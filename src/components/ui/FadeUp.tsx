@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 
-export const FadeUp = ({ children, className = "", delay = 0, style = {} }) => (
+export const FadeUp = ({ children, className = "", delay = 0, style = {}, ...props }) => (
   <motion.div
     initial={{ opacity: 0, y: 24 }}
     whileInView={{ opacity: 1, y: 0 }}
@@ -9,6 +9,7 @@ export const FadeUp = ({ children, className = "", delay = 0, style = {} }) => (
     transition={{ duration: 0.8, delay }}
     className={className}
     style={style}
+    {...props}
   >
     {children}
   </motion.div>

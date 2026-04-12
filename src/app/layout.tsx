@@ -15,6 +15,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://strategicconnex.com"),
   title: "Strategic Connex | Inteligencia de Mercado y Posicionamiento B2B",
   description: "Consultoría y documentación técnica de precisión para la industria de operaciones complejas y el sector Oil & Gas. Tableros analíticos, diseño de branding corporativo y prospectos B2B calificados en tiempo real.",
   keywords: ["Oil and Gas", "B2B Marketing", "Documentación Técnica", "Ingeniería Comercial", "Software Analítica B2B"],
