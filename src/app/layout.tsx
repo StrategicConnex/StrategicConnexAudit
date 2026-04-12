@@ -16,16 +16,16 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://strategicconnex.com"),
-  title: "Strategic Connex | Inteligencia de Mercado y Posicionamiento B2B",
-  description: "Consultoría y documentación técnica de precisión para la industria de operaciones complejas y el sector Oil & Gas. Tableros analíticos, diseño de branding corporativo y prospectos B2B calificados en tiempo real.",
-  keywords: ["Oil and Gas", "B2B Marketing", "Documentación Técnica", "Ingeniería Comercial", "Software Analítica B2B"],
+  title: "Strategic Connex | Consultoría Integral O&G en Neuquén",
+  description: "La única Consultora en Neuquén que fusiona Marketing B2B, Control Documental e IT para el Sector Energético. Dominamos el mercado en Vaca Muerta.",
+  keywords: ["Oil and Gas Neuquén", "Marketing B2B Vaca Muerta", "Documentación Técnica Petrolera", "Consultora Integral O&G"],
   robots: "index, follow",
   alternates: {
     canonical: "https://strategicconnex.com",
   },
   openGraph: {
-    title: "Strategic Connex | Inteligencia B2B",
-    description: "Multiplica tu tasa de cierre en industrias exigentes con nuestra tecnología de Documentación Técnica Certificada e Ingeniería Comercial B2B.",
+    title: "Strategic Connex | La Primera Opción en Vaca Muerta",
+    description: "Profesionalizando a Pymes de la Cuenca Neuquina con infraestructura operativa B2B de alto rendimiento.",
     url: "https://strategicconnex.com",
     siteName: "Strategic Connex",
     images: [
