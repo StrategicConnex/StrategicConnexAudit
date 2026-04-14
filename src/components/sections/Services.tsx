@@ -2,6 +2,7 @@
 import React from "react";
 import Image from "next/image";
 import { FadeUp } from "../ui/FadeUp";
+import { ServicesBackground3D } from "../ui/ServicesBackground3D";
 
 export function Services() {
   const servicios = [
@@ -18,14 +19,15 @@ export function Services() {
   ];
 
   return (
-    <section id="services">
-      <FadeUp className="services-header">
+    <section id="services" style={{ position: "relative", overflow: "hidden" }}>
+      <ServicesBackground3D />
+      <FadeUp className="services-header" style={{ position: "relative", zIndex: 1 }}>
         <span className="section-label">▸ Servicios</span>
         <h2 className="section-title">La única Suite Integral de Soluciones para el Sector Energético en Neuquén</h2>
         <div className="divider"></div>
         <p className="section-desc">Strategic Connex ofrece la única suite de servicios en la Cuenca Neuquina que resuelve, en un solo lugar, las necesidades críticas de comunicación y operación de las Pymes industriales.</p>
       </FadeUp>
-      <div className="services-grid">
+      <div className="services-grid" style={{ position: "relative", zIndex: 1 }}>
         {servicios.map((srv, i) => (
           <FadeUp key={i} className="service-card" delay={0.05 * i}>
             <div className="service-img">
