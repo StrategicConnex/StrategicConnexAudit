@@ -82,7 +82,7 @@ h2.section-title{font-family:var(--font-montserrat), sans-serif;font-size:clamp(
 }
 
 /* ── ABOUT ── */
-#about{background:rgba(42,45,50,0.4)}
+#about{background:var(--bg2)}
 .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:stretch;margin-top:3.5rem}
 .about-visual{position:relative;height:100%;min-height:450px;border-radius:var(--radius-card);overflow:hidden;border:1px solid rgba(212,175,55,.2);background:#111;}
 .about-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s;}
@@ -96,7 +96,7 @@ h2.section-title{font-family:var(--font-montserrat), sans-serif;font-size:clamp(
 .pillar-text span{font-size:.78rem;color:var(--text-muted)}
 
 /* ── SERVICES ── */
-#services{background:transparent}
+#services{background:var(--bg)}
 .services-header{text-align:center;margin-bottom:3.5rem}
 .services-header .section-desc{margin:0 auto}
 .services-header .divider{margin:1.25rem auto}
@@ -114,7 +114,7 @@ h2.section-title{font-family:var(--font-montserrat), sans-serif;font-size:clamp(
 .service-tag{display:inline-block;margin-top:.85rem;font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);opacity:.7}
 
 /* ── DOC SERVICES ── */
-#docs{background:rgba(42,45,50,0.4)}
+#docs{background:var(--bg2)}
 .docs-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin-top:3.5rem}
 .doc-card{background:linear-gradient(145deg, rgba(255,255,255,0.03) 0%, transparent 100%);border:1px solid rgba(255,255,255,.08);border-left:3px solid var(--gold);border-radius:var(--radius-card);padding:2rem;transition:all .3s;backdrop-filter:blur(10px)}
 .doc-card:hover{background:linear-gradient(145deg, rgba(255,255,255,0.06) 0%, transparent 100%);transform:translateY(-6px);border-color:rgba(212,175,55,.3);box-shadow:0 10px 30px rgba(0,0,0,0.3)}
@@ -127,8 +127,8 @@ h2.section-title{font-family:var(--font-montserrat), sans-serif;font-size:clamp(
 .doc-features li::before{content:'→';position:absolute;left:0;color:var(--gold);font-weight:900;font-size:0.9rem}
 
 /* ── INDUSTRIES ── */
-#industries{background:transparent;position:relative;overflow:hidden}
-.industries-bg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(17,20,23,0.8) 0%,rgba(26,29,34,0.8) 100%)}
+#industries{background:var(--bg);position:relative;overflow:hidden}
+.industries-bg{position:absolute;inset:0;background:linear-gradient(135deg,#111417 0%,#1a1d22 100%)}
 .ind-grid-bg{position:absolute;inset:0;background-image:radial-gradient(rgba(212,175,55,.06) 1px,transparent 1px);background-size:32px 32px}
 .industries-content{position:relative;z-index:1}
 .industry-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3.5rem}
@@ -144,7 +144,7 @@ h2.section-title{font-family:var(--font-montserrat), sans-serif;font-size:clamp(
 .ind-badge{display:inline-block;background:rgba(212,175,55,.2);border:1px solid rgba(212,175,55,.4);border-radius:20px;padding:.2rem .75rem;font-size:.65rem;font-weight:700;letter-spacing:.08em;color:var(--gold);margin-bottom:.75rem}
 
 /* ── KPI ── */
-#kpi{background:rgba(42,45,50,0.4)}
+#kpi{background:var(--bg2)}
 .kpi-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.06);border-radius:var(--radius-card);overflow:hidden;margin-top:3.5rem;border:1px solid rgba(255,255,255,.06)}
 .kpi-item{background:var(--bg3);padding:2.5rem 2rem;text-align:center;transition:background .25s}
 .kpi-item:hover{background:rgba(212,175,55,.05)}
@@ -154,7 +154,7 @@ h2.section-title{font-family:var(--font-montserrat), sans-serif;font-size:clamp(
 .kpi-trend{display:inline-flex;align-items:center;gap:.25rem;margin-top:.6rem;font-size:.72rem;font-weight:600;color:#22c55e;background:rgba(34,197,94,.1);padding:.2rem .6rem;border-radius:20px}
 
 /* ── DASHBOARD ── */
-#dashboard{background:transparent}
+#dashboard{background:var(--bg)}
 .dash-wrapper{background:var(--bg2);border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;margin-top:3.5rem;display:grid;grid-template-columns:220px 1fr}
 .dash-sidebar{background:#1a1d22;border-right:1px solid rgba(255,255,255,.07);padding:1.5rem 1rem}
 .dash-logo{font-family:var(--font-montserrat), sans-serif;font-weight:800;font-size:.9rem;color:var(--gold);padding:.75rem .75rem 1.5rem;letter-spacing:.04em}

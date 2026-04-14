@@ -5,7 +5,6 @@ import { Footer } from "@/components/layout/Footer";
 import { BackToTop } from "@/components/layout/BackToTop";
 import { CustomCursor } from "@/components/layout/CustomCursor";
 import { FloatingWP } from "@/components/layout/FloatingWP";
-import { GlobalBackground3D } from "@/components/ui/GlobalBackground3D";
 
 import { Hero } from "@/components/sections/Hero";
 import { About } from "@/components/sections/About";
@@ -24,7 +23,6 @@ export default function Page() {
 
   return (
     <>
-      <GlobalBackground3D />
       <Navbar onEnter={handleInteractEnter} onLeave={handleInteractLeave} />
       <main>
         <Hero onEnter={handleInteractEnter} onLeave={handleInteractLeave} />
