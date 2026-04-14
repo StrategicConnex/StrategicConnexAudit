@@ -4,7 +4,12 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { Counter } from "../ui/Counter";
 import { HeroBackground3D } from "../ui/HeroBackground3D";
 
-export function Hero({ onEnter, onLeave }) {
+interface HeroProps {
+  onEnter: () => void;
+  onLeave: () => void;
+}
+
+export function Hero({ onEnter, onLeave }: HeroProps) {
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 1000], [0, 350]);
 
