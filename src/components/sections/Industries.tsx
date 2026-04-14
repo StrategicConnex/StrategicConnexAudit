@@ -11,9 +11,9 @@ export function Industries({ onEnter, onLeave }) {
       <div className="industries-content">
         <FadeUp>
           <span className="section-label">▸ Industrias</span>
-          <h2 className="section-title">Enfocados en Sectores de Alta Complejidad</h2>
+          <h2 className="section-title">Enfocados en Sectores de Alta Complejidad en la Cuenca Neuquina</h2>
           <div className="divider"></div>
-          <p className="section-desc">Nuestra experiencia está concentrada en industrias donde la precisión técnica y la credibilidad corporativa son factores críticos de éxito.</p>
+          <p className="section-desc">Nuestra experiencia está concentrada en Añelo y el corazón de Vaca Muerta, ofreciendo Servicios Especializados para la industria del Oil & Gas, donde la precisión técnica y la credibilidad corporativa son factores críticos de éxito.</p>
         </FadeUp>
         <div className="industry-cards">
           <FadeUp delay={0.1} className="ind-card" onMouseEnter={onEnter} onMouseLeave={onLeave}>

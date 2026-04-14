@@ -15,7 +15,7 @@ export function Footer() {
         <div className="footer-col">
           <h4>Servicios</h4>
           <ul>
-            <li><a href="#">Marketing Digital</a></li>
+            <li><a href="#">Marketing Industrial</a></li>
             <li><a href="#">SEO / SEM</a></li>
             <li><a href="#">Branding</a></li>
             <li><a href="#">Consultoría</a></li>
@@ -25,7 +25,7 @@ export function Footer() {
         <div className="footer-col">
           <h4>Documentación</h4>
           <ul>
-            <li><a href="#">Fichas Técnicas</a></li>
+            <li><a href="#">Gestión de Legajos</a></li>
             <li><a href="#">Presupuestos</a></li>
             <li><a href="#">Ingeniería</a></li>
             <li><a href="#">Homologación</a></li>
@@ -42,7 +42,7 @@ export function Footer() {
       </div>
       <div className="footer-bottom">
         <span>© <span>{new Date().getFullYear()}</span> <span>Strategic Connex</span>. Todos los derechos reservados.</span>
-        <span>Diseñado para liderar.</span>
+        <span>Operaciones en Neuquén Capital y soporte técnico para bases en Añelo. | Diseñado para liderar.</span>
       </div>
     </footer>
   );

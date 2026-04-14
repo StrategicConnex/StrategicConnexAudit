@@ -16,9 +16,9 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://strategicconnex.com"),
-  title: "Strategic Connex | Consultoría Integral O&G en Neuquén",
-  description: "La única Consultora en Neuquén que fusiona Marketing B2B, Control Documental e IT para el Sector Energético. Dominamos el mercado en Vaca Muerta.",
-  keywords: ["Oil and Gas Neuquén", "Marketing B2B Vaca Muerta", "Documentación Técnica Petrolera", "Consultora Integral O&G"],
+  title: "Strategic Connex | Consultora Industrial Neuquén - Vaca Muerta",
+  description: "La única Consultora Industrial en Neuquén que fusiona Marketing, Control Documental Hidrocarburos e IT. Liderazgo B2B en Vaca Muerta.",
+  keywords: ["Consultora Industrial Neuquén", "Vaca Muerta", "Control Documental Hidrocarburos", "Oil and Gas", "Marketing B2B"],
   robots: "index, follow",
   alternates: {
     canonical: "https://strategicconnex.com",

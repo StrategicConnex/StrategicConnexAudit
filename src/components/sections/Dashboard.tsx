@@ -32,6 +32,12 @@ export function Dashboard() {
             <h4>Vista General — Q2</h4>
             <div className="dash-status">Sistema activo</div>
           </div>
+          <div className="dash-state-labels" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', padding: '0 1.5rem' }}>
+            <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', background: 'var(--blue)', color: '#fff', borderRadius: '4px' }}>Vencimientos ART</span>
+            <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', background: '#10B981', color: '#fff', borderRadius: '4px' }}>Inducciones aprobadas</span>
+            <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', background: 'var(--gold)', color: '#000', borderRadius: '4px' }}>Documentación de flota</span>
+            <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border)', borderRadius: '4px' }}>Estado de Homologación</span>
+          </div>
           <div className="dash-kpis">
             <div className="dash-kpi"><div className="dash-kpi-label">Tráfico Orgánico</div><div className="dash-kpi-val"><Counter to={24850} /> <span>↑9%</span></div></div>
             <div className="dash-kpi"><div className="dash-kpi-label">Leads Generados</div><div className="dash-kpi-val"><Counter to={312} /> <span>↑17%</span></div></div>

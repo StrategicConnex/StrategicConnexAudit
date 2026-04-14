@@ -45,8 +45,9 @@ export function Hero({ onEnter, onLeave }) {
       </motion.div>
       <div className="hero-content">
         <div className="hero-badge">🔶 PLATAFORMA DE INTELIGENCIA COMERCIAL</div>
-        <h1 className="hero-title">Control Total.<br /><span className="accent">Estrategia Precisa.</span>Resultados Reales.</h1>
-        <p className="hero-sub">La única Consultora Integral en Neuquén que fusiona Marketing B2B, Control Documental e IT para el Sector Energético. Strategic Connex redefine el estándar de crecimiento para las Pymes de la Cuenca Neuquina. Somos la única consultora en Neuquén Capital que integra en una sola estructura el marketing estratégico, el posicionamiento comercial B2B y la gestión documental técnica. Nuestra misión es clara: profesionalizar a las empresas de servicios de Oil & Gas para que dominen el mercado en Vaca Muerta. Hablamos el idioma de la industria y transformamos su infraestructura digital y operativa en un activo de alto rendimiento, garantizando que su empresa no solo sea visible, sino que sea la primera opción para las grandes operadoras.</p>
+        <h1 className="hero-title">Control Documental y<br /><span className="accent">Estrategia Comercial</span> para el ecosistema Vaca Muerta.</h1>
+        <p className="hero-sub">La única consultora integral en Neuquén que profesionaliza a las PyMEs de la Cuenca Neuquina para convertirlas en proveedores de élite.</p>
+        <p className="hero-pain" style={{ marginTop: '1rem', color: 'var(--text-muted)' }}><strong>Evite paradas operativas y multas.</strong> Digitalizamos su gestión documental para garantizar ingresos a pozo sin demoras.</p>
         <div className="hero-actions">
           <a href="#services" className="btn-primary" onMouseEnter={onEnter} onMouseLeave={onLeave}>▶ Explorar Servicios</a>
           <a href="#about" className="btn-outline" onMouseEnter={onEnter} onMouseLeave={onLeave}>Conocer el modelo →</a>

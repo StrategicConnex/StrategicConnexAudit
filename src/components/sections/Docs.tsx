@@ -20,7 +20,7 @@ export function Docs() {
         </FadeUp>
         <FadeUp className="doc-card" delay={0.1}>
           <div className="doc-header"><div className="doc-icon">📑</div><div className="doc-number">02</div></div>
-          <h3>Ficha Técnica Homologada</h3>
+          <h3>Gestión de Legajos para Operadoras (YPF, PAE, Vista, Chevron)</h3>
           <p>Fichas certificadas y estructuradas para operadoras del sector Oil & Gas.</p>
           <ul className="doc-features"><li>Formato operadoras</li><li>Trazabilidad</li><li>Aprobaciones</li></ul>
         </FadeUp>
@@ -32,7 +32,7 @@ export function Docs() {
         </FadeUp>
         <FadeUp className="doc-card" delay={0.3}>
           <div className="doc-header"><div className="doc-icon">🛡️</div><div className="doc-number">04</div></div>
-          <h3>Auditoría Documental</h3>
+          <h3>Acreditación de Personal y Vehículos para Yacimientos</h3>
           <p>Gestión y trazabilidad pura para auditorías y sistemas de control de calidad.</p>
           <ul className="doc-features"><li>Codificación</li><li>Revisiones históricas</li><li>Repositorio</li></ul>
         </FadeUp>

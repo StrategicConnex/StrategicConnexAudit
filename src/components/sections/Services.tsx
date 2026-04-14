@@ -5,7 +5,7 @@ import { FadeUp } from "../ui/FadeUp";
 
 export function Services() {
   const servicios = [
-    { img: "marketing_digital_1775961023662.png", title: "Marketing Digital", desc: "Estrategias digitales integrales orientadas a resultados medibles y crecimiento sostenido de marca.", tag: "Núcleo estratégico" },
+    { img: "marketing_digital_1775961023662.png", title: "Marketing Industrial & Desarrollo de Proveedores", desc: "Estrategias digitales integrales orientadas a resultados medibles y crecimiento sostenido de marca.", tag: "Núcleo estratégico" },
     { img: "estrategia_consultoria_1775961038052.png", title: "Estrategia y Consultoría", desc: "Análisis de mercado, posicionamiento competitivo y hoja de ruta estratégica para sectores industriales.", tag: "Diagnóstico y planificación" },
     { img: "key_visual_contenido_1775961052376.png", title: "Key Visual y Contenido", desc: "Identidad visual estratégica y producción de contenido de alto impacto alineado con los objetivos corporativos.", tag: "Marca y comunicación" },
     { img: "seo_tecnico_1775961065623.png", title: "SEO Técnico y Semántico", desc: "Optimización avanzada para motores de búsqueda con enfoque en industria B2B y mercados de nicho.", tag: "Visibilidad orgánica" },
