@@ -70,7 +70,9 @@ const Scene = ({ src }: { src: string }) => {
   let scaleY = 1;
   
   if (texture && texture.image) {
-    const aspectRatio = texture.image.width / texture.image.height;
+    // Cast to HTMLImageElement or any to satisfy TypeScript
+    const img = texture.image as any;
+    const aspectRatio = img.width / img.height;
     const vpRatio = viewport.width / viewport.height;
     if (vpRatio > aspectRatio) {
       scaleX = viewport.width;
