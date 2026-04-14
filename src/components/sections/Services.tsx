@@ -2,7 +2,6 @@
 import React from "react";
 import Image from "next/image";
 import { FadeUp } from "../ui/FadeUp";
-import { ServicesBackground3D } from "../ui/ServicesBackground3D";
 import { SERVICIOS_DATA } from "../../constants/data";
 
 export function Services() {
@@ -10,7 +9,6 @@ export function Services() {
 
   return (
     <section id="services" style={{ position: "relative", overflow: "hidden" }}>
-      <ServicesBackground3D />
       <FadeUp className="services-header" style={{ position: "relative", zIndex: 1 }}>
         <span className="section-label">▸ Servicios</span>
         <h2 className="section-title">La única Suite Integral de Soluciones para el Sector Energético en Neuquén</h2>
