@@ -45,7 +45,7 @@ export function Hero({ onEnter, onLeave }) {
       </motion.div>
       <div className="hero-content">
         <div className="hero-badge">🔶 PLATAFORMA DE INTELIGENCIA COMERCIAL</div>
-        <h1 className="hero-title">Control Documental y<br /><span className="accent">Estrategia Comercial</span> para el ecosistema Vaca Muerta.</h1>
+        <h1 className="hero-title" style={{ fontSize: 'clamp(2rem, 4.5vw, 3.5rem)', lineHeight: '1.1' }}>Control Documental y<br /><span className="accent">Estrategia Comercial</span> para el ecosistema Vaca Muerta.</h1>
         <p className="hero-sub">La única consultora integral en Neuquén que profesionaliza a las PyMEs de la Cuenca Neuquina para convertirlas en proveedores de élite.</p>
         <p className="hero-pain" style={{ marginTop: '1rem', color: 'var(--text-muted)' }}><strong>Evite paradas operativas y multas.</strong> Digitalizamos su gestión documental para garantizar ingresos a pozo sin demoras.</p>
         <div className="hero-actions">
