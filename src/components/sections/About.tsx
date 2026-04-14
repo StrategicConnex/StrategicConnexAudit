@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { FadeUp } from "../ui/FadeUp";
+import { ImageSequence } from "../ui/ImageSequence";
 
 export function About() {
   return (
@@ -18,7 +19,13 @@ export function About() {
           </div>
         </FadeUp>
         <FadeUp delay={0.2} className="about-visual" aria-hidden={true}>
-          <video src="/images/nosotros.mp4" className="about-video" autoPlay loop muted playsInline aria-label="Video Corporativo" preload="metadata" poster="/logo.png"></video>
+          <ImageSequence 
+            folder="/Iframe"
+            prefix="nosotros_"
+            frameCount={80}
+            extension="jpg"
+            fps={24}
+          />
         </FadeUp>
       </div>
     </section>

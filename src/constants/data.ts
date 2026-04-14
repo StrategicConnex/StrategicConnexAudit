@@ -14,6 +14,7 @@ export const SERVICIOS_DATA: ServiceItem[] = [
   { img: "redes_sociales_1775961095750.png", title: "Redes Sociales", desc: "Gestión estratégica de presencia digital corporativa con enfoque B2B y construcción de autoridad sectorial.", tag: "Presencia corporativa" },
   { img: "marketing_contenidos_1775961111176.png", title: "Marketing de Contenidos", desc: "Producción de contenido técnico especializado que genera credibilidad y atrae a tomadores de decisión.", tag: "Autoridad de nicho" },
   { img: "analitica_reportes_1775961126189.png", title: "Analítica y Reportes", desc: "Tableros de control personalizados, análisis de datos y reportes ejecutivos para toma de decisiones.", tag: "Inteligencia de negocio" },
+  { img: "proyectos_ai.png", title: "Implementación de IA", desc: "Desarrollo e integración de agentes autónomos y modelos predictivos para optimizar operaciones industriales.", tag: "Innovación Tecnológica" },
   { img: "branding_corporativo_1775961139844.png", title: "Branding Corporativo", desc: "Desarrollo y consolidación de identidad de marca para empresas operando en mercados de alta exigencia.", tag: "Posicionamiento" },
   { img: "diseno_web_1775961152123.png", title: "Diseño y Desarrollo Web", desc: "Plataformas digitales de alto rendimiento con experiencia de usuario premium y arquitectura escalable.", tag: "Presencia digital" },
 ];
