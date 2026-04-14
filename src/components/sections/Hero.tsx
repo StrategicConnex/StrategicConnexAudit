@@ -2,6 +2,7 @@
 import React from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Counter } from "../ui/Counter";
+import { EnergyTrails3D } from "../ui/EnergyTrails3D";
 
 interface HeroProps {
   onEnter: () => void;
@@ -17,6 +18,7 @@ export function Hero({ onEnter, onLeave }: HeroProps) {
       <motion.div className="hero-bg" aria-hidden={true} style={{ y: heroY }}>
         <div className="hero-grid"></div>
         <div className="hero-glow"></div>
+        <EnergyTrails3D />
       </motion.div>
       <div className="hero-content">
         <div className="hero-badge"><span style={{color: '#f05252', fontSize: '10px'}}>♦</span> PLATAFORMA DE INTELIGENCIA COMERCIAL</div>
