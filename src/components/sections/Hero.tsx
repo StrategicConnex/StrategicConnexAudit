@@ -13,7 +13,7 @@ export function Hero() {
       <div className="hero-content">
         <div className="hero-badge"><span style={{color: '#f05252', fontSize: '10px'}}>♦</span> PLATAFORMA DE INTELIGENCIA COMERCIAL</div>
         <h1 className="main-title">
-          Strategic Connex – Soluciones Estratégicas para Vaca Muerta
+          Strategic Connex – Soluciones Estratégicas
         </h1>
         <p className="hero-sub" style={{ marginTop: '2rem' }}>La única consultora integral en Neuquén que profesionaliza a las PyMEs de la Cuenca Neuquina para convertirlas en proveedores de élite.</p>
         <p className="hero-pain" style={{ marginTop: '1.5rem', color: 'var(--text-muted)' }}><strong>Evite paradas operativas y multas.</strong> Digitalizamos su gestión documental para garantizar<br />ingresos a pozo sin demoras.</p>
