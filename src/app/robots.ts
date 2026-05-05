@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/api/', '/_next/'],
     },
-    sitemap: 'https://strategicconnex.com/sitemap.xml',
+    sitemap: 'https://strategicconnex.vercel.app/sitemap.xml',
   };
 }

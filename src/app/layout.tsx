@@ -15,18 +15,18 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://strategicconnex.com"),
+  metadataBase: new URL("https://strategicconnex.vercel.app"),
   title: "Strategic Connex | Consultora Industrial Neuquén - Vaca Muerta",
   description: "La única Consultora Industrial en Neuquén que fusiona Marketing, Control Documental Hidrocarburos e IT. Liderazgo B2B en Vaca Muerta.",
   keywords: ["Consultora Industrial Neuquén", "Vaca Muerta", "Control Documental Hidrocarburos", "Oil and Gas", "Marketing B2B"],
   robots: "index, follow",
   alternates: {
-    canonical: "https://strategicconnex.com",
+    canonical: "https://strategicconnex.vercel.app",
   },
   openGraph: {
     title: "Strategic Connex | La Primera Opción en Vaca Muerta",
     description: "Profesionalizando a Pymes de la Cuenca Neuquina con infraestructura operativa B2B de alto rendimiento.",
-    url: "https://strategicconnex.com",
+    url: "https://strategicconnex.vercel.app",
     siteName: "Strategic Connex",
     images: [
       {
@@ -56,8 +56,8 @@ export default function RootLayout({
     "@type": "ProfessionalService",
     "name": "Strategic Connex",
     "description": "Consultora Industrial especializada en Marketing Digital B2B, Control Documental de Hidrocarburos y Soluciones IT para Vaca Muerta.",
-    "url": "https://strategicconnex.com",
-    "logo": "https://strategicconnex.com/logo.png",
+    "url": "https://strategicconnex.vercel.app",
+    "logo": "https://strategicconnex.vercel.app/logo.png",
     "image": "https://strategicconnex.com/images/marketing_digital_1775961023662.png",
     "address": {
       "@type": "PostalAddress",
