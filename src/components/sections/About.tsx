@@ -8,13 +8,13 @@ export function About() {
       <div className="about-grid">
         <FadeUp>
           <span className="section-label">▸ Acerca de nosotros</span>
-          <h2 className="section-title">La Primera Consultora de Posicionamiento y Gestión Comercial Integral de Neuquén</h2>
+          <h2 className="section-title">Agencia de Posicionamiento Web Estratégico y Crecimiento Orgánico</h2>
           <div className="divider"></div>
-          <p className="section-desc">Strategic Connex es la única consultora en Neuquén que integra marketing B2B, IT y control documental para el sector energético. Operamos en la intersección de la estrategia y la ejecución técnica</p>
+          <p className="section-desc">Strategic Connex es una agencia especializada en transformar la presencia digital de empresas mediante estrategias SEO avanzadas, arquitectura técnica y contenido de alto impacto que genera autoridad en Google.</p>
           <div className="about-pillars">
-            <div className="pillar"><div className="pillar-icon">🎯</div><div className="pillar-text"><strong>Precisión Estratégica</strong><span>Decisiones basadas en datos e inteligencia de mercado para empresas de Vaca Muerta</span></div></div>
-            <div className="pillar"><div className="pillar-icon">⚙️</div><div className="pillar-text"><strong>Control Operativo</strong><span>Optimizamos los procesos de homologación técnica</span></div></div>
-            <div className="pillar"><div className="pillar-icon">📈</div><div className="pillar-text"><strong>Crecimiento Medible</strong><span>KPIs claros, reportes continuos y mejora progresiva para liderar en mercados exigentes. Somos el aliado estratégico que profesionaliza a las PYMES de la Cuenca Neuquina para convertirlas en proveedores de Élite.</span></div></div>
+            <div className="pillar"><div className="pillar-icon">🎯</div><div className="pillar-text"><strong>SEO Técnico & Arquitectura</strong><span>Optimizamos cada línea de código para que Google te prefiera y tu web cargue a máxima velocidad.</span></div></div>
+            <div className="pillar"><div className="pillar-icon">⚙️</div><div className="pillar-text"><strong>Estrategia de Contenido</strong><span>Creamos activos digitales técnicos que atraen leads calificados y construyen autoridad sectorial.</span></div></div>
+            <div className="pillar"><div className="pillar-icon">📈</div><div className="pillar-text"><strong>Resultados Basados en Datos</strong><span>Implementamos tracking avanzado y KPIs claros para asegurar que tu inversión se traduzca en crecimiento orgánico real.</span></div></div>
           </div>
         </FadeUp>
         <FadeUp delay={0.2} className="about-visual" aria-hidden={true}>
