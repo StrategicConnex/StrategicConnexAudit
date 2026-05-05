@@ -50,7 +50,7 @@ header {position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(28,31,36
 .hero-content{position:relative;z-index:1;max-width:700px;margin-top:84px;} 
 .hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3);border-radius:20px;padding:.35rem 1rem;font-size:.75rem;font-weight:600;letter-spacing:.08em;color:var(--gold);margin-bottom:1.5rem;animation:fadeUp .8s ease both}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-h1.hero-title, .main-title{font-family:var(--font-montserrat), sans-serif;font-size:clamp(2.4rem,5vw,4rem);font-weight:900;line-height:1.1;letter-spacing:-.02em;animation:fadeUp .9s .1s ease both}
+h1.hero-title, .main-title{font-family:var(--font-montserrat), sans-serif;font-size:clamp(1.8rem,4vw,3.2rem);font-weight:900;line-height:1.1;letter-spacing:-.02em;animation:fadeUp .9s .1s ease both}
 h1.hero-title .accent, .main-title .accent{color:var(--gold);display:block}
 .hero-sub, .hero-pain{margin-top:1.25rem;font-size:1.05rem;color:var(--text-muted);line-height:1.7;max-width:560px;animation:fadeUp 1s .2s ease both}
 .hero-actions{display:flex;gap:1rem;margin-top:2.5rem;flex-wrap:wrap;animation:fadeUp 1s .35s ease both}
