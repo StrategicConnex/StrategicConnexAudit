@@ -1,5 +1,4 @@
-"use client";
-import React, { useState } from "react";
+import React from "react";
 import dynamic from "next/dynamic";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -21,11 +20,6 @@ const EnergyTrails3D = dynamic(
   { ssr: false }
 );
 export default function Page() {
-  const [isHovering, setIsHovering] = useState(false);
-
-  const handleInteractEnter = () => setIsHovering(true);
-  const handleInteractLeave = () => setIsHovering(false);
-
   return (
     <>
       <div className="global-page-bg" aria-hidden={true}>
@@ -33,21 +27,21 @@ export default function Page() {
         <div className="hero-glow"></div>
         <EnergyTrails3D />
       </div>
-      <Navbar onEnter={handleInteractEnter} onLeave={handleInteractLeave} />
+      <Navbar />
       <main>
-        <Hero onEnter={handleInteractEnter} onLeave={handleInteractLeave} />
+        <Hero />
         <About />
         <Services />
         <Docs />
-        <Industries onEnter={handleInteractEnter} onLeave={handleInteractLeave} />
+        <Industries />
         <KPI />
         <Dashboard />
       </main>
-      <CTA onEnter={handleInteractEnter} onLeave={handleInteractLeave} />
+      <CTA />
       <Footer />
-      <FloatingWP onEnter={handleInteractEnter} onLeave={handleInteractLeave} />
+      <FloatingWP />
       <BackToTop />
-      <CustomCursor isHovering={isHovering} />
+      <CustomCursor />
     </>
   );
 }

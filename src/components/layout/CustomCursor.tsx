@@ -1,11 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useCursorStore } from "@/lib/store/useCursorStore";
 
-export function CustomCursor({ isHovering }) {
+export function CustomCursor() {
+  const isHovering = useCursorStore((state) => state.isHovering);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    const handleMouseMove = (e) => setMousePos({ x: e.clientX, y: e.clientY });
+    const handleMouseMove = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);

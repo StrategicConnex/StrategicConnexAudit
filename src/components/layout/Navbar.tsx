@@ -2,14 +2,21 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useCursorStore } from "@/lib/store/useCursorStore";
 
-export function Navbar({ onEnter, onLeave }) {
+export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const setHovering = useCursorStore((state) => state.setHovering);
 
   return (
     <header>
       <div className="nav-inner">
-        <Link href="/" className="logo" onMouseEnter={onEnter} onMouseLeave={onLeave}>
+        <Link 
+          href="/" 
+          className="logo" 
+          onMouseEnter={() => setHovering(true)} 
+          onMouseLeave={() => setHovering(false)}
+        >
           <Image src="/logo.png" alt="Strategic Connex Logo" width={200} height={80} style={{ width: 'auto', height: '58px', objectFit: 'contain' }} className="logo-img" />
           <span className="logo-text">STRATEGIC <span className="logo-light">CONNEX</span></span>
         </Link>

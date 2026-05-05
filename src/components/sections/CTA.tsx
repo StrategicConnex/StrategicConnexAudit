@@ -1,11 +1,13 @@
 "use client";
 import React, { useState } from "react";
 import { FadeUp } from "../ui/FadeUp";
+import { useCursorStore } from "@/lib/store/useCursorStore";
 
-export function CTA({ onEnter, onLeave }) {
+export function CTA() {
   const [formStatus, setFormStatus] = useState("idle");
+  const setHovering = useCursorStore((state) => state.setHovering);
 
-  const handleForm = async (e) => {
+  const handleForm = async (e: any) => {
     e.preventDefault();
     setFormStatus("processing");
     
@@ -59,27 +61,66 @@ export function CTA({ onEnter, onLeave }) {
           <form className="corporate-form" id="contactForm" autoComplete="off" onSubmit={handleForm}>
             <div className="form-row">
               <div className="form-group">
-                <input type="text" id="name" required placeholder=" " minLength={3} onMouseEnter={onEnter} onMouseLeave={onLeave} />
+                <input 
+                  type="text" 
+                  id="name" 
+                  required 
+                  placeholder=" " 
+                  minLength={3} 
+                  onMouseEnter={() => setHovering(true)} 
+                  onMouseLeave={() => setHovering(false)} 
+                />
                 <label htmlFor="name">Nombre completo</label>
                 <div className="input-line"></div>
               </div>
               <div className="form-group">
-                <input type="text" id="company" required placeholder=" " minLength={2} onMouseEnter={onEnter} onMouseLeave={onLeave} />
+                <input 
+                  type="text" 
+                  id="company" 
+                  required 
+                  placeholder=" " 
+                  minLength={2} 
+                  onMouseEnter={() => setHovering(true)} 
+                  onMouseLeave={() => setHovering(false)} 
+                />
                 <label htmlFor="company">Organización</label>
                 <div className="input-line"></div>
               </div>
             </div>
             <div className="form-group">
-              <input type="email" id="email" required placeholder=" " pattern="[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$" onMouseEnter={onEnter} onMouseLeave={onLeave} />
+              <input 
+                type="email" 
+                id="email" 
+                required 
+                placeholder=" " 
+                pattern="[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$" 
+                onMouseEnter={() => setHovering(true)} 
+                onMouseLeave={() => setHovering(false)} 
+              />
               <label htmlFor="email">Correo corporativo</label>
               <div className="input-line"></div>
             </div>
             <div className="form-group">
-              <textarea id="message" rows={3} required placeholder=" " minLength={10} onMouseEnter={onEnter} onMouseLeave={onLeave}></textarea>
+              <textarea 
+                id="message" 
+                rows={3} 
+                required 
+                placeholder=" " 
+                minLength={10} 
+                onMouseEnter={() => setHovering(true)} 
+                onMouseLeave={() => setHovering(false)}
+              ></textarea>
               <label htmlFor="message">Requerimiento principal</label>
               <div className="input-line"></div>
             </div>
-            <button type="submit" className="btn-primary btn-submit" aria-live="polite" onMouseEnter={onEnter} onMouseLeave={onLeave} style={{ background: formStatus === 'done' ? '#22c55e' : 'var(--gold)' }}>
+            <button 
+              type="submit" 
+              className="btn-primary btn-submit" 
+              aria-live="polite" 
+              onMouseEnter={() => setHovering(true)} 
+              onMouseLeave={() => setHovering(false)} 
+              style={{ background: formStatus === 'done' ? '#22c55e' : 'var(--gold)' }}
+            >
               <span>{formStatus === 'idle' ? '▶ Enviar Solicitud' : formStatus === 'processing' ? 'Procesando...' : '✓ Solicitud Recibida'}</span>
             </button>
           </form>

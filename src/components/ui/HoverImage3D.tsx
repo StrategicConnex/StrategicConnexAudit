@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState, useMemo } from "react";
+import React, { useRef, useState, useMemo, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
@@ -54,6 +54,18 @@ const Scene = ({ src }: { src: string }) => {
     uHoverState: { value: 0 },
     uTime: { value: 0 }
   }), [texture]);
+
+  // Memoize geometry to avoid creating it on every render
+  const geometry = useMemo(() => new THREE.PlaneGeometry(1, 1, 32, 32), []);
+
+  // Cleanup resources on unmount
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      // material and textures are handled by suspense/r3f but manual is safer for custom shaders
+      if (materialRef.current) materialRef.current.dispose();
+    };
+  }, [geometry]);
   
   useFrame((state, delta) => {
     hoverValue.current = THREE.MathUtils.lerp(hoverValue.current, hovered ? 1 : 0, delta * 6);
@@ -65,23 +77,20 @@ const Scene = ({ src }: { src: string }) => {
 
   const { viewport } = useThree();
   
-  // Calculate scale to "cover" the viewport based on image aspect ratio
-  let scaleX = 1;
-  let scaleY = 1;
-  
-  if (texture && texture.image) {
-    // Cast to HTMLImageElement or any to satisfy TypeScript
-    const img = texture.image as any;
-    const aspectRatio = img.width / img.height;
-    const vpRatio = viewport.width / viewport.height;
-    if (vpRatio > aspectRatio) {
-      scaleX = viewport.width;
-      scaleY = viewport.width / aspectRatio;
-    } else {
-      scaleY = viewport.height;
-      scaleX = viewport.height * aspectRatio;
+  // Calculate scale
+  const [scaleX, scaleY] = useMemo(() => {
+    if (texture && texture.image) {
+      const img = texture.image as any;
+      const aspectRatio = img.width / img.height;
+      const vpRatio = viewport.width / viewport.height;
+      if (vpRatio > aspectRatio) {
+        return [viewport.width, viewport.width / aspectRatio];
+      } else {
+        return [viewport.height * aspectRatio, viewport.height];
+      }
     }
-  }
+    return [1, 1];
+  }, [texture, viewport]);
 
   return (
     <mesh 
@@ -89,8 +98,8 @@ const Scene = ({ src }: { src: string }) => {
       onPointerOver={() => { setHovered(true); document.body.style.cursor = 'crosshair'; }}
       onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto'; }}
       scale={[scaleX, scaleY, 1]} 
+      geometry={geometry}
     >
-      <planeGeometry args={[1, 1, 32, 32]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={vertexShader}

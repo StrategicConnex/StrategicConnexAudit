@@ -3,8 +3,11 @@ import React from "react";
 import Image from "next/image";
 import { FadeUp } from "../ui/FadeUp";
 import { HoverImage3D } from "../ui/HoverImage3D";
+import { useCursorStore } from "@/lib/store/useCursorStore";
 
-export function Industries({ onEnter, onLeave }) {
+export function Industries() {
+  const setHovering = useCursorStore((state) => state.setHovering);
+
   return (
     <section id="industries">
       <div className="industries-bg" aria-hidden={true}></div>
@@ -17,7 +20,12 @@ export function Industries({ onEnter, onLeave }) {
           <p className="section-desc">Nuestra experiencia está concentrada en Añelo y el corazón de Vaca Muerta, ofreciendo Servicios Especializados para la industria del Oil & Gas, donde la precisión técnica y la credibilidad corporativa son factores críticos de éxito.</p>
         </FadeUp>
         <div className="industry-cards">
-          <FadeUp delay={0.1} className="ind-card" onMouseEnter={onEnter} onMouseLeave={onLeave}>
+          <FadeUp 
+            delay={0.1} 
+            className="ind-card" 
+            onMouseEnter={() => setHovering(true)} 
+            onMouseLeave={() => setHovering(false)}
+          >
             <div className="ind-card-bg" aria-hidden={true}>
               <HoverImage3D src="/images/industry_oil_gas.png" className="ind-img" />
             </div>
@@ -28,7 +36,12 @@ export function Industries({ onEnter, onLeave }) {
               <p>Estrategia comercial, homologación y posicionamiento para empresas del sector energético y extractivo.</p>
             </div>
           </FadeUp>
-          <FadeUp delay={0.2} className="ind-card" onMouseEnter={onEnter} onMouseLeave={onLeave}>
+          <FadeUp 
+            delay={0.2} 
+            className="ind-card" 
+            onMouseEnter={() => setHovering(true)} 
+            onMouseLeave={() => setHovering(false)}
+          >
             <div className="ind-card-bg" aria-hidden={true}>
               <HoverImage3D src="/images/industry_energy.png" className="ind-img" />
             </div>
@@ -39,7 +52,12 @@ export function Industries({ onEnter, onLeave }) {
               <p>Comunicación estratégica y marketing B2B para empresas del sector energético y de servicios públicos.</p>
             </div>
           </FadeUp>
-          <FadeUp delay={0.3} className="ind-card" onMouseEnter={onEnter} onMouseLeave={onLeave}>
+          <FadeUp 
+            delay={0.3} 
+            className="ind-card" 
+            onMouseEnter={() => setHovering(true)} 
+            onMouseLeave={() => setHovering(false)}
+          >
             <div className="ind-card-bg" aria-hidden={true}>
               <HoverImage3D src="/images/industry_infra.png" className="ind-img" />
             </div>

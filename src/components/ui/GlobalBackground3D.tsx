@@ -15,13 +15,10 @@ const ParticleSwarm = () => {
     const colorBlue = new THREE.Color("#2563EB");
     
     for (let i = 0; i < count; i++) {
-        // Spread particles across a wide, shallow space
-        pos[i * 3 + 0] = (Math.random() - 0.5) * 20; // x
-        pos[i * 3 + 1] = (Math.random() - 0.5) * 20; // y
-        pos[i * 3 + 2] = (Math.random() - 0.5) * 8 - 3; // z
+        pos[i * 3 + 0] = (Math.random() - 0.5) * 20;
+        pos[i * 3 + 1] = (Math.random() - 0.5) * 20;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 8 - 3;
         
-        // Randomly pick gold or blue, favoring gold 80% of the time, 
-        // to match the exact aesthetic of the brand
         const isBlue = Math.random() > 0.8;
         cols[i * 3 + 0] = isBlue ? colorBlue.r : colorGold.r;
         cols[i * 3 + 1] = isBlue ? colorBlue.g : colorGold.g;
@@ -30,14 +27,21 @@ const ParticleSwarm = () => {
     return [pos, cols];
   }, [count]);
 
+  // Cleanup buffers on unmount
+  React.useEffect(() => {
+    return () => {
+      if (pointsRef.current) {
+        pointsRef.current.geometry.dispose();
+      }
+    };
+  }, []);
+
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     if (pointsRef.current) {
-        // Slow gentle rotation representing strategic flow
         pointsRef.current.rotation.y = Math.sin(time / 20) * 0.15;
         pointsRef.current.rotation.x = Math.cos(time / 25) * 0.15;
         
-        // Mouse reactivity for an interactive touch
         const mouseX = (state.pointer.x * 0.6);
         const mouseY = (state.pointer.y * 0.6);
         
