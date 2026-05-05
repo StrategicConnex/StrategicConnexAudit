@@ -16,16 +16,16 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://strategicconnex.vercel.app"),
-  title: "Strategic Connex – Soluciones Estratégicas",
-  description: "La única Consultora Industrial en Neuquén que fusiona Marketing, Control Documental Hidrocarburos e IT. Liderazgo B2B en Vaca Muerta.",
-  keywords: ["Consultora Industrial Neuquén", "Vaca Muerta", "Control Documental Hidrocarburos", "Oil and Gas", "Marketing B2B"],
+  title: "Posicionamiento Web Estratégico | StrategicConnex",
+  description: "Agencia SEO especializada en posicionamiento web, auditorías técnicas y crecimiento orgánico. Aumentamos tu visibilidad en Google con estrategias orientadas a resultados.",
+  keywords: ["posicionamiento web estratégico", "agencia SEO", "SEO para empresas", "consultoría SEO", "optimización SEO profesional", "auditoría SEO técnica"],
   robots: "index, follow",
   alternates: {
     canonical: "https://strategicconnex.vercel.app",
   },
   openGraph: {
-    title: "Strategic Connex | La Primera Opción en Vaca Muerta",
-    description: "Profesionalizando a Pymes de la Cuenca Neuquina con infraestructura operativa B2B de alto rendimiento.",
+    title: "Posicionamiento Web Estratégico | StrategicConnex",
+    description: "Agencia SEO especializada en posicionamiento web, auditorías técnicas y crecimiento orgánico para empresas de alto impacto.",
     url: "https://strategicconnex.vercel.app",
     siteName: "Strategic Connex",
     images: [
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
         url: "/images/marketing_digital_1775961023662.png", 
         width: 1200,
         height: 630,
-        alt: "Strategic Connex B2B Dashboard Analytics"
+        alt: "Strategic Connex | Agencia SEO & Posicionamiento Web"
       }
     ],
     locale: "es_AR",
@@ -41,8 +41,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Strategic Connex | Posicionamiento Estratégico",
-    description: "Liderazgo comercial e inteligencia para ecosistemas y rubros energéticos.",
+    title: "Posicionamiento Web Estratégico | StrategicConnex",
+    description: "Agencia SEO especializada en posicionamiento web y crecimiento orgánico.",
   }
 };
 
@@ -54,8 +54,8 @@ export default function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ProfessionalService",
-    "name": "Strategic Connex",
-    "description": "Consultora Industrial especializada en Marketing Digital B2B, Control Documental de Hidrocarburos y Soluciones IT para Vaca Muerta.",
+    "name": "StrategicConnex",
+    "description": "Agencia de posicionamiento web estratégico y marketing digital orientado a resultados. Especialistas en SEO técnico y crecimiento orgánico.",
     "url": "https://strategicconnex.vercel.app",
     "logo": "https://strategicconnex.vercel.app/logo.png",
     "image": "https://strategicconnex.com/images/marketing_digital_1775961023662.png",
@@ -81,22 +81,22 @@ export default function RootLayout({
     },
     "hasOfferCatalog": {
       "@type": "OfferCatalog",
-      "name": "Servicios Industriales",
+      "name": "Servicios SEO y Marketing Digital",
       "itemListElement": [
         {
           "@type": "Offer",
           "itemOffered": {
             "@type": "Service",
-            "name": "Marketing Digital Industrial B2B",
-            "description": "Posicionamiento estratégico y generación de demanda para empresas del sector energético."
+            "name": "Posicionamiento Web Estratégico",
+            "description": "Estrategias personalizadas para alcanzar las primeras posiciones en Google."
           }
         },
         {
           "@type": "Offer",
           "itemOffered": {
             "@type": "Service",
-            "name": "Control Documental de Hidrocarburos",
-            "description": "Gestión técnica de documentación y homologación para operadoras y proveedores de Vaca Muerta."
+            "name": "Auditoría SEO Técnica",
+            "description": "Análisis profundo de arquitectura web y optimización de rendimiento para buscadores."
           }
         }
       ]
