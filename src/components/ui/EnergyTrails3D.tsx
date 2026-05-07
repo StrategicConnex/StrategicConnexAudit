@@ -113,7 +113,10 @@ function TrailsShader() {
 
 export function EnergyTrails3D() {
   return (
-    <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: 0, pointerEvents: 'none' }}>
+    <div 
+      className="energy-trails-container"
+      style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden', width: '100%', height: '100%' }}
+    >
       <Canvas style={{ background: 'transparent' }}>
         <TrailsShader />
       </Canvas>
