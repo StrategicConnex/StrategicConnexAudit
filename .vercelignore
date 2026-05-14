@@ -1,0 +1,29 @@
+# Ignore local development and build outputs
+.next/
+node_modules/
+out/
+dist/
+.env
+.env*.local
+.pnpm-store/
+
+# Ignore tests and tool configs not required in production
+e2e/
+tests/
+__tests__/
+*.test.ts
+*.spec.ts
+playwright.config.ts
+vitest.config.ts
+
+# Ignore documentation, assets and config files not needed on Vercel
+docs/
+README.md
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.webp
+*.md
+.github/
+drizzle/

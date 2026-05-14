@@ -1,0 +1,12 @@
+import { task } from "@trigger.dev/sdk/v3";
+
+export const helloJob = task({
+  id: "hello-world",
+  run: async (payload: { name: string }) => {
+    console.log(`Hello ${payload.name}`);
+    return { 
+      message: `Hello ${payload.name}!`,
+      timestamp: new Date().toISOString()
+    };
+  },
+});
