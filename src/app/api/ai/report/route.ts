@@ -5,6 +5,7 @@ import { eq, desc, and, sql } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { env } from '@/shared/config/env';
 import { checkAiRateLimit } from '@/shared/lib/ratelimit';
+import { RedisCircuitBreaker } from '@/shared/lib/circuit-breaker';
 
 export const dynamic = 'force-dynamic';
 
@@ -140,30 +141,35 @@ Utiliza estrictamente los siguientes datos reales:
 
 Instrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconnex.com.ar)". Usa Markdown elegante con saltos de línea dobles entre párrafos. Estructura: Resumen Ejecutivo, Análisis de Rendimiento (con tabla), Diagnóstico Técnico y Plan de Acción (3-4 tareas).`;
 
-    // 7. Execute call to APIFreeLLM (OpenAI Compatible Format)
-    const response = await fetch(aiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo", // O el modelo que soporte tu proveedor
-        messages: [
-          { role: "system", content: "Eres un experto en SEO y marketing digital de alto nivel." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.3
-      })
+    const aiCircuitBreaker = new RedisCircuitBreaker('ai_report_api', {
+      failureThreshold: 3,
+      recoveryTimeout: 60000, // 1 minute
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('Error al llamar a la API de IA:', errText);
-      throw new Error(`AI API respondió con estado ${response.status}`);
-    }
+    const resData = await aiCircuitBreaker.execute(async () => {
+      const res = await fetch(aiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [
+            { role: "system", content: "Eres un experto en SEO y marketing digital de alto nivel." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.3
+        })
+      });
 
-    const resData = await response.json();
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`AI API error: ${res.status} - ${errText}`);
+      }
+
+      return res.json();
+    });
     
     // Extraer texto según formato estándar de Chat Completions
     const generatedReport = resData.choices?.[0]?.message?.content || resData.content?.[0]?.text || resData.generated_text;

@@ -129,14 +129,28 @@ function parseMarkdownReport(text: string) {
   };
 }
 
+// Helper for XSS prevention in generated reports
+function escapeHtml(unsafe: string) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // Generate the fully stylized standalone HTML file with a spectacular dark-mode agency theme
 function generateHtmlReportDocument(data: ReturnType<typeof parseMarkdownReport>) {
+  const sanitizedTitle = escapeHtml(data.title);
+  const sanitizedSummary = escapeHtml(data.summary).replace(/\n/g, '<br>');
+  const sanitizedIntro = escapeHtml(data.performanceIntro);
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reporte Estratégico SEO - ${data.title}</title>
+  <title>Reporte Estratégico SEO - ${sanitizedTitle}</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -526,6 +540,7 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjects[0]?.id || '');
   const [aiReportText, setAiReportText] = useState('');
   const [isGeneratingAiReport, setIsGeneratingAiReport] = useState(false);
+  const [isAiFallback, setIsAiFallback] = useState(false);
   const [aiReportProgress, setAiReportProgress] = useState(0);
   const [aiReportStatus, setAiReportStatus] = useState('');
 
@@ -567,9 +582,11 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
         setAiReportProgress(100);
         setAiReportStatus('¡Informe ejecutivo generado con éxito!');
         setAiReportText(data.report);
+        setIsAiFallback(!!data.isFallback);
       } else {
         setAiReportProgress(0);
         setAiReportStatus('Error al procesar el informe.');
+        setIsAiFallback(false);
         alert(data.error || 'Ocurrió un error inesperado al procesar la IA.');
       }
     } catch (error) {
@@ -1291,6 +1308,19 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
                           const data = parseMarkdownReport(aiReportText);
                           return (
                             <div className="p-6 overflow-y-auto max-h-[700px] space-y-6 text-sm text-slate-300 bg-zinc-950/60 font-sans select-text">
+                              {/* Fallback Warning Alert */}
+                              {isAiFallback && (
+                                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-3 animate-pulse">
+                                  <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                                  <div className="space-y-1">
+                                    <h5 className="text-xs font-bold text-yellow-400">Modo de Resiliencia Activo</h5>
+                                    <p className="text-[10px] text-yellow-200/70 leading-relaxed">
+                                      La API de IA no respondió a tiempo. El sistema ha generado este informe utilizando algoritmos deterministas locales para garantizar la continuidad del servicio.
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+
                               {/* White-label signature banner */}
                               <div className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-5 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />

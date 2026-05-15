@@ -3,6 +3,7 @@ import { db } from "@/shared/db";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { promises as dnsPromises } from "dns";
+import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 
 interface AnalyzeResult {
   statusCode: number;
@@ -90,14 +91,22 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   // 1. Validate the URL to prevent SSRF
   await validateSafeUrl(targetUrl);
 
-  // 2. Fetch with a 10s AbortSignal timeout to prevent unbounded hangs
-  const response = await fetch(targetUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (compatible; StrategicAuditBot/1.0; +https://strategicaudit.pro)",
-    },
-    signal: AbortSignal.timeout(20000), // Increased to 20-second timeout for better resilience
-    next: { revalidate: 0 } as any,
-  } as RequestInit);
+  // 2. Fetch with a 20s AbortSignal timeout to prevent unbounded hangs
+  const crawlerCircuitBreaker = new RedisCircuitBreaker('web_crawler', {
+    failureThreshold: 5,
+    recoveryTimeout: 60000,
+  });
+
+  const response = await crawlerCircuitBreaker.execute(async () => {
+    const res = await fetch(targetUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (compatible; StrategicAuditBot/1.0; +https://strategicaudit.pro)",
+      },
+      signal: AbortSignal.timeout(20000), 
+      next: { revalidate: 0 } as any,
+    } as RequestInit);
+    return res;
+  });
 
   const contentType = response.headers.get("content-type") || "";
   const contentLength = response.headers.get("content-length");
