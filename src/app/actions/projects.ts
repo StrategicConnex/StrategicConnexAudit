@@ -87,6 +87,6 @@ export const deactivateProject = authenticatedAction(
       );
       
     revalidatePath('/');
-    redirect('/');
+    return { success: true };
   }
 );

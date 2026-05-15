@@ -85,6 +85,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             'use server';
             const { deactivateProject } = await import('@/app/actions/projects');
             await deactivateProject({ projectId });
+            redirect('/');
           }}>
             <button className="bg-destructive/10 text-red-400 hover:bg-destructive/20 hover:text-red-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-destructive/20">
               <AlertTriangle className="w-4 h-4" />
