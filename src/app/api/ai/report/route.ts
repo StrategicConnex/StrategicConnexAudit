@@ -55,28 +55,6 @@ export async function POST(req: NextRequest) {
     }
     const project = projectList[0];
 
-    // 2.5 Rate Limiting Guard (30 seconds per user/project)
-    // We check the latest audit update time to prevent spamming
-    const lastAuditCheck = await db
-      .select({ updatedAt: audits.updatedAt })
-      .from(audits)
-      .where(eq(audits.projectId, project.id))
-      .orderBy(desc(audits.updatedAt))
-      .limit(1);
-
-    if (lastAuditCheck.length > 0 && lastAuditCheck[0].updatedAt) {
-      const lastUpdate = new Date(lastAuditCheck[0].updatedAt).getTime();
-      const now = Date.now();
-      const diffSeconds = (now - lastUpdate) / 1000;
-
-      if (diffSeconds < 30) {
-        const waitTime = Math.ceil(30 - diffSeconds);
-        return NextResponse.json({ 
-          success: false, 
-          error: `Límite de velocidad excedido. Por favor, espera ${waitTime} segundos antes de generar otro reporte.` 
-        }, { status: 429 });
-      }
-    }
 
     // 3. Obtain historical metrics concurrently to resolve sequential RTT blockings
     const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
@@ -193,11 +171,6 @@ Instrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconn
     if (!generatedReport) {
       throw new Error('La respuesta de la IA no contiene texto generado válido.');
     }
-
-    // 7.5 Update audit timestamp to reset rate limit anchor
-    await db.update(audits)
-      .set({ updatedAt: new Date() })
-      .where(eq(audits.id, latestAudits[0]?.id || ''));
 
     return NextResponse.json({
       success: true,
