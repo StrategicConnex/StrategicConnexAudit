@@ -71,7 +71,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       }
 
       // 4. Fetch Uptime Logs (Resiliente)
-      let recentUptimes = [];
+      let recentUptimes: any[] = [];
       try {
         recentUptimes = await tx.select().from(uptimeLogs)
           .where(eq(uptimeLogs.projectId, projectId))
@@ -84,7 +84,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
         
       // 5. Fetch Web Vitals Logs (Resiliente)
-      let vitalsLogs = [];
+      let vitalsLogs: any[] = [];
       try {
         vitalsLogs = await tx.select({
           lcp: webVitalsLogs.lcp,
@@ -98,6 +98,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       } catch (e) {
         console.error("Error fetching vitals logs:", e);
       }
+
 
 
       const vitalsAverages = {
