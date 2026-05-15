@@ -533,7 +533,7 @@ interface DashboardContainerProps {
 }
 
 export function DashboardContainer({ initialProjects, dashboardData }: DashboardContainerProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'performance' | 'keywords' | 'reports'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'performance' | 'keywords' | 'reports' | 'settings'>('overview');
   const [viewMode, setViewMode] = useState<'visual' | 'markdown'>('visual');
   const [keywordInput, setKeywordInput] = useState('');
   const [keywordsList, setKeywordsList] = useState([
@@ -748,7 +748,14 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
 
         {/* Footer Sidebar / Settings */}
         <div className="p-4 border-t border-border/50 shrink-0">
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-white/5 hover:text-white transition-all cursor-pointer">
+          <div 
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+              activeTab === 'settings'
+                ? 'bg-primary/10 text-primary border border-primary/20'
+                : 'text-muted-foreground hover:bg-white/5 hover:text-white border border-transparent'
+            }`}
+          >
             <Settings className="w-4 h-4" />
             <span>Configuración</span>
           </div>
@@ -766,6 +773,7 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
               {activeTab === 'performance' && 'Auditoría de Rendimiento (Web Vitals)'}
               {activeTab === 'keywords' && 'Seguimiento de Palabras Clave'}
               {activeTab === 'reports' && 'Exportación de Reportes de Auditoría'}
+              {activeTab === 'settings' && 'Configuración de la Cuenta'}
             </h1>
             <span className="text-xs bg-white/5 px-2 py-1 rounded border border-white/10 font-mono text-muted-foreground hidden sm:inline-block">
               v2.1.0
@@ -1542,6 +1550,49 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SETTINGS VIEW */}
+            {activeTab === 'settings' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="glass-card rounded-2xl p-8 border border-white/10 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+                  
+                  <div className="mb-8">
+                    <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-primary" />
+                      Configuración del Sistema
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-1">Administra las credenciales, llaves de API y preferencias de la agencia.</p>
+                  </div>
+
+                  <div className="grid gap-6 max-w-3xl">
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-white/80 uppercase tracking-widest border-b border-border/50 pb-2">Integraciones de IA</h3>
+                      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-white">OpenRouter / LLM API Key</span>
+                          <span className="text-xs bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20">Activo (env.local)</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-4">La configuración de los modelos (GPT-4o, Gemini 2.5, Claude) se maneja automáticamente vía variables de entorno.</p>
+                        <div className="flex gap-2">
+                          <input type="password" value="************************" readOnly className="flex-1 bg-black/40 border border-border/50 rounded-lg px-3 py-2 text-sm text-muted-foreground focus:outline-none" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-4">
+                      <h3 className="text-sm font-semibold text-white/80 uppercase tracking-widest border-b border-border/50 pb-2">Marca Blanca (White Label)</h3>
+                      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
+                        <p className="text-sm text-muted-foreground mb-4">Personaliza los logos, colores y dominios de los reportes. <br/><br/><span className="text-primary italic">Próximamente disponible en Fase 2.</span></p>
+                        <button disabled className="bg-white/5 text-white/50 px-4 py-2 rounded-lg text-sm font-medium border border-white/5 cursor-not-allowed">
+                          Configurar Branding
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
