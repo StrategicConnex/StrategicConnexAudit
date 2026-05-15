@@ -3,6 +3,7 @@ import { db } from '@/shared/db';
 import { projects, audits, integrations, integrationDataGsc, integrationDataGa4, keywordTargets } from '@/shared/db/schemas';
 import { eq, desc, isNull, sql, and } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
+import { withRLS } from '@/shared/db/rls';
 
 // Rate limiting store (in-memory for demo, use Redis in production)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -89,56 +90,97 @@ export async function GET(req: NextRequest) {
     }
 
 
-    // 4. If projectId is specified, verify ownership for authenticated users
-    let activeProjects: any[] = []; // Type for Drizzle query results
-    
-    if (projectId) {
-      // For authenticated users, verify project ownership
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        activeProjects = await db
-          .select()
-          .from(projects)
-          .where(
-            and(
-              eq(projects.id, projectId),
-              eq(projects.ownerId, user.id)
-            )
-          );
-      } else {
-        // Public API access - return empty if no user context
-        activeProjects = [];
-      }
+    // 4. Fetch projects using withRLS if user is authenticated
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let activeProjects: any[] = [];
+
+    if (user) {
+      activeProjects = await withRLS(user.id, async (tx) => {
+        if (projectId) {
+          return await tx
+            .select()
+            .from(projects)
+            .where(
+              and(
+                eq(projects.id, projectId),
+                eq(projects.ownerId, user.id)
+              )
+            );
+        } else {
+          return await tx
+            .select()
+            .from(projects)
+            .where(
+              and(
+                eq(projects.ownerId, user.id),
+                isNull(projects.deletedAt)
+              )
+            );
+        }
+      });
+    } else if (!expectedKey) {
+      // If no user and no API key, return empty
+      activeProjects = [];
     } else {
-      // Only return projects for authenticated users or if no specific project requested
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        activeProjects = await db
-          .select()
-          .from(projects)
-          .where(
-            and(
-              eq(projects.ownerId, user.id),
-              isNull(projects.deletedAt)
-            )
-          );
-      } else {
-        activeProjects = await db
-          .select()
-          .from(projects)
-          .where(isNull(projects.deletedAt));
-      }
+      // API Key access but no user - in this case we might want to return all projects 
+      // if the system allows public access via API Key. 
+      // However, if RLS is enabled, we'd need a superuser role to see anything.
+      // For now, let's keep it as is, but this might need a different handler if it's a service role.
+      activeProjects = await db
+        .select()
+        .from(projects)
+        .where(isNull(projects.deletedAt));
     }
 
     // 5. Generate rows with concurrent fetching
     const rows: any[] = [];
     const today = new Date();
 
-    const projectDataPromises = activeProjects.map(async (project) => {
+    const enrichedProjects = user ? await withRLS(user.id, async (tx) => {
+      const promises = activeProjects.map(async (project) => {
+        const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
+          tx
+            .select()
+            .from(integrationDataGsc)
+            .where(eq(integrationDataGsc.projectId, project.id))
+            .orderBy(desc(integrationDataGsc.date))
+            .limit(30),
+          tx
+            .select()
+            .from(integrationDataGa4)
+            .where(eq(integrationDataGa4.projectId, project.id))
+            .orderBy(desc(integrationDataGa4.date))
+            .limit(30),
+          tx
+            .select()
+            .from(audits)
+            .where(eq(audits.projectId, project.id))
+            .orderBy(desc(audits.createdAt))
+            .limit(1),
+          tx
+            .select({ count: sql<number>`count(*)` })
+            .from(keywordTargets)
+            .where(eq(keywordTargets.projectId, project.id))
+        ]);
+
+        const score = latestAudits[0]?.status === 'completed' ? 85 : 45;
+        const crawledCount = latestAudits[0]?.status === 'completed' ? 142 : 0;
+        const keywordsCount = Number(keywordsCountResult[0]?.count || 0);
+
+        return {
+          project,
+          gscRecords,
+          ga4Records,
+          score,
+          crawledCount,
+          keywordsCount
+        };
+      });
+      return await Promise.all(promises);
+    }) : await Promise.all(activeProjects.map(async (project) => {
+      // Fallback for public access (if allowed by DB config)
       const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
         db
           .select()
@@ -176,9 +218,7 @@ export async function GET(req: NextRequest) {
         crawledCount,
         keywordsCount
       };
-    });
-
-    const enrichedProjects = await Promise.all(projectDataPromises);
+    }));
 
     for (const { project, gscRecords, ga4Records, score, crawledCount, keywordsCount } of enrichedProjects) {
       for (let i = 14; i >= 0; i--) {

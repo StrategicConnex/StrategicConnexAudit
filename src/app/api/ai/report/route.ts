@@ -6,6 +6,7 @@ import { createClient } from '@/shared/lib/supabase/server';
 import { env } from '@/shared/config/env';
 import { checkAiRateLimit } from '@/shared/lib/ratelimit';
 import { RedisCircuitBreaker } from '@/shared/lib/circuit-breaker';
+import { withRLS } from '@/shared/db/rls';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,46 +45,59 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. Obtain project ensuring strict ownership verification (Tenant-Isolation Guard)
-    const projectList = await db
-      .select()
-      .from(projects)
-      .where(and(eq(projects.id, projectId), eq(projects.ownerId, user.id)));
+    // 2. Obtain project and metrics ensuring strict ownership verification (Tenant-Isolation Guard)
+    const dbData = await withRLS(user.id, async (tx) => {
+      const projectList = await tx
+        .select()
+        .from(projects)
+        .where(and(eq(projects.id, projectId), eq(projects.ownerId, user.id)));
 
-    if (projectList.length === 0) {
+      if (projectList.length === 0) {
+        return null;
+      }
+      const project = projectList[0];
+
+      // 3. Obtain historical metrics concurrently to resolve sequential RTT blockings
+      const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
+        tx
+          .select()
+          .from(integrationDataGsc)
+          .where(eq(integrationDataGsc.projectId, project.id))
+          .orderBy(desc(integrationDataGsc.date))
+          .limit(30),
+        tx
+          .select()
+          .from(integrationDataGa4)
+          .where(eq(integrationDataGa4.projectId, project.id))
+          .orderBy(desc(integrationDataGa4.date))
+          .limit(30),
+        tx
+          .select()
+          .from(audits)
+          .where(eq(audits.projectId, project.id))
+          .orderBy(desc(audits.createdAt))
+          .limit(1),
+        tx
+          .select({ count: sql<number>`count(*)` })
+          .from(keywordTargets)
+          .where(eq(keywordTargets.projectId, project.id))
+      ]);
+
+      return {
+        project,
+        gscRecords,
+        ga4Records,
+        latestAudits,
+        keywordsCount: Number(keywordsCountResult[0]?.count || 0)
+      };
+    });
+
+    if (!dbData) {
       // Return 404 (or 403) to prevent enumerating projects that do not belong to the user
       return NextResponse.json({ success: false, error: 'Proyecto no encontrado o acceso denegado' }, { status: 404 });
     }
-    const project = projectList[0];
 
-
-    // 3. Obtain historical metrics concurrently to resolve sequential RTT blockings
-    const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
-      db
-        .select()
-        .from(integrationDataGsc)
-        .where(eq(integrationDataGsc.projectId, project.id))
-        .orderBy(desc(integrationDataGsc.date))
-        .limit(30),
-      db
-        .select()
-        .from(integrationDataGa4)
-        .where(eq(integrationDataGa4.projectId, project.id))
-        .orderBy(desc(integrationDataGa4.date))
-        .limit(30),
-      db
-        .select()
-        .from(audits)
-        .where(eq(audits.projectId, project.id))
-        .orderBy(desc(audits.createdAt))
-        .limit(1),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(keywordTargets)
-        .where(eq(keywordTargets.projectId, project.id))
-    ]);
-
-    const keywordsCount = Number(keywordsCountResult[0]?.count || 0);
+    const { project, gscRecords, ga4Records, latestAudits, keywordsCount } = dbData;
 
     // 4. Calculate stats with fallbacks
     const totalClicks = gscRecords.reduce((sum, r) => sum + (r.clicks || 0), 0) || 2450;
