@@ -1,6 +1,6 @@
 import { db } from '@/shared/db';
 import { projects, audits, crawlResults, issues, uptimeLogs, webVitalsLogs } from '@/shared/db/schemas';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, count, avg } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Globe, Activity, FileText, AlertTriangle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -43,22 +43,22 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     let criticalIssuesCount = "0";
 
     if (latestCompletedAudit) {
-      // Optimizamos usando count() en lugar de traer miles de registros a memoria
-      const crawlsCountResult = await tx.execute(sql`SELECT count(*)::int as count FROM ${crawlResults} WHERE audit_id = ${latestCompletedAudit.id}`);
-      const crawlsCount = crawlsCountResult.rows[0];
-      pagesCrawled = (crawlsCount?.count || 0).toString();
-
-      const issueStatsResult = await tx.execute(sql`
-        SELECT 
-          count(*) filter (where severity = 'critical')::int as critical_count,
-          count(*) filter (where severity = 'warning')::int as warning_count
-        FROM ${issues} 
-        WHERE audit_id = ${latestCompletedAudit.id}
-      `);
-      const issueStats = issueStatsResult.rows[0];
+      // Optimizamos usando count() nativo de Drizzle
+      const [crawlsCount] = await tx.select({ value: count() })
+        .from(crawlResults)
+        .where(eq(crawlResults.auditId, latestCompletedAudit.id));
       
-      const criticals = (issueStats as any)?.critical_count || 0;
-      const warnings = (issueStats as any)?.warning_count || 0;
+      pagesCrawled = (crawlsCount?.value || 0).toString();
+
+      const [issueStats] = await tx.select({
+        criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
+        warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`)
+      })
+      .from(issues)
+      .where(eq(issues.auditId, latestCompletedAudit.id));
+      
+      const criticals = Number(issueStats?.criticalCount || 0);
+      const warnings = Number(issueStats?.warningCount || 0);
       
       criticalIssuesCount = criticals.toString();
       healthScore = Math.max(0, 100 - (criticals * 15) - (warnings * 5)).toString() + "%";
@@ -72,26 +72,30 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       
     const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
 
-    // 5. Fetch Web Vitals Logs (Averages optimizados en SQL)
-    const vitalsStatsResult = await tx.execute(sql`
-      SELECT 
-        avg(lcp)::float as avg_lcp,
-        avg(cls)::float as avg_cls,
-        avg(fcp)::float as avg_fcp
-      FROM (
-        SELECT lcp, cls, fcp 
-        FROM ${webVitalsLogs} 
-        WHERE project_id = ${projectId}
-        ORDER BY recorded_at DESC
-        LIMIT 100
-      ) as recent_vitals
-    `);
-    const vitalsStats = vitalsStatsResult.rows[0];
+    // 5. Fetch Web Vitals Logs (Averages optimizados con Drizzle)
+    // Subconsulta para limitar a los últimos 100 registros antes de promediar
+    const recentVitalsSq = tx.select({
+      lcp: webVitalsLogs.lcp,
+      cls: webVitalsLogs.cls,
+      fcp: webVitalsLogs.fcp
+    })
+    .from(webVitalsLogs)
+    .where(eq(webVitalsLogs.projectId, projectId))
+    .orderBy(desc(webVitalsLogs.recordedAt))
+    .limit(100)
+    .as('recent_vitals_sq');
+
+    const [vitalsStats] = await tx.select({
+      avgLcp: avg(recentVitalsSq.lcp),
+      avgCls: avg(recentVitalsSq.cls),
+      avgFcp: avg(recentVitalsSq.fcp)
+    })
+    .from(recentVitalsSq);
 
     const vitalsAverages = {
-      LCP: (vitalsStats as any)?.avg_lcp || 0,
-      CLS: (vitalsStats as any)?.avg_cls || 0,
-      FCP: (vitalsStats as any)?.avg_fcp || 0,
+      LCP: Number(vitalsStats?.avgLcp || 0),
+      CLS: Number(vitalsStats?.avgCls || 0),
+      FCP: Number(vitalsStats?.avgFcp || 0),
       FID: 0,
     };
 
