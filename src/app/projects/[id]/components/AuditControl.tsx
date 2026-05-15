@@ -107,6 +107,19 @@ export default function AuditControl({ projectId }: AuditControlProps) {
     return () => clearInterval(pollInterval);
   }, [auditId, status, projectId, router]);
 
+  // Detector de "congelamiento" en 15% (Worker no responde)
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isAuditing && status === 'pending' && progress >= 15) {
+      timeout = setTimeout(() => {
+        setShowWorkerWarning(true);
+      }, 20000); // 20 segundos esperando en 15%
+    } else {
+      setShowWorkerWarning(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [isAuditing, status, progress]);
+
   const handleStartAudit = () => {
     if (status === 'pending' || status === 'running') return;
     
@@ -144,7 +157,6 @@ export default function AuditControl({ projectId }: AuditControlProps) {
     });
   };
 
-  const isAuditing = status === 'pending' || status === 'running';
   const isDisabled = isAuditing || isPending || cooldown > 0;
 
   return (
