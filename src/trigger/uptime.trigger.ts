@@ -7,7 +7,7 @@ export const uptimeMonitor = schedules.task({
   id: "uptime-monitor",
   cron: "*/15 * * * *", // Cada 15 minutos
   run: async (payload) => {
-    console.log(`[Uptime] Iniciando ciclo de monitoreo: ${payload.scheduleTime}`);
+    console.log(`[Uptime] Iniciando ciclo de monitoreo: ${payload.timestamp}`);
 
     // 1. Obtener todos los proyectos activos
     const activeProjects = await db
