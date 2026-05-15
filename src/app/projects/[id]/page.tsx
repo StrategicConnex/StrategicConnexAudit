@@ -116,7 +116,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         pagesCrawled,
         criticalIssuesCount,
         currentUptimeStatus,
-        vitalsAverages
+        vitalsAverages,
+        latestCompletedAudit
       };
     });
   } catch (error: any) {
@@ -149,7 +150,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, currentUptimeStatus, vitalsAverages } = data;
+  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, currentUptimeStatus, vitalsAverages, latestCompletedAudit } = data;
   
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
