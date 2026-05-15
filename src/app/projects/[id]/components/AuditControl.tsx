@@ -49,16 +49,19 @@ export default function AuditControl({ projectId }: AuditControlProps) {
       // Se vuelve más lento a medida que se acerca al 95% para simular espera real
       intervalId = setInterval(() => {
         setProgress((prev) => {
-          if (prev < 15) return 15;
-          if (prev < 60) return prev + Math.floor(Math.random() * 3) + 1;
-          if (prev < 85) return prev + 1;
-          if (prev < 95) return prev + (Math.random() > 0.7 ? 1 : 0);
+          // Incremento inicial rápido hasta el 15%
+          if (prev < 15) return prev + 2;
+          // Progreso simulado más fluido
+          if (prev < 45) return prev + (Math.random() > 0.4 ? 1 : 0.5);
+          if (prev < 75) return prev + (Math.random() > 0.7 ? 0.5 : 0.2);
+          if (prev < 92) return prev + (Math.random() > 0.9 ? 0.2 : 0.1);
           return prev;
         });
-      }, 200);
+      }, 300);
     } else if (status === 'completed') {
-      // Se completa de golpe al 100%
       setProgress(100);
+    } else if (status === 'failed' || status === 'idle') {
+      // No resetear progreso inmediatamente para permitir ver el error
     }
 
     return () => clearInterval(intervalId);
@@ -107,7 +110,7 @@ export default function AuditControl({ projectId }: AuditControlProps) {
     
     setErrorMessage(null);
     setStatus('pending');
-    setProgress(2);
+    setProgress(5);
 
     startTransition(async () => {
       try {

@@ -92,40 +92,63 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   await validateSafeUrl(targetUrl);
 
   // 2. Fetch with a 20s AbortSignal timeout to prevent unbounded hangs
+  // 2. Fetch with a 25s AbortSignal timeout to prevent unbounded hangs
   const crawlerCircuitBreaker = new RedisCircuitBreaker('web_crawler', {
     failureThreshold: 5,
     recoveryTimeout: 60000,
   });
 
   const response = await crawlerCircuitBreaker.execute(async () => {
-    const res = await fetch(targetUrl, {
+    const response = await fetch(targetUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (compatible; StrategicAuditBot/1.0; +https://strategicaudit.pro)",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 StrategicAuditBot/1.1",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
       },
-      signal: AbortSignal.timeout(20000), 
+      signal: AbortSignal.timeout(25000),
       next: { revalidate: 0 } as any,
     } as RequestInit);
-    return res;
+    return response;
   });
 
-  const contentType = response.headers.get("content-type") || "";
-  const contentLength = response.headers.get("content-length");
-  const statusCode = response.status;
-
   if (!response.ok) {
-    throw new Error(`Error al descargar la URL de destino. Código de estado HTTP: ${statusCode}`);
+    console.warn(`[Crawler] El sitio respondió con error HTTP ${response.status} para ${targetUrl}`);
+    return { 
+      statusCode: response.status, 
+      contentType: response.headers.get("content-type") || "unknown",
+      title: null,
+      metaDescription: null,
+      h1Tags: [],
+      h2Tags: [],
+      wordCount: 0
+    };
   }
 
-  // 3. Prevent Memory Exhaustion (OOM) by checking headers prior to reading text
-  if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
-    throw new Error(`Tipo de archivo no soportado: "${contentType}". Solo se admiten páginas HTML.`);
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    console.warn(`[Crawler] El contenido no es HTML (${contentType}) para ${targetUrl}`);
+    return { 
+      statusCode: response.status, 
+      contentType,
+      title: null,
+      metaDescription: null,
+      h1Tags: [],
+      h2Tags: [],
+      wordCount: 0
+    };
   }
 
-  if (contentLength && parseInt(contentLength, 10) > 5 * 1024 * 1024) {
-    throw new Error(`El archivo HTML excede el límite máximo de tamaño de 5 MB (Tamaño detectado: ${(parseInt(contentLength, 10)/1024/1024).toFixed(2)} MB).`);
+  const contentLength = response.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > 8 * 1024 * 1024) {
+    console.warn(`[Crawler] Archivo demasiado grande (${contentLength} bytes)`);
+    return { statusCode: response.status, contentType, title: null, metaDescription: null, h1Tags: [], h2Tags: [], wordCount: 0, error: "Archivo demasiado grande" };
   }
 
+  console.log(`[Crawler] Descargando contenido para ${targetUrl}...`);
   const html = await response.text();
+  console.log(`[Crawler] Descarga completada (${html.length} caracteres)`);
 
   // 1. Extracción de etiqueta Title
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -220,7 +243,9 @@ export const runProjectAudit = task({
     try {
       // 2. Ejecutar análisis web
       console.log(`[Audit] Analizando sitio web: ${targetUrl}`);
+      console.log(`[Audit] Iniciando análisis de URL: ${targetUrl}`);
       const analysis = await analyzeUrl(targetUrl);
+      console.log(`[Audit] Análisis completado. Status: ${analysis.statusCode}, Title: ${analysis.title?.substring(0, 30)}...`);
       console.log(`[Audit] Análisis completado. Estado HTTP: ${analysis.statusCode}, Palabras: ${analysis.wordCount}`);
 
       // 3. Guardar resultados de la descarga

@@ -26,8 +26,13 @@ export class RedisCircuitBreaker {
   }
 
   async getState(): Promise<CircuitState> {
-    const state = await redis.get<CircuitState>(`${this.key}:state`);
-    return state || CircuitState.CLOSED;
+    try {
+      const state = await redis.get<CircuitState>(`${this.key}:state`);
+      return state || CircuitState.CLOSED;
+    } catch (e) {
+      console.warn(`[CircuitBreaker] Error conectando a Redis para ${this.key}, asumiendo CLOSED:`, e);
+      return CircuitState.CLOSED;
+    }
   }
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
