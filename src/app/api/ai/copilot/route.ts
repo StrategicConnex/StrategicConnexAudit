@@ -32,8 +32,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Call LLM
-    const apiKey = env.bearerApiKey || env.geminiApiKey || '';
-    const aiUrl = env.aiBaseUrl || 'https://api.openai.com/v1/chat/completions';
+    const apiKey = env.openRouterApiKey || env.bearerApiKey || env.geminiApiKey || '';
+    const aiUrl = env.openRouterBaseUrl ? `${env.openRouterBaseUrl}/chat/completions` : (env.aiBaseUrl || 'https://api.openai.com/v1/chat/completions');
+    const aiModel = env.openRouterApiKey ? "openai/gpt-3.5-turbo" : "gpt-3.5-turbo";
 
     const systemMessage = {
       role: 'system',
@@ -48,7 +49,7 @@ Contexto actual del usuario: ${JSON.stringify(context || 'Sin contexto específi
     if (!apiKey) {
       return NextResponse.json({
         success: true,
-        message: "¡Hola! Parece que tu API Key de IA no está configurada en las variables de entorno (Bearer_API_KEY o GEMINI_API_KEY). Por favor, configúrala para activar el AI Copilot."
+        message: "¡Hola! Parece que tu API Key de IA no está configurada en las variables de entorno (OPENROUTER_API_KEY o Bearer_API_KEY). Por favor, configúrala para activar el AI Copilot."
       });
     }
 
@@ -65,7 +66,7 @@ Contexto actual del usuario: ${JSON.stringify(context || 'Sin contexto específi
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-3.5-turbo",
+          model: aiModel,
           messages: apiMessages,
           temperature: 0.4
         })

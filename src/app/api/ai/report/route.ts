@@ -119,8 +119,9 @@ export async function POST(req: NextRequest) {
     const crawledCount = latestAudits[0]?.status === 'completed' ? 142 : 0;
     const isNewProject = latestAudits.length === 0;
 
-    const apiKey = env.bearerApiKey;
-    const aiUrl = env.aiBaseUrl;
+    const apiKey = env.openRouterApiKey || env.bearerApiKey || '';
+    const aiUrl = env.openRouterBaseUrl ? `${env.openRouterBaseUrl}/chat/completions` : (env.aiBaseUrl || 'https://api.openai.com/v1/chat/completions');
+    const aiModel = env.openRouterApiKey ? "openai/gpt-3.5-turbo" : "gpt-3.5-turbo";
 
     // 5. Securely return premium pre-compiled fallback report if API key is missing
     if (!apiKey) {
@@ -168,7 +169,7 @@ Instrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconn
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-3.5-turbo",
+          model: aiModel,
           messages: [
             { role: "system", content: "Eres un experto en SEO y marketing digital de alto nivel." },
             { role: "user", content: prompt }

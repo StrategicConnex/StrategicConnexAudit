@@ -12,4 +12,6 @@ export const env = {
   get geminiApiKey() { return process.env.GEMINI_API_KEY || ""; },
   get bearerApiKey() { return process.env.Bearer_API_KEY || ""; },
   get aiBaseUrl() { return process.env.XIAOMI_BASE_URL || "https://apifreellm.com/api/v1/chat"; },
+  get openRouterApiKey() { return process.env.OPENROUTER_API_KEY || ""; },
+  get openRouterBaseUrl() { return process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1"; },
 };
