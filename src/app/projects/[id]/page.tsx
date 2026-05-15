@@ -1,10 +1,12 @@
 import { db } from '@/shared/db';
 import { projects, audits, crawlResults, issues } from '@/shared/db/schemas';
 import { eq, desc } from 'drizzle-orm';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Globe, Activity, FileText, AlertTriangle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import AuditControl from './components/AuditControl';
+import { createClient } from '@/shared/lib/supabase/server';
+import { withRLS } from '@/shared/db/rls';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,35 +14,60 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const resolvedParams = await params;
   const projectId = resolvedParams.id;
   
-  // 1. Obtener proyecto de la base de datos
-  const projectResult = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
-  const project = projectResult[0];
-  
-  if (!project) {
+  // 0. Autenticar usuario
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Ejecutar todo el fetch dentro de un contexto RLS
+  const data = await withRLS(user.id, async (tx) => {
+    // 1. Obtener proyecto de la base de datos
+    const projectResult = await tx.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+    const project = projectResult[0];
+    
+    if (!project) {
+      return null;
+    }
+    
+    // 2. Obtener historial de auditorías
+    const projectAudits = await tx.select().from(audits).where(eq(audits.projectId, projectId)).orderBy(desc(audits.createdAt));
+
+    // 3. Extraer la última auditoría completada con éxito para calcular métricas vivas
+    const latestCompletedAudit = projectAudits.find(a => a.status === 'completed');
+    
+    let healthScore = "--";
+    let pagesCrawled = "0";
+    let criticalIssuesCount = "0";
+
+    if (latestCompletedAudit) {
+      const crawls = await tx.select().from(crawlResults).where(eq(crawlResults.auditId, latestCompletedAudit.id));
+      pagesCrawled = crawls.length.toString();
+
+      const auditIssues = await tx.select().from(issues).where(eq(issues.auditId, latestCompletedAudit.id));
+      const criticals = auditIssues.filter(i => i.severity === 'critical');
+      const warnings = auditIssues.filter(i => i.severity === 'warning');
+      
+      criticalIssuesCount = criticals.length.toString();
+      healthScore = Math.max(0, 100 - (criticals.length * 15) - (warnings.length * 5)).toString() + "%";
+    }
+
+    return {
+      project,
+      projectAudits,
+      healthScore,
+      pagesCrawled,
+      criticalIssuesCount
+    };
+  });
+
+  if (!data) {
     notFound();
   }
-  
-  // 2. Obtener historial de auditorías
-  const projectAudits = await db.select().from(audits).where(eq(audits.projectId, projectId)).orderBy(desc(audits.createdAt));
 
-  // 3. Extraer la última auditoría completada con éxito para calcular métricas vivas
-  const latestCompletedAudit = projectAudits.find(a => a.status === 'completed');
-  
-  let healthScore = "--";
-  let pagesCrawled = "0";
-  let criticalIssuesCount = "0";
-
-  if (latestCompletedAudit) {
-    const crawls = await db.select().from(crawlResults).where(eq(crawlResults.auditId, latestCompletedAudit.id));
-    pagesCrawled = crawls.length.toString();
-
-    const auditIssues = await db.select().from(issues).where(eq(issues.auditId, latestCompletedAudit.id));
-    const criticals = auditIssues.filter(i => i.severity === 'critical');
-    const warnings = auditIssues.filter(i => i.severity === 'warning');
-    
-    criticalIssuesCount = criticals.length.toString();
-    healthScore = Math.max(0, 100 - (criticals.length * 15) - (warnings.length * 5)).toString() + "%";
-  }
+  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount } = data;
   
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">

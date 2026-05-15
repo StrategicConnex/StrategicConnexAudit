@@ -1,7 +1,9 @@
 import { db } from '@/shared/db';
 import { projects, audits, crawlResults, issues } from '@/shared/db/schemas';
 import { eq, and } from 'drizzle-orm';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { createClient } from '@/shared/lib/supabase/server';
+import { withRLS } from '@/shared/db/rls';
 import { 
   ArrowLeft, 
   CheckCircle2, 
@@ -23,21 +25,38 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
   const resolvedParams = await params;
   const { id: projectId, auditId } = resolvedParams;
   
-  // 1. Obtener proyecto y auditoría
-  const projectResult = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
-  const project = projectResult[0];
-  if (!project) notFound();
+  // 0. Autenticar usuario
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Ejecutar todo el fetch dentro de un contexto RLS
+  const data = await withRLS(user.id, async (tx) => {
+    // 1. Obtener proyecto y auditoría
+    const projectResult = await tx.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+    const project = projectResult[0];
+    if (!project) return null;
+    
+    const auditResult = await tx.select().from(audits).where(and(eq(audits.id, auditId), eq(audits.projectId, projectId))).limit(1);
+    const audit = auditResult[0];
+    if (!audit) return null;
+    
+    // 2. Obtener resultado del rastreo (crawl)
+    const crawlResultDb = await tx.select().from(crawlResults).where(eq(crawlResults.auditId, auditId)).limit(1);
+    const crawl = crawlResultDb[0];
+    
+    // 3. Obtener problemas de optimización
+    const auditIssues = await tx.select().from(issues).where(eq(issues.auditId, auditId));
+    
+    return { project, audit, crawl, auditIssues };
+  });
+
+  if (!data) notFound();
   
-  const auditResult = await db.select().from(audits).where(and(eq(audits.id, auditId), eq(audits.projectId, projectId))).limit(1);
-  const audit = auditResult[0];
-  if (!audit) notFound();
-  
-  // 2. Obtener resultado del rastreo (crawl)
-  const crawlResultDb = await db.select().from(crawlResults).where(eq(crawlResults.auditId, auditId)).limit(1);
-  const crawl = crawlResultDb[0];
-  
-  // 3. Obtener problemas de optimización
-  const auditIssues = await db.select().from(issues).where(eq(issues.auditId, auditId));
+  const { project, audit, crawl, auditIssues } = data;
   
   // 4. Filtrar y contar por gravedad
   const criticalIssues = auditIssues.filter(i => i.severity === 'critical');
