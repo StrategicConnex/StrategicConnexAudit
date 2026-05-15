@@ -82,7 +82,7 @@ Contexto actual del usuario: ${JSON.stringify(context || 'Sin contexto específi
     console.error('Error in Copilot endpoint:', error);
     return NextResponse.json({
       success: false,
-      error: 'Servicio de AI Copilot no disponible temporalmente.'
+      error: `Error Copilot: ${error.message || 'Servicio no disponible'}`
     }, { status: 503 });
   }
 }
