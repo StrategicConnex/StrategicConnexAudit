@@ -23,83 +23,102 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   }
 
   // Ejecutar todo el fetch dentro de un contexto RLS
-  const data = await withRLS(user.id, async (tx) => {
-    // 1. Obtener proyecto de la base de datos
-    const projectResult = await tx.select().from(projects).where(eq(projects.id, projectId)).limit(1);
-    const project = projectResult[0];
-    
-    if (!project) {
-      return null;
-    }
-    
-    // 2. Obtener historial de auditorías
-    const projectAudits = await tx.select().from(audits).where(eq(audits.projectId, projectId)).orderBy(desc(audits.createdAt));
-
-    // 3. Extraer la última auditoría completada con éxito para calcular métricas vivas
-    const latestCompletedAudit = projectAudits.find(a => a.status === 'completed');
-    
-    let healthScore = "--";
-    let pagesCrawled = "0";
-    let criticalIssuesCount = "0";
-
-    if (latestCompletedAudit) {
-      // Optimizamos usando count() nativo de Drizzle
-      const [crawlsCount] = await tx.select({ value: count() })
-        .from(crawlResults)
-        .where(eq(crawlResults.auditId, latestCompletedAudit.id));
+  let data;
+  try {
+    data = await withRLS(user.id, async (tx) => {
+      // 1. Obtener proyecto de la base de datos
+      const projectResult = await tx.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+      const project = projectResult[0];
       
-      pagesCrawled = (crawlsCount?.value || 0).toString();
+      if (!project) {
+        return null;
+      }
+      
+      // 2. Obtener historial de auditorías (limitado a las últimas 50 para rendimiento)
+      const projectAudits = await tx.select().from(audits)
+        .where(eq(audits.projectId, projectId))
+        .orderBy(desc(audits.createdAt))
+        .limit(50);
 
-      // Contamos issues por severidad de forma eficiente
-      const [issueStats] = await tx.select({
-        criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
-        warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`)
+      // 3. Extraer la última auditoría completada con éxito para calcular métricas vivas
+      const latestCompletedAudit = projectAudits.find(a => a.status === 'completed');
+      
+      let healthScore = "--";
+      let pagesCrawled = "0";
+      let criticalIssuesCount = "0";
+
+      if (latestCompletedAudit) {
+        // Optimizamos usando count() nativo de Drizzle
+        const [crawlsCount] = await tx.select({ value: count() })
+          .from(crawlResults)
+          .where(eq(crawlResults.auditId, latestCompletedAudit.id));
+        
+        pagesCrawled = (crawlsCount?.value || 0).toString();
+
+        // Contamos issues por severidad de forma eficiente
+        const [issueStats] = await tx.select({
+          criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
+          warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`)
+        })
+        .from(issues)
+        .where(eq(issues.auditId, latestCompletedAudit.id));
+        
+        const criticals = Number(issueStats?.criticalCount || 0);
+        const warnings = Number(issueStats?.warningCount || 0);
+        
+        criticalIssuesCount = criticals.toString();
+        healthScore = Math.max(0, 100 - (criticals * 15) - (warnings * 5)).toString() + "%";
+      }
+
+      // 4. Fetch Uptime Logs
+      const recentUptimes = await tx.select().from(uptimeLogs)
+        .where(eq(uptimeLogs.projectId, projectId))
+        .orderBy(desc(uptimeLogs.checkedAt))
+        .limit(10);
+      const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
+        
+      // 5. Fetch Web Vitals Logs (Cálculo simplificado para evitar subconsultas complejas)
+      const vitalsLogs = await tx.select({
+        lcp: webVitalsLogs.lcp,
+        cls: webVitalsLogs.cls,
+        fcp: webVitalsLogs.fcp
       })
-      .from(issues)
-      .where(eq(issues.auditId, latestCompletedAudit.id));
-      
-      const criticals = Number(issueStats?.criticalCount || 0);
-      const warnings = Number(issueStats?.warningCount || 0);
-      
-      criticalIssuesCount = criticals.toString();
-      healthScore = Math.max(0, 100 - (criticals * 15) - (warnings * 5)).toString() + "%";
-    }
+      .from(webVitalsLogs)
+      .where(eq(webVitalsLogs.projectId, projectId))
+      .orderBy(desc(webVitalsLogs.recordedAt))
+      .limit(50);
 
-    // 4. Fetch Uptime Logs
-    const recentUptimes = await tx.select().from(uptimeLogs)
-      .where(eq(uptimeLogs.projectId, projectId))
-      .orderBy(desc(uptimeLogs.checkedAt))
-      .limit(10);
-    const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
-      
-    // 5. Fetch Web Vitals Logs (Cálculo simplificado para evitar subconsultas complejas)
-    const vitalsLogs = await tx.select({
-      lcp: webVitalsLogs.lcp,
-      cls: webVitalsLogs.cls,
-      fcp: webVitalsLogs.fcp
-    })
-    .from(webVitalsLogs)
-    .where(eq(webVitalsLogs.projectId, projectId))
-    .orderBy(desc(webVitalsLogs.recordedAt))
-    .limit(50);
+      const vitalsAverages = {
+        LCP: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.lcp || 0), 0) / vitalsLogs.length : 0,
+        CLS: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.cls || 0), 0) / vitalsLogs.length : 0,
+        FCP: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.fcp || 0), 0) / vitalsLogs.length : 0,
+        FID: 0,
+      };
 
-    const vitalsAverages = {
-      LCP: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.lcp || 0), 0) / vitalsLogs.length : 0,
-      CLS: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.cls || 0), 0) / vitalsLogs.length : 0,
-      FCP: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.fcp || 0), 0) / vitalsLogs.length : 0,
-      FID: 0,
-    };
-
-    return {
-      project,
-      projectAudits,
-      healthScore,
-      pagesCrawled,
-      criticalIssuesCount,
-      currentUptimeStatus,
-      vitalsAverages
-    };
-  });
+      return {
+        project,
+        projectAudits,
+        healthScore,
+        pagesCrawled,
+        criticalIssuesCount,
+        currentUptimeStatus,
+        vitalsAverages
+      };
+    });
+  } catch (error: any) {
+    console.error("Error loading project detail:", error);
+    return (
+      <div className="p-10 text-red-500">
+        <h1 className="text-2xl font-bold">Error al cargar datos del proyecto</h1>
+        <p className="mt-2 text-sm opacity-80">Por favor, contacta a soporte con el siguiente detalle:</p>
+        <pre className="mt-4 p-4 bg-red-900/20 rounded border border-red-500/30 overflow-auto max-w-full">
+          {error.message || "Error desconocido"}
+          {error.code ? ` (Code: ${error.code})` : ""}
+        </pre>
+        <Link href="/" className="mt-6 inline-block text-white underline">Volver al inicio</Link>
+      </div>
+    );
+  }
 
   if (!data) {
     notFound();
