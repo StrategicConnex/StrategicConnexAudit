@@ -147,6 +147,8 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
     return { statusCode: response.status, contentType, title: null, metaDescription: null, h1Tags: [], h2Tags: [], wordCount: 0, error: "Archivo demasiado grande" };
   }
 
+  const statusCode = response.status;
+  
   console.log(`[Crawler] Descargando contenido para ${targetUrl}...`);
   const html = await response.text();
   console.log(`[Crawler] Descarga completada (${html.length} caracteres)`);
