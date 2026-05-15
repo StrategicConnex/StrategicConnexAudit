@@ -4,7 +4,7 @@ import { authenticatedAction } from "@/shared/lib/actions";
 import { z } from "zod";
 import { db } from "@/shared/db";
 import { audits, projects } from "@/shared/db/schemas";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { tasks } from "@trigger.dev/sdk";
 import type { runProjectAudit } from "@/trigger/audit.trigger";
