@@ -58,9 +58,62 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
   
   const { project, audit, crawl, auditIssues } = data;
   
-  // 4. Filtrar y contar por gravedad
   const criticalIssues = auditIssues.filter(i => i.severity === 'critical');
   const warningIssues = auditIssues.filter(i => i.severity === 'warning');
+
+  // Funciones de cálculo para el SEO Impact Score
+  const calculateImpactScore = (issue: typeof auditIssues[0]) => {
+    let score = 50;
+    let difficulty = 'Media';
+    let roi = 'Medio';
+    let urgency = 'Normal';
+
+    // Peso por gravedad
+    if (issue.severity === 'critical') {
+      score += 30;
+      urgency = 'Alta';
+      roi = 'Alto';
+    } else if (issue.severity === 'warning') {
+      score += 10;
+    }
+
+    // Ajuste fino por categoría (simulando impacto algorítmico)
+    switch (issue.category) {
+      case 'meta':
+      case 'seo':
+        score += 15;
+        difficulty = 'Baja'; // Fácil de cambiar texto
+        if (issue.severity === 'critical') roi = 'Muy Alto'; // Ej. Falta Title
+        break;
+      case 'performance':
+        score += 10;
+        difficulty = 'Alta'; // Optimizar LCP o JS es difícil
+        break;
+      case 'accessibility':
+        score += 5;
+        difficulty = 'Media';
+        break;
+      case 'link':
+        score += 12;
+        difficulty = 'Baja';
+        break;
+      case 'security':
+        score += 20;
+        difficulty = 'Media';
+        urgency = 'Alta';
+        break;
+    }
+
+    // Normalizar a 100
+    score = Math.min(100, Math.max(1, score));
+
+    return { score, difficulty, roi, urgency };
+  };
+
+  // Ordenar auditIssues por Impact Score (los más urgentes primero)
+  const sortedAuditIssues = [...auditIssues].sort((a, b) => {
+    return calculateImpactScore(b).score - calculateImpactScore(a).score;
+  });
   
   let healthScore = 100;
   if (audit.status === 'completed') {
@@ -359,45 +412,73 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                   )}
                 </div>
 
-                {auditIssues.length > 0 ? (
+                {sortedAuditIssues.length > 0 ? (
                   <div className="space-y-4">
-                    {auditIssues.map((issue) => (
-                      <div 
-                        key={issue.id} 
-                        className={`p-5 rounded-xl border flex flex-col md:flex-row gap-4 items-start justify-between bg-white/[0.01] transition-all hover:bg-white/[0.03]
-                          ${issue.severity === 'critical' ? 'border-red-500/15 hover:border-red-500/25' : 'border-yellow-500/15 hover:border-yellow-500/25'}`}
-                      >
-                        <div className="flex items-start gap-3.5 max-w-3xl">
-                          <div className={`p-2 rounded-lg shrink-0 mt-0.5
-                            ${issue.severity === 'critical' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}
-                          >
-                            {issue.severity === 'critical' ? <AlertCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                          </div>
-                          <div className="space-y-1.5 text-left">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border
-                                ${issue.severity === 'critical' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}
-                              >
-                                {issue.severity === 'critical' ? "CRÍTICO" : "ADVERTENCIA"}
-                              </span>
-                              <span className="text-xs bg-white/5 text-muted-foreground px-2 py-0.5 rounded border border-white/5 uppercase font-mono">{issue.category}</span>
+                    {sortedAuditIssues.map((issue) => {
+                      const impact = calculateImpactScore(issue);
+                      return (
+                        <div 
+                          key={issue.id} 
+                          className={`p-5 rounded-xl border flex flex-col md:flex-row gap-4 items-start justify-between bg-white/[0.01] transition-all hover:bg-white/[0.03]
+                            ${issue.severity === 'critical' ? 'border-red-500/15 hover:border-red-500/25' : 'border-yellow-500/15 hover:border-yellow-500/25'}`}
+                        >
+                          <div className="flex flex-col md:flex-row items-start gap-4 w-full">
+                            {/* Icono izquierdo */}
+                            <div className={`p-2 rounded-lg shrink-0 mt-0.5
+                              ${issue.severity === 'critical' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}
+                            >
+                              {issue.severity === 'critical' ? <AlertCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
                             </div>
-                            <h4 className="text-sm font-semibold text-foreground tracking-tight">{issue.title}</h4>
-                            <p className="text-xs text-muted-foreground leading-relaxed">{issue.description}</p>
-                            
-                            {/* Acción sugerida */}
-                            {issue.recommendation && (
-                              <div className="mt-3 p-3 rounded-lg bg-neutral-900/40 border border-white/5 text-xs text-muted-foreground space-y-1 text-left">
-                                <span className="font-semibold text-primary flex items-center gap-1">
-                                  <Sparkles className="w-3 h-3" /> Acción Sugerida:
+
+                            {/* Contenido Central */}
+                            <div className="space-y-2 text-left flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border
+                                  ${issue.severity === 'critical' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}
+                                >
+                                  {issue.severity === 'critical' ? "CRÍTICO" : "ADVERTENCIA"}
                                 </span>
-                                <p className="leading-normal">{issue.recommendation}</p>
+                                <span className="text-xs bg-white/5 text-muted-foreground px-2 py-0.5 rounded border border-white/5 uppercase font-mono">{issue.category}</span>
+                                
+                                {/* Insignia Impact Score */}
+                                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border bg-blue-500/10 text-blue-400 border-blue-500/20 flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3" /> Impact Score: {impact.score}
+                                </span>
                               </div>
-                            )}
+                              
+                              <h4 className="text-sm font-semibold text-foreground tracking-tight">{issue.title}</h4>
+                              <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">{issue.description}</p>
+                              
+                              {/* Matrices de Impacto */}
+                              <div className="flex gap-4 pt-2">
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Urgencia</span>
+                                  <span className={`text-xs font-semibold ${impact.urgency === 'Alta' ? 'text-red-400' : 'text-yellow-400'}`}>{impact.urgency}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Dificultad</span>
+                                  <span className={`text-xs font-semibold ${impact.difficulty === 'Alta' ? 'text-orange-400' : impact.difficulty === 'Media' ? 'text-yellow-400' : 'text-green-400'}`}>{impact.difficulty}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Est. ROI</span>
+                                  <span className={`text-xs font-semibold ${impact.roi.includes('Alto') ? 'text-green-400' : 'text-yellow-400'}`}>{impact.roi}</span>
+                                </div>
+                              </div>
+
+                              {/* Acción sugerida */}
+                              {issue.recommendation && (
+                                <div className="mt-3 p-3 rounded-lg bg-neutral-900/40 border border-white/5 text-xs text-muted-foreground space-y-1 text-left max-w-3xl">
+                                  <span className="font-semibold text-primary flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> Fix Recomendado:
+                                  </span>
+                                  <p className="leading-normal text-white/80">{issue.recommendation}</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-12 border border-dashed border-border/50 rounded-xl bg-white/[0.01]">
