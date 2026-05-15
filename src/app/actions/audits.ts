@@ -62,24 +62,36 @@ export const triggerAudit = authenticatedAction(
       createdBy: user.id,
     }).returning();
 
-    // 4. Trigger background task
-    try {
-      await tasks.trigger<typeof runProjectAudit>("run-project-audit", {
-        projectId,
-        auditId: audit.id,
-      });
-      
-      return { success: true, auditId: audit.id };
-    } catch (triggerError) {
-      console.error("Failed to trigger background task:", triggerError);
-      await tx.update(audits)
-        .set({ status: 'failed' })
-        .where(eq(audits.id, audit.id));
-        
-      return { success: false, message: "Error al iniciar el motor de análisis." };
-    }
+    return { success: true, auditId: audit.id, projectId };
   }
 );
+
+// We need a wrapper to trigger the task AFTER the transaction finishes
+// However, Server Actions are functions. We can't easily hook into the end of authenticatedAction
+// unless we modify it or wrap it.
+
+// Let's modify triggerAudit to be a custom function that uses withRLS internally
+// but calls tasks.trigger after withRLS finishes.
+
+export const startAuditAction = async (data: z.infer<typeof AuditSchema>) => {
+  // We use triggerAudit to handle the DB part (transaction)
+  const result = await triggerAudit(data);
+  
+  if (result.data?.success && result.data.auditId) {
+    try {
+      await tasks.trigger<typeof runProjectAudit>("run-project-audit", {
+        projectId: result.data.projectId!,
+        auditId: result.data.auditId,
+      });
+      return { data: { success: true, auditId: result.data.auditId } };
+    } catch (triggerError) {
+      console.error("Failed to trigger background task:", triggerError);
+      return { error: "Error al iniciar el motor de análisis en segundo plano." };
+    }
+  }
+  
+  return result;
+};
 
 const StatusSchema = z.object({
   auditId: z.string().uuid(),
@@ -101,7 +113,8 @@ export const getAuditStatus = authenticatedAction(
 
     const record = result[0];
     if (!record) {
-      throw new Error("Auditoría no encontrada");
+      console.log(`[getAuditStatus] Record NOT FOUND for ID: ${auditId}`);
+      return { success: false, message: "Auditoría no encontrada en la base de datos." };
     }
 
     // 2. Verify user owns the project
@@ -109,6 +122,15 @@ export const getAuditStatus = authenticatedAction(
       throw new Error("Acceso denegado");
     }
 
-    return { success: true, status: record.audit.status, errorMessage: record.audit.errorMessage };
+    return { 
+      success: true, 
+      status: record.audit.status, 
+      errorMessage: record.audit.errorMessage,
+      _debug: {
+        id: record.audit.id,
+        createdAt: record.audit.createdAt,
+        dbStatus: record.audit.status
+      }
+    };
   }
 );

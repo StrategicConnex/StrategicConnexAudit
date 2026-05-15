@@ -64,6 +64,30 @@ export const exportAuditToPdf = async (
       backgroundColor: '#0a0a0a', // Match app background
       windowWidth: 1200, // Fixed width for consistent rendering
       onclone: (clonedDoc) => {
+        // html2canvas fails on modern CSS color functions like lab() or oklch()
+        // We need to sanitize the styles of the cloned document
+        const allElements = clonedDoc.getElementsByTagName('*');
+        for (let i = 0; i < allElements.length; i++) {
+          const el = allElements[i] as HTMLElement;
+          
+          // Check for background and text colors that might use unsupported formats
+          if (el.style) {
+            const bg = el.style.backgroundColor;
+            const color = el.style.color;
+            const borderColor = el.style.borderColor;
+
+            if (bg && (bg.includes('lab(') || bg.includes('oklch('))) {
+              el.style.backgroundColor = '#111111'; // Fallback to dark
+            }
+            if (color && (color.includes('lab(') || color.includes('oklch('))) {
+              el.style.color = '#ffffff'; // Fallback to white
+            }
+            if (borderColor && (borderColor.includes('lab(') || borderColor.includes('oklch('))) {
+              el.style.borderColor = '#333333'; // Fallback to dark gray
+            }
+          }
+        }
+
         // Find elements that should be hidden in PDF and hide them
         const hiddenElements = clonedDoc.querySelectorAll('.no-print');
         hiddenElements.forEach(el => {

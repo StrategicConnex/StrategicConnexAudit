@@ -22,19 +22,26 @@ if (dbUrl) {
   }
 }
 
+const sslConfig = {
+  rejectUnauthorized: false,
+};
+
 const conn = globalForDb.conn ?? new Pool({
   connectionString: cleanUrl,
-  // Optimización para Vercel Serverless / Edge
-  // En producción, cada función serverless atiende un solo request concurrente,
-  // por lo que max: 2 es ideal para evitar agotar las conexiones del pooler de Supabase.
   max: isProduction ? 2 : 10,
-  // Cerrar conexiones inactivas rápidamente en serverless para liberar recursos
   idleTimeoutMillis: isProduction ? 15000 : 30000,
-  // No esperar indefinidamente por una conexión
   connectionTimeoutMillis: 5000,
-  ssl: cleanUrl?.includes('supabase.com') || cleanUrl?.includes('pooler') ? { rejectUnauthorized: false } : undefined,
+  ssl: cleanUrl?.includes('supabase') || cleanUrl?.includes('pooler') ? sslConfig : undefined,
+});
+
+// Instance for background workers or tasks that need to bypass RLS
+const directConn = new Pool({
+  connectionString: process.env.DIRECT_URL || cleanUrl,
+  max: 2,
+  ssl: (process.env.DIRECT_URL || cleanUrl)?.includes('supabase') ? sslConfig : undefined,
 });
 
 if (!isProduction) globalForDb.conn = conn;
 
 export const db = drizzle(conn, { schema });
+export const directDb = drizzle(directConn, { schema });

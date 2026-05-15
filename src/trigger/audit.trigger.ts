@@ -1,5 +1,5 @@
 import { task, wait } from "@trigger.dev/sdk";
-import { db } from "@/shared/db";
+import { directDb as db } from "@/shared/db";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { promises as dnsPromises } from "dns";
@@ -7,6 +7,11 @@ import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 
 console.log("[Trigger Module] audit.trigger.ts cargado correctamente.");
 console.log("[Trigger Module] DATABASE_URL presente:", !!process.env.DATABASE_URL);
+
+// Force allow self-signed certs in background worker environment
+if (process.env.NODE_ENV === 'production' || process.env.TRIGGER_SECRET_KEY) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
 
 interface AnalyzeResult {
   statusCode: number;
@@ -212,12 +217,13 @@ export const runProjectAudit = task({
     maxAttempts: 3,
   },
   run: async (payload: { projectId: string; auditId: string; userId?: string }) => {
-    console.log(`[Worker] Tarea recibida para auditoría ${payload.auditId} (Proyecto: ${payload.projectId})`);
+    const dbUrl = process.env.DATABASE_URL || "";
+    const dbHost = dbUrl.split('@')[1]?.split(':')[0] || "unknown";
+    console.log(`[Worker] Tarea recibida para auditoría ${payload.auditId} (Proyecto: ${payload.projectId}) en ${dbHost}`);
     
     try {
-      // 1. Actualización inmediata para mover la UI del 15%
-      console.log(`[Worker] Marcando auditoría como 'running'...`);
-      const [audit] = await db.update(audits)
+      // 1. Mark as running
+      const results = await db.update(audits)
         .set({
           status: "running",
           startedAt: new Date()
@@ -225,16 +231,11 @@ export const runProjectAudit = task({
         .where(eq(audits.id, payload.auditId))
         .returning();
 
-      if (!audit) {
-        // Pequeña espera por si hay lag de base de datos
-        await new Promise(r => setTimeout(r, 1000));
-        const [auditRetry] = await db.update(audits)
-          .set({ status: "running" })
-          .where(eq(audits.id, payload.auditId))
-          .returning();
-          
-        if (!auditRetry) throw new Error(`Registro de auditoría ${payload.auditId} no encontrado.`);
+      if (results.length === 0) {
+        throw new Error(`Registro de auditoría ${payload.auditId} no encontrado (Direct DB).`);
       }
+      
+      const audit = results[0];
 
       // 2. Datos del proyecto
       const projectResult = await db.select().from(projects).where(eq(projects.id, payload.projectId)).limit(1);

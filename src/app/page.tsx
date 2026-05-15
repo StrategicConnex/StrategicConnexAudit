@@ -31,28 +31,28 @@ async function DashboardContent() {
       )
       .orderBy(desc(projects.createdAt));
 
-    // 3. Fetch integration counts and latest audits in parallel for user's projects
-    const data = await Promise.all(
-      projectsList.map(async (project) => {
-        const projectIntegrations = await tx
-          .select()
-          .from(integrations)
-          .where(eq(integrations.projectId, project.id));
+    // 3. Fetch integration counts and latest audits sequentially for user's projects
+    // Note: Promise.all with the transaction object (tx) causes "client is already executing a query" warnings.
+    const data = [];
+    for (const project of projectsList) {
+      const projectIntegrations = await tx
+        .select()
+        .from(integrations)
+        .where(eq(integrations.projectId, project.id));
 
-        const latestAudits = await tx
-          .select()
-          .from(audits)
-          .where(eq(audits.projectId, project.id))
-          .orderBy(desc(audits.createdAt))
-          .limit(1);
+      const latestAudits = await tx
+        .select()
+        .from(audits)
+        .where(eq(audits.projectId, project.id))
+        .orderBy(desc(audits.createdAt))
+        .limit(1);
 
-        return {
-          ...project,
-          integrations: projectIntegrations,
-          latestAudit: latestAudits[0] || null,
-        };
-      })
-    );
+      data.push({
+        ...project,
+        integrations: projectIntegrations,
+        latestAudit: latestAudits[0] || null,
+      });
+    }
 
     return { allProjects: projectsList, dashboardData: data };
   });
