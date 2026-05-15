@@ -70,20 +70,30 @@ export const exportAuditToPdf = async (
         for (let i = 0; i < allElements.length; i++) {
           const el = allElements[i] as HTMLElement;
           
-          // Check for background and text colors that might use unsupported formats
           if (el.style) {
             const bg = el.style.backgroundColor;
+            const bgImage = el.style.backgroundImage;
             const color = el.style.color;
             const borderColor = el.style.borderColor;
 
-            if (bg && (bg.includes('lab(') || bg.includes('oklch('))) {
-              el.style.backgroundColor = '#111111'; // Fallback to dark
+            // Pattern to match modern color functions
+            const modernColorPattern = /oklch\(|oklab\(|lab\(/i;
+
+            if (bg && modernColorPattern.test(bg)) {
+              el.style.backgroundColor = '#111111';
             }
-            if (color && (color.includes('lab(') || color.includes('oklch('))) {
-              el.style.color = '#ffffff'; // Fallback to white
+            
+            // If background image is a gradient with modern colors, replace with solid or a safe gradient
+            if (bgImage && modernColorPattern.test(bgImage)) {
+              el.style.backgroundImage = 'none';
+              el.style.backgroundColor = '#111111';
             }
-            if (borderColor && (borderColor.includes('lab(') || borderColor.includes('oklch('))) {
-              el.style.borderColor = '#333333'; // Fallback to dark gray
+
+            if (color && modernColorPattern.test(color)) {
+              el.style.color = '#ffffff';
+            }
+            if (borderColor && modernColorPattern.test(borderColor)) {
+              el.style.borderColor = '#333333';
             }
           }
         }
