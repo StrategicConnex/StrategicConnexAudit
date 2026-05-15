@@ -1134,8 +1134,11 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
                       <h4 className="font-bold text-white text-base">Auditoría SEO Completa (PDF)</h4>
                       <p className="text-xs text-muted-foreground">Reporte ejecutivo premium con gráficas de errores, sitemap, etiquetas y auditoría técnica detallada.</p>
                     </div>
-                    <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-colors text-xs font-semibold">
-                      <Download className="w-4 h-4" /> Descargar PDF
+                    <button 
+                      onClick={() => setActiveTab('overview')}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-colors text-xs font-semibold"
+                    >
+                      <Download className="w-4 h-4" /> Ir a Proyectos
                     </button>
                   </div>
 
@@ -1148,8 +1151,11 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
                       <h4 className="font-bold text-white text-base">Keywords y Rankings (CSV)</h4>
                       <p className="text-xs text-muted-foreground">Tabla con todas las keywords indexadas, volúmenes, cambios de puesto y páginas destino (landing pages) del proyecto.</p>
                     </div>
-                    <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-colors text-xs font-semibold">
-                      <Download className="w-4 h-4" /> Exportar CSV (Excel)
+                    <button 
+                      onClick={() => alert("La exportación CSV estará disponible en la Fase 2 (Módulo de Keywords y Rankings).")}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-colors text-xs font-semibold"
+                    >
+                      <Download className="w-4 h-4" /> Próximamente (Fase 2)
                     </button>
                   </div>
 
