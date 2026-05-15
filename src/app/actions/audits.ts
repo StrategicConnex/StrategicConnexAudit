@@ -1,6 +1,6 @@
 'use server';
 
-import { authenticatedAction } from "@/shared/lib/actions";
+import { ActionState, authenticatedAction } from "@/shared/lib/actions";
 import { z } from "zod";
 import { db } from "@/shared/db";
 import { audits, projects } from "@/shared/db/schemas";
@@ -73,7 +73,7 @@ export const triggerAudit = authenticatedAction(
 // Let's modify triggerAudit to be a custom function that uses withRLS internally
 // but calls tasks.trigger after withRLS finishes.
 
-export const startAuditAction = async (data: z.infer<typeof AuditSchema>) => {
+export const startAuditAction = async (data: z.infer<typeof AuditSchema>): Promise<ActionState<any>> => {
   // We use triggerAudit to handle the DB part (transaction)
   const result = await triggerAudit(data);
   
