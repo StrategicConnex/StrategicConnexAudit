@@ -5,6 +5,9 @@ import { eq } from "drizzle-orm";
 import { promises as dnsPromises } from "dns";
 import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 
+console.log("[Trigger Module] audit.trigger.ts cargado correctamente.");
+console.log("[Trigger Module] DATABASE_URL presente:", !!process.env.DATABASE_URL);
+
 interface AnalyzeResult {
   statusCode: number;
   contentType: string | null;
@@ -209,48 +212,47 @@ export const runProjectAudit = task({
     maxAttempts: 3,
   },
   run: async (payload: { projectId: string; auditId: string; userId?: string }) => {
-    console.log(`[Audit] Iniciando auditoría real para el proyecto: ${payload.projectId}, ID Auditoría: ${payload.auditId}`);
-
-    // 1. Obtener y actualizar el registro de auditoría pre-creado a estado 'running' inmediatamente
-    // Esto asegura que la UI se mueva del 15% al 20% y empiece el polling real.
-    console.log(`[Audit] Actualizando estado a 'running' para auditoría: ${payload.auditId}`);
-    const [audit] = await db.update(audits)
-      .set({
-        status: "running",
-        startedAt: new Date()
-      })
-      .where(eq(audits.id, payload.auditId))
-      .returning();
-
-    if (!audit) {
-      console.error(`[Audit] Error: No se encontró la auditoría ${payload.auditId}`);
-      throw new Error(`Registro de auditoría ${payload.auditId} no encontrado en base de datos`);
-    }
-
-    console.log(`[Audit] Recuperando datos del proyecto ${payload.projectId}...`);
-    const projectResult = await db.select().from(projects).where(eq(projects.id, payload.projectId)).limit(1);
-    const project = projectResult[0];
-
-    if (!project) {
-      throw new Error(`Proyecto ${payload.projectId} no encontrado`);
-    }
-
-    let targetUrl = project.domain;
-    if (!/^https?:\/\//i.test(targetUrl)) {
-      targetUrl = `https://${targetUrl}`;
-    }
-
+    console.log(`[Worker] Tarea recibida para auditoría ${payload.auditId} (Proyecto: ${payload.projectId})`);
+    
     try {
-      // 2. Ejecutar análisis web
-      console.log(`[Audit] Analizando sitio web: ${targetUrl}`);
-      console.log(`[Audit] Iniciando análisis de URL: ${targetUrl}`);
-      const analysis = await analyzeUrl(targetUrl);
-      console.log(`[Audit] Análisis completado. Status: ${analysis.statusCode}, Title: ${analysis.title?.substring(0, 30)}...`);
-      console.log(`[Audit] Análisis completado. Estado HTTP: ${analysis.statusCode}, Palabras: ${analysis.wordCount}`);
+      // 1. Actualización inmediata para mover la UI del 15%
+      console.log(`[Worker] Marcando auditoría como 'running'...`);
+      const [audit] = await db.update(audits)
+        .set({
+          status: "running",
+          startedAt: new Date()
+        })
+        .where(eq(audits.id, payload.auditId))
+        .returning();
 
-      // 3. Guardar resultados de la descarga
+      if (!audit) {
+        // Pequeña espera por si hay lag de base de datos
+        await new Promise(r => setTimeout(r, 1000));
+        const [auditRetry] = await db.update(audits)
+          .set({ status: "running" })
+          .where(eq(audits.id, payload.auditId))
+          .returning();
+          
+        if (!auditRetry) throw new Error(`Registro de auditoría ${payload.auditId} no encontrado.`);
+      }
+
+      // 2. Datos del proyecto
+      const projectResult = await db.select().from(projects).where(eq(projects.id, payload.projectId)).limit(1);
+      const project = projectResult[0];
+
+      if (!project) throw new Error(`Proyecto ${payload.projectId} no encontrado`);
+
+      let targetUrl = project.domain;
+      if (!/^https?:\/\//i.test(targetUrl)) targetUrl = `https://${targetUrl}`;
+
+      // 3. Ejecutar análisis web
+      console.log(`[Worker] Analizando URL: ${targetUrl}`);
+      const analysis = await analyzeUrl(targetUrl);
+      console.log(`[Worker] Análisis completado. Status: ${analysis.statusCode}, Words: ${analysis.wordCount}`);
+
+      // 4. Guardar resultados
       await db.insert(crawlResults).values({
-        auditId: audit.id,
+        auditId: payload.auditId,
         url: targetUrl,
         statusCode: analysis.statusCode,
         contentType: analysis.contentType,
@@ -261,14 +263,12 @@ export const runProjectAudit = task({
         wordCount: analysis.wordCount,
       });
 
-      // 4. Evaluar reglas de optimización SEO y técnicas en español
-      const detectedIssues = [];
-
-      // -- Reglas de Título
+      const issuesToInsert = [];
+      
       if (!analysis.title) {
-        detectedIssues.push({
-          projectId: project.id,
-          auditId: audit.id,
+        issuesToInsert.push({
+          projectId: payload.projectId,
+          auditId: payload.auditId,
           url: targetUrl,
           severity: "critical" as const,
           category: "meta" as const,
@@ -277,9 +277,9 @@ export const runProjectAudit = task({
           recommendation: "Crea una etiqueta `<title>` que describa de manera concisa el tema de la página (entre 50 y 60 caracteres) y colócala dentro de la sección `<head>`.",
         });
       } else if (analysis.title.length > 60) {
-        detectedIssues.push({
-          projectId: project.id,
-          auditId: audit.id,
+        issuesToInsert.push({
+          projectId: payload.projectId,
+          auditId: payload.auditId,
           url: targetUrl,
           severity: "warning" as const,
           category: "meta" as const,
@@ -291,9 +291,9 @@ export const runProjectAudit = task({
 
       // -- Reglas de Meta Descripción
       if (!analysis.metaDescription) {
-        detectedIssues.push({
-          projectId: project.id,
-          auditId: audit.id,
+        issuesToInsert.push({
+          projectId: payload.projectId,
+          auditId: payload.auditId,
           url: targetUrl,
           severity: "critical" as const,
           category: "meta" as const,
@@ -302,9 +302,9 @@ export const runProjectAudit = task({
           recommendation: "Agrega una etiqueta `<meta name=\"description\" content=\"...\">` de entre 120 y 160 caracteres que sintetice el contenido con un llamado a la acción persuasivo.",
         });
       } else if (analysis.metaDescription.length > 160) {
-        detectedIssues.push({
-          projectId: project.id,
-          auditId: audit.id,
+        issuesToInsert.push({
+          projectId: payload.projectId,
+          auditId: payload.auditId,
           url: targetUrl,
           severity: "warning" as const,
           category: "meta" as const,
@@ -316,9 +316,9 @@ export const runProjectAudit = task({
 
       // -- Estructura de Encabezados (H1)
       if (analysis.h1Tags.length === 0) {
-        detectedIssues.push({
-          projectId: project.id,
-          auditId: audit.id,
+        issuesToInsert.push({
+          projectId: payload.projectId,
+          auditId: payload.auditId,
           url: targetUrl,
           severity: "critical" as const,
           category: "seo" as const,
@@ -327,9 +327,9 @@ export const runProjectAudit = task({
           recommendation: "Introduce una única etiqueta `<h1>` con un título atractivo y descriptivo del negocio justo al inicio de la sección de contenido de la página.",
         });
       } else if (analysis.h1Tags.length > 1) {
-        detectedIssues.push({
-          projectId: project.id,
-          auditId: audit.id,
+        issuesToInsert.push({
+          projectId: payload.projectId,
+          auditId: payload.auditId,
           url: targetUrl,
           severity: "warning" as const,
           category: "seo" as const,
@@ -341,9 +341,9 @@ export const runProjectAudit = task({
 
       // -- Espesor de Contenido
       if (analysis.wordCount > 0 && analysis.wordCount < 250) {
-        detectedIssues.push({
-          projectId: project.id,
-          auditId: audit.id,
+        issuesToInsert.push({
+          projectId: payload.projectId,
+          auditId: payload.auditId,
           url: targetUrl,
           severity: "warning" as const,
           category: "seo" as const,
@@ -353,34 +353,37 @@ export const runProjectAudit = task({
         });
       }
 
-      // 5. Insertar problemas encontrados
-      if (detectedIssues.length > 0) {
-        console.log(`[Audit] Guardando ${detectedIssues.length} problemas de optimización detectados en español.`);
-        await db.insert(issues).values(detectedIssues);
+      if (issuesToInsert.length > 0) {
+        console.log(`[Worker] Guardando ${issuesToInsert.length} problemas de optimización detectados.`);
+        // @ts-ignore
+        await db.insert(issues).values(issuesToInsert);
       }
 
-      // 6. Marcar auditoría como completada con éxito
-      await db.update(audits)
-        .set({ 
-          status: "completed", 
-          completedAt: new Date() 
-        })
-        .where(eq(audits.id, audit.id));
-
-      console.log(`[Audit] Auditoría ${audit.id} finalizada exitosamente con ${detectedIssues.length} incidencias.`);
-      return { auditId: audit.id, status: "completed", issuesFound: detectedIssues.length };
-
-    } catch (err: any) {
-      console.error(`[Audit] Fallo crítico durante el proceso de crawling para ${targetUrl}:`, err);
-
+      // 6. Finalizar
       await db.update(audits)
         .set({
-          status: "failed",
-          errorMessage: err.message || "Error desconocido durante la ejecución del rastreador.",
+          status: "completed",
           completedAt: new Date()
         })
-        .where(eq(audits.id, audit.id));
+        .where(eq(audits.id, payload.auditId));
 
+      console.log(`[Worker] Auditoría ${payload.auditId} finalizada con éxito.`);
+
+    } catch (err: any) {
+      console.error(`[Worker] Error fatal en auditoría ${payload.auditId}:`, err);
+      
+      try {
+        await db.update(audits)
+          .set({
+            status: "failed",
+            errorMessage: err.message || "Error desconocido durante la ejecución.",
+            completedAt: new Date()
+          })
+          .where(eq(audits.id, payload.auditId));
+      } catch (updateErr) {
+        console.error("[Worker] Error al intentar marcar como fallido en DB:", updateErr);
+      }
+      
       throw err;
     }
   },
