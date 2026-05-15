@@ -50,6 +50,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       
       pagesCrawled = (crawlsCount?.value || 0).toString();
 
+      // Contamos issues por severidad de forma eficiente
       const [issueStats] = await tx.select({
         criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
         warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`)
@@ -69,12 +70,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       .where(eq(uptimeLogs.projectId, projectId))
       .orderBy(desc(uptimeLogs.checkedAt))
       .limit(10);
-      
     const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
-
-    // 5. Fetch Web Vitals Logs (Averages optimizados con Drizzle)
-    // Subconsulta para limitar a los últimos 100 registros antes de promediar
-    const recentVitalsSq = tx.select({
+      
+    // 5. Fetch Web Vitals Logs (Cálculo simplificado para evitar subconsultas complejas)
+    const vitalsLogs = await tx.select({
       lcp: webVitalsLogs.lcp,
       cls: webVitalsLogs.cls,
       fcp: webVitalsLogs.fcp
@@ -82,20 +81,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     .from(webVitalsLogs)
     .where(eq(webVitalsLogs.projectId, projectId))
     .orderBy(desc(webVitalsLogs.recordedAt))
-    .limit(100)
-    .as('recent_vitals_sq');
-
-    const [vitalsStats] = await tx.select({
-      avgLcp: avg(recentVitalsSq.lcp),
-      avgCls: avg(recentVitalsSq.cls),
-      avgFcp: avg(recentVitalsSq.fcp)
-    })
-    .from(recentVitalsSq);
+    .limit(50);
 
     const vitalsAverages = {
-      LCP: Number(vitalsStats?.avgLcp || 0),
-      CLS: Number(vitalsStats?.avgCls || 0),
-      FCP: Number(vitalsStats?.avgFcp || 0),
+      LCP: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.lcp || 0), 0) / vitalsLogs.length : 0,
+      CLS: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.cls || 0), 0) / vitalsLogs.length : 0,
+      FCP: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.fcp || 0), 0) / vitalsLogs.length : 0,
       FID: 0,
     };
 
