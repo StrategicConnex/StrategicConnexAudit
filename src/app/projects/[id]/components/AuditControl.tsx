@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { triggerAudit, getAuditStatus } from '@/app/actions/audits';
+import { startAuditAction, getAuditStatus } from '@/app/actions/audits';
 import { Play, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface AuditControlProps {
@@ -129,7 +129,7 @@ export default function AuditControl({ projectId }: AuditControlProps) {
 
     startTransition(async () => {
       try {
-        const res = await triggerAudit({ projectId });
+        const res = await startAuditAction({ projectId });
         
         if (res.error) {
           setStatus('failed');

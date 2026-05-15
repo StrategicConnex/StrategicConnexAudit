@@ -27,34 +27,34 @@
 }
 
 :root {
-  /* Premium Dark Theme by Default */
-  --background: oklch(0.14 0.02 280); /* Deep sleek blueish dark */
-  --foreground: oklch(0.98 0.01 280);
+  /* Premium Dark Theme by Default (Converted from oklch to HEX for html2canvas compatibility) */
+  --background: #090a0f; /* Deep sleek blueish dark */
+  --foreground: #f8f9fa;
   
-  --card: oklch(0.17 0.02 280);
-  --card-foreground: oklch(0.98 0.01 280);
+  --card: #11121a;
+  --card-foreground: #f8f9fa;
   
-  --popover: oklch(0.17 0.02 280);
-  --popover-foreground: oklch(0.98 0.01 280);
+  --popover: #11121a;
+  --popover-foreground: #f8f9fa;
   
-  --primary: oklch(0.65 0.25 250); /* Vibrant Electric Blue */
-  --primary-foreground: oklch(0.98 0.01 280);
+  --primary: #3b82f6; /* Vibrant Electric Blue */
+  --primary-foreground: #f8f9fa;
   
-  --secondary: oklch(0.25 0.03 280);
-  --secondary-foreground: oklch(0.85 0.02 280);
+  --secondary: #1f212d;
+  --secondary-foreground: #d1d5db;
   
-  --muted: oklch(0.22 0.02 280);
-  --muted-foreground: oklch(0.65 0.02 280);
+  --muted: #1a1c26;
+  --muted-foreground: #9ca3af;
   
-  --accent: oklch(0.35 0.15 280); /* Muted purple/blue accent */
-  --accent-foreground: oklch(0.98 0.01 280);
+  --accent: #2e304d; /* Muted purple/blue accent */
+  --accent-foreground: #f8f9fa;
   
-  --destructive: oklch(0.5 0.2 20);
-  --destructive-foreground: oklch(0.98 0.01 280);
+  --destructive: #ef4444;
+  --destructive-foreground: #f8f9fa;
   
-  --border: oklch(0.25 0.03 280);
-  --input: oklch(0.25 0.03 280);
-  --ring: oklch(0.65 0.25 250);
+  --border: #232533;
+  --input: #232533;
+  --ring: #3b82f6;
   
   --radius: 0.75rem;
 }
