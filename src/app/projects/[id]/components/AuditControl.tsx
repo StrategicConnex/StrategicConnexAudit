@@ -17,6 +17,8 @@ export default function AuditControl({ projectId }: AuditControlProps) {
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [showWorkerWarning, setShowWorkerWarning] = useState(false);
+  const isAuditing = status === 'pending' || status === 'running';
 
   // Efecto para el contador regresivo del Rate Limit
   useEffect(() => {
@@ -204,6 +206,12 @@ export default function AuditControl({ projectId }: AuditControlProps) {
       {errorMessage && (
         <span className="text-[11px] text-red-400 font-medium max-w-xs text-right animate-pulse bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-md">
           {errorMessage}
+        </span>
+      )}
+
+      {showWorkerWarning && (
+        <span className="text-[10px] text-amber-400 font-medium max-w-xs text-right animate-pulse px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md">
+          El servidor de análisis tarda en responder. Asegúrate de que el trabajador (worker) esté activo y conectado.
         </span>
       )}
     </div>

@@ -93,25 +93,20 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   await validateSafeUrl(targetUrl);
 
   // 2. Fetch with a 20s AbortSignal timeout to prevent unbounded hangs
-  // 2. Fetch with a 25s AbortSignal timeout to prevent unbounded hangs
   const crawlerCircuitBreaker = new RedisCircuitBreaker('web_crawler', {
     failureThreshold: 5,
     recoveryTimeout: 60000,
   });
 
   const response = await crawlerCircuitBreaker.execute(async () => {
-    const response = await fetch(targetUrl, {
+    console.log(`[Crawler] Solicitando URL: ${targetUrl}`);
+    return await fetch(targetUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 StrategicAuditBot/1.1",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
       },
       signal: AbortSignal.timeout(25000),
-      next: { revalidate: 0 } as any,
-    } as RequestInit);
-    return response;
+    });
   });
 
   if (!response.ok) {
@@ -216,14 +211,9 @@ export const runProjectAudit = task({
   run: async (payload: { projectId: string; auditId: string; userId?: string }) => {
     console.log(`[Audit] Iniciando auditoría real para el proyecto: ${payload.projectId}, ID Auditoría: ${payload.auditId}`);
 
-    const projectResult = await db.select().from(projects).where(eq(projects.id, payload.projectId)).limit(1);
-    const project = projectResult[0];
-
-    if (!project) {
-      throw new Error(`Proyecto ${payload.projectId} no encontrado`);
-    }
-
-    // 1. Obtener y actualizar el registro de auditoría pre-creado a estado 'running'
+    // 1. Obtener y actualizar el registro de auditoría pre-creado a estado 'running' inmediatamente
+    // Esto asegura que la UI se mueva del 15% al 20% y empiece el polling real.
+    console.log(`[Audit] Actualizando estado a 'running' para auditoría: ${payload.auditId}`);
     const [audit] = await db.update(audits)
       .set({
         status: "running",
@@ -233,10 +223,17 @@ export const runProjectAudit = task({
       .returning();
 
     if (!audit) {
+      console.error(`[Audit] Error: No se encontró la auditoría ${payload.auditId}`);
       throw new Error(`Registro de auditoría ${payload.auditId} no encontrado en base de datos`);
     }
 
-    console.log(`[Audit] Registro de auditoría ${audit.id} actualizado a estado de ejecución.`);
+    console.log(`[Audit] Recuperando datos del proyecto ${payload.projectId}...`);
+    const projectResult = await db.select().from(projects).where(eq(projects.id, payload.projectId)).limit(1);
+    const project = projectResult[0];
+
+    if (!project) {
+      throw new Error(`Proyecto ${payload.projectId} no encontrado`);
+    }
 
     let targetUrl = project.domain;
     if (!/^https?:\/\//i.test(targetUrl)) {
