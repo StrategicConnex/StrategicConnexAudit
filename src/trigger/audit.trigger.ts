@@ -13,6 +13,7 @@ interface AnalyzeResult {
   h1Tags: string[];
   h2Tags: string[];
   wordCount: number;
+  error?: string;
 }
 
 // Zero-dependency helper to check if an IP address belongs to local/private/reserved subnets
