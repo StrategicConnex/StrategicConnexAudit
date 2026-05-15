@@ -1,8 +1,8 @@
-import { db } from './src/shared/db/index.ts';
-import { projects, users } from './src/shared/db/schemas/index.ts';
-import { withRLS } from './src/shared/db/rls.ts';
+import { db } from './src/shared/db/index';
+import { projects, users } from './src/shared/db/schemas/index';
+import { withRLS } from './src/shared/db/rls';
 import { eq } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'crypto';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });

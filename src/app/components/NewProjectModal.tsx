@@ -50,11 +50,21 @@ export function NewProjectModal() {
     
     try {
       const formData = new FormData(e.currentTarget);
-      const result = await createProject(null, formData);
+      const actionResult = await createProject(formData);
       
-      setState(result);
-      
-      if (result?.success) {
+      if (actionResult.error) {
+        setState({ 
+          success: false, 
+          message: actionResult.error, 
+          errors: actionResult.validationErrors 
+        });
+      } else if (actionResult.data?.error) {
+        setState({
+          success: false,
+          message: actionResult.data.error
+        });
+      } else {
+        setState({ success: true });
         setIsOpen(false);
         setPosition({ x: 0, y: 0 });
         formRef.current?.reset();

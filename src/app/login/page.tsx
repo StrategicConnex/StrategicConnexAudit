@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { createClient } from '@/shared/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@/shared/components/ui/button'; // Asumiendo que existe o usaré HTML puro estilizado
+
 import { Mail, Lock, Loader2, Sparkles } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -161,5 +161,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-500" /></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

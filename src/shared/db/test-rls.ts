@@ -2,7 +2,7 @@ import { db } from './index';
 import { projects, users } from './schemas/index';
 import { withRLS } from './rls';
 import { eq, gt } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'crypto';
 
 async function testRLS() {
   console.log("🚀 Iniciando Prueba de Fuego: Row Level Security (RLS)\n");
