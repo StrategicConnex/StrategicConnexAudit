@@ -109,6 +109,6 @@ export const getAuditStatus = authenticatedAction(
       throw new Error("Acceso denegado");
     }
 
-    return { success: true, status: record.audit.status };
+    return { success: true, status: record.audit.status, errorMessage: record.audit.errorMessage };
   }
 );

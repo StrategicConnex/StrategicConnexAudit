@@ -93,9 +93,9 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   // 2. Fetch with a 10s AbortSignal timeout to prevent unbounded hangs
   const response = await fetch(targetUrl, {
     headers: {
-      "User-Agent": "StrategicAuditBot/1.0",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (compatible; StrategicAuditBot/1.0; +https://strategicaudit.pro)",
     },
-    signal: AbortSignal.timeout(10000), // Strict 10-second timeout
+    signal: AbortSignal.timeout(20000), // Increased to 20-second timeout for better resilience
     next: { revalidate: 0 } as any,
   } as RequestInit);
 

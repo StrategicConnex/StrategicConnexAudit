@@ -91,7 +91,7 @@ export default function AuditControl({ projectId }: AuditControlProps) {
           }, 1000);
         } else if (dbStatus === 'failed') {
           setStatus('failed');
-          setErrorMessage("El rastreador falló al descargar la web. Verifica que el dominio sea accesible.");
+          setErrorMessage(res.errorMessage || "El rastreador falló al descargar la web. Verifica que el dominio sea accesible.");
           clearInterval(pollInterval);
         }
       } catch (err) {
