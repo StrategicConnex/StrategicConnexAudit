@@ -45,6 +45,13 @@ Contexto actual del usuario: ${JSON.stringify(context || 'Sin contexto específi
 
     const apiMessages = [systemMessage, ...messages];
 
+    if (!apiKey) {
+      return NextResponse.json({
+        success: true,
+        message: "¡Hola! Parece que tu API Key de IA no está configurada en las variables de entorno (Bearer_API_KEY o GEMINI_API_KEY). Por favor, configúrala para activar el AI Copilot."
+      });
+    }
+
     const aiCircuitBreaker = new RedisCircuitBreaker('ai_copilot_api', {
       failureThreshold: 3,
       recoveryTimeout: 60000,
@@ -65,6 +72,9 @@ Contexto actual del usuario: ${JSON.stringify(context || 'Sin contexto específi
       });
 
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+           throw new Error(`Credenciales de IA inválidas o sin permisos (${res.status}). Verifica tu API Key.`);
+        }
         throw new Error(`AI API error: ${res.status}`);
       }
 
