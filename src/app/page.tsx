@@ -1,14 +1,15 @@
-import { db } from '@/shared/db';
+import { Suspense } from 'react';
 import { projects, audits, integrations } from '@/shared/db/schemas';
 import { eq, desc, isNull, and } from 'drizzle-orm';
 import { DashboardContainer } from './components/DashboardContainer';
 import { createClient } from '@/shared/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { withRLS } from '@/shared/db/rls';
+import { DashboardSkeleton } from './components/DashboardSkeleton';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardPage() {
+async function DashboardContent() {
   // 1. Authenticate user
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -61,5 +62,13 @@ export default async function DashboardPage() {
       initialProjects={allProjects} 
       dashboardData={dashboardData} 
     />
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardContent />
+    </Suspense>
   );
 }
