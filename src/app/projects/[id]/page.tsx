@@ -2,11 +2,13 @@ import { db } from '@/shared/db';
 import { projects, audits, crawlResults, issues, uptimeLogs, webVitalsLogs } from '@/shared/db/schemas';
 import { eq, desc, sql, count, avg } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
-import { ArrowLeft, Globe, Activity, FileText, AlertTriangle, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Globe, Activity, FileText, AlertTriangle, ArrowRight, Download, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
 import AuditControl from './components/AuditControl';
+import DeactivateButton from './components/DeactivateButton';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
+import { ExportCsvButton } from '@/app/components/ExportCsvButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +80,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           .orderBy(desc(uptimeLogs.checkedAt))
           .limit(10);
       } catch (e) {
-        console.error("Error fetching uptime logs:", e);
+        console.warn("Uptime logs table not ready or accessible:", e);
       }
       
       const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
@@ -96,15 +98,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         .orderBy(desc(webVitalsLogs.recordedAt))
         .limit(50);
       } catch (e) {
-        console.error("Error fetching vitals logs:", e);
+        console.warn("WebVitals logs table not ready or accessible:", e);
       }
 
-
-
+      const validVitals = vitalsLogs.filter(v => v.lcp !== null);
       const vitalsAverages = {
-        LCP: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.lcp || 0), 0) / vitalsLogs.length : 0,
-        CLS: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.cls || 0), 0) / vitalsLogs.length : 0,
-        FCP: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.fcp || 0), 0) / vitalsLogs.length : 0,
+        LCP: validVitals.length > 0 ? validVitals.reduce((acc, curr) => acc + Number(curr.lcp || 0), 0) / validVitals.length : 0,
+        CLS: validVitals.length > 0 ? validVitals.reduce((acc, curr) => acc + Number(curr.cls || 0), 0) / validVitals.length : 0,
+        FCP: validVitals.length > 0 ? validVitals.reduce((acc, curr) => acc + Number(curr.fcp || 0), 0) / validVitals.length : 0,
         FID: 0,
       };
 
@@ -119,16 +120,27 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       };
     });
   } catch (error: any) {
-    console.error("Error loading project detail:", error);
+    console.error("Critical error loading project detail:", error);
     return (
-      <div className="p-10 text-red-500">
-        <h1 className="text-2xl font-bold">Error al cargar datos del proyecto</h1>
-        <p className="mt-2 text-sm opacity-80">Por favor, contacta a soporte con el siguiente detalle:</p>
-        <pre className="mt-4 p-4 bg-red-900/20 rounded border border-red-500/30 overflow-auto max-w-full">
-          {error.message || "Error desconocido"}
-          {error.code ? ` (Code: ${error.code})` : ""}
-        </pre>
-        <Link href="/" className="mt-6 inline-block text-white underline">Volver al inicio</Link>
+      <div className="flex flex-col items-center justify-center min-h-screen p-10 text-center">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
+          <AlertTriangle className="w-8 h-8 text-red-500" />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground">Error al cargar el panel de control</h1>
+        <p className="mt-2 text-muted-foreground max-w-md">
+          Hubo un problema técnico al recuperar los datos de este proyecto. Nuestro equipo ha sido notificado.
+        </p>
+        <div className="mt-8 flex gap-4">
+          <Link href="/" className="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors">
+            Volver al Inicio
+          </Link>
+          <button 
+            onClick={(() => { "use client"; window.location.reload(); }) as any}
+            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
       </div>
     );
   }
@@ -221,6 +233,56 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
           
+          {/* Sección de Reportes Enterprise (Fase 1/2) */}
+          <div className="glass-card rounded-xl p-6 border-blue-500/10 bg-gradient-to-br from-blue-950/5 via-transparent to-transparent">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-left flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Centro de Reportes
+              </h2>
+              <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-bold uppercase tracking-widest">Premium</span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Reporte PDF */}
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-4 hover:border-primary/20 transition-all group">
+                <div className="flex items-start justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20">
+                    <Download className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-base group-hover:text-primary transition-colors">Auditoría SEO Completa (PDF)</h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Reporte ejecutivo premium con gráficas de errores, sitemap, etiquetas y auditoría técnica detallada.</p>
+                </div>
+                {latestCompletedAudit ? (
+                  <Link 
+                    href={`/projects/${projectId}/audits/${latestCompletedAudit.id}`}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline group-active:translate-y-0.5 transition-transform"
+                  >
+                    Generar Reporte PDF <ArrowRight className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Completa una auditoría para generar el PDF.</p>
+                )}
+              </div>
+
+              {/* Reporte CSV */}
+              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-4 hover:border-green-500/20 transition-all group">
+                <div className="flex items-start justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center border border-green-500/20">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-base group-hover:text-green-400 transition-colors">Keywords y Rankings (CSV)</h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Exportación masiva de palabras clave objetivo, posiciones actuales en SERP y volumen de búsqueda.</p>
+                </div>
+                <ExportCsvButton projectId={projectId} />
+              </div>
+            </div>
+          </div>
+          
           {/* Listado de Auditorías Recientes */}
           <div className="glass-card rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 text-left">Auditorías Recientes</h2>
@@ -298,18 +360,3 @@ function StatBox({ icon, title, value }: { icon: React.ReactNode; title: string;
   );
 }
 
-function DeactivateButton({ projectId }: { projectId: string }) {
-  return (
-    <form action={async () => {
-      'use server';
-      const { deactivateProject } = await import('@/app/actions/projects');
-      await deactivateProject({ projectId });
-      redirect('/');
-    }}>
-      <button className="bg-destructive/10 text-red-400 hover:bg-destructive/20 hover:text-red-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-destructive/20">
-        <AlertTriangle className="w-4 h-4" />
-        Desactivar Proyecto
-      </button>
-    </form>
-  );
-}
