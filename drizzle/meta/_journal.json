@@ -8,6 +8,13 @@
       "when": 1778264391353,
       "tag": "0000_old_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778821125742,
+      "tag": "0001_silky_ikaris",
+      "breakpoints": true
     }
   ]
 }

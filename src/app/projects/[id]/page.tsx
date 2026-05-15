@@ -1,5 +1,5 @@
 import { db } from '@/shared/db';
-import { projects, audits, crawlResults, issues } from '@/shared/db/schemas';
+import { projects, audits, crawlResults, issues, uptimeLogs, webVitalsLogs } from '@/shared/db/schemas';
 import { eq, desc } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Globe, Activity, FileText, AlertTriangle, ArrowRight } from 'lucide-react';
@@ -54,12 +54,52 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       healthScore = Math.max(0, 100 - (criticals.length * 15) - (warnings.length * 5)).toString() + "%";
     }
 
+    // 4. Fetch Uptime Logs
+    const recentUptimes = await tx.select().from(uptimeLogs)
+      .where(eq(uptimeLogs.projectId, projectId))
+      .orderBy(desc(uptimeLogs.checkedAt))
+      .limit(10);
+      
+    const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
+
+    // 5. Fetch Web Vitals Logs (Averages)
+    const recentVitals = await tx.select().from(webVitalsLogs)
+      .where(eq(webVitalsLogs.projectId, projectId))
+      .orderBy(desc(webVitalsLogs.recordedAt))
+      .limit(100);
+
+    const vitalsAverages = {
+      LCP: 0,
+      CLS: 0,
+      FCP: 0,
+      FID: 0,
+    };
+    
+    if (recentVitals.length > 0) {
+      let lcpSum = 0, lcpCount = 0;
+      let clsSum = 0, clsCount = 0;
+      let fcpSum = 0, fcpCount = 0;
+      let fidSum = 0, fidCount = 0;
+
+      for (const v of recentVitals) {
+        if (v.lcp !== null) { lcpSum += parseFloat(v.lcp); lcpCount++; }
+        if (v.cls !== null) { clsSum += parseFloat(v.cls); clsCount++; }
+        if (v.fcp !== null) { fcpSum += parseFloat(v.fcp); fcpCount++; }
+      }
+
+      if (lcpCount > 0) vitalsAverages.LCP = lcpSum / lcpCount;
+      if (clsCount > 0) vitalsAverages.CLS = clsSum / clsCount;
+      if (fcpCount > 0) vitalsAverages.FCP = fcpSum / fcpCount;
+    }
+
     return {
       project,
       projectAudits,
       healthScore,
       pagesCrawled,
-      criticalIssuesCount
+      criticalIssuesCount,
+      currentUptimeStatus,
+      vitalsAverages
     };
   });
 
@@ -67,7 +107,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount } = data;
+  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, currentUptimeStatus, vitalsAverages } = data;
   
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -108,6 +148,58 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             <StatBox icon={<Globe className="w-5 h-5" />} title="Páginas Rastreadas" value={pagesCrawled} />
             <StatBox icon={<AlertTriangle className="text-red-400 w-5 h-5" />} title="Problemas Críticos" value={criticalIssuesCount} />
             <StatBox icon={<FileText className="w-5 h-5" />} title="Auditorías Totales" value={projectAudits.length.toString()} />
+          </div>
+
+          {/* Panel de Observabilidad (Fase 2) */}
+          <div className="glass-card rounded-xl p-6 border-primary/20">
+            <h2 className="text-lg font-semibold mb-4 text-left flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              Observabilidad y Rendimiento
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white/[0.02] border border-white/5 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground font-medium mb-1">Estado de Servidor</p>
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${currentUptimeStatus === 'up' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : currentUptimeStatus === 'down' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-gray-500'}`} />
+                  <span className="text-lg font-semibold capitalize">{currentUptimeStatus === 'unknown' ? 'Sin datos' : currentUptimeStatus}</span>
+                </div>
+              </div>
+              
+              <div className="bg-white/[0.02] border border-white/5 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground font-medium mb-1">LCP (Promedio)</p>
+                <p className={`text-lg font-semibold ${vitalsAverages.LCP > 2500 ? 'text-red-400' : vitalsAverages.LCP > 0 ? 'text-green-400' : ''}`}>
+                  {vitalsAverages.LCP ? `${Math.round(vitalsAverages.LCP)}ms` : '--'}
+                </p>
+              </div>
+
+              <div className="bg-white/[0.02] border border-white/5 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground font-medium mb-1">CLS (Promedio)</p>
+                <p className={`text-lg font-semibold ${vitalsAverages.CLS > 0.1 ? 'text-yellow-400' : vitalsAverages.CLS > 0 ? 'text-green-400' : ''}`}>
+                  {vitalsAverages.CLS ? vitalsAverages.CLS.toFixed(3) : '--'}
+                </p>
+              </div>
+
+              <div className="bg-white/[0.02] border border-white/5 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground font-medium mb-1">FCP (Promedio)</p>
+                <p className={`text-lg font-semibold ${vitalsAverages.FCP > 1800 ? 'text-yellow-400' : vitalsAverages.FCP > 0 ? 'text-green-400' : ''}`}>
+                  {vitalsAverages.FCP ? `${Math.round(vitalsAverages.FCP)}ms` : '--'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <p className="text-xs text-muted-foreground flex items-center justify-between">
+                <span>Añade este script en tu sitio para recolectar Web Vitals:</span>
+                <Link href={`/scripts/vitals.js`} className="text-primary hover:underline">Ver Script RUM</Link>
+              </p>
+              <code className="block mt-2 text-[10px] sm:text-xs bg-black/40 p-3 rounded border border-white/5 text-muted-foreground overflow-x-auto whitespace-pre">
+{`<script 
+  src="${process.env.NEXT_PUBLIC_APP_URL || 'https://strategicaudit.pro'}/scripts/vitals.js" 
+  data-project-id="${project.id}" 
+  defer>
+</script>`}
+              </code>
+            </div>
           </div>
           
           {/* Listado de Auditorías Recientes */}

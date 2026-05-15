@@ -439,3 +439,28 @@ export const auditLogs = pgTable("audit_logs", {
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
+
+// 30. Uptime Logs (Phase 2)
+export const uptimeLogs = pgTable("uptime_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+  isUp: boolean("is_up").notNull(),
+  statusCode: integer("status_code"),
+  responseTimeMs: integer("response_time_ms"),
+  errorMessage: text("error_message"),
+  checkedAt: timestamp("checked_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// 31. Web Vitals Logs (Phase 2 - Real User Monitoring)
+export const webVitalsLogs = pgTable("web_vitals_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+  url: text("url").notNull(),
+  deviceType: deviceEnum("device_type").notNull().default("desktop"),
+  lcp: numeric("lcp", { precision: 8, scale: 2 }), // Largest Contentful Paint (ms)
+  inp: numeric("inp", { precision: 8, scale: 2 }), // Interaction to Next Paint (ms)
+  cls: numeric("cls", { precision: 8, scale: 4 }), // Cumulative Layout Shift
+  ttfb: numeric("ttfb", { precision: 8, scale: 2 }), // Time to First Byte (ms)
+  fcp: numeric("fcp", { precision: 8, scale: 2 }), // First Contentful Paint (ms)
+  recordedAt: timestamp("recorded_at", { withTimezone: true }).defaultNow().notNull(),
+});
