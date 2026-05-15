@@ -70,23 +70,35 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         healthScore = Math.max(0, 100 - (criticals * 15) - (warnings * 5)).toString() + "%";
       }
 
-      // 4. Fetch Uptime Logs
-      const recentUptimes = await tx.select().from(uptimeLogs)
-        .where(eq(uptimeLogs.projectId, projectId))
-        .orderBy(desc(uptimeLogs.checkedAt))
-        .limit(10);
+      // 4. Fetch Uptime Logs (Resiliente)
+      let recentUptimes = [];
+      try {
+        recentUptimes = await tx.select().from(uptimeLogs)
+          .where(eq(uptimeLogs.projectId, projectId))
+          .orderBy(desc(uptimeLogs.checkedAt))
+          .limit(10);
+      } catch (e) {
+        console.error("Error fetching uptime logs:", e);
+      }
+      
       const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
         
-      // 5. Fetch Web Vitals Logs (Cálculo simplificado para evitar subconsultas complejas)
-      const vitalsLogs = await tx.select({
-        lcp: webVitalsLogs.lcp,
-        cls: webVitalsLogs.cls,
-        fcp: webVitalsLogs.fcp
-      })
-      .from(webVitalsLogs)
-      .where(eq(webVitalsLogs.projectId, projectId))
-      .orderBy(desc(webVitalsLogs.recordedAt))
-      .limit(50);
+      // 5. Fetch Web Vitals Logs (Resiliente)
+      let vitalsLogs = [];
+      try {
+        vitalsLogs = await tx.select({
+          lcp: webVitalsLogs.lcp,
+          cls: webVitalsLogs.cls,
+          fcp: webVitalsLogs.fcp
+        })
+        .from(webVitalsLogs)
+        .where(eq(webVitalsLogs.projectId, projectId))
+        .orderBy(desc(webVitalsLogs.recordedAt))
+        .limit(50);
+      } catch (e) {
+        console.error("Error fetching vitals logs:", e);
+      }
+
 
       const vitalsAverages = {
         LCP: vitalsLogs.length > 0 ? vitalsLogs.reduce((acc, curr) => acc + Number(curr.lcp || 0), 0) / vitalsLogs.length : 0,
