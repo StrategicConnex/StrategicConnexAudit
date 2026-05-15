@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Call LLM
-    const apiKey = env.geminiApiKey || '';
-    const aiUrl = env.aiBaseUrl ? `${env.aiBaseUrl}/chat/completions` : 'https://api.openai.com/v1/chat/completions';
+    const apiKey = env.bearerApiKey || env.geminiApiKey || '';
+    const aiUrl = env.aiBaseUrl || 'https://api.openai.com/v1/chat/completions';
 
     const systemMessage = {
       role: 'system',
