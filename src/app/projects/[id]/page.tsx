@@ -1,6 +1,6 @@
 import { db } from '@/shared/db';
 import { projects, audits, crawlResults, issues, uptimeLogs, webVitalsLogs } from '@/shared/db/schemas';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Globe, Activity, FileText, AlertTriangle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -43,15 +43,25 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     let criticalIssuesCount = "0";
 
     if (latestCompletedAudit) {
-      const crawls = await tx.select().from(crawlResults).where(eq(crawlResults.auditId, latestCompletedAudit.id));
-      pagesCrawled = crawls.length.toString();
+      // Optimizamos usando count() en lugar de traer miles de registros a memoria
+      const crawlsCountResult = await tx.execute(sql`SELECT count(*)::int as count FROM ${crawlResults} WHERE audit_id = ${latestCompletedAudit.id}`);
+      const crawlsCount = crawlsCountResult.rows[0];
+      pagesCrawled = (crawlsCount?.count || 0).toString();
 
-      const auditIssues = await tx.select().from(issues).where(eq(issues.auditId, latestCompletedAudit.id));
-      const criticals = auditIssues.filter(i => i.severity === 'critical');
-      const warnings = auditIssues.filter(i => i.severity === 'warning');
+      const issueStatsResult = await tx.execute(sql`
+        SELECT 
+          count(*) filter (where severity = 'critical')::int as critical_count,
+          count(*) filter (where severity = 'warning')::int as warning_count
+        FROM ${issues} 
+        WHERE audit_id = ${latestCompletedAudit.id}
+      `);
+      const issueStats = issueStatsResult.rows[0];
       
-      criticalIssuesCount = criticals.length.toString();
-      healthScore = Math.max(0, 100 - (criticals.length * 15) - (warnings.length * 5)).toString() + "%";
+      const criticals = (issueStats as any)?.critical_count || 0;
+      const warnings = (issueStats as any)?.warning_count || 0;
+      
+      criticalIssuesCount = criticals.toString();
+      healthScore = Math.max(0, 100 - (criticals * 15) - (warnings * 5)).toString() + "%";
     }
 
     // 4. Fetch Uptime Logs
@@ -62,35 +72,28 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       
     const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
 
-    // 5. Fetch Web Vitals Logs (Averages)
-    const recentVitals = await tx.select().from(webVitalsLogs)
-      .where(eq(webVitalsLogs.projectId, projectId))
-      .orderBy(desc(webVitalsLogs.recordedAt))
-      .limit(100);
+    // 5. Fetch Web Vitals Logs (Averages optimizados en SQL)
+    const vitalsStatsResult = await tx.execute(sql`
+      SELECT 
+        avg(lcp)::float as avg_lcp,
+        avg(cls)::float as avg_cls,
+        avg(fcp)::float as avg_fcp
+      FROM (
+        SELECT lcp, cls, fcp 
+        FROM ${webVitalsLogs} 
+        WHERE project_id = ${projectId}
+        ORDER BY recorded_at DESC
+        LIMIT 100
+      ) as recent_vitals
+    `);
+    const vitalsStats = vitalsStatsResult.rows[0];
 
     const vitalsAverages = {
-      LCP: 0,
-      CLS: 0,
-      FCP: 0,
+      LCP: (vitalsStats as any)?.avg_lcp || 0,
+      CLS: (vitalsStats as any)?.avg_cls || 0,
+      FCP: (vitalsStats as any)?.avg_fcp || 0,
       FID: 0,
     };
-    
-    if (recentVitals.length > 0) {
-      let lcpSum = 0, lcpCount = 0;
-      let clsSum = 0, clsCount = 0;
-      let fcpSum = 0, fcpCount = 0;
-      let fidSum = 0, fidCount = 0;
-
-      for (const v of recentVitals) {
-        if (v.lcp !== null) { lcpSum += parseFloat(v.lcp); lcpCount++; }
-        if (v.cls !== null) { clsSum += parseFloat(v.cls); clsCount++; }
-        if (v.fcp !== null) { fcpSum += parseFloat(v.fcp); fcpCount++; }
-      }
-
-      if (lcpCount > 0) vitalsAverages.LCP = lcpSum / lcpCount;
-      if (clsCount > 0) vitalsAverages.CLS = clsSum / clsCount;
-      if (fcpCount > 0) vitalsAverages.FCP = fcpSum / fcpCount;
-    }
 
     return {
       project,
@@ -121,18 +124,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </div>
         
         <div className="ml-auto flex items-center gap-4">
-          <form action={async () => {
-            'use server';
-            const { deactivateProject } = await import('@/app/actions/projects');
-            await deactivateProject({ projectId });
-            redirect('/');
-          }}>
-            <button className="bg-destructive/10 text-red-400 hover:bg-destructive/20 hover:text-red-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-destructive/20">
-              <AlertTriangle className="w-4 h-4" />
-              Desactivar Proyecto
-            </button>
-          </form>
-
+          <DeactivateButton projectId={projectId} />
           {/* Botón de control de auditorías reactivo con sondeo (Polling) y porcentaje de progreso */}
           <AuditControl projectId={projectId} />
         </div>
@@ -276,5 +268,21 @@ function StatBox({ icon, title, value }: { icon: React.ReactNode; title: string;
         <p className="text-xl font-bold">{value}</p>
       </div>
     </div>
+  );
+}
+
+function DeactivateButton({ projectId }: { projectId: string }) {
+  return (
+    <form action={async () => {
+      'use server';
+      const { deactivateProject } = await import('@/app/actions/projects');
+      await deactivateProject({ projectId });
+      redirect('/');
+    }}>
+      <button className="bg-destructive/10 text-red-400 hover:bg-destructive/20 hover:text-red-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-destructive/20">
+        <AlertTriangle className="w-4 h-4" />
+        Desactivar Proyecto
+      </button>
+    </form>
   );
 }
