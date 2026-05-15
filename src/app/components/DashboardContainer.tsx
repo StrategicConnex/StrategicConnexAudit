@@ -6,7 +6,7 @@ import {
   ChevronRight, Plus, Download, ArrowUpRight, ArrowDownRight, 
   Sparkles, Clock, CheckCircle2, AlertCircle, TrendingUp, 
   Gauge, FileText, Filter, Calendar, Zap, RefreshCw, Layers, ShieldCheck,
-  Eye, Monitor, Smartphone, HelpCircle, Copy, Check
+  Eye, Monitor, Smartphone, HelpCircle, Copy, Check, Palette, Save
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -1585,12 +1585,97 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
                     </div>
 
                     <div className="space-y-4 mt-4">
-                      <h3 className="text-sm font-semibold text-white/80 uppercase tracking-widest border-b border-border/50 pb-2">Marca Blanca (White Label)</h3>
+                      <h3 className="text-sm font-semibold text-white/80 uppercase tracking-widest border-b border-border/50 pb-2 flex items-center gap-2">
+                        <Palette className="w-4 h-4 text-primary" /> Marca Blanca (White Label)
+                      </h3>
                       <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
-                        <p className="text-sm text-muted-foreground mb-4">Personaliza los logos, colores y dominios de los reportes. <br/><br/><span className="text-primary italic">Próximamente disponible en Fase 2.</span></p>
-                        <button disabled className="bg-white/5 text-white/50 px-4 py-2 rounded-lg text-sm font-medium border border-white/5 cursor-not-allowed">
-                          Configurar Branding
-                        </button>
+                        <p className="text-sm text-muted-foreground mb-6">Personaliza los logos y colores para los reportes PDF exportados.</p>
+                        
+                        <div className="grid gap-5">
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-white/80">Nombre de la Agencia</label>
+                            <input 
+                              type="text" 
+                              placeholder="Ej: Strategic SEO Agency" 
+                              className="w-full bg-black/40 border border-border/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 transition-colors"
+                              id="branding-name-input"
+                              defaultValue={typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('agencyBranding') || '{}').name || '' : ''}
+                              onChange={(e) => {
+                                const current = JSON.parse(localStorage.getItem('agencyBranding') || '{}');
+                                localStorage.setItem('agencyBranding', JSON.stringify({ ...current, name: e.target.value }));
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-white/80">Color Principal (HEX)</label>
+                            <div className="flex gap-3 items-center">
+                              <input 
+                                type="color" 
+                                className="w-10 h-10 rounded border border-border/50 bg-black/40 p-1 cursor-pointer"
+                                id="branding-color-picker"
+                                defaultValue={typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('agencyBranding') || '{}').color || '#3b82f6' : '#3b82f6'}
+                                onChange={(e) => {
+                                  const current = JSON.parse(localStorage.getItem('agencyBranding') || '{}');
+                                  localStorage.setItem('agencyBranding', JSON.stringify({ ...current, color: e.target.value }));
+                                  const textInput = document.getElementById('branding-color-text') as HTMLInputElement;
+                                  if (textInput) textInput.value = e.target.value;
+                                }}
+                              />
+                              <input 
+                                type="text" 
+                                id="branding-color-text"
+                                placeholder="#3b82f6" 
+                                className="flex-1 bg-black/40 border border-border/50 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-primary/50 transition-colors uppercase"
+                                defaultValue={typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('agencyBranding') || '{}').color || '#3b82f6' : '#3b82f6'}
+                                onChange={(e) => {
+                                  const current = JSON.parse(localStorage.getItem('agencyBranding') || '{}');
+                                  localStorage.setItem('agencyBranding', JSON.stringify({ ...current, color: e.target.value }));
+                                  const colorPicker = document.getElementById('branding-color-picker') as HTMLInputElement;
+                                  if (colorPicker) colorPicker.value = e.target.value;
+                                }}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-white/80">URL del Logo (Opcional)</label>
+                            <input 
+                              type="text" 
+                              placeholder="https://tudominio.com/logo.png" 
+                              className="w-full bg-black/40 border border-border/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 transition-colors"
+                              defaultValue={typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('agencyBranding') || '{}').logoUrl || '' : ''}
+                              onChange={(e) => {
+                                const current = JSON.parse(localStorage.getItem('agencyBranding') || '{}');
+                                localStorage.setItem('agencyBranding', JSON.stringify({ ...current, logoUrl: e.target.value }));
+                              }}
+                            />
+                            <p className="text-[10px] text-muted-foreground mt-1">Para mejores resultados en el PDF, usa una imagen con fondo transparente (PNG).</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-6 flex justify-end">
+                          <button 
+                            className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                            onClick={(e) => {
+                              const btn = e.currentTarget;
+                              const originalText = btn.innerHTML;
+                              btn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Guardando...';
+                              setTimeout(() => {
+                                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M20 6 9 17l-5-5"/></svg> Guardado localmente';
+                                btn.classList.add('bg-green-500/20', 'text-green-400', 'border-green-500/30');
+                                btn.classList.remove('bg-primary/20', 'text-primary', 'border-primary/30');
+                                setTimeout(() => {
+                                  btn.innerHTML = originalText;
+                                  btn.classList.remove('bg-green-500/20', 'text-green-400', 'border-green-500/30');
+                                  btn.classList.add('bg-primary/20', 'text-primary', 'border-primary/30');
+                                }, 3000);
+                              }, 600);
+                            }}
+                          >
+                            <Save className="w-4 h-4" /> Guardar Preferencias
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

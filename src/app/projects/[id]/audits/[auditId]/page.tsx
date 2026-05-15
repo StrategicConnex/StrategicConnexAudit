@@ -18,6 +18,7 @@ import {
   Check
 } from 'lucide-react';
 import Link from 'next/link';
+import { ExportPdfButton } from '@/app/components/ExportPdfButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -161,6 +162,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
         </div>
         
         <div className="ml-auto flex items-center gap-3">
+          <ExportPdfButton targetElementId="pdf-export-content" />
           <div className={`text-xs px-3 py-1 rounded-full font-medium border capitalize flex items-center gap-1.5
             ${audit.status === 'completed' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 
               audit.status === 'failed' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 
@@ -173,7 +175,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
       </header>
 
       <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-5xl mx-auto space-y-8">
+        <div id="pdf-export-content" className="max-w-5xl mx-auto space-y-8 p-4 -m-4 bg-background">
           
           {/* Fila de Score de Salud y Métricas rápidas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
