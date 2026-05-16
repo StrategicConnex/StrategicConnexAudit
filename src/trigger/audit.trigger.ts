@@ -217,12 +217,15 @@ export const runProjectAudit = task({
     maxAttempts: 3,
   },
   run: async (payload: { projectId: string; auditId: string; userId?: string }) => {
+    const startTime = Date.now();
     const dbUrl = process.env.DATABASE_URL || "";
     const dbHost = dbUrl.split('@')[1]?.split(':')[0] || "unknown";
-    console.log(`[Worker] Tarea recibida para auditoría ${payload.auditId} (Proyecto: ${payload.projectId}) en ${dbHost}`);
+    
+    console.log(`[Worker] Tarea recibida. ID Auditoría: ${payload.auditId}. Iniciando handshake con DB en ${dbHost}...`);
     
     try {
       // 1. Mark as running
+      console.log(`[Worker] Intentando actualizar estado a 'running' para auditoría ${payload.auditId}...`);
       const results = await db.update(audits)
         .set({
           status: "running",
@@ -235,6 +238,7 @@ export const runProjectAudit = task({
         throw new Error(`Registro de auditoría ${payload.auditId} no encontrado (Direct DB).`);
       }
       
+      console.log(`[Worker] Estado actualizado a 'running' en ${Date.now() - startTime}ms. Procediendo con el análisis...`);
       const audit = results[0];
 
       // 2. Datos del proyecto

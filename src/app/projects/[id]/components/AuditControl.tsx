@@ -39,13 +39,14 @@ export default function AuditControl({ projectId }: AuditControlProps) {
     let intervalId: NodeJS.Timeout;
 
     if (status === 'pending') {
-      // Sube gradualmente del 0% al 15% mientras se encola
+      // Sube gradualmente del 0% al 20% mientras se encola (más lento al final)
       intervalId = setInterval(() => {
         setProgress((prev) => {
-          if (prev < 15) return prev + 1;
+          if (prev < 12) return prev + 1;
+          if (prev < 19) return prev + 0.2; // Ralentizar para dar sensación de espera activa
           return prev;
         });
-      }, 150);
+      }, 200);
     } else if (status === 'running') {
       // Sube del 15% al 95% simulando el proceso de crawling y análisis
       // Se vuelve más lento a medida que se acerca al 95% para simular espera real
@@ -110,10 +111,10 @@ export default function AuditControl({ projectId }: AuditControlProps) {
   // Detector de "congelamiento" en 15% (Worker no responde)
   useEffect(() => {
     let timeout: NodeJS.Timeout;
-    if (isAuditing && status === 'pending' && progress >= 15) {
+    if (isAuditing && status === 'pending' && progress >= 18) {
       timeout = setTimeout(() => {
         setShowWorkerWarning(true);
-      }, 20000); // 20 segundos esperando en 15%
+      }, 45000); // 45 segundos esperando en modo pending (Cold Start margin)
     } else {
       setShowWorkerWarning(false);
     }
