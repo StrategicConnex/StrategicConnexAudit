@@ -63,10 +63,10 @@ export function AiCopilot({ contextData }: { contextData: any }) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 p-4 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 hover:scale-105 transition-all z-50 flex items-center gap-2 group"
+        className="fixed bottom-8 right-8 p-5 rounded-full bg-gradient-to-r from-[#0a84ff] to-[#0055ff] text-white shadow-[0_0_30px_rgba(10,132,255,0.45)] border border-[#0a84ff]/30 hover:scale-105 hover:shadow-[0_0_40px_rgba(10,132,255,0.65)] hover:border-[#0a84ff]/60 transition-all duration-300 z-50 flex items-center justify-center group cursor-pointer"
       >
-        <Bot className="w-6 h-6" />
-        <span className="hidden group-hover:inline-block font-semibold px-2 animate-in fade-in slide-in-from-right-4">
+        <Sparkles className="w-6 h-6 animate-pulse" strokeWidth={2.5} />
+        <span className="max-w-0 overflow-hidden group-hover:max-w-[120px] transition-all duration-300 font-bold text-[13px] tracking-tight whitespace-nowrap px-0 group-hover:px-2 text-white">
           SEO Copilot
         </span>
       </button>
@@ -74,44 +74,45 @@ export function AiCopilot({ contextData }: { contextData: any }) {
   }
 
   return (
-    <div className={`fixed bottom-6 right-6 bg-card border border-border/50 shadow-2xl rounded-2xl flex flex-col z-50 transition-all duration-300 ${isExpanded ? 'w-[600px] h-[80vh]' : 'w-[380px] h-[600px]'}`}>
+    <div className={`fixed bottom-8 right-8 glass-card border border-apple-gray-dark/10 shadow-2xl rounded-apple-md flex flex-col z-50 transition-all duration-500 ease-in-out animate-in slide-in-from-bottom-10 fade-in ${isExpanded ? 'w-[700px] h-[85vh]' : 'w-[400px] h-[640px]'}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/30 rounded-t-2xl shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
+      <div className="flex items-center justify-between p-6 border-b border-apple-gray rounded-t-apple-md shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-apple-sm bg-apple-gray flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-apple-ink" strokeWidth={2.5} />
           </div>
           <div>
-            <h3 className="font-semibold text-sm">Strategic Copilot</h3>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
-            </p>
+            <h3 className="font-bold text-[15px] text-apple-ink tracking-tight">Strategic Copilot</h3>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              <span className="text-[11px] font-bold text-apple-ink/40 uppercase tracking-widest">IA Activa</span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setIsExpanded(!isExpanded)} className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground">
-            {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setIsExpanded(!isExpanded)} className="p-2 hover:bg-apple-gray rounded-apple-sm text-apple-ink/40 transition-colors">
+            {isExpanded ? <Minimize2 className="w-4 h-4" strokeWidth={2.5} /> : <Maximize2 className="w-4 h-4" strokeWidth={2.5} />}
           </button>
-          <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground">
-            <X className="w-4 h-4" />
+          <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-apple-gray rounded-apple-sm text-apple-ink/40 transition-colors">
+            <X className="w-4 h-4" strokeWidth={2.5} />
           </button>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-muted rounded-tl-sm'}`}>
+            <div className={`max-w-[85%] rounded-apple-sm px-5 py-3.5 text-[14px] leading-relaxed font-medium ${msg.role === 'user' ? 'bg-apple-blue text-white shadow-sm' : 'bg-apple-gray text-apple-ink'}`}>
               <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') }} />
             </div>
           </div>
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Analizando...</span>
+            <div className="bg-apple-gray rounded-apple-sm px-5 py-4 flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin text-apple-ink/40" />
+              <span className="text-[11px] font-bold text-apple-ink/40 uppercase tracking-widest">Generando Respuesta...</span>
             </div>
           </div>
         )}
@@ -119,10 +120,10 @@ export function AiCopilot({ contextData }: { contextData: any }) {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-border/50 shrink-0">
+      <div className="p-6 border-t border-apple-gray shrink-0">
         <form
           onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-          className="flex items-end gap-2 bg-muted/50 border border-border/50 rounded-xl p-2"
+          className="relative"
         >
           <textarea
             value={input}
@@ -133,22 +134,22 @@ export function AiCopilot({ contextData }: { contextData: any }) {
                 handleSend();
               }
             }}
-            placeholder="Pregúntale al Copilot sobre tus métricas..."
-            className="flex-1 bg-transparent border-none outline-none resize-none max-h-32 text-sm p-2 scrollbar-thin"
+            placeholder="Pregúntale al Copilot..."
+            className="w-full bg-apple-gray border border-transparent focus:border-apple-gray-dark/10 rounded-apple-sm px-5 py-4 pr-14 text-[14px] font-medium text-apple-ink placeholder:text-apple-ink/30 outline-none resize-none max-h-32 transition-all"
             rows={1}
-            style={{ minHeight: '40px' }}
+            style={{ minHeight: '56px' }}
           />
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            className="absolute right-3 top-3 p-2.5 rounded-apple-sm bg-apple-blue text-white shadow-md hover:bg-apple-blue/90 disabled:opacity-20 disabled:grayscale transition-all cursor-pointer"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-4 h-4" strokeWidth={2.5} />
           </button>
         </form>
-        <div className="mt-2 text-[10px] text-center text-muted-foreground">
-          El Copilot puede cometer errores. Verifica siempre los datos críticos.
-        </div>
+        <p className="mt-4 text-[10px] font-bold text-center text-apple-ink/20 uppercase tracking-widest">
+          IA experimental • Verifique datos críticos
+        </p>
       </div>
     </div>
   );

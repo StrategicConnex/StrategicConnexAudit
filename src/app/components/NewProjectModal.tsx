@@ -22,9 +22,7 @@ export function NewProjectModal() {
   const dragStart = useRef({ x: 0, y: 0 });
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    // Don't drag if clicking inside an input or button
     if ((e.target as HTMLElement).closest('input, button')) return;
-    
     setIsDragging(true);
     dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -80,16 +78,16 @@ export function NewProjectModal() {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/20 transition-colors border border-[var(--color-primary)]/20"
+        className="flex items-center gap-2 px-5 py-2.5 bg-apple-blue text-white rounded-apple-pill hover:opacity-90 transition-all shadow-sm font-bold text-[13px] tracking-tight"
       >
-        <Plus size={18} />
-        <span className="font-medium text-sm">New Project</span>
+        <Plus size={16} strokeWidth={3} />
+        <span>Nuevo Proyecto</span>
       </button>
 
       {isOpen && mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/45 backdrop-blur-md animate-in fade-in duration-300">
           <div 
-            className={`glass-card w-full max-w-md p-6 relative animate-in fade-in zoom-in-95 duration-200 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`glass-card rounded-apple-md w-full max-w-md p-10 shadow-2xl relative animate-in zoom-in-95 duration-500 border border-apple-gray-dark/10 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -102,49 +100,52 @@ export function NewProjectModal() {
                 setState(null);
                 setPosition({ x: 0, y: 0 });
               }}
-              className="absolute top-4 right-4 text-[var(--color-muted-foreground)] hover:text-white transition-colors cursor-pointer"
+              className="absolute top-6 right-6 text-apple-ink/20 hover:text-apple-ink transition-colors cursor-pointer"
             >
-              <X size={20} />
+              <X size={20} strokeWidth={2.5} />
             </button>
             
-            <h2 className="text-xl font-bold text-white mb-6 pointer-events-none select-none">Create New Project</h2>
+            <div className="mb-8 pointer-events-none select-none">
+              <h2 className="text-2xl font-bold text-apple-ink tracking-tight">Agregar Dominio</h2>
+              <p className="text-[13px] font-medium text-apple-ink/40 mt-1.5">Configure un nuevo sitio para monitoreo SEO y Core Web Vitals.</p>
+            </div>
             
-            <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 cursor-auto">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-[var(--color-muted-foreground)] mb-1">Project Name</label>
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-6 cursor-auto">
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-[11px] font-bold text-apple-ink/40 uppercase tracking-widest ml-1">Nombre del Proyecto</label>
                 <input 
                   type="text" 
                   id="name" 
                   name="name" 
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/50 transition-all"
-                  placeholder="e.g. My Awesome Startup"
+                  className="w-full bg-apple-gray border border-apple-gray-dark/5 rounded-apple-sm px-4 py-3 text-apple-ink text-[14px] font-medium focus:outline-none focus:border-apple-blue/50 transition-all"
+                  placeholder="Ej: Mi Startup Ecommerce"
                 />
                 {state?.errors?.name && (
-                  <p className="text-red-400 text-xs mt-1">{state.errors.name[0]}</p>
+                  <p className="text-red-500 text-[11px] font-bold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.name[0]}</p>
                 )}
               </div>
               
-              <div>
-                <label htmlFor="baseUrl" className="block text-sm font-medium text-[var(--color-muted-foreground)] mb-1">Base URL</label>
+              <div className="space-y-2">
+                <label htmlFor="baseUrl" className="text-[11px] font-bold text-apple-ink/40 uppercase tracking-widest ml-1">URL Base (Dominio)</label>
                 <input 
                   type="text" 
                   id="baseUrl" 
                   name="baseUrl" 
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/50 transition-all"
-                  placeholder="https://example.com"
+                  className="w-full bg-apple-gray border border-apple-gray-dark/5 rounded-apple-sm px-4 py-3 text-apple-ink text-[14px] font-medium focus:outline-none focus:border-apple-blue/50 transition-all"
+                  placeholder="https://ejemplo.com"
                 />
                 {state?.errors?.baseUrl && (
-                  <p className="text-red-400 text-xs mt-1">{state.errors.baseUrl[0]}</p>
+                  <p className="text-red-500 text-[11px] font-bold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.baseUrl[0]}</p>
                 )}
               </div>
 
               {state?.message && !state?.success && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-apple-sm text-red-600 text-xs font-bold">
                   {state.message}
                 </div>
               )}
 
-              <div className="pt-4 flex justify-end gap-3">
+              <div className="pt-6 flex items-center justify-end gap-4">
                 <button 
                   type="button" 
                   onClick={() => {
@@ -152,17 +153,17 @@ export function NewProjectModal() {
                     setState(null);
                     setPosition({ x: 0, y: 0 });
                   }}
-                  className="px-4 py-2 text-sm font-medium text-[var(--color-muted-foreground)] hover:text-white transition-colors"
+                  className="text-[13px] font-bold text-apple-ink/40 hover:text-apple-ink transition-colors"
                   disabled={isPending}
                 >
-                  Cancel
+                  Cancelar
                 </button>
                 <button 
                   type="submit" 
                   disabled={isPending}
-                  className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-background)] font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-apple-ink text-black font-bold rounded-apple-pill hover:opacity-90 transition-all disabled:opacity-50 text-[13px]"
                 >
-                  {isPending ? <Loader2 size={18} className="animate-spin" /> : 'Create Project'}
+                  {isPending ? <Loader2 size={16} className="animate-spin" /> : 'Crear Proyecto'}
                 </button>
               </div>
             </form>

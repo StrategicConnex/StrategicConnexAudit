@@ -51,12 +51,26 @@ const config: Config = {
           '3': 'hsl(var(--chart-3))',
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))'
+        },
+        apple: {
+          gray: 'var(--apple-gray)',
+          'gray-dark': 'var(--apple-gray-dark)',
+          blue: 'var(--apple-blue)',
+          ink: 'var(--apple-ink)',
+          black: 'var(--apple-black)',
+          white: 'var(--apple-white)',
         }
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
+        sm: 'calc(var(--radius) - 4px)',
+        'apple-sm': '8px',
+        'apple-md': '12px',
+        'apple-lg': '18px',
+        'apple-xl': '28px',
+        'apple-2xl': '36px',
+        'apple-pill': '980px',
       }
     }
   },

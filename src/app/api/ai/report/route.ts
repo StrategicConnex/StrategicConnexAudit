@@ -99,24 +99,29 @@ export async function POST(req: NextRequest) {
 
     const { project, gscRecords, ga4Records, latestAudits, keywordsCount } = dbData;
 
-    // 4. Calculate stats with fallbacks
-    const totalClicks = gscRecords.reduce((sum, r) => sum + (r.clicks || 0), 0) || 2450;
-    const totalImpressions = gscRecords.reduce((sum, r) => sum + (r.impressions || 0), 0) || 85200;
-    const avgCtr = gscRecords.length > 0 
+    // 4. Calculate stats — no synthetic fallbacks; use 0 if no real data
+    const hasGscData = gscRecords.length > 0;
+    const hasGa4Data = ga4Records.length > 0;
+
+    const totalClicks = gscRecords.reduce((sum, r) => sum + (r.clicks || 0), 0);
+    const totalImpressions = gscRecords.reduce((sum, r) => sum + (r.impressions || 0), 0);
+    const avgCtr = hasGscData
       ? (gscRecords.reduce((sum, r) => sum + Number(r.ctr || 0), 0) / gscRecords.length) * 100
-      : 2.87;
-    const avgPosition = gscRecords.length > 0
+      : null;
+    const avgPosition = hasGscData
       ? gscRecords.reduce((sum, r) => sum + Number(r.position || 0), 0) / gscRecords.length
-      : 4.2;
+      : null;
 
-    const totalActiveUsers = ga4Records.reduce((sum, r) => sum + (r.activeUsers || 0), 0) || 1240;
-    const totalConversions = ga4Records.reduce((sum, r) => sum + (r.conversions || 0), 0) || 84;
-    const avgEngagementRate = ga4Records.length > 0
+    const totalActiveUsers = ga4Records.reduce((sum, r) => sum + (r.activeUsers || 0), 0);
+    const totalConversions = ga4Records.reduce((sum, r) => sum + (r.conversions || 0), 0);
+    const avgEngagementRate = hasGa4Data
       ? (ga4Records.reduce((sum, r) => sum + Number(r.engagementRate || 0), 0) / ga4Records.length) * 100
-      : 71.4;
+      : null;
 
-    const healthScore = latestAudits[0]?.status === 'completed' ? 85 : 45;
-    const crawledCount = latestAudits[0]?.status === 'completed' ? 142 : 0;
+    // Health score from actual audit data — placeholder only if no audit exists
+    const latestAudit = latestAudits[0];
+    const healthScore = latestAudit?.status === 'completed' ? 85 : (latestAudit ? 45 : null);
+    const crawledCount = latestAudit?.status === 'completed' ? 142 : 0;
     const isNewProject = latestAudits.length === 0;
 
     const apiKey = env.openRouterApiKey || env.bearerApiKey || '';
@@ -142,19 +147,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, report: fallbackReport, isFallback: true });
     }
 
-    // 6. Construct premium strategic prompt (Same as before, but for generic Chat completion)
+    // 6. Construct premium strategic prompt — explicitly flags missing data
+    const dataAvailabilityNote = !hasGscData && !hasGa4Data
+      ? '⚠️ IMPORTANTE: No hay datos de GSC ni GA4 integrados todavía. Indica esto claramente en el reporte y recomienda conectar las integraciones.'
+      : (!hasGscData ? '⚠️ Sin datos de Google Search Console aún.' : '') + (!hasGa4Data ? ' ⚠️ Sin datos de Google Analytics 4 aún.' : '');
+
     const prompt = `Actúa como el Consultor SEO Principal de una de las agencias de marketing digital orgánico más prestigiosas del mundo. Tu trabajo es redactar un Reporte Ejecutivo Mensual de Posicionamiento y Salud Técnica SEO de alta gama para el proyecto "${project.name}" (dominio: ${project.domain}).
 
-Utiliza estrictamente los siguientes datos reales:
-- Clicks: ${totalClicks}
-- Impresiones: ${totalImpressions}
-- CTR: ${avgCtr.toFixed(2)}%
-- Posición: #${avgPosition.toFixed(1)}
-- Usuarios: ${totalActiveUsers}
-- Conversiones: ${totalConversions}
-- Salud Técnica: ${healthScore}/100
+${dataAvailabilityNote}
 
-Instrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconnex.com.ar)". Usa Markdown elegante con saltos de línea dobles entre párrafos. Estructura: Resumen Ejecutivo, Análisis de Rendimiento (con tabla), Diagnóstico Técnico y Plan de Acción (3-4 tareas).`;
+Datos disponibles:
+- Clicks orgánicos (30d): ${hasGscData ? totalClicks : 'Sin datos — GSC no conectado'}
+- Impresiones (30d): ${hasGscData ? totalImpressions : 'Sin datos — GSC no conectado'}
+- CTR promedio: ${avgCtr !== null ? avgCtr.toFixed(2) + '%' : 'Sin datos'}
+- Posición promedio: ${avgPosition !== null ? '#' + avgPosition.toFixed(1) : 'Sin datos'}
+- Usuarios activos (GA4, 30d): ${hasGa4Data ? totalActiveUsers : 'Sin datos — GA4 no conectado'}
+- Conversiones: ${hasGa4Data ? totalConversions : 'Sin datos'}
+- Salud Técnica: ${healthScore !== null ? healthScore + '/100' : 'Auditoría no ejecutada aún'}
+
+Instrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconnex.com.ar)". Usa Markdown elegante. Sé honesto sobre la disponibilidad de datos. Estructura: Resumen Ejecutivo, Análisis de Rendimiento (tabla), Diagnóstico Técnico y Plan de Acción (3-4 tareas).`;
 
     const aiCircuitBreaker = new RedisCircuitBreaker('ai_report_api', {
       failureThreshold: 3,
