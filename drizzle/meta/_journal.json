@@ -15,6 +15,13 @@
       "when": 1778821125742,
       "tag": "0001_silky_ikaris",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1747404000000,
+      "tag": "0002_quota_enforcement",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/db';
 import { webVitalsLogs, projects } from '@/shared/db/schemas';
 import { eq } from 'drizzle-orm';
@@ -7,7 +7,7 @@ import { z } from 'zod';
 // Define the validation schema for the incoming payload
 const vitalsSchema = z.object({
   projectId: z.string().uuid(),
-  url: z.string().min(1),
+  url: z.string().min(1).max(2048),
   deviceType: z.enum(['desktop', 'mobile']).optional().default('desktop'),
   metrics: z.object({
     LCP: z.number().optional(),
@@ -18,11 +18,51 @@ const vitalsSchema = z.object({
   })
 });
 
-export async function POST(request: Request) {
+// SECURITY: Simple in-memory rate limiter for telemetry endpoint (60 req/min per IP).
+// Replace with Redis-backed limiter (Upstash) for multi-instance deployments.
+const telemetryRateLimit = new Map<string, { count: number; resetTime: number }>();
+
+function checkTelemetryRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = telemetryRateLimit.get(ip);
+  if (!record || now > record.resetTime) {
+    telemetryRateLimit.set(ip, { count: 1, resetTime: now + 60_000 });
+    return true;
+  }
+  if (record.count >= 60) return false;
+  record.count++;
+  return true;
+}
+
+// SECURITY: Determine allowed origins from env var.
+// Set ALLOWED_TELEMETRY_ORIGINS=https://mysite.com,https://otherdomain.com in .env
+// In development, all origins are allowed.
+function getCorsOrigin(requestOrigin: string | null): string {
+  if (process.env.NODE_ENV !== 'production') return requestOrigin ?? '*';
+  const allowedRaw = process.env.ALLOWED_TELEMETRY_ORIGINS ?? '';
+  const allowed = allowedRaw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!requestOrigin || !allowed.includes(requestOrigin)) return 'null';
+  return requestOrigin;
+}
+
+export async function POST(request: NextRequest) {
   try {
-    // Basic CORS for public endpoint
-    // In production, we might want to restrict this via allowedOrigins per project,
-    // but for now we accept telemetry if the projectId is valid.
+    // Rate limiting by IP
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') ?? 'unknown');
+    if (!checkTelemetryRateLimit(ip)) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // CORS origin validation
+    const origin = request.headers.get('origin');
+    const corsOrigin = getCorsOrigin(origin);
+    if (corsOrigin === 'null' && process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Forbidden: origin not allowed' }, {
+        status: 403,
+        headers: { 'Access-Control-Allow-Origin': 'null' },
+      });
+    }
 
     const body = await request.json();
     const parsed = vitalsSchema.safeParse(body);
@@ -55,22 +95,26 @@ export async function POST(request: Request) {
       fcp: metrics.FCP !== undefined ? String(metrics.FCP) : null,
     });
 
-    // Return a 204 No Content for successful telemetry
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(null, {
+      status: 204,
+      headers: { 'Access-Control-Allow-Origin': corsOrigin },
+    });
   } catch (error: any) {
     console.error('Telemetry error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-export async function OPTIONS(request: Request) {
-  // Handle preflight requests for CORS
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const corsOrigin = getCorsOrigin(origin);
   return new NextResponse(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*', // Adjust in production
+      'Access-Control-Allow-Origin': corsOrigin,
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
 }
+

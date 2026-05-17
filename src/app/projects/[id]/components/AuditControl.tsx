@@ -39,22 +39,17 @@ export default function AuditControl({ projectId }: AuditControlProps) {
     let intervalId: NodeJS.Timeout;
 
     if (status === 'pending') {
-      // Sube gradualmente del 0% al 20% mientras se encola (más lento al final)
       intervalId = setInterval(() => {
         setProgress((prev) => {
           if (prev < 12) return prev + 1;
-          if (prev < 19) return prev + 0.2; // Ralentizar para dar sensación de espera activa
+          if (prev < 19) return prev + 0.2;
           return prev;
         });
       }, 200);
     } else if (status === 'running') {
-      // Sube del 15% al 95% simulando el proceso de crawling y análisis
-      // Se vuelve más lento a medida que se acerca al 95% para simular espera real
       intervalId = setInterval(() => {
         setProgress((prev) => {
-          // Incremento inicial rápido hasta el 15%
           if (prev < 15) return prev + 2;
-          // Progreso simulado más fluido
           if (prev < 45) return prev + (Math.random() > 0.4 ? 1 : 0.5);
           if (prev < 75) return prev + (Math.random() > 0.7 ? 0.5 : 0.2);
           if (prev < 92) return prev + (Math.random() > 0.9 ? 0.2 : 0.1);
@@ -63,8 +58,6 @@ export default function AuditControl({ projectId }: AuditControlProps) {
       }, 300);
     } else if (status === 'completed') {
       setProgress(100);
-    } else if (status === 'failed' || status === 'idle') {
-      // No resetear progreso inmediatamente para permitir ver el error
     }
 
     return () => clearInterval(intervalId);
@@ -114,11 +107,11 @@ export default function AuditControl({ projectId }: AuditControlProps) {
     if (isAuditing && status === 'pending' && progress >= 18) {
       timeout = setTimeout(() => {
         setShowWorkerWarning(true);
-      }, 45000); // 45 segundos esperando en modo pending (Cold Start margin)
+      }, 45000);
     } else {
       setShowWorkerWarning(false);
     }
-    return () => clearTimeout(timeout);
+    return () => clearInterval(timeout);
   }, [isAuditing, status, progress]);
 
   const handleStartAudit = () => {
@@ -161,71 +154,86 @@ export default function AuditControl({ projectId }: AuditControlProps) {
   const isDisabled = isAuditing || isPending || cooldown > 0;
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="flex flex-col items-end gap-3">
       <button
         onClick={handleStartAudit}
         disabled={isDisabled}
-        className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all relative overflow-hidden flex items-center gap-2.5 shadow-lg border
+        className={`relative h-11 px-8 rounded-apple-pill text-xs font-semibold tracking-widest uppercase transition-all overflow-hidden flex items-center justify-center gap-2.5 
           ${isDisabled 
-            ? 'bg-primary/10 border-primary/30 text-primary cursor-not-allowed select-none min-w-[190px] justify-center' 
-            : 'bg-primary hover:bg-primary/90 text-primary-foreground border-transparent hover:scale-[1.02] active:scale-[0.98]'}`}
-        style={{
-          // Crea un fondo de barra de carga sutil dentro del mismo botón para dar un efecto visual premium
-          background: isAuditing 
-            ? `linear-gradient(90deg, rgba(var(--color-primary), 0.15) ${progress}%, transparent ${progress}%)`
-            : cooldown > 0
-            ? `linear-gradient(90deg, rgba(var(--color-primary), 0.1) ${(cooldown/30)*100}%, transparent ${(cooldown/30)*100}%)`
-            : undefined
-        }}
+            ? 'bg-apple-gray/40 text-apple-ink/40 cursor-not-allowed border border-apple-ink/5' 
+            : 'bg-apple-blue text-white shadow-[0_4px_12px_rgba(0,113,227,0.3)] hover:shadow-[0_6px_16px_rgba(0,113,227,0.4)] hover:scale-[1.02] active:scale-[0.98]'}`}
       >
-        {status === 'pending' && (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span>Encolando... {progress}%</span>
-          </>
+        {/* Background Progress Layer */}
+        {isAuditing && (
+          <div 
+            className="absolute inset-0 bg-apple-ink/5 transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
         )}
-        {status === 'running' && (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span>Analizando... {progress}%</span>
-          </>
+        
+        {cooldown > 0 && status === 'idle' && (
+          <div 
+            className="absolute inset-0 bg-apple-ink/10 transition-all duration-1000 linear"
+            style={{ width: `${(cooldown/30)*100}%` }}
+          />
         )}
-        {status === 'completed' && (
-          <>
-            <CheckCircle2 className="w-4 h-4 text-green-400 animate-bounce" />
-            <span>¡Completado! {progress}%</span>
-          </>
-        )}
-        {status === 'failed' && (
-          <>
-            <AlertCircle className="w-4 h-4 text-red-400" />
-            <span>Reintentar Auditoría</span>
-          </>
-        )}
-        {status === 'idle' && cooldown > 0 && (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin opacity-50" />
-            <span>Espera {cooldown}s</span>
-          </>
-        )}
-        {status === 'idle' && cooldown === 0 && (
-          <>
-            <Play className="w-4 h-4 fill-current" />
-            <span>Auditar Sitio Ahora</span>
-          </>
-        )}
+
+        <div className="relative z-10 flex items-center gap-2.5">
+          {status === 'pending' && (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Initializing {progress}%</span>
+            </>
+          )}
+          {status === 'running' && (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Auditing {progress}%</span>
+            </>
+          )}
+          {status === 'completed' && (
+            <>
+              <CheckCircle2 className="w-3.5 h-3.5 animate-bounce" />
+              <span>Success {progress}%</span>
+            </>
+          )}
+          {status === 'failed' && (
+            <>
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>Retry Audit</span>
+            </>
+          )}
+          {status === 'idle' && cooldown > 0 && (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin opacity-50" />
+              <span>Wait {cooldown}s</span>
+            </>
+          )}
+          {status === 'idle' && cooldown === 0 && (
+            <>
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Start Audit</span>
+            </>
+          )}
+        </div>
       </button>
 
       {errorMessage && (
-        <span className="text-[11px] text-red-400 font-medium max-w-xs text-right animate-pulse bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-md">
-          {errorMessage}
-        </span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-apple-sm bg-red-500/5 border border-red-500/10 max-w-xs animate-in fade-in slide-in-from-top-1">
+          <AlertCircle className="w-3 h-3 text-red-500" />
+          <span className="text-[10px] text-red-500/80 font-medium text-right leading-tight">
+            {errorMessage}
+          </span>
+        </div>
       )}
 
       {showWorkerWarning && (
-        <span className="text-[10px] text-amber-400 font-medium max-w-xs text-right animate-pulse px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md">
-          El servidor de análisis tarda en responder. Asegúrate de que el trabajador (worker) esté activo y conectado.
-        </span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-apple-sm bg-apple-gray/50 border border-apple-ink/5 max-w-xs animate-pulse">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span className="text-[10px] text-apple-ink/60 font-medium text-right leading-tight">
+            Server response delayed. Waiting for analyzer...
+          </span>
+        </div>
       )}
     </div>
   );

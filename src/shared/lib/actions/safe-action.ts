@@ -9,10 +9,16 @@ export type ActionState<T> = {
 };
 
 /**
- * Un wrapper para Server Actions que garantiza autenticación y validación.
+ * Un wrapper para Server Actions que garantiza autenticación y validación de esquema Zod.
+ *
+ * Uso:
+ *   const result = await protectedAction(MySchema, formData, async (input, userId) => {
+ *     // input ya está validado y tipado como z.infer<typeof MySchema>
+ *   });
  */
 export async function protectedAction<TInput, TOutput>(
   schema: z.ZodSchema<TInput>,
+  input: unknown,
   handler: (input: TInput, userId: string) => Promise<TOutput>
 ): Promise<ActionState<TOutput>> {
   try {
@@ -27,12 +33,17 @@ export async function protectedAction<TInput, TOutput>(
       };
     }
 
-    // 2. Validación de entrada con Zod (opcional si se pasa el schema)
-    // Nota: Para FormData, el schema debería manejar la transformación si es necesario
-    const result = schema.safeParse(arguments[0]); // Esto es una simplificación, en uso real pasaremos el input ya parseado o el FormData
-    
-    // Ejecutamos el handler
-    const data = await handler(arguments[0] as TInput, user.id);
+    // 2. Validación de entrada con Zod
+    const result = schema.safeParse(input);
+    if (!result.success) {
+      return {
+        success: false,
+        errors: result.error.flatten().fieldErrors as Record<string, string[]>,
+      };
+    }
+
+    // 3. Ejecutar el handler con el input validado y tipado
+    const data = await handler(result.data, user.id);
 
     return {
       success: true,
@@ -40,7 +51,7 @@ export async function protectedAction<TInput, TOutput>(
     };
   } catch (error) {
     console.error("[Action Error]:", error);
-    
+
     if (error instanceof z.ZodError) {
       return {
         success: false,
@@ -54,3 +65,4 @@ export async function protectedAction<TInput, TOutput>(
     };
   }
 }
+

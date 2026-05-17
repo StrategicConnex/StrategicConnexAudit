@@ -1,5 +1,5 @@
 import { task, wait } from "@trigger.dev/sdk";
-import { directDb as db } from "@/shared/db";
+import { directDb } from "@/shared/db";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { promises as dnsPromises } from "dns";
@@ -8,10 +8,11 @@ import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 console.log("[Trigger Module] audit.trigger.ts cargado correctamente.");
 console.log("[Trigger Module] DATABASE_URL presente:", !!process.env.DATABASE_URL);
 
-// Force allow self-signed certs in background worker environment
-if (process.env.NODE_ENV === 'production' || process.env.TRIGGER_SECRET_KEY) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
+// SECURITY: Do NOT disable TLS validation globally.
+// If a specific upstream requires it (e.g. a self-signed internal endpoint),
+// set ALLOW_SELF_SIGNED_CERTS=true in the environment and handle it at the
+// fetch/pg-connection level only — never globally via NODE_TLS_REJECT_UNAUTHORIZED.
+// The DB connection's SSL is handled in src/shared/db/index.ts via DB_ALLOW_INSECURE_SSL.
 
 interface AnalyzeResult {
   statusCode: number;
@@ -217,35 +218,29 @@ export const runProjectAudit = task({
     maxAttempts: 3,
   },
   run: async (payload: { projectId: string; auditId: string; userId?: string }) => {
-    const startTime = Date.now();
-    const dbUrl = process.env.DATABASE_URL || "";
-    const dbHost = dbUrl.split('@')[1]?.split(':')[0] || "unknown";
-    
-    console.log(`[Worker] Tarea recibida. ID Auditoría: ${payload.auditId}. Iniciando handshake con DB en ${dbHost}...`);
-    
-    try {
-      // 1. Mark as running
-      console.log(`[Worker] Intentando actualizar estado a 'running' para auditoría ${payload.auditId}...`);
-      const results = await db.update(audits)
-        .set({
-          status: "running",
-          startedAt: new Date()
-        })
-        .where(eq(audits.id, payload.auditId))
-        .returning();
-
-      if (results.length === 0) {
-        throw new Error(`Registro de auditoría ${payload.auditId} no encontrado (Direct DB).`);
-      }
+      const { auditId, projectId } = payload;
       
-      console.log(`[Worker] Estado actualizado a 'running' en ${Date.now() - startTime}ms. Procediendo con el análisis...`);
-      const audit = results[0];
+      console.log(`[Worker] Tarea recibida. ID Auditoría: ${auditId}. Procesando...`);
+      
+      try {
+        // 1. Marcar como 'running'
+        const [audit] = await directDb.update(audits)
+          .set({
+            status: "running",
+            startedAt: new Date()
+          })
+          .where(eq(audits.id, auditId))
+          .returning();
 
-      // 2. Datos del proyecto
-      const projectResult = await db.select().from(projects).where(eq(projects.id, payload.projectId)).limit(1);
-      const project = projectResult[0];
+        if (!audit) {
+          throw new Error(`Registro de auditoría ${auditId} no encontrado.`);
+        }
+        
+        console.log(`[Worker] Estado actualizado. Iniciando análisis...`);
 
-      if (!project) throw new Error(`Proyecto ${payload.projectId} no encontrado`);
+        // 2. Datos del proyecto
+        const [project] = await directDb.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+        if (!project) throw new Error(`Proyecto ${projectId} no encontrado`);
 
       let targetUrl = project.domain;
       if (!/^https?:\/\//i.test(targetUrl)) targetUrl = `https://${targetUrl}`;
@@ -256,7 +251,7 @@ export const runProjectAudit = task({
       console.log(`[Worker] Análisis completado. Status: ${analysis.statusCode}, Words: ${analysis.wordCount}`);
 
       // 4. Guardar resultados
-      await db.insert(crawlResults).values({
+      await directDb.insert(crawlResults).values({
         auditId: payload.auditId,
         url: targetUrl,
         statusCode: analysis.statusCode,
@@ -360,31 +355,30 @@ export const runProjectAudit = task({
 
       if (issuesToInsert.length > 0) {
         console.log(`[Worker] Guardando ${issuesToInsert.length} problemas de optimización detectados.`);
-        // @ts-ignore
-        await db.insert(issues).values(issuesToInsert);
+        await directDb.insert(issues).values(issuesToInsert);
       }
 
       // 6. Finalizar
-      await db.update(audits)
+      await directDb.update(audits)
         .set({
           status: "completed",
           completedAt: new Date()
         })
-        .where(eq(audits.id, payload.auditId));
+        .where(eq(audits.id, auditId));
 
-      console.log(`[Worker] Auditoría ${payload.auditId} finalizada con éxito.`);
+      console.log(`[Worker] Auditoría ${auditId} finalizada con éxito.`);
 
     } catch (err: any) {
-      console.error(`[Worker] Error fatal en auditoría ${payload.auditId}:`, err);
+      console.error(`[Worker] Error fatal en auditoría ${auditId}:`, err);
       
       try {
-        await db.update(audits)
+        await directDb.update(audits)
           .set({
             status: "failed",
             errorMessage: err.message || "Error desconocido durante la ejecución.",
             completedAt: new Date()
           })
-          .where(eq(audits.id, payload.auditId));
+          .where(eq(audits.id, auditId));
       } catch (updateErr) {
         console.error("[Worker] Error al intentar marcar como fallido en DB:", updateErr);
       }

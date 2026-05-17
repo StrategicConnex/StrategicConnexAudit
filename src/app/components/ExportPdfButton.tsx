@@ -1,6 +1,6 @@
 'use client';
 
-import { Download } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { exportAuditToPdf } from '@/shared/utils/exportPdf';
 import { useState } from 'react';
 
@@ -34,17 +34,15 @@ export function ExportPdfButton({ targetElementId }: { targetElementId: string }
     <button 
       onClick={handleExport}
       disabled={isExporting}
-      className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed no-print"
+      className="h-10 px-6 rounded-apple-pill text-[10px] font-bold uppercase tracking-[0.1em] transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed no-print
+        bg-apple-ink/5 text-apple-ink hover:bg-apple-blue hover:text-white border border-apple-ink/5 hover:border-apple-blue shadow-sm hover:shadow-md"
     >
       {isExporting ? (
-        <svg className="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
       ) : (
-        <Download className="w-4 h-4" />
+        <Download className="w-3.5 h-3.5" />
       )}
-      {isExporting ? 'Generando PDF...' : 'Exportar Reporte PDF (White Label)'}
+      {isExporting ? 'Generating PDF...' : 'Export PDF Report'}
     </button>
   );
 }

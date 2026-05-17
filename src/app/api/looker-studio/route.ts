@@ -121,17 +121,16 @@ export async function GET(req: NextRequest) {
         }
       });
     } else if (!expectedKey) {
-      // If no user and no API key, return empty
+      // No user and no API key configured — return empty
       activeProjects = [];
     } else {
-      // API Key access but no user - in this case we might want to return all projects 
-      // if the system allows public access via API Key. 
-      // However, if RLS is enabled, we'd need a superuser role to see anything.
-      // For now, let's keep it as is, but this might need a different handler if it's a service role.
-      activeProjects = await db
-        .select()
-        .from(projects)
-        .where(isNull(projects.deletedAt));
+      // SECURITY: API Key presented but no authenticated user session.
+      // We do NOT query without RLS — this would expose all projects across tenants.
+      // For server-to-server integrations, implement a dedicated /api/service/looker
+      // endpoint with a scoped service token and explicit organization filtering.
+      console.warn('[Looker] API Key auth without user session — returning empty dataset. ' +
+        'For service-to-service integration, use a dedicated service endpoint.');
+      activeProjects = [];
     }
 
     // 5. Generate rows with concurrent fetching
@@ -230,15 +229,16 @@ export async function GET(req: NextRequest) {
         const realGsc = gscRecords.find(r => r.date === isoDateStr);
         const realGa4 = ga4Records.find(r => r.date === isoDateStr);
 
-        const multiplier = 1 + Math.sin(i / 2) * 0.15 + (Math.random() * 0.05);
-        const clicks = realGsc ? Number(realGsc.clicks) : Math.floor(250 * multiplier);
-        const impressions = realGsc ? Number(realGsc.impressions) : Math.floor(4200 * multiplier);
-        const ctr = realGsc ? Number(realGsc.ctr) : 0.059 * multiplier;
-        const position = realGsc ? Number(realGsc.position) : 4.2 - (Math.sin(i / 4) * 0.3);
+        // PRODUCT: Only use real data. When absent, use 0 instead of synthetic Math.random()
+        // values. The `isDemoData` flag in the response meta signals the absence of real data.
+        const clicks = realGsc ? Number(realGsc.clicks) : 0;
+        const impressions = realGsc ? Number(realGsc.impressions) : 0;
+        const ctr = realGsc ? Number(realGsc.ctr) : 0;
+        const position = realGsc ? Number(realGsc.position) : 0;
 
-        const activeUsers = realGa4 ? Number(realGa4.activeUsers) : Math.floor(180 * multiplier);
-        const conversions = realGa4 ? Number(realGa4.conversions) : Math.floor(12 * multiplier);
-        const engagementRate = realGa4 ? Number(realGa4.engagementRate) : 0.72 * multiplier;
+        const activeUsers = realGa4 ? Number(realGa4.activeUsers) : 0;
+        const conversions = realGa4 ? Number(realGa4.conversions) : 0;
+        const engagementRate = realGa4 ? Number(realGa4.engagementRate) : 0;
 
         rows.push({
           values: [
@@ -254,13 +254,18 @@ export async function GET(req: NextRequest) {
             activeUsers,
             conversions,
             engagementRate,
-            keywordsCount || 5
+            keywordsCount || 0
           ]
         });
       }
     }
 
     // 6. Return response with rate limit headers
+    const hasRealData = activeProjects.some(p => {
+      const ep = enrichedProjects.find((e: any) => e.project.id === p.id);
+      return ep && (ep.gscRecords.length > 0 || ep.ga4Records.length > 0);
+    });
+
     const headers = {
       'X-RateLimit-Remaining': remaining.toString(),
       'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
@@ -280,6 +285,7 @@ export async function GET(req: NextRequest) {
       meta: {
         generatedAt: today.toISOString(),
         totalProjects: activeProjects.length,
+        isDemoData: !hasRealData,
         version: "2.1",
         developer: "StrategicAudit Pro Team"
       }

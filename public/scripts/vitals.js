@@ -15,7 +15,18 @@
   if (!scriptTag) return;
 
   const projectId = scriptTag.getAttribute('data-project-id');
-  const apiUrl = scriptTag.getAttribute('data-api-url') || '/api/telemetry/vitals';
+  
+  let defaultApiUrl = '/api/telemetry/vitals';
+  try {
+    if (scriptTag.src) {
+      const scriptUrl = new URL(scriptTag.src, window.location.href);
+      defaultApiUrl = scriptUrl.origin + '/api/telemetry/vitals';
+    }
+  } catch (e) {
+    // Fallback if URL parsing fails
+  }
+
+  const apiUrl = scriptTag.getAttribute('data-api-url') || defaultApiUrl;
 
   if (!projectId) {
     console.warn('StrategicAudit Pro: data-project-id is missing.');
