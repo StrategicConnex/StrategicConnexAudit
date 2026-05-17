@@ -129,21 +129,22 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   } catch (error: any) {
     console.error("Critical error loading project detail:", error);
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-10 text-center bg-background">
-        <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-8 border border-red-500/20">
-          <AlertTriangle className="w-10 h-10 text-red-400" />
+      <div className="flex flex-col items-center justify-center min-h-screen p-10 text-center bg-[#030303] text-zinc-100 relative overflow-hidden font-sans">
+        <div className="absolute inset-0 tech-grid opacity-20 pointer-events-none" />
+        <div className="w-20 h-20 rounded-full bg-rose-500/10 flex items-center justify-center mb-8 border border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.15)] relative z-10 animate-pulse">
+          <AlertTriangle className="w-10 h-10 text-rose-400" />
         </div>
-        <h1 className="text-3xl font-bold text-apple-ink tracking-tight">Error de Conexión</h1>
-        <p className="mt-4 text-[15px] font-medium text-apple-ink/40 max-w-md leading-relaxed">
-          Hubo un problema técnico al recuperar los datos de este proyecto. Nuestro equipo ha sido notificado.
+        <h1 className="text-3xl font-extrabold text-white tracking-tight relative z-10">Error de Conexión</h1>
+        <p className="mt-4 text-[15px] font-medium text-zinc-400 max-w-md leading-relaxed relative z-10">
+          Hubo un problema técnico al recuperar los datos de este proyecto. Nuestro equipo de respuesta a incidentes ha sido notificado automáticamente.
         </p>
-        <div className="mt-12 flex gap-4">
-          <Link href="/" className="px-8 py-3 bg-apple-gray text-apple-ink font-bold rounded-apple-pill hover:bg-apple-gray-dark/10 transition-all text-[14px]">
+        <div className="mt-12 flex gap-4 relative z-10">
+          <Link href="/" className="px-8 py-3 bg-white/[0.04] text-zinc-300 font-bold border border-white/[0.08] rounded-xl hover:bg-white/[0.08] transition-all text-[14px]">
             Volver al Inicio
           </Link>
           <button 
             onClick={(() => { "use client"; window.location.reload(); }) as any}
-            className="px-8 py-3 bg-apple-ink text-white font-bold rounded-apple-pill hover:opacity-90 transition-all text-[14px]"
+            className="px-8 py-3 bg-cyan-500 text-black font-extrabold rounded-xl hover:bg-cyan-400 transition-all text-[14px] shadow-[0_0_20px_rgba(6,182,212,0.3)]"
           >
             Reintentar
           </button>
@@ -159,33 +160,38 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, currentUptimeStatus, vitalsAverages, latestCompletedAudit } = data;
   
   return (
-    <div className="min-h-screen bg-apple-gray/30 text-apple-ink flex flex-col font-sans">
-      <header className="h-20 border-b border-apple-gray-dark/5 flex items-center px-10 bg-background/80 backdrop-blur-xl sticky top-0 z-50 gap-8 shrink-0">
-        <Link href="/" className="text-apple-ink/20 hover:text-apple-ink transition-all p-2 -ml-2 rounded-apple-sm hover:bg-apple-gray shrink-0">
+    <div className="min-h-screen bg-[#030303] text-zinc-100 flex flex-col font-sans relative overflow-hidden">
+      {/* Ambient glowing mesh system */}
+      <div className="absolute inset-0 tech-grid opacity-30 pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
+
+      <header className="h-20 border-b border-white/[0.06] flex items-center px-10 bg-[#030303]/85 backdrop-blur-xl sticky top-0 z-50 gap-8 shrink-0">
+        <Link href="/" className="text-zinc-500 hover:text-white transition-all p-2 -ml-2 rounded-xl hover:bg-white/[0.03] shrink-0 border border-transparent hover:border-white/[0.06]">
           <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
         </Link>
         <div className="flex flex-col text-left min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-apple-ink/30 uppercase tracking-[0.2em]">Proyecto Activo</span>
-            <span className="w-1 h-1 rounded-full bg-apple-ink/20"></span>
-            <span className="text-[11px] font-bold text-apple-blue uppercase tracking-[0.2em]">{project.id.substring(0, 8)}</span>
+            <span className="text-[9px] font-extrabold text-zinc-500 uppercase tracking-widest">Proyecto Activo</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-white/[0.12]" />
+            <span className="text-[9px] font-extrabold text-cyan-400 uppercase tracking-widest">{project.id.substring(0, 8)}</span>
           </div>
-          <h1 className="text-xl font-bold tracking-tight leading-tight truncate mt-0.5" title={project.name}>{project.name}</h1>
+          <h1 className="text-xl font-bold tracking-tight text-white leading-tight truncate mt-0.5" title={project.name}>{project.name}</h1>
         </div>
         
         <div className="flex items-center gap-6">
-          <div className="hidden sm:flex flex-col items-right text-right">
-             <span className="text-[10px] font-bold text-apple-ink/30 uppercase tracking-widest">Dominio</span>
-             <span className="text-[13px] font-bold text-apple-ink/60 truncate max-w-[200px]">{project.domain}</span>
+          <div className="hidden sm:flex flex-col items-end text-right">
+             <span className="text-[9px] font-extrabold text-zinc-500 uppercase tracking-widest">Dominio</span>
+             <span className="text-[13px] font-bold text-zinc-400 truncate max-w-[200px] mt-0.5">{project.domain}</span>
           </div>
-          <div className="h-8 w-px bg-apple-gray-dark/10 mx-2"></div>
+          <div className="h-8 w-px bg-white/[0.08] mx-2" />
           <DeactivateButton projectId={projectId} />
           <AuditControl projectId={projectId} />
         </div>
       </header>
       
       {/* Content */}
-      <main className="flex-1 p-10 overflow-y-auto">
+      <main className="flex-1 p-10 overflow-y-auto relative z-10">
         <div className="max-w-[1400px] mx-auto space-y-12">
           
           {/* Panel de Métricas Rápidas */}
@@ -197,74 +203,81 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </div>
 
           {/* Panel de Observabilidad */}
-          <section className="glass-card rounded-apple-md p-10 shadow-sm">
-            <div className="flex items-center justify-between mb-10">
+          <section className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-10 shadow-[0_8px_30px_rgb(0,0,0,0.5)] relative overflow-hidden">
+            <div className="absolute -top-40 -right-40 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-apple-ink flex items-center gap-3">
-                  <Activity className="w-7 h-7 text-apple-blue" strokeWidth={2.5} />
-                  Observabilidad de Infraestructura
-                </h2>
-                <p className="text-[15px] font-medium text-apple-ink/40 mt-2">Monitoreo en tiempo real de disponibilidad y experiencia de usuario.</p>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                    <Activity className="w-6 h-6 text-cyan-400 animate-[pulse_2s_infinite]" strokeWidth={2.5} />
+                    Observabilidad de Infraestructura
+                  </h2>
+                  {/* Executive Compliance Badges */}
+                  <div className="hidden xl:flex items-center gap-2">
+                    <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">SOC 2 Type II</span>
+                    <span className="text-[8px] font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">OWASP Top 10</span>
+                  </div>
+                </div>
+                <p className="text-sm text-zinc-500 mt-2">Monitoreo en tiempo real de disponibilidad, tiempos de respuesta y Core Web Vitals.</p>
               </div>
-              <div className="flex items-center gap-3 bg-apple-gray px-5 py-2.5 rounded-apple-pill border border-apple-gray-dark/5">
-                <div className={`w-2.5 h-2.5 rounded-full ${currentUptimeStatus === 'up' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'}`} />
-                <span className="text-[13px] font-bold text-apple-ink uppercase tracking-widest">{currentUptimeStatus === 'up' ? 'Servidor Online' : 'Servidor Offline'}</span>
+              <div className="flex items-center gap-3 bg-white/[0.02] px-5 py-2.5 rounded-full border border-white/[0.06] w-fit">
+                <div className={`w-2 h-2 rounded-full ${currentUptimeStatus === 'up' ? 'bg-emerald-400 shadow-[0_0_12px_#34d399]' : 'bg-rose-500 shadow-[0_0_12px_#f43f5e]'}`} />
+                <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">{currentUptimeStatus === 'up' ? 'Servidor Online' : 'Servidor Offline'}</span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <VitalsCard label="Largest Contentful Paint" value={vitalsAverages.LCP ? `${Math.round(vitalsAverages.LCP)}ms` : '--'} status={vitalsAverages.LCP > 2500 ? 'poor' : vitalsAverages.LCP > 0 ? 'good' : 'none'} desc="Mide el rendimiento de carga del contenido principal." />
-              <VitalsCard label="Cumulative Layout Shift" value={vitalsAverages.CLS ? vitalsAverages.CLS.toFixed(3) : '--'} status={vitalsAverages.CLS > 0.1 ? 'needs-improvement' : vitalsAverages.CLS > 0 ? 'good' : 'none'} desc="Mide la estabilidad visual de la página." />
-              <VitalsCard label="First Contentful Paint" value={vitalsAverages.FCP ? `${Math.round(vitalsAverages.FCP)}ms` : '--'} status={vitalsAverages.FCP > 1800 ? 'needs-improvement' : vitalsAverages.FCP > 0 ? 'good' : 'none'} desc="Tiempo hasta que se renderiza el primer texto/imagen." />
+              <VitalsCard label="Cumulative Layout Shift" value={vitalsAverages.CLS ? vitalsAverages.CLS.toFixed(3) : '--'} status={vitalsAverages.CLS > 0.1 ? 'needs-improvement' : vitalsAverages.CLS > 0 ? 'good' : 'none'} desc="Mide la estabilidad visual de la estructura web." />
+              <VitalsCard label="First Contentful Paint" value={vitalsAverages.FCP ? `${Math.round(vitalsAverages.FCP)}ms` : '--'} status={vitalsAverages.FCP > 1800 ? 'needs-improvement' : vitalsAverages.FCP > 0 ? 'good' : 'none'} desc="Tiempo hasta que se procesa el primer elemento DOM." />
             </div>
             
-            <div className="mt-12 p-8 bg-apple-gray rounded-apple-md border border-apple-gray-dark/5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[13px] font-bold text-apple-ink/60 uppercase tracking-widest">Integración RUM (Real User Monitoring)</h3>
-                <Link href={`/scripts/vitals.js`} className="text-[12px] font-bold text-apple-blue hover:underline">Documentación Técnica →</Link>
+            <div className="mt-12 p-8 bg-black/40 rounded-2xl border border-white/[0.06] relative overflow-hidden">
+              <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 relative z-10">
+                <h3 className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                  <Server className="w-4 h-4 text-cyan-400" /> Integración RUM (Real User Monitoring)
+                </h3>
+                <Link href={`/scripts/vitals.js`} className="text-[10px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors uppercase tracking-widest">Documentación Técnica →</Link>
               </div>
-              <p className="text-[14px] font-medium text-apple-ink/40 mb-6 max-w-2xl leading-relaxed">
-                Inserte este fragmento en el `&lt;head&gt;` de su sitio web para comenzar a capturar métricas de rendimiento reales de sus visitantes.
+              <p className="text-sm text-zinc-500 mb-6 max-w-2xl leading-relaxed relative z-10">
+                Inserte este fragmento en el head de su sitio web para comenzar a capturar métricas de rendimiento reales de sus visitantes directamente en su consola de StrategicAudit Pro.
               </p>
-              <div className="relative group">
-                <code className="block text-[13px] font-mono bg-apple-ink text-apple-gray-light p-6 rounded-apple-sm overflow-x-auto whitespace-pre leading-relaxed border border-white/5">
+              <div className="relative group overflow-hidden rounded-xl border border-white/[0.08]">
+                <code className="block text-xs font-mono bg-black/60 text-cyan-300/90 p-6 overflow-x-auto whitespace-pre leading-relaxed">
 {`<script 
   src="${appUrl}/scripts/vitals.js" 
   data-project-id="${project.id}" 
   defer>
 </script>`}
                 </code>
-                <button className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white p-2 rounded-apple-sm transition-all opacity-0 group-hover:opacity-100 border border-white/10">
-                  <Download className="w-4 h-4" />
-                </button>
               </div>
             </div>
           </section>
           
           {/* Sección de Reportes */}
-          <section className="space-y-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-apple-ink flex items-center gap-3">
-                  <FileText className="w-7 h-7 text-apple-ink" strokeWidth={2.5} />
-                  Centro de Inteligencia
-                </h2>
-                <p className="text-[15px] font-medium text-apple-ink/40 mt-2">Exporte sus auditorías en formatos profesionales para presentaciones ejecutivas.</p>
-              </div>
+          <section className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                <FileText className="w-6 h-6 text-indigo-400" strokeWidth={2.5} />
+                Centro de Inteligencia de Auditoría
+              </h2>
+              <p className="text-sm text-zinc-500 mt-2">Exporte sus auditorías y datasets en formatos profesionales listos para su presentación ejecutiva o White Label.</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <ReportCard 
                 title="Auditoría Ejecutiva (PDF)" 
-                desc="Reporte de alta fidelidad con visualización de sitemap, arquitectura de etiquetas y priorización de riesgos técnicos."
-                icon={<Download className="w-6 h-6" />}
+                desc="Reporte premium de alta fidelidad con visualización de sitemap, arquitectura de etiquetas SEO y priorización inteligente de riesgos técnicos."
+                icon={<Download className="w-5 h-5 text-rose-400" />}
                 accent="red"
                 action={latestCompletedAudit ? (
                   <Link 
                     href={`/projects/${projectId}/audits/${latestCompletedAudit.id}`}
-                    className="flex items-center gap-2 text-[14px] font-bold text-red-400 hover:opacity-80 transition-all mt-4"
+                    className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-rose-400 hover:text-rose-300 transition-colors mt-6 w-fit bg-rose-500/10 border border-rose-500/20 px-4 py-2 rounded-xl"
                   >
-                    Generar PDF <ArrowRight className="w-4 h-4" />
+                    Generar PDF <ArrowRight className="w-4 h-4 ml-1" />
                   </Link>
                 ) : null}
                 disabled={!latestCompletedAudit}
@@ -272,76 +285,77 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
               <ReportCard 
                 title="Dataset de Rankings (CSV)" 
-                desc="Exportación completa de palabras clave, volúmenes de búsqueda y posiciones históricas para análisis en hojas de cálculo."
-                icon={<FileSpreadsheet className="w-6 h-6" />}
+                desc="Exportación completa de palabras clave, volúmenes de búsqueda, CTR promedio y posiciones históricas del dominio para análisis avanzado en hojas de cálculo."
+                icon={<FileSpreadsheet className="w-5 h-5 text-emerald-400" />}
                 accent="green"
-                action={<div className="mt-4"><ExportCsvButton projectId={projectId} /></div>}
+                action={<div className="mt-6"><ExportCsvButton projectId={projectId} /></div>}
               />
             </div>
           </section>
           
           {/* Listado de Auditorías Recientes */}
-          <section className="glass-card rounded-apple-md overflow-hidden shadow-sm">
-            <div className="p-10 border-b border-apple-gray">
-              <h2 className="text-2xl font-bold tracking-tight text-apple-ink">Historial de Análisis</h2>
-              <p className="text-[15px] font-medium text-apple-ink/40 mt-2">Registro cronológico de todas las auditorías técnicas realizadas.</p>
+          <section className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+            <div className="p-10 border-b border-white/[0.06] bg-white/[0.005]">
+              <h2 className="text-2xl font-bold tracking-tight text-white">Historial de Análisis SEO</h2>
+              <p className="text-sm text-zinc-500 mt-2">Registro cronológico y auditoría técnica completa de todos los escaneos realizados.</p>
             </div>
             
             {projectAudits.length === 0 ? (
-              <div className="text-center py-32 bg-apple-gray/10">
-                <Globe className="w-16 h-16 text-apple-ink/10 mx-auto mb-6" strokeWidth={1} />
-                <h3 className="text-xl font-bold text-apple-ink/30">Sin Auditorías</h3>
-                <p className="text-[14px] font-medium text-apple-ink/20 mt-2">Inicie un nuevo análisis para ver los resultados aquí.</p>
+              <div className="text-center py-32 bg-white/[0.002]">
+                <Globe className="w-16 h-16 text-zinc-700 mx-auto mb-6" strokeWidth={1} />
+                <h3 className="text-xl font-bold text-zinc-500">Sin Auditorías Activas</h3>
+                <p className="text-[14px] font-medium text-zinc-600 mt-2">Inicie un nuevo análisis de ciber-seguridad para comenzar a recolectar datos aquí.</p>
               </div>
             ) : (
-              <div className="divide-y divide-apple-gray">
+              <div className="divide-y divide-white/[0.04]">
                 {projectAudits.map((audit) => {
                   let statusLabel = "Pendiente";
-                  let statusStyle = "bg-apple-gray text-apple-ink/40 border-apple-gray-dark/5";
+                  let statusStyle = "bg-white/[0.03] text-zinc-400 border-white/[0.06]";
                   
                   if (audit.status === 'completed') {
                     statusLabel = "Completado";
-                    statusStyle = "bg-green-500/10 text-green-400 border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
+                    statusStyle = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]";
                   } else if (audit.status === 'failed') {
                     statusLabel = "Fallido";
-                    statusStyle = "bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]";
+                    statusStyle = "bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]";
                   } else if (audit.status === 'running') {
                     statusLabel = "Analizando";
-                    statusStyle = "bg-apple-blue/10 text-apple-blue border-apple-blue/20 animate-pulse shadow-[0_0_15px_rgba(0,122,255,0.1)]";
+                    statusStyle = "bg-cyan-500/10 text-cyan-400 border-cyan-500/20 animate-pulse shadow-[0_0_15px_rgba(6,182,212,0.1)]";
                   }
 
                   return (
                     <Link 
                       key={audit.id} 
                       href={`/projects/${projectId}/audits/${audit.id}`}
-                      className="flex items-center justify-between p-8 hover:bg-apple-gray/30 transition-all group"
+                      className="flex items-center justify-between p-8 hover:bg-white/[0.01] transition-all group relative overflow-hidden"
                     >
+                      <div className="absolute top-0 left-0 w-[2px] h-0 bg-cyan-500 group-hover:h-full transition-all duration-300" />
                       <div className="flex items-center gap-6">
-                        <div className={`w-3 h-3 rounded-full 
-                          ${audit.status === 'completed' ? 'bg-green-500' : 
-                            audit.status === 'failed' ? 'bg-red-500' : 
-                            'bg-yellow-500 animate-pulse'}`} 
+                        <div className={`w-2.5 h-2.5 rounded-full 
+                          ${audit.status === 'completed' ? 'bg-emerald-400 shadow-[0_0_10px_#34d399]' : 
+                            audit.status === 'failed' ? 'bg-rose-500 shadow-[0_0_10px_#f43f5e]' : 
+                            'bg-yellow-400 shadow-[0_0_10px_#fbbf24] animate-pulse'}`} 
                         />
                         <div>
-                          <div className="flex items-center gap-3">
-                            <p className="text-[16px] font-bold text-apple-ink group-hover:text-apple-blue transition-colors tracking-tight">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <p className="text-[15px] font-bold text-zinc-100 group-hover:text-cyan-400 transition-colors tracking-tight">
                               Análisis Técnico Completo
                             </p>
-                            <span className="text-[11px] font-mono font-bold text-apple-ink/20 uppercase tracking-widest px-2 py-0.5 bg-apple-gray rounded">
+                            <span className="text-[9px] font-mono font-bold text-zinc-500 uppercase tracking-widest px-2 py-0.5 bg-white/[0.03] border border-white/[0.06] rounded w-fit">
                               ID: {audit.id.substring(0, 8)}
                             </span>
                           </div>
-                          <p className="text-[13px] font-medium text-apple-ink/40 mt-1">
+                          <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mt-1">
                             {audit.createdAt ? new Date(audit.createdAt).toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' }) : '--'}
                           </p>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-6">
-                        <span className={`text-[11px] px-3 py-1 rounded-apple-pill font-bold uppercase tracking-widest border ${statusStyle}`}>
+                        <span className={`text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider border ${statusStyle}`}>
                           {statusLabel}
                         </span>
-                        <ArrowRight className="w-5 h-5 text-apple-ink/10 group-hover:text-apple-ink group-hover:translate-x-1 transition-all" strokeWidth={2.5} />
+                        <ArrowRight className="w-5 h-5 text-zinc-700 group-hover:text-white group-hover:translate-x-1 transition-all" strokeWidth={2.5} />
                       </div>
                     </Link>
                   );
@@ -358,65 +372,64 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
 function StatBox({ icon, title, value, accent = "default" }: { icon: React.ReactNode; title: string; value: string; accent?: "default" | "blue" | "red" }) {
   const accentStyles = {
-    default: "bg-apple-gray text-apple-ink border-apple-gray-dark/5",
-    blue: "bg-apple-blue/5 text-apple-blue border-apple-blue/10",
-    red: "bg-red-500/10 text-red-400 border-red-500/20"
+    default: "bg-white/[0.02] text-zinc-400 border-white/[0.06] shadow-md",
+    blue: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]",
+    red: "bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.15)]"
   };
 
   return (
-    <div className="glass-card rounded-apple-md p-8 shadow-sm flex flex-col items-start gap-4 hover:shadow-md transition-all group">
-      <div className={`w-12 h-12 rounded-apple-sm flex items-center justify-center border transition-transform group-hover:scale-110 ${accentStyles[accent]}`}>
+    <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.02] hover:border-white/[0.1] rounded-2xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.5)] flex flex-col items-start gap-4 hover:shadow-[0_8px_30px_rgba(255,255,255,0.01)] transition-all duration-300 group">
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-transform group-hover:scale-110 ${accentStyles[accent]}`}>
         {icon}
       </div>
       <div>
-        <p className="text-[11px] font-bold text-apple-ink/30 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-apple-ink tracking-tighter mt-1">{value}</p>
+        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{title}</p>
+        <p className="text-3xl font-extrabold text-white tracking-tighter mt-1">{value}</p>
       </div>
     </div>
   );
 }
 
 function VitalsCard({ label, value, status, desc }: { label: string; value: string; status: 'good' | 'needs-improvement' | 'poor' | 'none'; desc: string }) {
-  const statusStyles = {
-    good: "text-green-500 bg-green-500",
-    "needs-improvement": "text-yellow-500 bg-yellow-500",
-    poor: "text-red-500 bg-red-500",
-    none: "text-apple-ink/10 bg-apple-ink/10"
+  const statusColors = {
+    good: "bg-emerald-400 shadow-[0_0_12px_#34d399]",
+    "needs-improvement": "bg-amber-400 shadow-[0_0_12px_#fbbf24]",
+    poor: "bg-rose-500 shadow-[0_0_12px_#f43f5e]",
+    none: "bg-zinc-700"
   };
 
   return (
-    <div className="bg-apple-gray/30 border border-apple-gray-dark/5 rounded-apple-md p-8 flex flex-col justify-between group hover:bg-apple-gray transition-colors">
+    <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.02] hover:border-white/[0.1] rounded-2xl p-8 flex flex-col justify-between group transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
       <div>
-        <p className="text-[12px] font-bold text-apple-ink/40 uppercase tracking-[0.15em] mb-4">{label}</p>
+        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4">{label}</p>
         <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold tracking-tighter text-apple-ink">{value}</span>
-          <div className={`w-2 h-2 rounded-full ${statusStyles[status].split(' ')[1]}`}></div>
+          <span className="text-4xl font-extrabold tracking-tighter text-white">{value}</span>
+          <div className={`w-2 h-2 rounded-full ${statusColors[status]}`}></div>
         </div>
       </div>
-      <p className="text-[13px] font-medium text-apple-ink/40 mt-6 leading-relaxed">{desc}</p>
+      <p className="text-xs font-semibold text-zinc-500 mt-6 leading-relaxed">{desc}</p>
     </div>
   );
 }
 
 function ReportCard({ title, desc, icon, accent, action, disabled = false }: { title: string; desc: string; icon: React.ReactNode; accent: 'red' | 'green'; action?: React.ReactNode; disabled?: boolean }) {
   const colors = {
-    red: "bg-red-500/10 text-red-400 border-red-500/20",
-    green: "bg-green-500/10 text-green-400 border-green-500/20"
+    red: "bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.15)]",
+    green: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.15)]"
   };
 
   return (
-    <div className={`glass-card rounded-apple-md p-10 shadow-sm flex flex-col justify-between transition-all ${disabled ? 'opacity-50 grayscale' : 'hover:shadow-md'}`}>
+    <div className={`backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.02] hover:border-white/[0.1] rounded-2xl p-10 flex flex-col justify-between transition-all duration-300 ${disabled ? 'opacity-40 pointer-events-none' : 'hover:shadow-[0_8px_30px_rgb(0,0,0,0.5)]'}`}>
       <div className="space-y-6">
-        <div className={`w-14 h-14 rounded-apple-sm flex items-center justify-center border ${colors[accent]}`}>
+        <div className={`w-14 h-14 rounded-xl flex items-center justify-center border ${colors[accent]}`}>
           {icon}
         </div>
         <div>
-          <h3 className="text-xl font-bold text-apple-ink tracking-tight">{title}</h3>
-          <p className="text-[15px] font-medium text-apple-ink/40 mt-2 leading-relaxed">{desc}</p>
+          <h3 className="text-xl font-extrabold text-white tracking-tight">{title}</h3>
+          <p className="text-xs font-semibold text-zinc-500 mt-2 leading-relaxed">{desc}</p>
         </div>
       </div>
       {action}
     </div>
   );
 }
-

@@ -12,7 +12,7 @@ export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderP
       case 'projects': return 'Proyectos';
       case 'performance': return 'Rendimiento';
       case 'keywords': return 'Keywords';
-      case 'reports': return 'Reportes';
+      case 'reports': return 'Reportes AI';
       case 'settings': return 'Ajustes';
       default: return 'Dashboard';
     }
@@ -21,30 +21,31 @@ export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderP
   const getSubtitle = () => {
     switch (activeTab) {
       case 'overview': return 'Vista general del sistema';
-      case 'projects': return 'Administracion de dominios';
-      case 'performance': return 'Core Web Vitals';
+      case 'projects': return 'Administración de dominios';
+      case 'performance': return 'Core Web Vitals & Auditoría';
       case 'keywords': return 'Posicionamiento SERP';
-      case 'reports': return 'Documentacion tecnica';
+      case 'reports': return 'Documentación técnica e Insights';
       case 'settings': return 'Cuenta y preferencias';
       default: return 'Vista general del sistema';
     }
   };
 
   return (
-    <header className="h-20 bg-background/80 backdrop-blur-xl border-b border-apple-gray-dark/5 flex items-center justify-between px-10 sticky top-0 z-10 shrink-0">
+    <header className="h-20 bg-[#030303]/60 backdrop-blur-xl border-b border-white/[0.04] flex items-center justify-between px-10 sticky top-0 z-20 shrink-0">
       <div className="flex flex-col">
-        <h1 className="text-2xl font-bold tracking-tight text-apple-ink">
+        <h1 className="text-xl font-bold tracking-tight text-white">
           {getTitle()}
         </h1>
-        <p className="text-[11px] font-medium text-apple-ink/40 uppercase tracking-widest mt-0.5">
+        <p className="text-[9px] font-extrabold text-[#06b6d4] uppercase tracking-widest mt-0.5">
           {getSubtitle()}
         </p>
       </div>
       
       <div className="flex items-center gap-6">
         <NewProjectModal />
-        <div className="w-10 h-10 rounded-apple-pill bg-apple-gray flex items-center justify-center cursor-pointer hover:bg-apple-gray-dark/10 transition-all border border-apple-gray-dark/5">
-          <span className="text-xs font-bold text-apple-ink/60">JU</span>
+        <div className="w-9 h-9 rounded-full bg-white/[0.03] hover:bg-white/[0.08] flex items-center justify-center cursor-pointer transition-all duration-300 border border-white/[0.05] relative group shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+          <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">JU</span>
+          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 border-2 border-[#030303] rounded-full" />
         </div>
       </div>
     </header>
