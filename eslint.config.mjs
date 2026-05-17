@@ -16,6 +16,15 @@ const eslintConfig = defineConfig([
     ".trigger/**",
     // SQL migration files — not JS/TS:
     "drizzle/**",
+    // Development directories and scratch files
+    "scratch/**",
+    "backups/**",
+    "configure-upstash-alerts.ts",
+    "db-security-scan.ts",
+    "rls-fire-test.ts",
+    "test-rls-root.ts",
+    "backup-manager.ts",
+    "hello.ts",
   ]),
 ]);
 
