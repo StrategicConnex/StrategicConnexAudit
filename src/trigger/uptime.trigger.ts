@@ -1,7 +1,8 @@
 import { schedules, wait } from "@trigger.dev/sdk";
 import { db } from "@/shared/db";
 import { projects, uptimeLogs } from "@/shared/db/schemas";
-import { eq, isNull, and } from "drizzle-orm";
+import { isNull } from "drizzle-orm";
+import { validateSafeUrl, normalizeUrl } from "@/shared/utils/network";
 
 export const uptimeMonitor = schedules.task({
   id: "uptime-monitor",
@@ -25,10 +26,8 @@ export const uptimeMonitor = schedules.task({
       let errorMessage: string | null = null;
 
       try {
-        let targetUrl = project.domain;
-        if (!/^https?:\/\//i.test(targetUrl)) {
-          targetUrl = `https://${targetUrl}`;
-        }
+        const targetUrl = normalizeUrl(project.domain);
+        await validateSafeUrl(targetUrl);
 
         const response = await fetch(targetUrl, {
           method: 'HEAD', // HEAD es más rápido y consume menos ancho de banda
@@ -40,11 +39,13 @@ export const uptimeMonitor = schedules.task({
 
         statusCode = response.status;
         isUp = response.status >= 200 && response.status < 400;
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const error = err as Error;
         isUp = false;
-        errorMessage = err.message || "Error de conexión";
+        errorMessage = error.message || "Error de conexión";
         console.error(`[Uptime] Fallo en ${project.domain}:`, errorMessage);
       }
+
 
       const responseTime = Date.now() - startTime;
 

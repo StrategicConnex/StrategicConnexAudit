@@ -10,6 +10,7 @@ import DeactivateButton from './components/DeactivateButton';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
 import { ExportCsvButton } from '@/app/components/ExportCsvButton';
+import { computeVitalsAverages } from '@/shared/utils/rum';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,89 +104,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         console.warn("WebVitals logs table not ready or accessible:", e);
       }
 
-      // Compute sophisticated RUM averages and counters
-      const totalLogs = vitalsLogs.length;
-      
-      let lcpSum = 0, lcpCount = 0;
-      let clsSum = 0, clsCount = 0;
-      let fcpSum = 0, fcpCount = 0;
-      let inpSum = 0, inpCount = 0;
-      let fidSum = 0, fidCount = 0;
-      let ttfbSum = 0, ttfbCount = 0;
-      
-      let totalViews = 0;
-      let totalPageTime = 0, pageTimeCount = 0;
-      let totalSessionTime = 0, sessionTimeCount = 0;
-      let errorCount = 0;
-      
-      const browsersMap: Record<string, number> = {};
-      const countriesMap: Record<string, number> = {};
-      const slowResourcesList: { name: string; duration: number }[] = [];
-
-      for (const log of vitalsLogs) {
-        if (log.lcp) { lcpSum += Number(log.lcp); lcpCount++; }
-        if (log.cls) { clsSum += Number(log.cls); clsCount++; }
-        if (log.fcp) { fcpSum += Number(log.fcp); fcpCount++; }
-        if (log.inp) { inpSum += Number(log.inp); inpCount++; }
-        if (log.fid) { fidSum += Number(log.fid); fidCount++; }
-        if (log.ttfb) { ttfbSum += Number(log.ttfb); ttfbCount++; }
-        
-        if (log.pageViews) { totalViews += Number(log.pageViews); }
-        if (log.timeOnPage) { totalPageTime += Number(log.timeOnPage); pageTimeCount++; }
-        if (log.sessionDuration) { totalSessionTime += Number(log.sessionDuration); sessionTimeCount++; }
-        
-        if (log.browser) {
-          browsersMap[log.browser] = (browsersMap[log.browser] || 0) + 1;
-        }
-        if (log.country) {
-          countriesMap[log.country] = (countriesMap[log.country] || 0) + 1;
-        }
-        
-        // Count errors
-        if (log.errors && Array.isArray(log.errors)) {
-          errorCount += log.errors.length;
-        }
-        
-        // Collect resources
-        if (log.resources && Array.isArray(log.resources)) {
-          for (const res of log.resources) {
-            if (res && res.name && res.duration) {
-              slowResourcesList.push({ name: res.name, duration: Number(res.duration) });
-            }
-          }
-        }
-      }
-
-      // Sort resources to get the top 5 slowest
-      const topSlowResources = slowResourcesList
-        .sort((a, b) => b.duration - a.duration)
-        .slice(0, 5);
-
-      let memorySum = 0, memoryCount = 0;
-      for (const log of vitalsLogs) {
-        if (log.memory && typeof log.memory === 'object' && 'usedJSHeapSize' in log.memory) {
-          memorySum += Number((log.memory as any).usedJSHeapSize || 0);
-          memoryCount++;
-        }
-      }
-      const avgMemoryMB = memoryCount > 0 ? (memorySum / memoryCount / (1024 * 1024)).toFixed(1) : '--';
-
-      const vitalsAverages = {
-        LCP: lcpCount > 0 ? lcpSum / lcpCount : 0,
-        CLS: clsCount > 0 ? clsSum / clsCount : 0,
-        FCP: fcpCount > 0 ? fcpSum / fcpCount : 0,
-        INP: inpCount > 0 ? inpSum / inpCount : 0,
-        FID: fidCount > 0 ? fidSum / fidCount : 0,
-        TTFB: ttfbCount > 0 ? ttfbSum / ttfbCount : 0,
-        errorCount,
-        totalPagesViews: totalViews || totalLogs || 0,
-        avgTimeOnPage: pageTimeCount > 0 ? Math.round(totalPageTime / pageTimeCount / 1000) : 0,
-        avgSessionDuration: sessionTimeCount > 0 ? Math.round(totalSessionTime / sessionTimeCount / 1000) : 0,
-        avgMemoryMB,
-        topSlowResources,
-        browsersMap,
-        countriesMap
-      };
+      // Compute sophisticated RUM averages and counters using extracted engine
+      const vitalsAverages = computeVitalsAverages(vitalsLogs);
 
       return {
         project,
