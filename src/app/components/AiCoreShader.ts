@@ -175,6 +175,11 @@ export const AiCoreShader = {
 
       // Camera distance attenuation for realistic 3D depth feeling
       float pScale = aScale * (uType < 0.5 ? 0.5 : 1.0);
+      
+      // Dynamic breathing size pulse synchronized with color pulse
+      float sizePulse = sin(uTime * 2.5) * 0.15;
+      pScale *= (1.0 + sizePulse);
+      
       gl_PointSize = pScale * (25.0 / -mvPosition.z);
     }
   `,
@@ -198,31 +203,37 @@ export const AiCoreShader = {
       // ─── Volumetric Color Grading ───
       vec3 color = vec3(0.0);
 
+      // Red color pulse: Modulate the brightness slightly with a clean sine wave
+      float pulse = sin(uTime * 2.5) * 0.25 + 0.75; // Range: [0.5, 1.0]
+
       if (vType < 0.5) {
-        // Inner Core: Sophisticated Deep Violet, Energetic Magenta, and Bright Accent Orange
-        vec3 deepPurple = vec3(0.32, 0.12, 0.8);
-        vec3 magenta    = vec3(0.85, 0.05, 0.58);
-        vec3 neonOrange  = vec3(1.0, 0.42, 0.08);
+        // Inner Core: Sophisticated Crimson Red, Cyber Red, and Neon Scarlet highlights
+        vec3 crimsonRed  = vec3(0.5, 0.0, 0.1);
+        vec3 cyberRed    = vec3(0.95, 0.04, 0.04);
+        vec3 neonScarlet = vec3(1.0, 0.32, 0.12);
 
         // Mix based on radial coordinate & dynamic sine sweep
-        float mixVal1 = sin(length(vPosition) * 4.0 - uTime * 1.2) * 0.5 + 0.5;
-        float mixVal2 = sin(vPosition.y * 2.5 + uTime * 0.8) * 0.5 + 0.5;
+        float mixVal1 = sin(length(vPosition) * 4.0 - uTime * 2.0) * 0.5 + 0.5;
+        float mixVal2 = sin(vPosition.y * 2.5 + uTime * 1.5) * 0.5 + 0.5;
 
-        vec3 coreGrad = mix(deepPurple, magenta, mixVal1);
-        color = mix(coreGrad, neonOrange, mixVal2 * 0.35); // Subtle active scanning highlights
+        vec3 coreGrad = mix(crimsonRed, cyberRed, mixVal1);
+        color = mix(coreGrad, neonScarlet, mixVal2 * 0.4); // Subtle active scanning highlights
       } else {
-        // Outer Shell: Premium Electric Cyan, Translucent Amethyst, and Slate Blue
-        vec3 electricCyan = vec3(0.0, 0.71, 0.83);
-        vec3 deepPurple   = vec3(0.38, 0.18, 0.84);
-        vec3 slateBlue    = vec3(0.08, 0.22, 0.5);
+        // Outer Shell: Premium Electric Ruby, Deep Crimson, and Slate Black
+        vec3 crimsonRed   = vec3(0.5, 0.0, 0.1);
+        vec3 electricRuby = vec3(0.85, 0.03, 0.2);
+        vec3 slateBlack   = vec3(0.12, 0.02, 0.04);
 
-        float mixVal = sin(vPosition.x * 1.5 + vPosition.z * 1.5 + uTime * 0.5) * 0.5 + 0.5;
-        color = mix(electricCyan, deepPurple, mixVal);
-        color = mix(color, slateBlue, 0.2); // Cool deep border tones
+        float mixVal = sin(vPosition.x * 1.5 + vPosition.z * 1.5 + uTime * 0.8) * 0.5 + 0.5;
+        color = mix(crimsonRed, electricRuby, mixVal);
+        color = mix(color, slateBlack, 0.35); // Deep border shadow tones
       }
 
       // Apply additive intensity boost at the particle center
       color += vec3(lightGlow * 0.25);
+
+      // Apply the heartbeat pulse to overall color
+      color *= pulse;
 
       gl_FragColor = vec4(color, alpha);
     }

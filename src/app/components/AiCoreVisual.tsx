@@ -262,7 +262,7 @@ export default function AiCoreVisual({ size = 200, interactive = true }: AiCoreV
         style={{ width: size, height: size }} 
         className="rounded-full bg-[#030303] border border-white/[0.04] flex items-center justify-center relative overflow-hidden"
       >
-        <div className="w-1/2 h-1/2 rounded-full bg-gradient-to-br from-indigo-500/10 to-cyan-500/10 blur-xl animate-pulse" />
+        <div className="w-1/2 h-1/2 rounded-full bg-gradient-to-br from-red-500/10 to-rose-500/10 blur-xl animate-pulse" />
       </div>
     );
   }
@@ -274,14 +274,14 @@ export default function AiCoreVisual({ size = 200, interactive = true }: AiCoreV
     return (
       <div 
         style={{ width: size, height: size }} 
-        className="rounded-full bg-[#030303]/90 border border-white/[0.06] flex items-center justify-center relative overflow-hidden shadow-[0_0_30px_rgba(129,140,248,0.12)] group pointer-events-auto"
+        className="rounded-full bg-[#030303]/90 border border-white/[0.06] flex items-center justify-center relative overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.12)] group pointer-events-auto"
       >
         {/* Animated fluid base glow */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#818cf8]/15 via-[#a855f7]/5 to-[#06b6d4]/15 animate-pulse duration-4000 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#ef4444]/15 via-[#be123c]/5 to-[#f97316]/15 animate-pulse duration-4000 pointer-events-none" />
         
         {/* Micro-breathing core blur orb */}
         <div 
-          className="absolute rounded-full bg-gradient-to-tr from-[#818cf8]/35 to-[#06b6d4]/35 blur-md animate-pulse pointer-events-none transition-all duration-700 group-hover:scale-[1.25]" 
+          className="absolute rounded-full bg-gradient-to-tr from-[#ef4444]/35 to-[#f97316]/35 blur-md animate-pulse pointer-events-none transition-all duration-700 group-hover:scale-[1.25]" 
           style={{ width: size * 0.5, height: size * 0.5 }}
         />
         
@@ -290,7 +290,7 @@ export default function AiCoreVisual({ size = 200, interactive = true }: AiCoreV
           className="rounded-full bg-white/20 border border-white/30 backdrop-blur-md shadow-[inset_0_0_8px_rgba(255,255,255,0.2)] flex items-center justify-center transition-transform duration-500 group-hover:scale-110 pointer-events-none"
           style={{ width: Math.max(16, size * 0.28), height: Math.max(16, size * 0.28) }}
         >
-          <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shadow-[0_0_10px_#06b6d4]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping shadow-[0_0_10px_#ef4444]" />
         </div>
       </div>
     );
