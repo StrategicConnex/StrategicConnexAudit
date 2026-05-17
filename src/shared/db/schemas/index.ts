@@ -462,5 +462,20 @@ export const webVitalsLogs = pgTable("web_vitals_logs", {
   cls: numeric("cls", { precision: 8, scale: 4 }), // Cumulative Layout Shift
   ttfb: numeric("ttfb", { precision: 8, scale: 2 }), // Time to First Byte (ms)
   fcp: numeric("fcp", { precision: 8, scale: 2 }), // First Contentful Paint (ms)
+  sessionId: text("session_id"),
+  path: text("path"),
+  browser: text("browser"),
+  country: text("country"),
+  fid: numeric("fid", { precision: 8, scale: 2 }), // First Input Delay (ms)
+  pageViews: integer("page_views").default(1),
+  sessionDuration: integer("session_duration"),
+  timeOnPage: integer("time_on_page"),
+  errors: jsonb("errors"),
+  interactions: jsonb("interactions"),
+  resources: jsonb("resources"),
+  connection: jsonb("connection"),
+  memory: jsonb("memory"),
+  timing: jsonb("timing"),
+  rawPayload: jsonb("raw_payload"),
   recordedAt: timestamp("recorded_at", { withTimezone: true }).defaultNow().notNull(),
 });
