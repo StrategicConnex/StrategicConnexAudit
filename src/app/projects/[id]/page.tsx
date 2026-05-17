@@ -94,25 +94,97 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       // 5. Fetch Web Vitals Logs (Resiliente)
       let vitalsLogs: any[] = [];
       try {
-        vitalsLogs = await tx.select({
-          lcp: webVitalsLogs.lcp,
-          cls: webVitalsLogs.cls,
-          fcp: webVitalsLogs.fcp
-        })
+        vitalsLogs = await tx.select()
         .from(webVitalsLogs)
         .where(eq(webVitalsLogs.projectId, projectId))
         .orderBy(desc(webVitalsLogs.recordedAt))
-        .limit(50);
+        .limit(100);
       } catch (e) {
         console.warn("WebVitals logs table not ready or accessible:", e);
       }
 
-      const validVitals = vitalsLogs.filter(v => v.lcp !== null);
+      // Compute sophisticated RUM averages and counters
+      const totalLogs = vitalsLogs.length;
+      
+      let lcpSum = 0, lcpCount = 0;
+      let clsSum = 0, clsCount = 0;
+      let fcpSum = 0, fcpCount = 0;
+      let inpSum = 0, inpCount = 0;
+      let fidSum = 0, fidCount = 0;
+      let ttfbSum = 0, ttfbCount = 0;
+      
+      let totalViews = 0;
+      let totalPageTime = 0, pageTimeCount = 0;
+      let totalSessionTime = 0, sessionTimeCount = 0;
+      let errorCount = 0;
+      
+      const browsersMap: Record<string, number> = {};
+      const countriesMap: Record<string, number> = {};
+      const slowResourcesList: { name: string; duration: number }[] = [];
+
+      for (const log of vitalsLogs) {
+        if (log.lcp) { lcpSum += Number(log.lcp); lcpCount++; }
+        if (log.cls) { clsSum += Number(log.cls); clsCount++; }
+        if (log.fcp) { fcpSum += Number(log.fcp); fcpCount++; }
+        if (log.inp) { inpSum += Number(log.inp); inpCount++; }
+        if (log.fid) { fidSum += Number(log.fid); fidCount++; }
+        if (log.ttfb) { ttfbSum += Number(log.ttfb); ttfbCount++; }
+        
+        if (log.pageViews) { totalViews += Number(log.pageViews); }
+        if (log.timeOnPage) { totalPageTime += Number(log.timeOnPage); pageTimeCount++; }
+        if (log.sessionDuration) { totalSessionTime += Number(log.sessionDuration); sessionTimeCount++; }
+        
+        if (log.browser) {
+          browsersMap[log.browser] = (browsersMap[log.browser] || 0) + 1;
+        }
+        if (log.country) {
+          countriesMap[log.country] = (countriesMap[log.country] || 0) + 1;
+        }
+        
+        // Count errors
+        if (log.errors && Array.isArray(log.errors)) {
+          errorCount += log.errors.length;
+        }
+        
+        // Collect resources
+        if (log.resources && Array.isArray(log.resources)) {
+          for (const res of log.resources) {
+            if (res && res.name && res.duration) {
+              slowResourcesList.push({ name: res.name, duration: Number(res.duration) });
+            }
+          }
+        }
+      }
+
+      // Sort resources to get the top 5 slowest
+      const topSlowResources = slowResourcesList
+        .sort((a, b) => b.duration - a.duration)
+        .slice(0, 5);
+
+      let memorySum = 0, memoryCount = 0;
+      for (const log of vitalsLogs) {
+        if (log.memory && typeof log.memory === 'object' && 'usedJSHeapSize' in log.memory) {
+          memorySum += Number((log.memory as any).usedJSHeapSize || 0);
+          memoryCount++;
+        }
+      }
+      const avgMemoryMB = memoryCount > 0 ? (memorySum / memoryCount / (1024 * 1024)).toFixed(1) : '--';
+
       const vitalsAverages = {
-        LCP: validVitals.length > 0 ? validVitals.reduce((acc, curr) => acc + Number(curr.lcp || 0), 0) / validVitals.length : 0,
-        CLS: validVitals.length > 0 ? validVitals.reduce((acc, curr) => acc + Number(curr.cls || 0), 0) / validVitals.length : 0,
-        FCP: validVitals.length > 0 ? validVitals.reduce((acc, curr) => acc + Number(curr.fcp || 0), 0) / validVitals.length : 0,
-        FID: 0,
+        LCP: lcpCount > 0 ? lcpSum / lcpCount : 0,
+        CLS: clsCount > 0 ? clsSum / clsCount : 0,
+        FCP: fcpCount > 0 ? fcpSum / fcpCount : 0,
+        INP: inpCount > 0 ? inpSum / inpCount : 0,
+        FID: fidCount > 0 ? fidSum / fidCount : 0,
+        TTFB: ttfbCount > 0 ? ttfbSum / ttfbCount : 0,
+        errorCount,
+        totalPagesViews: totalViews || totalLogs || 0,
+        avgTimeOnPage: pageTimeCount > 0 ? Math.round(totalPageTime / pageTimeCount / 1000) : 0,
+        avgSessionDuration: sessionTimeCount > 0 ? Math.round(totalSessionTime / sessionTimeCount / 1000) : 0,
+        avgMemoryMB,
+        topSlowResources,
+        browsersMap,
+        countriesMap
       };
 
       return {
@@ -231,6 +303,88 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <VitalsCard label="Largest Contentful Paint" value={vitalsAverages.LCP ? `${Math.round(vitalsAverages.LCP)}ms` : '--'} status={vitalsAverages.LCP > 2500 ? 'poor' : vitalsAverages.LCP > 0 ? 'good' : 'none'} desc="Mide el rendimiento de carga del contenido principal." />
               <VitalsCard label="Cumulative Layout Shift" value={vitalsAverages.CLS ? vitalsAverages.CLS.toFixed(3) : '--'} status={vitalsAverages.CLS > 0.1 ? 'needs-improvement' : vitalsAverages.CLS > 0 ? 'good' : 'none'} desc="Mide la estabilidad visual de la estructura web." />
               <VitalsCard label="First Contentful Paint" value={vitalsAverages.FCP ? `${Math.round(vitalsAverages.FCP)}ms` : '--'} status={vitalsAverages.FCP > 1800 ? 'needs-improvement' : vitalsAverages.FCP > 0 ? 'good' : 'none'} desc="Tiempo hasta que se procesa el primer elemento DOM." />
+              
+              <VitalsCard 
+                label="INP & FID (Interactividad)" 
+                value={vitalsAverages.INP ? `${Math.round(vitalsAverages.INP)}ms` : '--'} 
+                status={vitalsAverages.INP > 500 ? 'poor' : vitalsAverages.INP > 200 ? 'needs-improvement' : vitalsAverages.INP > 0 ? 'good' : 'none'} 
+                desc={`Latencia de respuesta a interacciones (INP). Primer Delay (FID): ${vitalsAverages.FID ? Math.round(vitalsAverages.FID) + 'ms' : '--'}.`} 
+              />
+              <VitalsCard 
+                label="JavaScript Hot Errors" 
+                value={String(vitalsAverages.errorCount)} 
+                status={vitalsAverages.errorCount > 5 ? 'poor' : vitalsAverages.errorCount > 0 ? 'needs-improvement' : 'good'} 
+                desc="Excepciones de JavaScript no controladas y fallos de ejecución capturados en caliente." 
+              />
+              <VitalsCard 
+                label="User System Heap & Tráfico" 
+                value={vitalsAverages.avgMemoryMB !== '--' ? `${vitalsAverages.avgMemoryMB} MB` : '--'} 
+                status={vitalsAverages.TTFB > 1500 ? 'poor' : vitalsAverages.TTFB > 800 ? 'needs-improvement' : vitalsAverages.TTFB > 0 ? 'good' : 'none'} 
+                desc={`Memoria heap promedio del cliente. Vistas: ${vitalsAverages.totalPagesViews}. TTFB promedio de red: ${vitalsAverages.TTFB ? Math.round(vitalsAverages.TTFB) + 'ms' : '--'}.`} 
+              />
+            </div>
+
+            {/* RUM Analytics & Diagnostic Tables */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+              {/* Slow Resources */}
+              <div className="backdrop-blur-xl border border-white/[0.04] bg-white/[0.005] rounded-2xl p-6 relative overflow-hidden">
+                <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Server className="w-4 h-4 text-cyan-400" /> Recursos Más Lentos Detectados
+                </h3>
+                {vitalsAverages.topSlowResources.length > 0 ? (
+                  <div className="space-y-3">
+                    {vitalsAverages.topSlowResources.map((res, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-white/[0.01] p-3 rounded-lg border border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                        <span className="text-xs text-zinc-400 font-mono truncate max-w-[200px] sm:max-w-[300px] lg:max-w-[400px]">{res.name}</span>
+                        <span className={`text-xs font-bold ${res.duration > 1000 ? 'text-rose-400' : 'text-amber-400'}`}>{res.duration}ms</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500 italic">No se han registrado transferencias lentas aún en este proyecto.</p>
+                )}
+              </div>
+
+              {/* Geo & Browser Breakdown */}
+              <div className="backdrop-blur-xl border border-white/[0.04] bg-white/[0.005] rounded-2xl p-6 relative overflow-hidden">
+                <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-cyan-400" /> Distribución de Clientes
+                </h3>
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Browsers */}
+                  <div>
+                    <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-3">Navegadores</h4>
+                    {Object.keys(vitalsAverages.browsersMap).length > 0 ? (
+                      <div className="space-y-2">
+                        {Object.entries(vitalsAverages.browsersMap).map(([browser, count], idx) => (
+                          <div key={idx} className="flex justify-between text-xs text-zinc-400">
+                            <span>{browser}</span>
+                            <span className="font-bold text-white">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-500 italic">Sin datos</p>
+                    )}
+                  </div>
+                  {/* Countries */}
+                  <div>
+                    <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-3">Países (Vercel Geo)</h4>
+                    {Object.keys(vitalsAverages.countriesMap).length > 0 ? (
+                      <div className="space-y-2">
+                        {Object.entries(vitalsAverages.countriesMap).map(([country, count], idx) => (
+                          <div key={idx} className="flex justify-between text-xs text-zinc-400">
+                            <span className="uppercase">{country}</span>
+                            <span className="font-bold text-white">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-500 italic">Sin datos</p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div className="mt-12 p-8 bg-black/40 rounded-2xl border border-white/[0.06] relative overflow-hidden">
