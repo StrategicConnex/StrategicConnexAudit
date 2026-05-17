@@ -9,11 +9,11 @@ interface ProjectsTabProps {
 
 export function ProjectsTab({ dashboardData, NewProjectModal }: ProjectsTabProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative z-10 font-sans text-zinc-100">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[19px] font-bold tracking-tight text-apple-ink">Listado Completo de Dominios</h2>
-          <p className="text-[13px] text-apple-ink/40 mt-1">Administra y analiza los sitios web asignados a tu cuenta de agencia.</p>
+          <h2 className="text-[19px] font-extrabold tracking-tight text-white">Listado Completo de Dominios</h2>
+          <p className="text-xs text-zinc-500 mt-1">Administre y audite la infraestructura de los sitios web asignados a su cuenta corporativa.</p>
         </div>
       </div>
 
@@ -23,13 +23,13 @@ export function ProjectsTab({ dashboardData, NewProjectModal }: ProjectsTabProps
         ))}
         
         {/* Empty project placeholder card */}
-        <div className="border border-dashed border-apple-gray-dark/20 hover:border-apple-blue/40 rounded-apple-md p-8 flex flex-col items-center justify-center text-center gap-6 transition-all min-h-[240px] bg-apple-white group">
-          <div className="w-14 h-14 rounded-apple-pill bg-apple-gray flex items-center justify-center text-apple-ink/20 group-hover:text-apple-blue transition-colors border border-apple-gray-dark/5 shadow-sm">
+        <div className="border border-dashed border-white/[0.08] hover:border-cyan-500/40 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-6 transition-all min-h-[240px] bg-white/[0.005] group">
+          <div className="w-14 h-14 rounded-xl bg-white/[0.02] flex items-center justify-center text-zinc-600 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 group-hover:border-cyan-500/20 transition-all border border-white/[0.08] shadow-sm">
             <Plus className="w-7 h-7" />
           </div>
           <div className="space-y-1">
-            <h4 className="font-bold text-apple-ink text-[15px] tracking-tight">Agregar nuevo dominio?</h4>
-            <p className="text-[13px] text-apple-ink/40 max-w-[200px] mx-auto leading-relaxed">Somete tu sitio a un escaneo profundo en segundos.</p>
+            <h4 className="font-extrabold text-white text-[15px] tracking-tight">¿Agregar un nuevo dominio?</h4>
+            <p className="text-xs text-zinc-500 max-w-[200px] mx-auto leading-relaxed">Somete tu sitio web a una auditoría técnica profunda impulsada por IA.</p>
           </div>
           <NewProjectModal />
         </div>

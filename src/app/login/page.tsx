@@ -5,6 +5,10 @@ import { createClient } from '@/shared/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Mail, Lock, Loader2, Sparkles } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const AiCoreVisual = dynamic(() => import('../components/AiCoreVisual'), { ssr: false });
+
 
 function LoginContent() {
   const [email, setEmail] = useState('');
@@ -70,8 +74,8 @@ function LoginContent() {
           <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50" />
           
           <div className="text-center mb-8">
-            <div className="inline-flex p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 mb-4 shadow-lg shadow-purple-500/20">
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className="inline-flex mb-4 justify-center items-center">
+              <AiCoreVisual size={90} interactive={true} />
             </div>
             <h1 className="text-3xl font-bold text-white tracking-tight">StrategicAudit Pro</h1>
             <p className="text-gray-400 mt-2">Bienvenido de nuevo. Accede a tu panel.</p>

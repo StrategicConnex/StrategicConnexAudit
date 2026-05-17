@@ -78,16 +78,16 @@ export function NewProjectModal() {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-5 py-2.5 bg-apple-blue text-white rounded-apple-pill hover:opacity-90 transition-all shadow-sm font-bold text-[13px] tracking-tight"
+        className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-full transition-all shadow-[0_4px_12px_rgba(99,102,241,0.2)] hover:shadow-[0_4px_16px_rgba(99,102,241,0.3)] border border-indigo-500/20 font-bold text-[11px] uppercase tracking-widest"
       >
-        <Plus size={16} strokeWidth={3} />
+        <Plus size={14} strokeWidth={3} />
         <span>Nuevo Proyecto</span>
       </button>
 
       {isOpen && mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/45 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/75 backdrop-blur-md animate-in fade-in duration-300">
           <div 
-            className={`glass-card rounded-apple-md w-full max-w-md p-10 shadow-2xl relative animate-in zoom-in-95 duration-500 border border-apple-gray-dark/10 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`glass-card rounded-2xl w-full max-w-md p-8 shadow-2xl relative animate-in zoom-in-95 duration-300 border border-white/[0.06] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -100,52 +100,54 @@ export function NewProjectModal() {
                 setState(null);
                 setPosition({ x: 0, y: 0 });
               }}
-              className="absolute top-6 right-6 text-apple-ink/20 hover:text-apple-ink transition-colors cursor-pointer"
+              className="absolute top-5 right-5 text-slate-500 hover:text-white transition-colors cursor-pointer"
             >
-              <X size={20} strokeWidth={2.5} />
+              <X size={18} strokeWidth={2.5} />
             </button>
             
-            <div className="mb-8 pointer-events-none select-none">
-              <h2 className="text-2xl font-bold text-apple-ink tracking-tight">Agregar Dominio</h2>
-              <p className="text-[13px] font-medium text-apple-ink/40 mt-1.5">Configure un nuevo sitio para monitoreo SEO y Core Web Vitals.</p>
+            <div className="mb-6 pointer-events-none select-none">
+              <h2 className="text-xl font-bold text-white tracking-tight">Agregar Dominio</h2>
+              <p className="text-xs font-semibold text-slate-400 mt-1">Configure un nuevo sitio para monitoreo SEO y Core Web Vitals.</p>
             </div>
             
-            <form ref={formRef} onSubmit={handleSubmit} className="space-y-6 cursor-auto">
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-5 cursor-auto">
               <div className="space-y-2">
-                <label htmlFor="name" className="text-[11px] font-bold text-apple-ink/40 uppercase tracking-widest ml-1">Nombre del Proyecto</label>
+                <label htmlFor="name" className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Nombre del Proyecto</label>
                 <input 
                   type="text" 
                   id="name" 
                   name="name" 
-                  className="w-full bg-apple-gray border border-apple-gray-dark/5 rounded-apple-sm px-4 py-3 text-apple-ink text-[14px] font-medium focus:outline-none focus:border-apple-blue/50 transition-all"
+                  className="w-full bg-[#08080a]/60 border border-white/[0.08] focus:border-[#06b6d4]/40 rounded-xl px-4 py-3 text-white text-xs font-semibold focus:outline-none transition-all duration-300 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
                   placeholder="Ej: Mi Startup Ecommerce"
+                  required
                 />
                 {state?.errors?.name && (
-                  <p className="text-red-500 text-[11px] font-bold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.name[0]}</p>
+                  <p className="text-red-400 text-[10px] font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.name[0]}</p>
                 )}
               </div>
               
               <div className="space-y-2">
-                <label htmlFor="baseUrl" className="text-[11px] font-bold text-apple-ink/40 uppercase tracking-widest ml-1">URL Base (Dominio)</label>
+                <label htmlFor="baseUrl" className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">URL Base (Dominio)</label>
                 <input 
-                  type="text" 
+                  type="url" 
                   id="baseUrl" 
                   name="baseUrl" 
-                  className="w-full bg-apple-gray border border-apple-gray-dark/5 rounded-apple-sm px-4 py-3 text-apple-ink text-[14px] font-medium focus:outline-none focus:border-apple-blue/50 transition-all"
+                  className="w-full bg-[#08080a]/60 border border-white/[0.08] focus:border-[#06b6d4]/40 rounded-xl px-4 py-3 text-white text-xs font-semibold focus:outline-none transition-all duration-300 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
                   placeholder="https://ejemplo.com"
+                  required
                 />
                 {state?.errors?.baseUrl && (
-                  <p className="text-red-500 text-[11px] font-bold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.baseUrl[0]}</p>
+                  <p className="text-red-400 text-[10px] font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.baseUrl[0]}</p>
                 )}
               </div>
 
               {state?.message && !state?.success && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-apple-sm text-red-600 text-xs font-bold">
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-semibold">
                   {state.message}
                 </div>
               )}
 
-              <div className="pt-6 flex items-center justify-end gap-4">
+              <div className="pt-4 flex items-center justify-end gap-4">
                 <button 
                   type="button" 
                   onClick={() => {
@@ -153,7 +155,7 @@ export function NewProjectModal() {
                     setState(null);
                     setPosition({ x: 0, y: 0 });
                   }}
-                  className="text-[13px] font-bold text-apple-ink/40 hover:text-apple-ink transition-colors"
+                  className="text-[11px] font-extrabold uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
                   disabled={isPending}
                 >
                   Cancelar
@@ -161,9 +163,9 @@ export function NewProjectModal() {
                 <button 
                   type="submit" 
                   disabled={isPending}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-apple-ink text-black font-bold rounded-apple-pill hover:opacity-90 transition-all disabled:opacity-50 text-[13px]"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-white text-black font-extrabold rounded-full hover:bg-slate-200 transition-all disabled:opacity-50 text-[11px] uppercase tracking-widest shadow-md hover:shadow-[0_2px_15px_rgba(255,255,255,0.2)]"
                 >
-                  {isPending ? <Loader2 size={16} className="animate-spin" /> : 'Crear Proyecto'}
+                  {isPending ? <Loader2 size={14} className="animate-spin text-black" /> : 'Crear Proyecto'}
                 </button>
               </div>
             </form>

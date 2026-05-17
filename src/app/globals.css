@@ -27,108 +27,160 @@
 }
 
 :root {
-  /* Apple-inspired "Premium Dark" Theme */
-  --background: #09090b; /* Deep matte zinc/carbon black */
-  --foreground: #f4f4f5; /* Light off-white */
+  /* Onyx Cyber Design System (Enterprise AI & Security Platform) */
+  --background: #030303; /* Deep matte pitch obsidian black */
+  --foreground: #f8fafc; /* Crisp clean slate white */
   
-  --card: #121214; /* Elegant matte gray-black */
-  --card-foreground: #f4f4f5;
+  --card: #08080c; /* Elegant glass onyx card base */
+  --card-foreground: #f8fafc;
   
-  --popover: #121214;
-  --popover-foreground: #f4f4f5;
+  --popover: #08080c;
+  --popover-foreground: #f8fafc;
   
-  --primary: #0a84ff; /* Apple System Blue Dark */
+  /* Brand Accents */
+  --primary: #818cf8; /* Amethyst Indigo (AI & Intelligence) */
   --primary-foreground: #ffffff;
   
-  --secondary: #8e8e93; /* System Secondary Gray */
-  --secondary-foreground: #f4f4f5;
+  --secondary: #64748b; /* Steel secondary */
+  --secondary-foreground: #f8fafc;
   
-  --muted: #1c1c1e; /* Slightly lighter gray-black */
-  --muted-foreground: #a1a1aa;
+  --muted: #0d0d12; /* Very deep slate */
+  --muted-foreground: #94a3b8;
   
-  --accent: #27272a; /* Zinc 800 */
-  --accent-foreground: #f4f4f5;
+  --accent: #1e1b4b; /* Subtle purple glow fill */
+  --accent-foreground: #f8fafc;
   
-  --destructive: #ff453a; /* Apple System Red Dark */
+  --destructive: #ef4444; /* High-intensity alert red */
   --destructive-foreground: #ffffff;
   
-  --border: #222226; /* Elegant subtle dark borders */
-  --input: #222226;
-  --ring: #0a84ff;
+  --border: rgba(255, 255, 255, 0.05); /* Ultra subtle transparent border */
+  --input: rgba(255, 255, 255, 0.03);
+  --ring: #06b6d4; /* Cybersecurity Cyan focus ring */
   
-  --radius: 8px; /* Apple Standard Radius */
+  --radius: 12px; /* Premium smooth border radius */
 
-  /* Additional Apple Tokens */
-  --apple-black: #000000;
-  --apple-white: #121214; /* White maps to card dark color for structural container compatibility */
-  --apple-ink: #f4f4f5; /* Near-white main typography */
-  --apple-gray: #18181b; /* Deep dark gray background for sidebars and panels */
-  --apple-gray-dark: #2c2c2e; /* Slate-tinted border line */
-  --apple-blue: #0a84ff;
+  /* Legacy Apple Tokens Mapped to the New Premium Cyber Design System */
+  --apple-black: #030303;
+  --apple-white: #08080c; /* Container card mapping */
+  --apple-ink: #f8fafc; /* Standard crisp typography */
+  --apple-gray: #0b0b0f; /* Deep dark slate panel background */
+  --apple-gray-dark: rgba(255, 255, 255, 0.08); /* Transparent borders divider */
+  --apple-blue: #06b6d4; /* Custom Electric Cyan Accent */
+  
+  /* Premium Cyber Colors */
+  --cyber-cyan: #06b6d4;
+  --cyber-emerald: #10b981;
+  --cyber-amethyst: #818cf8;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Apple-Style Section Rhythm Utilities */
-@utility section-showcase {
-  background-color: var(--apple-black);
-  color: var(--apple-white);
+/* Premium Glassmorphic Layout Utilities */
+@utility glass-card {
+  background: linear-gradient(135deg, rgba(8, 8, 12, 0.7) 0%, rgba(3, 3, 5, 0.8) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.7);
 }
 
-@utility section-neutral {
-  background-color: var(--apple-gray);
-  color: var(--apple-ink);
-}
-
-@utility section-transaction {
-  background-color: var(--apple-white);
-  color: var(--apple-ink);
-}
-
-/* Apple-Style Glassmorphism */
 @utility apple-glass {
-  background: rgba(24, 24, 27, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 11, 15, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 @utility apple-glass-dark {
-  background: rgba(18, 18, 20, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(4, 4, 6, 0.85);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-@utility glass-card {
-  background: rgba(18, 18, 20, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+/* Restrained Neon Security Glows */
+@utility cyber-glow-cyan {
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.08);
+}
+
+@utility cyber-glow-amethyst {
+  box-shadow: 0 0 30px rgba(129, 140, 248, 0.08);
+}
+
+/* Cyber Scanning Pulsing Animations */
+@keyframes scan-pulse-animation {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.35);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(6, 182, 212, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
+  }
+}
+
+@utility scan-pulse {
+  animation: scan-pulse-animation 2.2s infinite ease-in-out;
+}
+
+/* Subtle Shimmer for Scanner Loading States */
+@keyframes shimmer-animation {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@utility tech-shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer-animation 2.5s infinite linear;
+}
+
+/* Tech Grid Pattern Background */
+@utility tech-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+}
+
+/* Premium Ambient Lighting Mesh */
+@utility ambient-mesh {
+  background: radial-gradient(circle at 50% -20%, rgba(129, 140, 248, 0.07) 0%, transparent 45%),
+              radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.03) 0%, transparent 40%);
 }
 
 /* Premium Typography Utilities */
 @utility text-hero {
   font-size: clamp(3rem, 8vw, 6rem);
   line-height: 1.05;
-  letter-spacing: -0.02em;
-  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-weight: 700;
 }
 
 @utility text-merch {
   font-size: clamp(1.5rem, 4vw, 2.5rem);
   line-height: 1.1;
-  letter-spacing: -0.01em;
-  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-weight: 700;
 }
 
 @utility apple-pill {
-  border-radius: var(--radius-apple-pill);
+  border-radius: 980px;
   padding: 0.5rem 1.25rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
