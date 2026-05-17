@@ -1,9 +1,9 @@
-import { task, wait } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
 import { directDb } from "@/shared/db";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
-import { promises as dnsPromises } from "dns";
 import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
+import { validateSafeUrl, normalizeUrl } from "@/shared/utils/network";
 
 console.log("[Trigger Module] audit.trigger.ts cargado correctamente.");
 console.log("[Trigger Module] DATABASE_URL presente:", !!process.env.DATABASE_URL);
@@ -25,76 +25,6 @@ interface AnalyzeResult {
   error?: string;
 }
 
-// Zero-dependency helper to check if an IP address belongs to local/private/reserved subnets
-function isPrivateIp(ip: string): boolean {
-  // IPv4 Loopback (127.0.0.0/8)
-  if (/^127\./.test(ip)) return true;
-  
-  // IPv4 Private Networks (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
-  if (/^10\./.test(ip)) return true;
-  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(ip)) return true;
-  if (/^192\.168\./.test(ip)) return true;
-  
-  // IPv4 Link-Local (169.254.0.0/16)
-  if (/^169\.254\./.test(ip)) return true;
-
-  // IPv4 Carrier-Grade NAT (100.64.0.0/10)
-  if (/^100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\./.test(ip)) return true;
-
-  // IPv4 Current Network / Broadcast (0.0.0.0/8, 255.255.255.255)
-  if (/^0\./.test(ip) || ip === "255.255.255.255") return true;
-
-  // IPv6 Loopback (::1)
-  if (ip === "::1" || ip === "0:0:0:0:0:0:0:1") return true;
-
-  // IPv6 Link-Local (fe80::/10)
-  if (/^fe[89ab][0-9a-f]:/i.test(ip)) return true;
-
-  // IPv6 Unique Local (fc00::/7)
-  if (/^f[cd][0-9a-f]{2}:/i.test(ip)) return true;
-
-  return false;
-}
-
-// SSRF and DNS Rebinding Validator to protect background crawling tasks
-async function validateSafeUrl(targetUrl: string): Promise<string> {
-  const parsedUrl = new URL(targetUrl);
-  
-  // 1. Enforce strict http/https protocol
-  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-    throw new Error(`Protocolo no soportado: ${parsedUrl.protocol}. Solo se admiten HTTP y HTTPS.`);
-  }
-
-  const hostname = parsedUrl.hostname;
-
-  // 2. Direct validation if hostname is raw IP
-  const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-  if (ipv4Regex.test(hostname)) {
-    if (isPrivateIp(hostname)) {
-      throw new Error(`Acceso denegado: IP privada detectada (${hostname})`);
-    }
-    return targetUrl;
-  }
-
-  // 3. DNS Lookup resolution checking all records to prevent host redirection exploits
-  try {
-    const addresses = await dnsPromises.lookup(hostname, { all: true });
-    for (const address of addresses) {
-      if (isPrivateIp(address.address)) {
-        throw new Error(`Acceso denegado: El host ${hostname} se resuelve a una IP privada (${address.address})`);
-      }
-    }
-  } catch (dnsErr: any) {
-    // If lookup throws an explicit access-denied error, propagate it
-    if (dnsErr.message && dnsErr.message.includes("Acceso denegado")) {
-      throw dnsErr;
-    }
-    // For other connection errors, let the fetch attempt resolve or fail naturally
-    console.warn(`[Crawler Security] No se pudo resolver DNS para el host ${hostname}:`, dnsErr.message);
-  }
-
-  return targetUrl;
-}
 
 // Scraper nativo optimizado para una extracción rápida y ligera
 async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
@@ -242,8 +172,7 @@ export const runProjectAudit = task({
         const [project] = await directDb.select().from(projects).where(eq(projects.id, projectId)).limit(1);
         if (!project) throw new Error(`Proyecto ${projectId} no encontrado`);
 
-      let targetUrl = project.domain;
-      if (!/^https?:\/\//i.test(targetUrl)) targetUrl = `https://${targetUrl}`;
+      const targetUrl = normalizeUrl(project.domain);
 
       // 3. Ejecutar análisis web
       console.log(`[Worker] Analizando URL: ${targetUrl}`);
@@ -368,16 +297,18 @@ export const runProjectAudit = task({
 
       console.log(`[Worker] Auditoría ${auditId} finalizada con éxito.`);
 
-    } catch (err: any) {
-      console.error(`[Worker] Error fatal en auditoría ${auditId}:`, err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error(`[Worker] Error fatal en auditoría ${auditId}:`, error);
       
       try {
         await directDb.update(audits)
           .set({
             status: "failed",
-            errorMessage: err.message || "Error desconocido durante la ejecución.",
+            errorMessage: error.message || "Error desconocido durante la ejecución.",
             completedAt: new Date()
           })
+
           .where(eq(audits.id, auditId));
       } catch (updateErr) {
         console.error("[Worker] Error al intentar marcar como fallido en DB:", updateErr);
