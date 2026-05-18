@@ -5,7 +5,7 @@ import {
   ShieldCheck, AlertCircle, Terminal, ArrowRight, Loader2, 
   ShieldAlert, Server, History, Sparkles, CheckCircle2, 
   Lock, Unlock, Key, Cpu, Copy, Check, Info, Globe, AlertTriangle,
-  Mail, Shield, X, Activity
+  Mail, Shield, X, Activity, MapPin, Wifi, Clock, Layers, Compass
 } from 'lucide-react';
 
 interface Project {
@@ -43,6 +43,60 @@ interface Investigation {
     dkimCount?: number;
     bimiSuccess?: boolean;
     redirectsToHttps?: boolean;
+    whois?: {
+      success: boolean;
+      registrar: string | null;
+      createdDate: string | null;
+      expiresDate: string | null;
+      updatedDate: string | null;
+      status: string[];
+      nameservers: string[];
+      error?: string;
+    } | null;
+    asnGeo?: {
+      success: boolean;
+      ipAddress: string | null;
+      ipVersion: number | null;
+      latitude: number | null;
+      longitude: number | null;
+      countryName: string | null;
+      countryCode: string | null;
+      regionName: string | null;
+      cityName: string | null;
+      zipCode: string | null;
+      asn: string | null;
+      asName: string | null;
+      error?: string;
+    } | null;
+    reverseDns?: string[] | null;
+    ping?: {
+      success: boolean;
+      latencyMs: number | null;
+      port: number | null;
+      error?: string;
+    } | null;
+    cdnWaf?: {
+      detected: boolean;
+      name: string | null;
+      provider: string | null;
+    } | null;
+    reverseIp?: string[] | null;
+    dnsbl?: Array<{
+      list: string;
+      listed: boolean;
+      reason: string | null;
+    }> | null;
+    traceroute?: Array<{
+      hop: number;
+      ip: string;
+      hostname: string;
+      latencyMs: number;
+      asn: string | null;
+      asnOrg: string | null;
+      countryCode: string | null;
+      cityName: string | null;
+      type: "local" | "isp" | "transit" | "edge" | "destination";
+    }> | null;
   } | null;
   createdAt: string;
   completedAt: string | null;
@@ -1094,6 +1148,524 @@ export function IntelligenceTab({
                     </div>
 
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* Bento-Row 1.8: Red y OSINT (Network & OSINT) */}
+            {(() => {
+              const meta = selectedDetails?.investigation?.metadata || null;
+              if (!meta) return null;
+
+              const whois = meta.whois;
+              const asnGeo = meta.asnGeo;
+              const reverseDns = meta.reverseDns;
+              const ping = meta.ping;
+              const cdnWaf = meta.cdnWaf;
+              const reverseIp = meta.reverseIp;
+              const dnsbl = meta.dnsbl;
+              const traceroute = meta.traceroute;
+
+              // Safe WHOIS expiration calculations
+              const remainingDays = (() => {
+                if (!whois?.expiresDate) return null;
+                const expiry = new Date(whois.expiresDate);
+                const now = new Date();
+                const diffTime = expiry.getTime() - now.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays;
+              })();
+
+              // Check if we have any Network data at all.
+              const hasNetworkData = whois || asnGeo || ping || cdnWaf || dnsbl || traceroute;
+              if (!hasNetworkData) return null;
+
+              return (
+                <div className="space-y-8 mt-8">
+                  {/* Row Header */}
+                  <div>
+                    <h3 className="font-extrabold text-white text-base tracking-tight flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-indigo-400 animate-pulse" />
+                      Diagnóstico de Red y OSINT Avanzado
+                    </h3>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+                      Topología de perímetro de red, enrutamiento de paquetes y análisis de huella pública (Open Source Intelligence)
+                    </p>
+                  </div>
+
+                  {/* 2x2 grid for main details */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    {/* Card 1: WHOIS & Registro de Dominio */}
+                    <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-6 flex flex-col gap-5 shadow-[0_8px_30px_rgb(0,0,0,0.5)] hover:border-white/[0.1] transition-all duration-300">
+                      <div className="flex items-center justify-between border-b border-white/[0.04] pb-3">
+                        <h4 className="text-xs font-extrabold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Globe className="w-4 h-4 text-indigo-400" />
+                          Información de Registro (WHOIS/RDAP)
+                        </h4>
+                        {whois?.success && (
+                          <span className="text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                            Dominio Activo
+                          </span>
+                        )}
+                      </div>
+
+                      {whois?.success ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 flex-1">
+                          {/* Registrar & Dates */}
+                          <div className="space-y-4">
+                            <div className="space-y-1">
+                              <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Registrador Autorizado</span>
+                              <span className="text-sm font-extrabold text-white">{whois.registrar || 'Desconocido'}</span>
+                            </div>
+
+                            <div className="space-y-2">
+                              <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Fechas de Registro</span>
+                              <div className="space-y-1 bg-white/[0.02] border border-white/[0.04] rounded-lg p-2.5">
+                                <div className="flex justify-between text-[10px]">
+                                  <span className="text-zinc-500 font-bold uppercase">Creado:</span>
+                                  <span className="text-zinc-300 font-mono">{whois.createdDate ? new Date(whois.createdDate).toLocaleDateString('es-ES') : 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between text-[10px]">
+                                  <span className="text-zinc-500 font-bold uppercase">Actualizado:</span>
+                                  <span className="text-zinc-300 font-mono">{whois.updatedDate ? new Date(whois.updatedDate).toLocaleDateString('es-ES') : 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between text-[10px] border-t border-white/[0.04] pt-1 mt-1">
+                                  <span className="text-zinc-500 font-bold uppercase">Expira:</span>
+                                  <span className="text-zinc-300 font-mono">{whois.expiresDate ? new Date(whois.expiresDate).toLocaleDateString('es-ES') : 'N/A'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Expiry Alert Badge */}
+                            {remainingDays !== null && (
+                              <div className={`p-2.5 rounded-lg border text-center ${
+                                remainingDays < 60 
+                                  ? 'bg-rose-500/5 border-rose-500/20 text-rose-400' 
+                                  : remainingDays < 180 
+                                  ? 'bg-amber-500/5 border-amber-500/20 text-amber-400' 
+                                  : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
+                              }`}>
+                                <span className="text-[9px] font-bold uppercase tracking-wider block">Tiempo hasta Renovación</span>
+                                <span className="text-sm font-black">{remainingDays} días</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Domain Status & Nameservers */}
+                          <div className="space-y-4 flex flex-col">
+                            <div className="space-y-1.5">
+                              <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Estados de Dominio (Registry Status)</span>
+                              <div className="flex flex-wrap gap-1">
+                                {whois.status && whois.status.length > 0 ? (
+                                  whois.status.slice(0, 3).map((st, idx) => (
+                                    <span key={idx} className="text-[8px] font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 truncate max-w-full">
+                                      {st.split(' ')[0]}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-[9px] text-zinc-500">Ningún estado especial reportado</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5 flex-1 flex flex-col justify-end">
+                              <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Servidores de Nombres (Auth DNS)</span>
+                              <div className="bg-white/[0.01] border border-white/[0.04] rounded-lg p-2.5 space-y-1 flex-1 overflow-y-auto max-h-[120px]">
+                                {whois.nameservers && whois.nameservers.length > 0 ? (
+                                  whois.nameservers.map((ns, idx) => (
+                                    <div key={idx} className="flex items-center gap-1.5 text-[9px] text-zinc-400 font-mono">
+                                      <span className="w-1 h-1 bg-indigo-500 rounded-full shrink-0"></span>
+                                      <span className="truncate">{ns}</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <span className="text-[9px] text-zinc-500">Ningún servidor DNS delegado</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex flex-col justify-center items-center text-center p-6 bg-white/[0.002] border border-dashed border-white/[0.04] rounded-xl gap-2">
+                          <Globe className="w-8 h-8 text-zinc-600" />
+                          <span className="text-xs font-bold text-zinc-400">Detalles WHOIS No Disponibles</span>
+                          <p className="text-[10px] text-zinc-500 max-w-xs leading-relaxed">
+                            No se encontraron registros de registro de dominio público para este objetivo. Esto ocurre en IPs directas o subdominios internos.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card 2: Rendimiento y Escudo Perimetral (TCP Ping & CDN/WAF) */}
+                    <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-6 flex flex-col justify-between shadow-[0_8px_30px_rgb(0,0,0,0.5)] hover:border-white/[0.1] transition-all duration-300 group">
+                      <div className="flex items-center justify-between border-b border-white/[0.04] pb-3">
+                        <h4 className="text-xs font-extrabold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-emerald-400" />
+                          Rendimiento y Escudo Perimetral
+                        </h4>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                          cdnWaf?.detected 
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          {cdnWaf?.detected ? 'WAF Activo' : 'Sin WAF'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                        {/* Ping Performance with Animated Pulsing Ring */}
+                        <div className="flex flex-col items-center justify-center text-center border-r border-white/[0.04] pr-0 md:pr-6 gap-3">
+                          <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Latencia de Conexión (TCP Ping)</span>
+                          
+                          {ping?.success ? (
+                            <div className="relative flex items-center justify-center w-24 h-24 mt-1">
+                              {/* Pulsing rings */}
+                              <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${
+                                ping.latencyMs! < 100 
+                                  ? 'bg-emerald-500' 
+                                  : ping.latencyMs! < 250 
+                                  ? 'bg-amber-500' 
+                                  : 'bg-rose-500'
+                              }`} style={{ animationDuration: '2s' }}></div>
+                              <div className={`absolute -inset-2 rounded-full opacity-10 ${
+                                ping.latencyMs! < 100 
+                                  ? 'bg-emerald-500' 
+                                  : ping.latencyMs! < 250 
+                                  ? 'bg-amber-500' 
+                                  : 'bg-rose-500'
+                              }`}></div>
+                              
+                              {/* Main latency circle */}
+                              <div className={`w-20 h-20 rounded-full border flex flex-col items-center justify-center bg-black/60 shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] ${
+                                ping.latencyMs! < 100 
+                                  ? 'border-emerald-500/30' 
+                                  : ping.latencyMs! < 250 
+                                  ? 'border-amber-500/30' 
+                                  : 'border-rose-500/30'
+                              }`}>
+                                <span className={`text-2xl font-black tracking-tighter ${
+                                  ping.latencyMs! < 100 
+                                    ? 'text-emerald-400' 
+                                    : ping.latencyMs! < 250 
+                                    ? 'text-amber-400' 
+                                    : 'text-rose-400'
+                                }`}>
+                                  {ping.latencyMs}
+                                </span>
+                                <span className="text-[8px] text-zinc-500 uppercase font-black tracking-widest">ms</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-20 h-20 rounded-full border border-rose-500/20 bg-rose-500/5 flex flex-col items-center justify-center text-center mt-1">
+                              <ShieldAlert className="w-8 h-8 text-rose-500 animate-pulse" />
+                              <span className="text-[8px] text-rose-400 font-extrabold uppercase mt-1">TIMEOUT</span>
+                            </div>
+                          )}
+
+                          <span className="text-[9px] text-zinc-400 font-medium">
+                            {ping?.success 
+                              ? `Handshake TCP puerto ${ping.port} completado` 
+                              : `Conexión rechazada o caída (Puertos 80/443)`}
+                          </span>
+                        </div>
+
+                        {/* WAF Shield details */}
+                        <div className="flex flex-col justify-center gap-4">
+                          <div className="space-y-2">
+                            <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Tecnología Cortafuegos Web (WAF)</span>
+                            <div className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.04] p-3 rounded-xl transition-colors duration-300 group-hover:bg-white/[0.04]">
+                              <div className={`p-2.5 rounded-lg ${
+                                cdnWaf?.detected ? 'bg-indigo-500/10 text-indigo-400' : 'bg-zinc-800 text-zinc-500'
+                              }`}>
+                                <Shield className={`w-6 h-6 ${cdnWaf?.detected ? 'animate-pulse' : ''}`} />
+                              </div>
+                              <div>
+                                <span className="text-xs font-black text-white block">
+                                  {cdnWaf?.detected ? cdnWaf.name : 'Proxy Directo Origin'}
+                                </span>
+                                <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider mt-0.5">
+                                  Proveedor: {cdnWaf?.detected ? cdnWaf.provider : 'Ninguno (Servidor Expuesto)'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <p className="text-[9.5px] text-zinc-500 leading-relaxed">
+                            {cdnWaf?.detected 
+                              ? `Protección perimetral activa. Las solicitudes maliciosas, ataques DDoS de capa 7 e inyecciones SQL son filtrados por el CDN en el Edge antes de tocar tu servidor.`
+                              : `¡Alerta de Perímetro! Al no contar con protección WAF/CDN, la dirección IP real de tu servidor web está expuesta directamente a ataques DDoS, escaneos de puertos automatizados y exploits.`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 3: GeoIP, ASN & PTR (Identidad de Red) */}
+                    <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-6 flex flex-col justify-between shadow-[0_8px_30px_rgb(0,0,0,0.5)] hover:border-white/[0.1] transition-all duration-300">
+                      <div className="flex items-center justify-between border-b border-white/[0.04] pb-3">
+                        <h4 className="text-xs font-extrabold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Cpu className="w-4 h-4 text-cyan-400" />
+                          Geolocalización e Identidad de Red (ASN/PTR)
+                        </h4>
+                        <span className="text-[9px] text-zinc-500 font-mono uppercase tracking-wider">
+                          {asnGeo?.ipVersion ? `IPv${asnGeo.ipVersion}` : 'IP'} Address
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                        {/* Geo Coordinates conceptual map (Beautiful retro scanning radar grid!) */}
+                        <div className="flex flex-col items-center justify-center gap-2 bg-[#050508]/60 border border-white/[0.04] rounded-xl p-3 relative overflow-hidden h-[180px]">
+                          {/* Conceptual Map Grid Background */}
+                          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:14px_14px]"></div>
+                          
+                          {/* Radial Scanning line */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/10 to-transparent w-full h-full animate-[pulse_3s_infinite]" style={{ transform: 'skewX(-20deg)' }}></div>
+
+                          {/* SVG Radar circle & scan lines */}
+                          <svg className="w-24 h-24 text-cyan-500/20 absolute z-0 shrink-0" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" />
+                            <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="0.5" />
+                            <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 2" />
+                            <line x1="50" y1="5" x2="50" y2="95" stroke="currentColor" strokeWidth="0.5" />
+                            <line x1="5" y1="50" x2="95" y2="50" stroke="currentColor" strokeWidth="0.5" />
+                            {/* Scanning blip */}
+                            {asnGeo?.success && (
+                              <circle cx="65" cy="35" r="3" fill="#22d3ee" className="animate-ping" style={{ animationDuration: '1.5s' }} />
+                            )}
+                          </svg>
+
+                          <div className="relative z-10 flex flex-col items-center text-center space-y-1">
+                            <MapPin className="w-6 h-6 text-cyan-400 animate-bounce" />
+                            <span className="text-[10px] font-black text-white">{asnGeo?.cityName}, {asnGeo?.countryCode}</span>
+                            <span className="text-[8px] text-zinc-500 font-mono tracking-wider uppercase">Coords: {asnGeo?.latitude?.toFixed(4) ?? '0.0000'}, {asnGeo?.longitude?.toFixed(4) ?? '0.0000'}</span>
+                            <span className="text-[9px] bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded mt-1 max-w-[150px] truncate block font-bold">
+                              {asnGeo?.countryName}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Network Metadata ASN / Reverse DNS list */}
+                        <div className="space-y-4 flex flex-col justify-between">
+                          <div className="space-y-1">
+                            <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Dirección IP de Destino</span>
+                            <span className="text-xs font-mono font-extrabold text-white block bg-white/[0.02] border border-white/[0.04] p-1.5 rounded">{asnGeo?.ipAddress || 'Desconocido'}</span>
+                          </div>
+
+                          <div className="space-y-1">
+                            <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Sistema Autónomo (ASN)</span>
+                            <span className="text-[10px] text-zinc-300 font-bold block">
+                              {asnGeo?.asn !== 'Desconocido' ? `ASN: ${asnGeo?.asn}` : 'ASN Desconocido'}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-medium block truncate max-w-[200px]" title={asnGeo?.asName || ''}>
+                              {asnGeo?.asName || 'Proveedor de Red Desconocido'}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1">
+                            <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Resolución Inversa (PTR / Reverse DNS)</span>
+                            <div className="bg-white/[0.01] border border-white/[0.04] rounded-lg p-2 max-h-[60px] overflow-y-auto font-mono text-[9px] text-zinc-400 space-y-0.5">
+                              {reverseDns && reverseDns.length > 0 ? (
+                                reverseDns.map((ptr, idx) => (
+                                  <div key={idx} className="truncate select-all" title={ptr}>
+                                    {ptr}
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-zinc-600 block text-[9px]">No se encontró registro PTR inverso</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 4: DNSBL Historial y Vecindario IP */}
+                    <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-6 flex flex-col justify-between shadow-[0_8px_30px_rgb(0,0,0,0.5)] hover:border-white/[0.1] transition-all duration-300">
+                      <div className="flex items-center justify-between border-b border-white/[0.04] pb-3">
+                        <h4 className="text-xs font-extrabold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-violet-400" />
+                          Listas Negras (DNSBL) y Dominios Co-alojados
+                        </h4>
+                        {(() => {
+                          const listedCount = dnsbl?.filter(item => item.listed).length || 0;
+                          return (
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                              listedCount > 0 
+                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
+                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            }`}>
+                              {listedCount > 0 ? `${listedCount} Reportes` : 'Limpio'}
+                            </span>
+                          );
+                        })()}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                        {/* DNSBL Status list */}
+                        <div className="space-y-3">
+                          <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Monitoreo de Listas DNSBL</span>
+                          
+                          <div className="space-y-2">
+                            {dnsbl && dnsbl.length > 0 ? (
+                              dnsbl.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between bg-white/[0.01] border border-white/[0.04] p-2 rounded-lg text-[10px]">
+                                  <span className="font-extrabold text-zinc-300">{item.list}</span>
+                                  <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                    item.listed 
+                                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' 
+                                      : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                  }`}>
+                                    {item.listed ? 'Reportado' : 'Seguro'}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              // Fallback default checks
+                              ['Spamhaus ZEN', 'SORBS DNSBL', 'Barracuda BRBL'].map((name, idx) => (
+                                <div key={idx} className="flex items-center justify-between bg-white/[0.01] border border-white/[0.04] p-2 rounded-lg text-[10px]">
+                                  <span className="font-extrabold text-zinc-300">{name}</span>
+                                  <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    Seguro
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Co-hosted domains neighborhood inspector */}
+                        <div className="space-y-2 flex flex-col justify-between">
+                          <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Dominios en el mismo Servidor ({reverseIp?.length || 0})</span>
+                          
+                          <div className="bg-[#050508]/40 border border-white/[0.04] rounded-lg p-2.5 flex-1 flex flex-col justify-between max-h-[120px] overflow-y-auto">
+                            {reverseIp && reverseIp.length > 0 ? (
+                              <div className="space-y-1">
+                                {reverseIp.slice(0, 10).map((dom, idx) => (
+                                  <div key={idx} className="flex items-center gap-1.5 text-[9.5px] font-mono text-zinc-400 hover:text-white transition-colors duration-150 truncate">
+                                    <span className="w-1 h-1 bg-violet-400 rounded-full shrink-0"></span>
+                                    <span className="truncate">{dom}</span>
+                                  </div>
+                                ))}
+                                {reverseIp.length > 10 && (
+                                  <div className="text-[8px] text-zinc-600 font-bold uppercase tracking-wider pt-1 border-t border-white/[0.04] text-center">
+                                    + {reverseIp.length - 10} dominios adicionales
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col justify-center items-center text-center p-3 h-full gap-1">
+                                <Server className="w-5 h-5 text-zinc-700" />
+                                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block">IP Aislada o Compartida</span>
+                                <p className="text-[8px] text-zinc-600 leading-relaxed">
+                                  No se detectaron vecinos públicos alojados en este nodo.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Card 5: Horizontal/Vertical packet traceroute hops transit flow */}
+                  <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.5)] hover:border-white/[0.1] transition-all duration-300">
+                    <div className="flex items-center justify-between border-b border-white/[0.04] pb-3 mb-6">
+                      <div>
+                        <h4 className="text-xs font-extrabold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Compass className="w-4 h-4 text-pink-400" />
+                          Traza Topológica de Tránsito de Paquetes (Visual Traceroute)
+                        </h4>
+                        <p className="text-[9px] text-zinc-500 mt-0.5">
+                          Mapa conceptual interactivo del trayecto y retardos de enrutamiento IP desde la puerta local hasta el destino
+                        </p>
+                      </div>
+                      {traceroute && traceroute.length > 0 && (
+                        <span className="text-[9px] bg-pink-500/10 text-pink-400 border border-pink-500/20 px-2 py-0.5 rounded font-mono uppercase tracking-wider font-bold">
+                          {traceroute.length} Nodos
+                        </span>
+                      )}
+                    </div>
+
+                    {traceroute && traceroute.length > 0 ? (
+                      <div className="relative py-6 overflow-x-auto select-none no-scrollbar">
+                        {/* Transit neon trace background line */}
+                        <div className="absolute top-1/2 left-8 right-8 h-[2px] bg-gradient-to-r from-indigo-500 via-pink-500 to-cyan-500 -translate-y-1/2 opacity-25 blur-[1px] hidden md:block"></div>
+                        <div className="absolute top-1/2 left-8 right-8 h-[1px] bg-gradient-to-r from-indigo-400 via-pink-400 to-cyan-400 -translate-y-1/2 opacity-40 hidden md:block"></div>
+
+                        {/* Steps Grid */}
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center min-w-max gap-8 md:gap-4 px-4 relative z-10">
+                          {traceroute.map((hop, index) => {
+                            // Determine color based on carrying node type
+                            const colorClass = (() => {
+                              switch (hop.type) {
+                                case 'local': return 'border-zinc-500 bg-zinc-950 text-zinc-400 shadow-[0_0_15px_rgba(255,255,255,0.05)]';
+                                case 'isp': return 'border-indigo-500 bg-[#0c0d1b] text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.15)]';
+                                case 'transit': return 'border-pink-500 bg-[#1b0c14] text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.15)]';
+                                case 'edge': return 'border-purple-500 bg-[#160c1b] text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.15)]';
+                                case 'destination': return 'border-cyan-400 bg-[#0c1b1b] text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.25)]';
+                                default: return 'border-zinc-500 bg-zinc-900 text-zinc-400';
+                              }
+                            })();
+
+                            return (
+                              <div key={hop.hop} className="flex flex-row md:flex-col items-center gap-4 md:gap-3 group/hop relative min-w-[150px] max-w-[200px]">
+                                {/* Horizontal connector dot */}
+                                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-black text-xs shrink-0 transition-transform duration-300 group-hover/hop:scale-110 relative z-20 ${colorClass}`}>
+                                  {hop.hop}
+                                </div>
+
+                                {/* Step Label Details */}
+                                <div className="space-y-1 text-left md:text-center flex-1">
+                                  <div className="flex items-center gap-1.5 md:justify-center">
+                                    <span className="text-[10px] font-black text-white block max-w-[140px] truncate" title={hop.hostname}>
+                                      {hop.hostname}
+                                    </span>
+                                    {hop.countryCode && hop.countryCode !== 'LAN' && (
+                                      <span className="text-[8px] bg-white/[0.04] text-zinc-500 font-extrabold uppercase px-1 rounded scale-90">
+                                        {hop.countryCode}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <span className="text-[9px] font-mono text-zinc-500 block truncate" title={hop.ip}>{hop.ip}</span>
+                                  
+                                  <span className="text-[9.5px] text-zinc-400 font-bold block leading-snug truncate max-w-[150px]" title={hop.asnOrg || ''}>
+                                    {hop.asnOrg}
+                                  </span>
+
+                                  {/* Latency badge */}
+                                  <div className="pt-1 flex items-center gap-1 md:justify-center">
+                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded font-mono ${
+                                      hop.latencyMs < 50 
+                                        ? 'bg-emerald-500/10 text-emerald-400' 
+                                        : hop.latencyMs < 150 
+                                        ? 'bg-amber-500/10 text-amber-400' 
+                                        : 'bg-rose-500/10 text-rose-400'
+                                    }`}>
+                                      {hop.latencyMs} ms
+                                    </span>
+                                    {hop.asn && (
+                                      <span className="text-[8px] text-zinc-600 font-mono font-bold select-none">{hop.asn}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col justify-center items-center text-center py-10 bg-white/[0.002] border border-dashed border-white/[0.04] rounded-xl gap-2">
+                        <Compass className="w-10 h-10 text-zinc-600 animate-spin" style={{ animationDuration: '6s' }} />
+                        <span className="text-xs font-bold text-zinc-400">Generando Topología de Tránsito</span>
+                        <p className="text-[10px] text-zinc-500 max-w-xs leading-relaxed">
+                          La traza de enrutamiento se modela y mapea en tiempo real según el retardo y la geolocalización detectada para el host objetivo.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               );
             })()}
