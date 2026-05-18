@@ -1,0 +1,1005 @@
+'use client';
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { 
+  ShieldCheck, AlertCircle, Terminal, ArrowRight, Loader2, 
+  ShieldAlert, Server, History, Sparkles, CheckCircle2, 
+  Lock, Unlock, Key, Cpu, Copy, Check, Info, Globe, AlertTriangle
+} from 'lucide-react';
+
+interface Project {
+  id: string;
+  name: string;
+  domain: string;
+}
+
+interface Investigation {
+  id: string;
+  projectId: string;
+  title: string;
+  target: string;
+  targetType: string;
+  status: string;
+  score: number | null;
+  summary: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+interface Finding {
+  id: string;
+  severity: 'info' | 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  recommendation: string | null;
+  evidence: any;
+  affectedAsset: string | null;
+}
+
+interface RunEvent {
+  id: string;
+  eventType: string;
+  message: string;
+  createdAt: string;
+}
+
+interface Asset {
+  id: string;
+  assetType: string;
+  value: string;
+  ip: string | null;
+}
+
+interface IntelligenceTabProps {
+  initialProjects: Project[];
+  selectedProjectId: string;
+  setSelectedProjectId: (id: string) => void;
+}
+
+export function IntelligenceTab({ 
+  initialProjects, 
+  selectedProjectId, 
+  setSelectedProjectId 
+}: IntelligenceTabProps) {
+  // Navigation & session state
+  const [investigations, setInvestigations] = useState<Investigation[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  
+  // Details of the selected investigation
+  const [selectedDetails, setSelectedDetails] = useState<{
+    investigation: Investigation;
+    findings: Finding[];
+    events: RunEvent[];
+    assets: Asset[];
+  } | null>(null);
+
+  // Form input & loading states
+  const [targetInput, setTargetInput] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState<string[]>([]);
+  const [scanStepIndex, setScanStepIndex] = useState(0);
+  const [scanStatusMessage, setScanStatusMessage] = useState('');
+  
+  // IA Copilot remediation state
+  const [isGeneratingCopilot, setIsGeneratingCopilot] = useState(false);
+  const [copilotOutput, setCopilotOutput] = useState<string | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<boolean>(false);
+  const [copiedBlockIdx, setCopiedBlockIdx] = useState<number | null>(null);
+  const [errorText, setErrorText] = useState<string | null>(null);
+
+  const consoleEndRef = useRef<HTMLDivElement>(null);
+
+  interface RenderedBlock {
+    type: 'h1' | 'h2' | 'h3' | 'code' | 'ul' | 'ol' | 'p';
+    content?: string;
+    items?: string[];
+    language?: string;
+  }
+
+  const parseMarkdown = (md: string): RenderedBlock[] => {
+    const lines = md.split('\n');
+    const blocks: RenderedBlock[] = [];
+    let currentBlock: RenderedBlock | null = null;
+    let codeLines: string[] = [];
+    let inCode = false;
+    let codeLang = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (line.trim().startsWith('```')) {
+        if (inCode) {
+          blocks.push({
+            type: 'code',
+            content: codeLines.join('\n'),
+            language: codeLang || 'code'
+          });
+          codeLines = [];
+          inCode = false;
+          codeLang = '';
+        } else {
+          inCode = true;
+          codeLang = line.trim().substring(3).trim();
+        }
+        continue;
+      }
+
+      if (inCode) {
+        codeLines.push(line);
+        continue;
+      }
+
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith('### ')) {
+        blocks.push({ type: 'h3', content: trimmed.substring(4) });
+        currentBlock = null;
+        continue;
+      }
+      if (trimmed.startsWith('## ')) {
+        blocks.push({ type: 'h2', content: trimmed.substring(3) });
+        currentBlock = null;
+        continue;
+      }
+      if (trimmed.startsWith('# ')) {
+        blocks.push({ type: 'h1', content: trimmed.substring(2) });
+        currentBlock = null;
+        continue;
+      }
+
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        const itemContent = trimmed.substring(2);
+        if (currentBlock && currentBlock.type === 'ul') {
+          currentBlock.items?.push(itemContent);
+        } else {
+          currentBlock = { type: 'ul', items: [itemContent] };
+          blocks.push(currentBlock);
+        }
+        continue;
+      }
+
+      const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+      if (olMatch) {
+        const itemContent = olMatch[2];
+        if (currentBlock && currentBlock.type === 'ol') {
+          currentBlock.items?.push(itemContent);
+        } else {
+          currentBlock = { type: 'ol', items: [itemContent] };
+          blocks.push(currentBlock);
+        }
+        continue;
+      }
+
+      if (trimmed === '') {
+        currentBlock = null;
+        continue;
+      }
+
+      if (currentBlock && currentBlock.type === 'p') {
+        currentBlock.content += '\n' + line;
+      } else {
+        currentBlock = { type: 'p', content: line };
+        blocks.push(currentBlock);
+      }
+    }
+
+    if (inCode && codeLines.length > 0) {
+      blocks.push({
+        type: 'code',
+        content: codeLines.join('\n'),
+        language: codeLang || 'code'
+      });
+    }
+
+    return blocks;
+  };
+
+  const renderInlineMarkdown = (text: string) => {
+    if (!text) return '';
+    const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={idx} className="font-extrabold text-white">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      if (part.startsWith('`') && part.endsWith('`')) {
+        return (
+          <code key={idx} className="font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/30 px-1.5 py-0.5 rounded text-[11px] font-semibold">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return part;
+    });
+  };
+
+  // Fetch investigations list for current project
+  const fetchInvestigations = useCallback(async (projId: string) => {
+    try {
+      setErrorText(null);
+      const res = await fetch(`/api/intelligence?projectId=${projId}`);
+      const data = await res.json();
+      if (data.success) {
+        setInvestigations(data.investigations || []);
+        // Automatically select the first one if available
+        if (data.investigations && data.investigations.length > 0) {
+          setSelectedId(data.investigations[0].id);
+        } else {
+          setSelectedId(null);
+          setSelectedDetails(null);
+        }
+      } else {
+        console.error(data.error);
+      }
+    } catch (err) {
+      console.error('Error fetching investigations:', err);
+    }
+  }, []);
+
+  // Fetch complete details for a single selected investigation
+  const fetchInvestigationDetails = useCallback(async (investId: string) => {
+    try {
+      setErrorText(null);
+      const res = await fetch(`/api/intelligence?investigationId=${investId}`);
+      const data = await res.json();
+      if (data.success) {
+        setSelectedDetails({
+          investigation: data.investigation,
+          findings: data.findings || [],
+          events: data.events || [],
+          assets: data.assets || []
+        });
+        setCopilotOutput(null); // Reset IA output when selection changes
+      } else {
+        console.error(data.error);
+      }
+    } catch (err) {
+      console.error('Error fetching details:', err);
+    }
+  }, []);
+
+  // Sync on project change
+  useEffect(() => {
+    if (selectedProjectId) {
+      fetchInvestigations(selectedProjectId);
+    }
+  }, [selectedProjectId, fetchInvestigations]);
+
+  // Sync on selection change
+  useEffect(() => {
+    if (selectedId) {
+      fetchInvestigationDetails(selectedId);
+    } else {
+      setSelectedDetails(null);
+    }
+  }, [selectedId, fetchInvestigationDetails]);
+
+  // Scroll to bottom of terminal console
+  useEffect(() => {
+    if (consoleEndRef.current) {
+      consoleEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [scanProgress]);
+
+  // Simulated live console log generator
+  const simulateConsoleLogs = (target: string, onFinish: () => void) => {
+    const steps = [
+      `[00:01] ⚡ Inicializando motor de inteligencia cibernética a nivel de infraestructura...`,
+      `[00:03] 🌐 Resolviendo registros de DNS para "${target}" en servidores autoritativos...`,
+      `[00:05]    ├─ Consulta de registro A: completado.`,
+      `[00:06]    ├─ Consulta de registro AAAA: completado.`,
+      `[00:08]    ├─ Consulta de registro MX: completado.`,
+      `[00:10]    └─ Consulta de registro TXT / SPF / DMARC: completado.`,
+      `[00:12] 🔒 Iniciando handshake SSL/TLS de alta fidelidad...`,
+      `[00:15]    ├─ Verificación de cadena de certificación y validez temporal...`,
+      `[00:18]    ├─ Escaneo de soporte de ciphers obsoletos (SSLv3, TLS 1.0, TLS 1.1)...`,
+      `[00:21]    └─ Comprobación de vulnerabilidades conocidas (Heartbleed, Logjam)...`,
+      `[00:24] 🛡️ Analizando cabeceras de seguridad HTTP aplicadas...`,
+      `[00:27]    ├─ Evaluando directiva Strict-Transport-Security (HSTS)...`,
+      `[00:30]    ├─ Evaluando directiva Content-Security-Policy (CSP)...`,
+      `[00:32]    └─ Comprobando protección contra Clickjacking (X-Frame-Options)...`,
+      `[00:35] ⚖️ Evaluando deducción de puntaje y catalogación de riesgos...`,
+      `[00:38] 🧠 Compilando análisis heurístico final...`,
+      `[00:40] 🚀 Proceso completado exitosamente. Sincronizando registros persistentes en base de datos.`
+    ];
+
+    setScanProgress([]);
+    setIsScanning(true);
+    setCopilotOutput(null);
+    setErrorText(null);
+
+    let idx = 0;
+    const interval = setInterval(() => {
+      if (idx < steps.length) {
+        setScanProgress(prev => [...prev, steps[idx]]);
+        setScanStatusMessage(steps[idx].replace(/\[\d+:\d+\] /, ''));
+        idx++;
+      } else {
+        clearInterval(interval);
+        onFinish();
+      }
+    }, 900);
+  };
+
+  // Launch scan handler
+  const handleLaunchScan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetInput.trim()) return;
+
+    const target = targetInput.trim();
+    setTargetInput('');
+
+    // Pre-launch validation
+    if (!selectedProjectId) {
+      setErrorText('Por favor, selecciona un proyecto para vincular el análisis.');
+      return;
+    }
+
+    simulateConsoleLogs(target, async () => {
+      try {
+        const res = await fetch('/api/intelligence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectId: selectedProjectId,
+            target: target
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          await fetchInvestigations(selectedProjectId);
+          setSelectedId(data.investigation.id);
+        } else {
+          setErrorText(data.error || 'Ocurrió un error inesperado durante el análisis.');
+        }
+      } catch (err: any) {
+        setErrorText(`Error de conexión con la API de Inteligencia: ${err.message || err}`);
+      } finally {
+        setIsScanning(false);
+      }
+    });
+  };
+
+  // Call IA Copilot Remediation
+  const handleGenerateCopilot = async () => {
+    if (!selectedDetails?.investigation.id) return;
+    setIsGeneratingCopilot(true);
+    setErrorText(null);
+    try {
+      const res = await fetch('/api/intelligence/copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          investigationId: selectedDetails.investigation.id
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setCopilotOutput(data.remediationPlan);
+      } else {
+        setErrorText(data.error || 'No se pudo generar el plan de remediación con IA.');
+      }
+    } catch (err: any) {
+      setErrorText(`Error de comunicación con el motor de IA: ${err.message || err}`);
+    } finally {
+      setIsGeneratingCopilot(false);
+    }
+  };
+
+  // Copy to clipboard helper
+  const handleCopyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(true);
+    setTimeout(() => setCopiedIndex(false), 2000);
+  };
+
+  const getScoreRating = (score: number) => {
+    if (score >= 90) return { label: 'A - Excelente', color: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' };
+    if (score >= 80) return { label: 'B - Bueno', color: 'text-teal-400 border-teal-500/20 bg-teal-500/5' };
+    if (score >= 70) return { label: 'C - Advertencia', color: 'text-amber-400 border-amber-500/20 bg-amber-500/5' };
+    if (score >= 50) return { label: 'D - Alto Riesgo', color: 'text-orange-400 border-orange-500/20 bg-orange-500/5' };
+    return { label: 'F - Crítico', color: 'text-rose-400 border-rose-500/20 bg-rose-500/5' };
+  };
+
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case 'critical':
+        return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+      case 'high':
+        return 'text-orange-400 bg-orange-500/10 border-orange-500/20';
+      case 'medium':
+        return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+      case 'low':
+        return 'text-teal-400 bg-teal-500/10 border-teal-500/20';
+      default:
+        return 'text-zinc-400 bg-white/5 border-white/10';
+    }
+  };
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-8 relative z-10 font-sans text-zinc-100 min-h-[calc(100vh-140px)]">
+      
+      {/* ─── LEFT PANEL: List of Previous Investigations ─────────────────── */}
+      <div className="w-full lg:w-72 shrink-0 flex flex-col gap-6">
+        
+        {/* Project Selector inside Workspace */}
+        <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+          <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+            Proyecto Activo
+          </label>
+          <div className="relative">
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full bg-[#07070a] border border-white/[0.08] hover:border-white/[0.15] text-white text-xs font-bold rounded-xl py-3 px-4 outline-none transition-all cursor-pointer appearance-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]"
+            >
+              {initialProjects.map((proj) => (
+                <option key={proj.id} value={proj.id} className="bg-[#07070a] text-white">
+                  {proj.name} ({proj.domain})
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+              ▼
+            </div>
+          </div>
+        </div>
+
+        {/* History List Card */}
+        <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl flex-1 flex flex-col min-h-[300px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+          <div className="p-5 border-b border-white/[0.06] flex items-center justify-between bg-white/[0.005]">
+            <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+              <History className="w-3.5 h-3.5" /> Historial de Análisis
+            </h3>
+            <span className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded-full font-bold">
+              {investigations.length}
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto divide-y divide-white/[0.04] max-h-[450px]">
+            {investigations.length === 0 ? (
+              <div className="p-8 text-center flex flex-col items-center justify-center h-full gap-3">
+                <ShieldCheck className="w-8 h-8 text-zinc-600" />
+                <p className="text-xs text-zinc-500 leading-relaxed">
+                  No hay análisis previos para este proyecto.
+                </p>
+              </div>
+            ) : (
+              investigations.map((inv) => {
+                const isActive = selectedId === inv.id;
+                const scoreInfo = inv.score !== null ? getScoreRating(inv.score) : null;
+                return (
+                  <button
+                    key={inv.id}
+                    onClick={() => setSelectedId(inv.id)}
+                    className={`w-full text-left p-5 transition-all duration-300 relative group flex flex-col gap-2 ${
+                      isActive 
+                        ? 'bg-white/[0.02] border-l-2 border-cyan-500' 
+                        : 'hover:bg-white/[0.01] border-l-2 border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors truncate max-w-[140px]">
+                        {inv.target}
+                      </span>
+                      {inv.score !== null ? (
+                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded border ${scoreInfo?.color.split(' ')[0]} ${scoreInfo?.color.split(' ')[1]}`}>
+                          {inv.score}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] bg-white/5 border border-white/10 text-zinc-500 px-2 py-0.5 rounded font-bold">
+                          Pendiente
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-[9px] text-zinc-500 uppercase tracking-wider">
+                      <span>{inv.targetType}</span>
+                      <span>
+                        {new Date(inv.createdAt).toLocaleDateString('es-ES', { 
+                          day: 'numeric', 
+                          month: 'short' 
+                        })}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* ─── RIGHT PANEL: Main Analysis Input & Posture Insights ─────────── */}
+      <div className="flex-1 flex flex-col gap-8 min-w-0">
+        
+        {/* Error notification display */}
+        {errorText && (
+          <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 text-xs font-bold flex items-center gap-3 animate-in fade-in duration-300">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <span>{errorText}</span>
+          </div>
+        )}
+
+        {/* Dynamic target launcher header */}
+        <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.5)] relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col gap-6">
+            <div>
+              <h3 className="font-extrabold text-white text-base tracking-tight">Escanear Infraestructura Cibernética</h3>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+                Ingresa un Dominio, IP o URL para auditar registros DNS, SSL, TLS y cabeceras de red
+              </p>
+            </div>
+
+            <form onSubmit={handleLaunchScan} className="flex gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  required
+                  disabled={isScanning}
+                  value={targetInput}
+                  onChange={(e) => setTargetInput(e.target.value)}
+                  placeholder="ejemplo.com, 1.1.1.1, https://miweb.com"
+                  className="w-full bg-[#07070a]/60 border border-white/[0.08] hover:border-white/[0.15] focus:border-cyan-500/40 text-white font-medium placeholder-zinc-600 text-sm rounded-xl py-3.5 pl-5 pr-12 outline-none transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600">
+                  <Globe className="w-4 h-4" />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isScanning}
+                className="bg-white text-black hover:bg-zinc-200 transition-all font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-white cursor-pointer active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shrink-0 shadow-[0_2px_12px_rgba(0,0,0,0.3)]"
+              >
+                {isScanning ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Escaneando
+                  </>
+                ) : (
+                  <>
+                    Auditar <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* ─── CASE A: Escaneo activo (Retro Console Timeline Terminal) ────── */}
+        {isScanning && (
+          <div className="backdrop-blur-xl border border-white/[0.08] bg-[#030305]/95 rounded-2xl overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.8)] relative animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Terminal Top Window Bar */}
+            <div className="h-10 px-5 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+              </div>
+              <span className="text-[10px] text-zinc-500 font-mono font-bold tracking-widest flex items-center gap-1.5 uppercase">
+                <Terminal className="w-3.5 h-3.5 text-cyan-500" /> terminal://intelligence-engine.v2
+              </span>
+              <div className="w-8" />
+            </div>
+
+            {/* Retro Phosphor Screen Body */}
+            <div className="p-8 font-mono text-[11px] leading-relaxed text-cyan-400 bg-[#030305] max-h-[350px] overflow-y-auto flex flex-col gap-2 border-b border-white/[0.04]">
+              {scanProgress.map((line, idx) => (
+                <div key={idx} className="animate-in fade-in duration-300">
+                  {line}
+                </div>
+              ))}
+              <div ref={consoleEndRef} />
+            </div>
+
+            {/* Terminal Live Bar Indicator */}
+            <div className="p-4 bg-white/[0.005] flex items-center justify-between px-8 text-[10px] text-zinc-500 font-bold uppercase tracking-widest shrink-0">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping" />
+                {scanStatusMessage || 'Inicializando motor...'}
+              </span>
+              <span>100% SEGURO</span>
+            </div>
+          </div>
+        )}
+
+        {/* ─── CASE B: Mostrando detalles de análisis seleccionado ────────── */}
+        {!isScanning && selectedDetails && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            
+            {/* Bento-Row 1: Posture Score & Vulnerability Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              
+              {/* Score Gauge Ring */}
+              <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.5)] md:col-span-1">
+                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                  Índice de Seguridad
+                </h3>
+                
+                {selectedDetails.investigation.score !== null ? (
+                  <div className="relative flex items-center justify-center">
+                    {/* Retro ring container */}
+                    <div className="w-36 h-36 rounded-full border-4 border-white/[0.02] flex items-center justify-center flex-col gap-0.5">
+                      <span className="text-4xl font-extrabold tracking-tighter text-white">
+                        {selectedDetails.investigation.score}
+                      </span>
+                      <span className="text-[9px] font-extrabold text-zinc-500 uppercase tracking-widest">
+                        / 100
+                      </span>
+                    </div>
+                    {/* Glowing outer aura depending on score */}
+                    <div className={`absolute inset-0 rounded-full blur-2xl opacity-15 pointer-events-none ${
+                      selectedDetails.investigation.score >= 80 ? 'bg-emerald-500' : 'bg-rose-500'
+                    }`} />
+                  </div>
+                ) : (
+                  <div className="w-36 h-36 rounded-full border-4 border-dashed border-white/[0.08] flex items-center justify-center text-zinc-600 text-sm font-bold">
+                    N/A
+                  </div>
+                )}
+
+                {selectedDetails.investigation.score !== null && (
+                  <div className={`text-[10px] font-extrabold px-3 py-1 rounded-full border uppercase tracking-widest ${
+                    getScoreRating(selectedDetails.investigation.score).color
+                  }`}>
+                    {getScoreRating(selectedDetails.investigation.score).label}
+                  </div>
+                )}
+              </div>
+
+              {/* Vulnerabilities counts, Summary & Target Info */}
+              <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-8 flex flex-col justify-between gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.5)] md:col-span-2">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest">
+                      Análisis Finalizado
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-medium">
+                      {new Date(selectedDetails.investigation.createdAt).toLocaleString('es-ES')}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-white text-lg tracking-tight">
+                      {selectedDetails.investigation.target}
+                    </h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed mt-1">
+                      {selectedDetails.investigation.summary || 'Análisis de vulnerabilidad técnica de red completado exitosamente.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Severity Breakdown boxes */}
+                <div className="grid grid-cols-4 gap-4 pt-4 border-t border-white/[0.04]">
+                  {[
+                    { label: 'Críticos', count: selectedDetails.findings.filter(f => f.severity === 'critical').length, color: 'text-rose-500' },
+                    { label: 'Altos', count: selectedDetails.findings.filter(f => f.severity === 'high').length, color: 'text-orange-400' },
+                    { label: 'Medios', count: selectedDetails.findings.filter(f => f.severity === 'medium').length, color: 'text-amber-400' },
+                    { label: 'Bajos', count: selectedDetails.findings.filter(f => f.severity === 'low').length, color: 'text-teal-400' },
+                  ].map((group, idx) => (
+                    <div key={idx} className="bg-white/[0.01] border border-white/[0.04] p-3 rounded-xl flex flex-col gap-1 items-center justify-center text-center">
+                      <span className={`text-base font-extrabold ${group.color}`}>{group.count}</span>
+                      <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">{group.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Bento-Row 2: Findings List Accordions */}
+            <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+              <div className="p-8 border-b border-white/[0.06] bg-white/[0.005]">
+                <h3 className="font-extrabold text-white text-base tracking-tight">Hallazgos e Ineficiencias de Red</h3>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+                  Lista de vulnerabilidades clasificadas por severidad con evidencia técnica
+                </p>
+              </div>
+
+              {selectedDetails.findings.length === 0 ? (
+                <div className="p-12 text-center flex flex-col items-center justify-center gap-4 bg-white/[0.002]">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+                  <div>
+                    <h4 className="font-extrabold text-white text-sm">¡Excelente Postura de Seguridad!</h4>
+                    <p className="text-xs text-zinc-500 max-w-sm mt-1 mx-auto leading-relaxed">
+                      No se encontraron vulnerabilidades o fallas DNS en tu infraestructura de red.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/[0.04]">
+                  {selectedDetails.findings.map((finding) => (
+                    <div key={finding.id} className="p-8 hover:bg-white/[0.005] transition-all duration-300 flex flex-col gap-4">
+                      
+                      {/* Header row */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <span className={`text-[9px] font-extrabold uppercase tracking-widest px-3 py-1 rounded border shrink-0 mt-0.5 ${getSeverityBadge(finding.severity)}`}>
+                            {finding.severity}
+                          </span>
+                          <div>
+                            <h4 className="font-extrabold text-white text-sm tracking-tight">
+                              {finding.title}
+                            </h4>
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mt-0.5">
+                              Activo Afectado: <span className="text-zinc-300 font-mono font-medium">{finding.affectedAsset || 'General'}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Description & Recommendations */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs leading-relaxed pt-2">
+                        <div className="space-y-2">
+                          <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
+                            <Info className="w-3.5 h-3.5" /> Descripción de Falla
+                          </h5>
+                          <p className="text-zinc-400 font-medium">
+                            {finding.description}
+                          </p>
+                        </div>
+                        {finding.recommendation && (
+                          <div className="space-y-2">
+                            <h5 className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> Recomendación Técnica
+                            </h5>
+                            <p className="text-zinc-300 font-medium">
+                              {finding.recommendation}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Evidence JSON payload */}
+                      {finding.evidence && Object.keys(finding.evidence).length > 0 && (
+                        <div className="mt-4 bg-[#07070a] border border-white/[0.04] p-5 rounded-xl relative overflow-hidden group">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest flex items-center gap-1">
+                              <Terminal className="w-3 h-3 text-zinc-500" /> Evidencia Técnica Recuperada
+                            </span>
+                            <button
+                              onClick={() => handleCopyToClipboard(JSON.stringify(finding.evidence, null, 2))}
+                              className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                            >
+                              Copiar Payload
+                            </button>
+                          </div>
+                          <pre className="text-[10px] font-mono text-zinc-400 overflow-x-auto select-all max-h-[140px] leading-relaxed">
+                            {JSON.stringify(finding.evidence, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Bento-Row 3: Discovered Assets Grid */}
+            {selectedDetails.assets && selectedDetails.assets.length > 0 && (
+              <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+                <div className="p-8 border-b border-white/[0.06] bg-white/[0.005]">
+                  <h3 className="font-extrabold text-white text-base tracking-tight">Activos Técnicos Descubiertos</h3>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+                    Infraestructura mapeada durante la auditoría
+                  </p>
+                </div>
+
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {selectedDetails.assets.map((asset) => (
+                    <div key={asset.id} className="backdrop-blur-xl border border-white/[0.04] bg-white/[0.005] p-5 rounded-xl flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-9 h-9 rounded-lg bg-white/[0.02] border border-white/[0.08] flex items-center justify-center text-zinc-500">
+                          <Server className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-[8px] font-bold text-zinc-500 uppercase tracking-widest">
+                            {asset.assetType}
+                          </span>
+                          <span className="block text-xs font-bold text-white truncate font-mono mt-0.5">
+                            {asset.value}
+                          </span>
+                        </div>
+                      </div>
+                      {asset.ip && (
+                        <span className="text-[9px] bg-white/5 border border-white/10 text-zinc-400 font-mono px-2 py-0.5 rounded">
+                          {asset.ip}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bento-Row 4: IA Remediation Copilot Console */}
+            <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)] relative">
+              <div className="p-8 border-b border-white/[0.06] bg-white/[0.005] flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h3 className="font-extrabold text-white text-base tracking-tight flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" /> Copilot de Remediación Técnica con IA
+                  </h3>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+                    Genera scripts Nginx, configuraciones DNS y directivas SPF/DMARC a medida
+                  </p>
+                </div>
+
+                {!copilotOutput && (
+                  <button
+                    onClick={handleGenerateCopilot}
+                    disabled={isGeneratingCopilot}
+                    className="bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-cyan-500/20 cursor-pointer hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed text-center shrink-0 shadow-lg"
+                  >
+                    {isGeneratingCopilot ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Compilando Plan...
+                      </>
+                    ) : (
+                      <>
+                        Generar Plan IA <Sparkles className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Copilot plan output display */}
+              {copilotOutput && (
+                <div className="p-8 bg-[#040407] space-y-6">
+                  
+                  {/* Actions & controls bar */}
+                  <div className="flex items-center justify-between px-1.5">
+                    <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5" /> Plan de Acción e Instrucciones de Despliegue
+                    </span>
+                    <button
+                      onClick={() => handleCopyToClipboard(copilotOutput)}
+                      className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors flex items-center gap-1 bg-white/5 border border-white/10 px-3.5 py-2 rounded-xl cursor-pointer"
+                    >
+                      {copiedIndex ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" /> ¡Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" /> Copiar Plan Completo
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Rendered remediation content */}
+                  <div className="bg-[#08080c] border border-white/[0.04] p-8 rounded-2xl relative">
+                    <div className="space-y-6 max-w-none text-zinc-300 leading-relaxed text-xs font-sans">
+                      {parseMarkdown(copilotOutput).map((block, idx) => {
+                        switch (block.type) {
+                          case 'h1':
+                            return (
+                              <h1 key={idx} className="text-lg font-extrabold text-white flex items-center gap-2 border-b border-white/[0.06] pb-2.5 pt-6 first:pt-0">
+                                <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+                                {renderInlineMarkdown(block.content || '')}
+                              </h1>
+                            );
+                          case 'h2':
+                            return (
+                              <h2 key={idx} className="text-base font-extrabold text-white flex items-center gap-2 border-b border-white/[0.06] pb-2 pt-5 first:pt-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+                                {renderInlineMarkdown(block.content || '')}
+                              </h2>
+                            );
+                          case 'h3':
+                            return (
+                              <h3 key={idx} className="text-sm font-bold text-white flex items-center gap-2 pt-4 first:pt-0">
+                                <span className="w-1 h-1 rounded-full bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.6)]" />
+                                {renderInlineMarkdown(block.content || '')}
+                              </h3>
+                            );
+                          case 'ul':
+                            return (
+                              <ul key={idx} className="space-y-2.5 my-3 pl-1.5">
+                                {block.items?.map((item, itemIdx) => (
+                                  <li key={itemIdx} className="flex items-start gap-2.5 text-zinc-300 text-xs leading-relaxed">
+                                    <span className="text-cyan-400 font-bold mt-1 select-none text-[9px]">&bull;</span>
+                                    <div className="flex-1">{renderInlineMarkdown(item)}</div>
+                                  </li>
+                                ))}
+                              </ul>
+                            );
+                          case 'ol':
+                            return (
+                              <ol key={idx} className="space-y-2.5 my-3 pl-1.5 list-decimal list-inside">
+                                {block.items?.map((item, itemIdx) => (
+                                  <li key={itemIdx} className="text-zinc-300 text-xs leading-relaxed pl-1">
+                                    <span className="flex-1 inline pl-1">{renderInlineMarkdown(item)}</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            );
+                          case 'code':
+                            return (
+                              <div key={idx} className="border border-white/[0.06] rounded-xl overflow-hidden my-4 bg-[#0a0a0f] shadow-md">
+                                <div className="bg-[#0f0f16] px-4 py-2 border-b border-white/[0.04] flex items-center justify-between text-[10px] font-bold tracking-widest text-zinc-400 uppercase select-none">
+                                  <span>{block.language || 'código'}</span>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(block.content || '');
+                                      setCopiedBlockIdx(idx);
+                                      setTimeout(() => setCopiedBlockIdx(null), 2000);
+                                    }}
+                                    className="hover:text-white transition-colors flex items-center gap-1 cursor-pointer bg-white/[0.02] hover:bg-white/[0.06] px-2.5 py-1 rounded-md border border-white/[0.04]"
+                                  >
+                                    {copiedBlockIdx === idx ? (
+                                      <>
+                                        <Check className="w-3 h-3 text-emerald-400" /> ¡Copiado!
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3 h-3" /> Copiar Código
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                                <pre className="p-4 overflow-x-auto text-[11px] font-mono text-zinc-200 bg-[#040407] leading-relaxed">
+                                  <code>{block.content}</code>
+                                </pre>
+                              </div>
+                            );
+                          case 'p':
+                          default:
+                            return (
+                              <p key={idx} className="text-zinc-300 leading-relaxed text-xs">
+                                {renderInlineMarkdown(block.content || '')}
+                              </p>
+                            );
+                        }
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Dynamic clean reset button */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setCopilotOutput(null)}
+                      className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white transition-colors"
+                    >
+                      Volver a Generar
+                    </button>
+                  </div>
+
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* ─── CASE C: Sin análisis seleccionado / Estado inicial ─────────── */}
+        {!isScanning && !selectedDetails && (
+          <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-16 text-center flex flex-col items-center justify-center gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.5)] animate-in fade-in duration-500 flex-1">
+            <div className="w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/[0.08] flex items-center justify-center text-zinc-500 relative">
+              <ShieldCheck className="w-8 h-8 text-zinc-500 animate-pulse" />
+              <div className="absolute inset-0 bg-cyan-500/10 rounded-2xl blur-lg animate-ping" />
+            </div>
+            <div>
+              <h4 className="font-extrabold text-white text-base tracking-tight">
+                Espacio de Trabajo de Inteligencia de Red
+              </h4>
+              <p className="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed mt-2">
+                Ingresa una dirección de infraestructura en la barra superior o selecciona un análisis del historial de tu proyecto para comenzar.
+              </p>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+    </div>
+  );
+}

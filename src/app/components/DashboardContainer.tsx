@@ -10,6 +10,7 @@ import { PerformanceTab } from './tabs/PerformanceTab';
 import { KeywordsTab, type KeywordItem } from './tabs/KeywordsTab';
 import { ReportsTab } from './tabs/ReportsTab';
 import { SettingsTab } from './tabs/SettingsTab';
+import { IntelligenceTab } from './tabs/IntelligenceTab';
 import { useAiReport } from './useAiReport';
 
 const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mod.NewProjectModal), {
@@ -31,10 +32,11 @@ type ProjectWithNested = typeof projects.$inferSelect & {
 interface DashboardContainerProps {
   initialProjects: (typeof projects.$inferSelect)[];
   dashboardData: ProjectWithNested[];
+  defaultTab?: DashboardTab;
 }
 
-export function DashboardContainer({ initialProjects, dashboardData }: DashboardContainerProps) {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
+export function DashboardContainer({ initialProjects, dashboardData, defaultTab }: DashboardContainerProps) {
+  const [activeTab, setActiveTab] = useState<DashboardTab>(defaultTab || 'overview');
   const [viewMode, setViewMode] = useState<'visual' | 'markdown'>('visual');
   const [keywordInput, setKeywordInput] = useState('');
   const [keywordsList, setKeywordsList] = useState<KeywordItem[]>([
@@ -132,6 +134,14 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
 
             {activeTab === 'settings' && (
               <SettingsTab />
+            )}
+
+            {activeTab === 'intelligence' && (
+              <IntelligenceTab 
+                initialProjects={initialProjects}
+                selectedProjectId={selectedProjectId}
+                setSelectedProjectId={setSelectedProjectId}
+              />
             )}
 
           </div>

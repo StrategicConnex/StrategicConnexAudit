@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
       status: 204,
       headers: { 'Access-Control-Allow-Origin': corsOrigin },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Telemetry error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
