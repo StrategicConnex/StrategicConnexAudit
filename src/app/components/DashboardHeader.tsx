@@ -14,6 +14,7 @@ export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderP
       case 'keywords': return 'Keywords';
       case 'reports': return 'Reportes AI';
       case 'intelligence': return 'Inteligencia';
+      case 'monitoring': return 'Controles Activos';
       case 'settings': return 'Ajustes';
       default: return 'Dashboard';
     }
@@ -27,6 +28,7 @@ export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderP
       case 'keywords': return 'Posicionamiento SERP';
       case 'reports': return 'Documentación técnica e Insights';
       case 'intelligence': return 'Análisis de Red e Infraestructura';
+      case 'monitoring': return 'Monitoreo de Seguridad & APIs';
       case 'settings': return 'Cuenta y preferencias';
       default: return 'Vista general del sistema';
     }

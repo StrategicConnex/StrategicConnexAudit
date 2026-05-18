@@ -2,16 +2,17 @@
 
 import {
   LayoutDashboard, Globe, Activity, Search, BarChart3, Settings,
-  ShieldCheck
+  ShieldCheck, Sliders
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+
 
 const AiCoreVisual = dynamic(() => import('./AiCoreVisual'), { ssr: false });
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type DashboardTab = 'overview' | 'projects' | 'performance' | 'keywords' | 'reports' | 'intelligence' | 'settings';
+export type DashboardTab = 'overview' | 'projects' | 'performance' | 'keywords' | 'reports' | 'intelligence' | 'monitoring' | 'settings';
 
 interface DashboardSidebarProps {
   activeTab: DashboardTab;
@@ -130,6 +131,15 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           label="Inteligencia"
           badge={<span className="text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Beta</span>}
           onClick={() => onTabChange('intelligence')}
+        />
+
+        <NavButton
+          tab="monitoring"
+          activeTab={activeTab}
+          icon={<Sliders size={18} strokeWidth={2} />}
+          label="Controles Activos"
+          badge={<span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">APIs</span>}
+          onClick={() => onTabChange('monitoring')}
         />
       </nav>
 

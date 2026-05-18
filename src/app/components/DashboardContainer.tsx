@@ -11,6 +11,7 @@ import { KeywordsTab, type KeywordItem } from './tabs/KeywordsTab';
 import { ReportsTab } from './tabs/ReportsTab';
 import { SettingsTab } from './tabs/SettingsTab';
 import { IntelligenceTab } from './tabs/IntelligenceTab';
+import { MonitoringTab } from './tabs/MonitoringTab';
 import { useAiReport } from './useAiReport';
 
 const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mod.NewProjectModal), {
@@ -138,6 +139,14 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
 
             {activeTab === 'intelligence' && (
               <IntelligenceTab 
+                initialProjects={initialProjects}
+                selectedProjectId={selectedProjectId}
+                setSelectedProjectId={setSelectedProjectId}
+              />
+            )}
+
+            {activeTab === 'monitoring' && (
+              <MonitoringTab 
                 initialProjects={initialProjects}
                 selectedProjectId={selectedProjectId}
                 setSelectedProjectId={setSelectedProjectId}
