@@ -135,9 +135,39 @@ h2.section-title{font-family:var(--font-montserrat), sans-serif;font-size:clamp(
 /* ── ABOUT ── */
 #about{background:transparent}
 .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;margin-top:3.5rem}
-.about-visual{position:relative;width:100%;aspect-ratio:1/1;border-radius:var(--radius-card);overflow:hidden;border:1px solid rgba(212,175,55,.2);background:#111;}
-.about-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s;}
-.about-visual:hover .about-video{transform:scale(1.02);}
+.about-visual {
+  position: relative;
+  width: 85%;
+  max-width: 480px;
+  aspect-ratio: 4/3;
+  justify-self: center;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: #111;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(212, 175, 55, 0.03);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.about-visual::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.3) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+@media(min-width:901px){
+  .about-visual {
+    justify-self: end;
+    width: 90%;
+  }
+}
+.about-visual:hover {
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.55), 0 0 30px rgba(212, 175, 55, 0.12);
+}
+.about-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);}
+.about-visual:hover .about-video{transform:scale(1.03);}
 .about-tag{background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.25);border-radius:8px;padding:.65rem 1.1rem;font-size:.82rem;color:var(--gold);font-weight:600;margin-bottom:1rem;display:inline-block}
 .about-pillars{display:flex;flex-direction:column;gap:.85rem;margin-top:1.75rem}
 .pillar{display:flex;align-items:flex-start;gap:.85rem;padding:1rem 1.25rem;background:rgba(212,175,55,.04);border:1px solid rgba(212,175,55,.1);border-radius:8px;transition:border-color .25s,background .25s}
