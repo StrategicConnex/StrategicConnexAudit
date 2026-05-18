@@ -11,7 +11,7 @@ const AiCoreVisual = dynamic(() => import('./AiCoreVisual'), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type DashboardTab = 'overview' | 'projects' | 'performance' | 'keywords' | 'reports' | 'settings';
+export type DashboardTab = 'overview' | 'projects' | 'performance' | 'keywords' | 'reports' | 'intelligence' | 'settings';
 
 interface DashboardSidebarProps {
   activeTab: DashboardTab;
@@ -121,6 +121,15 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           label="Reportes AI"
           badge={<span className="text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Audit</span>}
           onClick={() => onTabChange('reports')}
+        />
+
+        <NavButton
+          tab="intelligence"
+          activeTab={activeTab}
+          icon={<ShieldCheck size={18} strokeWidth={2} />}
+          label="Inteligencia"
+          badge={<span className="text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Beta</span>}
+          onClick={() => onTabChange('intelligence')}
         />
       </nav>
 

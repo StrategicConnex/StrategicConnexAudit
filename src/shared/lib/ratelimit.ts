@@ -1,24 +1,43 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-// Configuración del cliente de Redis para Upstash.
-// Las variables de entorno UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN
-// deben estar configuradas en .env.local
-export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || "",
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
+let _redisInstance: Redis | null = null;
+
+function getRedisInstance(): Redis {
+  if (!_redisInstance) {
+    _redisInstance = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL || "",
+      token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
+    });
+  }
+  return _redisInstance;
+}
+
+// Proxied redis client to prevent eager instantiation during build phase
+export const redis = new Proxy({} as Redis, {
+  get(target, prop, receiver) {
+    const instance = getRedisInstance();
+    const value = Reflect.get(instance, prop);
+    if (typeof value === "function") {
+      return value.bind(instance);
+    }
+    return value;
+  }
 });
 
-/**
- * Crea un limitador de peticiones.
- * Configuración por defecto: 5 peticiones cada 60 segundos (ventana deslizante).
- */
-export const aiRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, "60 s"),
-  analytics: true,
-  prefix: "strat_audit_ai_limit",
-});
+let _aiRateLimitInstance: Ratelimit | null = null;
+
+function getAiRateLimitInstance(): Ratelimit {
+  if (!_aiRateLimitInstance) {
+    _aiRateLimitInstance = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "60 s"),
+      analytics: true,
+      prefix: "strat_audit_ai_limit",
+    });
+  }
+  return _aiRateLimitInstance;
+}
 
 /**
  * Verifica si un usuario ha excedido el límite.
@@ -32,5 +51,6 @@ export async function checkAiRateLimit(userId: string) {
     return { success: true, limit: 0, remaining: 0, reset: 0 };
   }
 
-  return await aiRateLimit.limit(userId);
+  return await getAiRateLimitInstance().limit(userId);
 }
+

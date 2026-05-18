@@ -479,3 +479,6 @@ export const webVitalsLogs = pgTable("web_vitals_logs", {
   rawPayload: jsonb("raw_payload"),
   recordedAt: timestamp("recorded_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export * from "./intelligence";
+
