@@ -23,17 +23,18 @@ export async function withRLS<T>(
       
       return await callback(tx);
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Si el error es 42501 (Insufficient Privilege), es una violacin de RLS detectada por Postgres
-    if (error.code === '42501') {
+    const dbError = error as { code?: string; detail?: string; hint?: string; message?: string };
+    if (dbError.code === '42501') {
       await logger.security({
         userId,
         action: 'RLS_VIOLATION_DETECTED',
         error: error,
         metadata: {
-          code: error.code,
-          detail: error.detail,
-          hint: error.hint
+          code: dbError.code,
+          detail: dbError.detail,
+          hint: dbError.hint
         }
       });
     } else {

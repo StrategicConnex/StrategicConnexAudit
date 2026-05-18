@@ -1,9 +1,10 @@
 import React from 'react';
-import { RefreshCw, Gauge, ChevronRight, Zap } from 'lucide-react';
+import { RefreshCw, ChevronRight, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { projects } from '@/shared/db/schemas';
 
 interface PerformanceTabProps {
-  dashboardData: any[];
+  dashboardData: (typeof projects.$inferSelect)[];
 }
 
 export function PerformanceTab({ dashboardData }: PerformanceTabProps) {

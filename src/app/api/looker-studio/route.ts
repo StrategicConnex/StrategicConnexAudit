@@ -1,9 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/db';
-import { projects, audits, integrations, integrationDataGsc, integrationDataGa4, keywordTargets } from '@/shared/db/schemas';
+import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets } from '@/shared/db/schemas';
 import { eq, desc, isNull, sql, and } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
+
+interface ProjectData {
+  id: string;
+  name: string;
+  domain: string | null;
+  ownerId: string;
+}
+
+interface EnrichedProject {
+  project: ProjectData;
+  gscRecords: { date: string; clicks: number | null; impressions: number | null; ctr: string | null; position: string | null }[];
+  ga4Records: { date: string; activeUsers: number | null; conversions: number | null; engagementRate: string | null }[];
+  score: number;
+  crawledCount: number;
+  keywordsCount: number;
+}
+
+interface LookerStudioRow {
+  values: (string | number | null)[];
+}
 
 // Rate limiting store (in-memory for demo, use Redis in production)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -89,12 +109,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ schema });
     }
 
-
     // 4. Fetch projects using withRLS if user is authenticated
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    let activeProjects: any[] = [];
+    let activeProjects: ProjectData[] = [];
 
     if (user) {
       activeProjects = await withRLS(user.id, async (tx) => {
@@ -134,10 +153,10 @@ export async function GET(req: NextRequest) {
     }
 
     // 5. Generate rows with concurrent fetching
-    const rows: any[] = [];
+    const rows: LookerStudioRow[] = [];
     const today = new Date();
 
-    const enrichedProjects = user ? await withRLS(user.id, async (tx) => {
+    const enrichedProjects: EnrichedProject[] = user ? await withRLS(user.id, async (tx) => {
       const promises = activeProjects.map(async (project) => {
         const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
           tx
@@ -262,7 +281,7 @@ export async function GET(req: NextRequest) {
 
     // 6. Return response with rate limit headers
     const hasRealData = activeProjects.some(p => {
-      const ep = enrichedProjects.find((e: any) => e.project.id === p.id);
+      const ep = enrichedProjects.find((e) => e.project.id === p.id);
       return ep && (ep.gscRecords.length > 0 || ep.ga4Records.length > 0);
     });
 
@@ -291,11 +310,12 @@ export async function GET(req: NextRequest) {
       }
     }, { headers });
 
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as { message?: string };
     console.error('Error serving Looker Studio connector data:', error);
     return NextResponse.json({ 
       error: 'Internal Server Error', 
-      message: error?.message || 'Unknown error occurred'
+      message: err?.message || 'Unknown error occurred occurred'
     }, { status: 500 });
   }
 }

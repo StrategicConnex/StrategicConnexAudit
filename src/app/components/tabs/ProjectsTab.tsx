@@ -1,10 +1,19 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { ProjectCard } from '../ProjectCard';
+import { projects } from '@/shared/db/schemas';
+
+type ProjectWithNested = typeof projects.$inferSelect & {
+  latestAudit?: {
+    id: string;
+    status: string;
+  } | null;
+  integrations?: unknown[] | null;
+};
 
 interface ProjectsTabProps {
-  dashboardData: any[];
-  NewProjectModal: any;
+  dashboardData: ProjectWithNested[];
+  NewProjectModal: React.ComponentType;
 }
 
 export function ProjectsTab({ dashboardData, NewProjectModal }: ProjectsTabProps) {

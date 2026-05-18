@@ -7,7 +7,7 @@ import { DashboardHeader } from './DashboardHeader';
 import { OverviewTab } from './tabs/OverviewTab';
 import { ProjectsTab } from './tabs/ProjectsTab';
 import { PerformanceTab } from './tabs/PerformanceTab';
-import { KeywordsTab } from './tabs/KeywordsTab';
+import { KeywordsTab, type KeywordItem } from './tabs/KeywordsTab';
 import { ReportsTab } from './tabs/ReportsTab';
 import { SettingsTab } from './tabs/SettingsTab';
 import { useAiReport } from './useAiReport';
@@ -18,16 +18,26 @@ const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mo
 
 const AiCopilot = dynamic(() => import('./AiCopilot').then(mod => mod.AiCopilot), { ssr: false });
 
+import { projects } from '@/shared/db/schemas';
+
+type ProjectWithNested = typeof projects.$inferSelect & {
+  latestAudit?: {
+    id: string;
+    status: string;
+  } | null;
+  integrations?: unknown[] | null;
+};
+
 interface DashboardContainerProps {
-  initialProjects: any[];
-  dashboardData: any[];
+  initialProjects: (typeof projects.$inferSelect)[];
+  dashboardData: ProjectWithNested[];
 }
 
 export function DashboardContainer({ initialProjects, dashboardData }: DashboardContainerProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
   const [viewMode, setViewMode] = useState<'visual' | 'markdown'>('visual');
   const [keywordInput, setKeywordInput] = useState('');
-  const [keywordsList, setKeywordsList] = useState([
+  const [keywordsList, setKeywordsList] = useState<KeywordItem[]>([
     { id: '1', keyword: 'auditoria seo tecnica', volume: '1.2K', difficulty: 34, position: 3, change: '+2', trend: 'up', project: 'StrategicAudit Pro' },
     { id: '2', keyword: 'consultor seo enterprise', volume: '880', difficulty: 48, position: 1, change: '0', trend: 'stable', project: 'StrategicAudit Pro' },
     { id: '3', keyword: 'agencia de seo organico', volume: '2.4K', difficulty: 62, position: 12, change: '-3', trend: 'down', project: 'Silo SEO' },
@@ -43,7 +53,7 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
   const handleAddKeyword = (e: React.FormEvent) => {
     e.preventDefault();
     if (!keywordInput.trim()) return;
-    const newKw = {
+    const newKw: KeywordItem = {
       id: Date.now().toString(),
       keyword: keywordInput.toLowerCase().trim(),
       volume: 'N/A',
@@ -82,7 +92,7 @@ export function DashboardContainer({ initialProjects, dashboardData }: Dashboard
               <OverviewTab 
                 initialProjects={initialProjects} 
                 dashboardData={dashboardData} 
-                setActiveTab={setActiveTab} 
+                setActiveTab={(tab) => setActiveTab(tab as DashboardTab)} 
               />
             )}
 

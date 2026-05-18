@@ -10,8 +10,8 @@ interface LogOptions {
   action: string;
   entityType?: string;
   entityId?: string;
-  metadata?: any;
-  error?: any;
+  metadata?: Record<string, unknown> | unknown;
+  error?: Error | unknown;
 }
 
 /**
@@ -30,11 +30,15 @@ export const logger = {
       security: '🛡️'
     }[level];
 
+    const errorMessage = options.error instanceof Error 
+      ? options.error.message 
+      : (typeof options.error === 'string' ? options.error : undefined);
+
     console.log(`[${timestamp}] ${icon} [${level.toUpperCase()}] ${options.action}`, {
       projectId: options.projectId,
       userId: options.userId,
       metadata: options.metadata,
-      error: options.error?.message || options.error
+      error: errorMessage || options.error
     });
 
     // 2. Persistencia en Base de Datos para eventos crticos
@@ -43,6 +47,8 @@ export const logger = {
         const headerList = await headers();
         const ip = headerList.get("x-forwarded-for") || "unknown";
         const ua = headerList.get("user-agent") || "unknown";
+
+        const errObj = options.error instanceof Error ? options.error : null;
 
         // Usamos una conexin normal (fuera de withRLS) para asegurar que el log se guarde
         // incluso si la operacin principal fall por RLS.
@@ -53,9 +59,9 @@ export const logger = {
           entityType: options.entityType,
           entityId: options.entityId,
           newData: {
-            metadata: options.metadata,
-            error: options.error?.message || options.error,
-            stack: isProd ? undefined : options.error?.stack
+            metadata: options.metadata as Record<string, unknown>,
+            error: errObj ? errObj.message : (typeof options.error === 'string' ? options.error : String(options.error)),
+            stack: isProd ? undefined : (errObj ? errObj.stack : undefined)
           },
           ipAddress: ip,
           userAgent: ua
@@ -78,3 +84,4 @@ export const logger = {
     return this.log('info', options);
   }
 };
+

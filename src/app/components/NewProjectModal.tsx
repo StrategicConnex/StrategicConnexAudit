@@ -8,12 +8,15 @@ import { Plus, X, Loader2 } from 'lucide-react';
 export function NewProjectModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
-  const [state, setState] = useState<{ success?: boolean; message?: string; errors?: any } | null>(null);
+  const [state, setState] = useState<{ success?: boolean; message?: string; errors?: Record<string, string[]> } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Dragging state
@@ -67,7 +70,7 @@ export function NewProjectModal() {
         setPosition({ x: 0, y: 0 });
         formRef.current?.reset();
       }
-    } catch (error) {
+    } catch {
       setState({ success: false, message: "An unexpected error occurred." });
     } finally {
       setIsPending(false);

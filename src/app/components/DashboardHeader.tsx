@@ -2,7 +2,7 @@ import React from 'react';
 
 interface DashboardHeaderProps {
   activeTab: string;
-  NewProjectModal: any;
+  NewProjectModal: React.ComponentType;
 }
 
 export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderProps) {

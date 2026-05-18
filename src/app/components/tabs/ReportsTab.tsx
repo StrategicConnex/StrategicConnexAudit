@@ -1,15 +1,32 @@
 import React from 'react';
 import { 
   FileText, Download, BarChart3, Sparkles, RefreshCw, 
-  Check, Copy, AlertCircle, Activity, CheckCircle2, ChevronRight 
+  Check, Copy, AlertCircle 
 } from 'lucide-react';
 import { parseMarkdownReport } from '../report-utils';
+import { projects } from '@/shared/db/schemas';
+
+interface AIReportState {
+  isGenerating: boolean;
+  isCopied: boolean;
+  text: string;
+  isFallback: boolean;
+  progress: number;
+  status: string;
+}
+
+interface AIReport {
+  state: AIReportState;
+  generate: () => void;
+  copyToClipboard: () => void;
+  downloadHtml: () => void;
+}
 
 interface ReportsTabProps {
-  initialProjects: any[];
+  initialProjects: (typeof projects.$inferSelect)[];
   selectedProjectId: string;
   setSelectedProjectId: (id: string) => void;
-  aiReport: any;
+  aiReport: AIReport;
   viewMode: 'visual' | 'markdown';
   setViewMode: (mode: 'visual' | 'markdown') => void;
   setActiveTab: (tab: string) => void;

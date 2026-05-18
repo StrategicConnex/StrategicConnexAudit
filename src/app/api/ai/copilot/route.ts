@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Rate Limiting
-    const { success, remaining, reset } = await checkAiRateLimit(user.id);
+    const { success } = await checkAiRateLimit(user.id);
     if (!success) {
       return NextResponse.json({ 
         success: false, 
@@ -89,11 +89,12 @@ Contexto actual del usuario: ${JSON.stringify(context || 'Sin contexto específi
       message: reply
     });
 
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as { message?: string };
     console.error('Error in Copilot endpoint:', error);
     return NextResponse.json({
       success: false,
-      error: `Error Copilot: ${error.message || 'Servicio no disponible'}`
+      error: `Error Copilot: ${err.message || 'Servicio no disponible'}`
     }, { status: 503 });
   }
 }

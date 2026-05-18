@@ -2,10 +2,8 @@
 
 import { ActionState, authenticatedAction } from "@/shared/lib/actions";
 import { z } from "zod";
-import { db } from "@/shared/db";
 import { audits, projects } from "@/shared/db/schemas";
-import { eq, and, desc, gt } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { eq, and, gt } from "drizzle-orm";
 import { tasks } from "@trigger.dev/sdk";
 import type { runProjectAudit } from "@/trigger/audit.trigger";
 
@@ -13,9 +11,16 @@ const AuditSchema = z.object({
   projectId: z.string().uuid(),
 });
 
+export interface StartAuditResponse {
+  success: boolean;
+  auditId: string;
+  projectId?: string;
+  message?: string;
+}
+
 export const triggerAudit = authenticatedAction(
   AuditSchema,
-  async ({ projectId }, { user, tx }) => {
+  async ({ projectId }, { user, tx }): Promise<StartAuditResponse> => {
     // 1. Verify project ownership (Tenant-Isolation Guard)
     const projectResult = await tx
       .select()
@@ -49,6 +54,7 @@ export const triggerAudit = authenticatedAction(
       const waitTime = Math.ceil((recentAudit.createdAt!.getTime() + 30000 - Date.now()) / 1000);
       return { 
         success: false, 
+        auditId: "",
         message: `Por favor, espera ${waitTime} segundos antes de iniciar otra auditoría para este proyecto.` 
       };
     }
@@ -73,7 +79,7 @@ export const triggerAudit = authenticatedAction(
 // Let's modify triggerAudit to be a custom function that uses withRLS internally
 // but calls tasks.trigger after withRLS finishes.
 
-export const startAuditAction = async (data: z.infer<typeof AuditSchema>): Promise<ActionState<any>> => {
+export const startAuditAction = async (data: z.infer<typeof AuditSchema>): Promise<ActionState<StartAuditResponse>> => {
   // We use triggerAudit to handle the DB part (transaction)
   const result = await triggerAudit(data);
   

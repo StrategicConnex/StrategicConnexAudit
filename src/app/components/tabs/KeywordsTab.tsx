@@ -1,8 +1,19 @@
 import React from 'react';
-import { TrendingUp, Search, Plus, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { TrendingUp, Search, Plus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+
+export interface KeywordItem {
+  id: string | number;
+  keyword: string;
+  project: string;
+  volume: string | number;
+  difficulty: number;
+  position: number;
+  trend: 'up' | 'down' | 'stable';
+  change: string;
+}
 
 interface KeywordsTabProps {
-  keywordsList: any[];
+  keywordsList: KeywordItem[];
   keywordInput: string;
   setKeywordInput: (val: string) => void;
   handleAddKeyword: (e: React.FormEvent) => void;

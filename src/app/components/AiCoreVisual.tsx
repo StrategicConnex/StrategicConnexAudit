@@ -1,4 +1,4 @@
-'use client';
+import Image from 'next/image';
 
 interface AiCoreVisualProps {
   size?: number;
@@ -18,9 +18,11 @@ export default function AiCoreVisual({ size = 200, interactive = true }: AiCoreV
         <div className="absolute inset-0 bg-red-500/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       )}
       
-      <img
+      <Image
         src="/logo_reina.png"
         alt="StrategicAudit Pro Logo"
+        width={size}
+        height={size}
         className="w-full h-full object-contain"
         draggable={false}
       />
