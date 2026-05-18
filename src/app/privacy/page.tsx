@@ -1,20 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { BackToTop } from "@/components/layout/BackToTop";
 import { CustomCursor } from "@/components/layout/CustomCursor";
 import { FloatingWP } from "@/components/layout/FloatingWP";
 import { FadeUp } from "@/components/ui/FadeUp";
-import { Shield, Eye, Lock, RefreshCw, FileText, CheckCircle } from "lucide-react";
+import { Shield, Eye, Lock, RefreshCw, CheckCircle } from "lucide-react";
 
 export default function PrivacyPage() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -113,7 +108,7 @@ export default function PrivacyPage() {
                   <span className="text-gold font-mono text-base">01.</span> Introducción y Responsable de Tratamiento
                 </h2>
                 <p>
-                  Bienvenido a <strong>StrategicConnex</strong> (el "Sitio"). El respeto por tu privacidad y la seguridad técnica de tus datos de navegación son de máxima prioridad para nuestra agencia. De acuerdo con las disposiciones de la <strong>Ley de Protección de Datos Personales de la República Argentina Nº 25.326</strong> (LPDP) y del <strong>Reglamento General de Protección de Datos de la Unión Europea</strong> (GDPR - Reglamento UE 2016/679), informamos detalladamente cómo recopilamos, procesamos, almacenamos y protegemos la información personal y de rastreo técnico de nuestros usuarios.
+                  Bienvenido a <strong>StrategicConnex</strong> (el &quot;Sitio&quot;). El respeto por tu privacidad y la seguridad técnica de tus datos de navegación son de máxima prioridad para nuestra agencia. De acuerdo con las disposiciones de la <strong>Ley de Protección de Datos Personales de la República Argentina Nº 25.326</strong> (LPDP) y del <strong>Reglamento General de Protección de Datos de la Unión Europea</strong> (GDPR - Reglamento UE 2016/679), informamos detalladamente cómo recopilamos, procesamos, almacenamos y protegemos la información personal y de rastreo técnico de nuestros usuarios.
                 </p>
                 <p className="text-gray-400">
                   El responsable del tratamiento de los datos personales recopilados a través de este Sitio es StrategicConnex, una agencia dedicada a servicios profesionales de posicionamiento web, SEO técnico y consultoría estratégica de marketing digital corporativo.

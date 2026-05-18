@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { motion } from "framer-motion";
 import { Counter } from "../ui/Counter";
 import { heroMetrics } from "@/constants/metrics";
 import { useCursorStore } from "@/lib/store/useCursorStore";

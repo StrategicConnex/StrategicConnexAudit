@@ -1,6 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-import dynamic from "next/dynamic";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -12,7 +11,6 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { 
   Calendar, 
   Clock, 
-  User, 
   Share2, 
   Link2, 
   ArrowRight, 
@@ -24,9 +22,7 @@ import {
   BookOpen, 
   Flame, 
   Activity, 
-  Globe, 
   Cpu, 
-  RefreshCw, 
   Network, 
   Sparkles,
   ExternalLink
@@ -45,29 +41,28 @@ interface ErrorData {
   hasInteractiveScenario?: boolean;
 }
 
+// SECTIONS for Table of Contents (extracted globally to resolve dependency array issues in hooks)
+const sections = [
+  { id: "intro", label: "Introducción" },
+  { id: "error-01", label: "01. Search Intent" },
+  { id: "error-02", label: "02. Falta de EEAT" },
+  { id: "error-03", label: "03. Arquitectura SEO" },
+  { id: "error-04", label: "04. Fallas Técnicas" },
+  { id: "error-05", label: "05. Sobreoptimización" },
+  { id: "error-06", label: "06. Ignorar la IA" },
+  { id: "error-07", label: "07. Contenido Estático" },
+  { id: "error-08", label: "08. Enlaces Spam" },
+  { id: "evitar-errores", label: "Enfoque Estratégico" },
+  { id: "partner", label: "Partner Estratégico" },
+  { id: "conclusion", label: "Conclusión" },
+];
+
 export default function BlogPage() {
   const [activeSection, setActiveSection] = useState("intro");
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showToast, setShowToast] = useState(false);
   const [isScenarioCluster, setIsScenarioCluster] = useState(true);
-  const [activeTab, setActiveTab] = useState<"ocurre" | "impacto" | "correccion">("ocurre");
   const [currentUrl, setCurrentUrl] = useState("");
-
-  // SECTIONS for Table of Contents
-  const sections = [
-    { id: "intro", label: "Introducción" },
-    { id: "error-01", label: "01. Search Intent" },
-    { id: "error-02", label: "02. Falta de EEAT" },
-    { id: "error-03", label: "03. Arquitectura SEO" },
-    { id: "error-04", label: "04. Fallas Técnicas" },
-    { id: "error-05", label: "05. Sobreoptimización" },
-    { id: "error-06", label: "06. Ignorar la IA" },
-    { id: "error-07", label: "07. Contenido Estático" },
-    { id: "error-08", label: "08. Enlaces Spam" },
-    { id: "evitar-errores", label: "Enfoque Estratégico" },
-    { id: "partner", label: "Partner Estratégico" },
-    { id: "conclusion", label: "Conclusión" },
-  ];
 
   // BLOG ARTICLES DATA STRUCTURING
   const errors: ErrorData[] = [
@@ -203,6 +198,7 @@ export default function BlogPage() {
 
   // TRACK SCROLL PROGRESS & ACTIVE SECTION
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentUrl(window.location.href);
 
     const handleScroll = () => {
@@ -564,7 +560,7 @@ export default function BlogPage() {
                     {/* ERROR SPECIFIC SNIPPETS */}
                     {err.snippet && (
                       <div className="blog-quote-snippet">
-                        " {err.snippet} "
+                        &quot; {err.snippet} &quot;
                       </div>
                     )}
 
@@ -717,7 +713,7 @@ export default function BlogPage() {
                       La optimización en 2026 exige estructuración legible tanto para humanos como para Large Language Models (LLMs). Si un motor de búsqueda generativo no logra decodificar, procesar e interpretar la arquitectura semántica de tu contenido, quedará automáticamente excluido del extracto del SGE.
                     </p>
                     <div className="blog-quote-snippet">
-                      "El contenido que no puede ser interpretado por la IA, no será mostrado por Google."
+                      &quot;El contenido que no puede ser interpretado por la IA, no será mostrado por Google.&quot;
                     </div>
                   </div>
                 </div>
@@ -757,7 +753,7 @@ export default function BlogPage() {
                 </div>
 
                 <p className="text-sm text-gray-400 italic mt-6 border-l-2 border-gold-dark pl-4">
-                  "En este contexto, muchas empresas descubren que el problema no es la falta de inversión... sino la falta de dirección."
+                  &quot;En este contexto, muchas empresas descubren que el problema no es la falta de inversión... sino la falta de dirección.&quot;
                 </p>
               </section>
 

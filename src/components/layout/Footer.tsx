@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import Image from "next/image";
 
 export function Footer() {
@@ -6,29 +7,29 @@ export function Footer() {
     <footer>
       <div className="footer-grid">
         <div className="footer-brand">
-          <a href="#" className="logo">
+          <Link href="/" className="logo">
             <Image src="/logo.webp" alt="Logo de Strategic Connex - Consultoría SEO y Posicionamiento en Buscadores" width={200} height={80} style={{ width: 'auto', height: '58px', objectFit: 'contain' }} className="logo-img" loading="lazy" />
             <span className="logo-text">STRATEGIC <span className="logo-light">CONNEX</span></span>
-          </a>
+          </Link>
           <p>Agencia especializada en posicionamiento web estratégico y crecimiento orgánico. Optimizamos la visibilidad de empresas mediante SEO técnico de alta precisión y estrategias de contenido orientadas a resultados.</p>
         </div>
         <div className="footer-col">
           <h4>Servicios SEO</h4>
           <ul>
-            <li><a href="/posicionamiento-web">Posicionamiento Web</a></li>
-            <li><a href="/auditoria-seo">Auditoría SEO</a></li>
-            <li><a href="/seo-tecnico">SEO Técnico</a></li>
-            <li><a href="/estrategia-seo">Estrategia SEO</a></li>
-            <li><a href="/consultoria-seo">Consultoría SEO</a></li>
+            <li><Link href="/posicionamiento-web">Posicionamiento Web</Link></li>
+            <li><Link href="/auditoria-seo">Auditoría SEO</Link></li>
+            <li><Link href="/seo-tecnico">SEO Técnico</Link></li>
+            <li><Link href="/estrategia-seo">Estrategia SEO</Link></li>
+            <li><Link href="/consultoria-seo">Consultoría SEO</Link></li>
           </ul>
         </div>
         <div className="footer-col">
           <h4>Recursos</h4>
           <ul>
-            <li><a href="/blog">Blog SEO</a></li>
-            <li><a href="/#docs">Documentación</a></li>
-            <li><a href="/#dashboard">ROI Dashboard</a></li>
-            <li><a href="/#industries">Industrias</a></li>
+            <li><Link href="/blog">Blog SEO</Link></li>
+            <li><Link href="/#docs">Documentación</Link></li>
+            <li><Link href="/#dashboard">ROI Dashboard</Link></li>
+            <li><Link href="/#industries">Industrias</Link></li>
           </ul>
         </div>
         <div className="footer-col">
@@ -36,7 +37,7 @@ export function Footer() {
           <ul>
             <li><a href="mailto:contacto@strategicconnex.com">contacto@strategicconnex.com</a></li>
             <li><a href="#">LinkedIn</a></li>
-            <li><a href="/privacy">Privacidad</a></li>
+            <li><Link href="/privacy">Privacidad</Link></li>
           </ul>
         </div>
       </div>

@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     let body;
     try {
       body = await req.json();
-    } catch (e) {
+    } catch {
       return NextResponse.json(
         { error: 'Cuerpo de solicitud inválido' },
         { status: 400 }
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       { status: 200 }
     );
 
-  } catch (error: any) {
+  } catch (error) {
     // Manejo específico de errores de validación
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -45,10 +45,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const err = error instanceof Error ? error : new Error(String(error));
+
     // Logging estructurado sin exponer detalles sensibles al cliente
     console.error("[CONTACT_API_ERROR]", {
-      message: error.message,
-      stack: error.stack,
+      message: err.message,
+      stack: err.stack,
     });
 
     return NextResponse.json(

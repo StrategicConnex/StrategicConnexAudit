@@ -91,6 +91,8 @@ function TrailsShader() {
 
   const geometry = useMemo(() => new THREE.PlaneGeometry(2, 2), []);
 
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
+
   React.useEffect(() => {
     return () => {
       geometry.dispose();
@@ -99,14 +101,14 @@ function TrailsShader() {
   }, [geometry, shaderMaterial]);
 
   useFrame((state) => {
-    if (shaderMaterial) {
-      shaderMaterial.uniforms.time.value = state.clock.elapsedTime;
+    if (materialRef.current) {
+      materialRef.current.uniforms.time.value = state.clock.elapsedTime;
     }
   });
 
   return (
     <mesh ref={meshRef} geometry={geometry}>
-      <primitive object={shaderMaterial} attach="material" />
+      <primitive ref={materialRef} object={shaderMaterial} attach="material" />
     </mesh>
   );
 }

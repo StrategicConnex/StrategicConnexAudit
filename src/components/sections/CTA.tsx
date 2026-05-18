@@ -7,16 +7,17 @@ export function CTA() {
   const [formStatus, setFormStatus] = useState("idle");
   const setHovering = useCursorStore((state) => state.setHovering);
 
-  const handleForm = async (e: any) => {
+  const handleForm = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormStatus("processing");
     
+    const target = e.currentTarget;
     const formData = {
-      name: e.target.name.value,
-      company: e.target.company.value,
-      email: e.target.email.value,
-      message: e.target.message.value,
-      website: e.target.website.value
+      name: (target.elements.namedItem("name") as HTMLInputElement).value,
+      company: (target.elements.namedItem("company") as HTMLInputElement).value,
+      email: (target.elements.namedItem("email") as HTMLInputElement).value,
+      message: (target.elements.namedItem("message") as HTMLTextAreaElement).value,
+      website: (target.elements.namedItem("website") as HTMLInputElement).value
     };
 
     try {
@@ -28,7 +29,7 @@ export function CTA() {
 
       if (response.ok) {
         setFormStatus("done");
-        e.target.reset(); // Limpiar el formulario
+        target.reset(); // Limpiar el formulario
       } else {
         console.error("Error enviando correo.");
         setFormStatus("idle"); // Volver a permitir enviar

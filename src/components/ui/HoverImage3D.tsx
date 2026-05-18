@@ -61,9 +61,10 @@ const Scene = ({ src }: { src: string }) => {
 
   // Cleanup resources on unmount
   useEffect(() => {
+    const currentMaterial = materialRef.current;
     return () => {
       geometry.dispose();
-      if (materialRef.current) materialRef.current.dispose();
+      if (currentMaterial) currentMaterial.dispose();
     };
   }, [geometry]);
   
@@ -80,7 +81,7 @@ const Scene = ({ src }: { src: string }) => {
   // Calculate scale
   const [scaleX, scaleY] = useMemo(() => {
     if (texture && texture.image) {
-      const img = texture.image as any;
+      const img = texture.image as HTMLImageElement;
       const aspectRatio = img.width / img.height;
       const vpRatio = viewport.width / viewport.height;
       if (vpRatio > aspectRatio) {

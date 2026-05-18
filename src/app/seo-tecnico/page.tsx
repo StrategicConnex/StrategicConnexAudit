@@ -92,7 +92,7 @@ export default function SeoTecnicoPage() {
             <FadeUp delay={0.2} className="service-detail-card p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
               <h2 className="text-2xl font-bold mb-4 text-gold">Datos Estructurados (JSON-LD)</h2>
               <p className="text-gray-400 leading-relaxed">
-                Inyectamos marcado de esquema avanzado para obtener "Rich Results" (fragmentos enriquecidos) y aumentar el CTR en los resultados de búsqueda.
+                Inyectamos marcado de esquema avanzado para obtener &quot;Rich Results&quot; (fragmentos enriquecidos) y aumentar el CTR en los resultados de búsqueda.
               </p>
             </FadeUp>
 

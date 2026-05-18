@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Shield, Settings, Check, X, ChevronDown, ChevronUp, Cookie } from "lucide-react";
+import { Settings, Check, Cookie } from "lucide-react";
 
 interface CookiePreferences {
   essential: boolean;
@@ -20,6 +20,7 @@ export function CookieConsent() {
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const consent = localStorage.getItem("strategic-cookie-consent");
     if (!consent) {
@@ -28,7 +29,7 @@ export function CookieConsent() {
       try {
         const parsed = JSON.parse(consent);
         setPreferences(parsed);
-      } catch (e) {
+      } catch {
         setShowBanner(true);
       }
     }
