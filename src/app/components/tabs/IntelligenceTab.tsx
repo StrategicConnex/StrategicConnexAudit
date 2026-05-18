@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   ShieldCheck, AlertCircle, Terminal, ArrowRight, Loader2, 
   ShieldAlert, Server, History, Sparkles, CheckCircle2, 
-  Lock, Unlock, Key, Cpu, Copy, Check, Info, Globe, AlertTriangle
+  Lock, Unlock, Key, Cpu, Copy, Check, Info, Globe, AlertTriangle,
+  Mail, Shield, X, Activity
 } from 'lucide-react';
 
 interface Project {
@@ -22,6 +23,27 @@ interface Investigation {
   status: string;
   score: number | null;
   summary: string | null;
+  metadata?: {
+    mailHealthCompositeScore?: number;
+    infrastructureScore?: number;
+    spfParsed?: {
+      record: string;
+      dnsLookups: number;
+      isWeak: boolean;
+      weakReason: string | null;
+    } | null;
+    dmarcParsed?: {
+      record: string;
+      policy: "none" | "quarantine" | "reject" | "invalid";
+      rua: string[];
+      ruf: string[];
+      adkim: "r" | "s";
+      aspf: "r" | "s";
+    } | null;
+    dkimCount?: number;
+    bimiSuccess?: boolean;
+    redirectsToHttps?: boolean;
+  } | null;
   createdAt: string;
   completedAt: string | null;
 }
@@ -86,6 +108,8 @@ export function IntelligenceTab({
   const [copiedIndex, setCopiedIndex] = useState<boolean>(false);
   const [copiedBlockIdx, setCopiedBlockIdx] = useState<number | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [copilotViewTab, setCopilotViewTab] = useState<'formatted' | 'html'>('formatted');
+  const [copiedHtml, setCopiedHtml] = useState<boolean>(false);
 
   const consoleEndRef = useRef<HTMLDivElement>(null);
 
@@ -214,6 +238,119 @@ export function IntelligenceTab({
       }
       return part;
     });
+  };
+
+  const convertMarkdownToHtml = (md: string): string => {
+    if (!md) return '';
+    const lines = md.split('\n');
+    let html = '';
+    let inList = false;
+    let listType: 'ul' | 'ol' | null = null;
+    let inCode = false;
+    let codeLang = '';
+    let codeContent: string[] = [];
+
+    const formatInline = (text: string): string => {
+      let formatted = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      
+      // Bold
+      formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Inline Code
+      formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
+      
+      return formatted;
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Handle Code Blocks
+      if (line.trim().startsWith('```')) {
+        if (inCode) {
+          html += `<pre><code class="language-${codeLang || 'generic'}">${codeContent.join('\n')}</code></pre>\n`;
+          codeContent = [];
+          inCode = false;
+          codeLang = '';
+        } else {
+          inCode = true;
+          codeLang = line.trim().substring(3).trim();
+        }
+        continue;
+      }
+
+      if (inCode) {
+        codeContent.push(line
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+        );
+        continue;
+      }
+
+      // Close open list if we transition to non-list item
+      const isListItem = trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s+/.test(trimmed);
+      if (inList && (!isListItem || trimmed === '')) {
+        html += listType === 'ul' ? '</ul>\n' : '</ol>\n';
+        inList = false;
+        listType = null;
+      }
+
+      if (trimmed === '') {
+        continue;
+      }
+
+      // Headings
+      if (trimmed.startsWith('# ')) {
+        html += `<h1>${formatInline(trimmed.substring(2))}</h1>\n`;
+        continue;
+      }
+      if (trimmed.startsWith('## ')) {
+        html += `<h2>${formatInline(trimmed.substring(3))}</h2>\n`;
+        continue;
+      }
+      if (trimmed.startsWith('### ')) {
+        html += `<h3>${formatInline(trimmed.substring(4))}</h3>\n`;
+        continue;
+      }
+
+      // Lists
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        if (!inList) {
+          html += '<ul>\n';
+          inList = true;
+          listType = 'ul';
+        }
+        html += `  <li>${formatInline(trimmed.substring(2))}</li>\n`;
+        continue;
+      }
+
+      const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+      if (olMatch) {
+        if (!inList) {
+          html += '<ol>\n';
+          inList = true;
+          listType = 'ol';
+        }
+        html += `  <li>${formatInline(olMatch[2])}</li>\n`;
+        continue;
+      }
+
+      // Regular Paragraph
+      html += `<p>${formatInline(line)}</p>\n`;
+    }
+
+    if (inList) {
+      html += listType === 'ul' ? '</ul>\n' : '</ol>\n';
+    }
+    if (inCode && codeContent.length > 0) {
+      html += `<pre><code class="language-${codeLang || 'generic'}">${codeContent.join('\n')}</code></pre>\n`;
+    }
+
+    return html;
   };
 
   // Fetch investigations list for current project
@@ -692,6 +829,274 @@ export function IntelligenceTab({
               </div>
 
             </div>
+
+            {/* Bento-Row 1.5: Mail Health & Web Security Audit Panel */}
+            {(() => {
+              const meta = selectedDetails?.investigation?.metadata || null;
+              const mailScore = meta?.mailHealthCompositeScore ?? null;
+              const infraScore = meta?.infrastructureScore ?? null;
+              
+              return (
+                <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-8 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+                  <div>
+                    <h3 className="font-extrabold text-white text-base tracking-tight flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-cyan-400" />
+                      Salud de Correo y Seguridad Web
+                    </h3>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+                      Diagnóstico granular de protocolos de entrega segura de correo y protección de infraestructura web
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 border-t border-white/[0.04] pt-6">
+                    
+                    {/* Left Column: Mail Security & Deliverability */}
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-extrabold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-cyan-400" />
+                          Autenticación de Correo y Reputación
+                        </h4>
+                        {mailScore !== null && (
+                          <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                            mailScore >= 80 ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' : 'text-rose-400 border-rose-500/20 bg-rose-500/5'
+                          }`}>
+                            Score: {mailScore}/100
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        {/* SPF Card */}
+                        <div className="bg-[#07070a]/40 border border-white/[0.04] rounded-xl p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest">
+                              SPF (Sender Policy Framework)
+                            </span>
+                            {meta?.spfParsed ? (
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
+                                meta.spfParsed.isWeak 
+                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
+                                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              }`}>
+                                {meta.spfParsed.isWeak ? 'Vulnerable' : 'Seguro'}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded font-bold">
+                                No Configurado
+                              </span>
+                            )}
+                          </div>
+                          {meta?.spfParsed ? (
+                            <div className="space-y-2">
+                              <code className="block text-[10px] text-zinc-300 bg-white/[0.02] border border-white/[0.05] p-2 rounded font-mono break-all leading-normal">
+                                {meta.spfParsed.record}
+                              </code>
+                              <div className="flex items-center justify-between text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
+                                <span>Consultas DNS: {meta.spfParsed.dnsLookups} / 10</span>
+                                <span>Directiva: {meta.spfParsed.isWeak ? 'Débil (SoftFail/Neutral)' : 'Fuerte (HardFail)'}</span>
+                              </div>
+                              {meta.spfParsed.weakReason && (
+                                <p className="text-[9px] text-amber-400/90 bg-amber-500/5 border border-amber-500/10 p-2 rounded leading-relaxed">
+                                  ⚠️ {meta.spfParsed.weakReason}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-zinc-500 leading-relaxed">
+                              El dominio no tiene un registro SPF en su zona DNS. Esto permite que cualquier atacante falsifique la identidad del remitente de tus correos institucionales.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* DMARC Card */}
+                        <div className="bg-[#07070a]/40 border border-white/[0.04] rounded-xl p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest">
+                              DMARC Policy Enforcement
+                            </span>
+                            {meta?.dmarcParsed && meta.dmarcParsed.policy !== 'invalid' ? (
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
+                                meta.dmarcParsed.policy === 'reject' 
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                  : meta.dmarcParsed.policy === 'quarantine'
+                                  ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              }`}>
+                                Política: {meta.dmarcParsed.policy.toUpperCase()}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded font-bold">
+                                Inactivo / Inválido
+                              </span>
+                            )}
+                          </div>
+                          {meta?.dmarcParsed && meta.dmarcParsed.policy !== 'invalid' ? (
+                            <div className="space-y-2">
+                              <code className="block text-[10px] text-zinc-300 bg-white/[0.02] border border-white/[0.05] p-2 rounded font-mono break-all leading-normal">
+                                {meta.dmarcParsed.record}
+                              </code>
+                              {meta.dmarcParsed.rua && meta.dmarcParsed.rua.length > 0 && (
+                                <div className="text-[9px] text-zinc-500 flex flex-col gap-1">
+                                  <span className="font-bold uppercase tracking-wider">Destino de Informes RUA:</span>
+                                  <span className="text-zinc-400 font-mono text-[9px] break-all">{meta.dmarcParsed.rua.join(', ')}</span>
+                                </div>
+                              )}
+                              {meta.dmarcParsed.policy === 'none' && (
+                                <p className="text-[9px] text-amber-400/90 bg-amber-500/5 border border-amber-500/10 p-2 rounded leading-relaxed">
+                                  ⚠️ La política 'p=none' solo monitorea pero no bloquea ni rechaza correos fraudulentos. Se recomienda migrar a 'quarantine' o 'reject'.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-zinc-500 leading-relaxed">
+                              No se detectó una política DMARC válida en el host. DMARC es el escudo definitivo que ordena a los servidores del mundo cómo manejar correos fraudulentos que pretendan ser tuyos.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* DKIM & BIMI Mini-grid */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-[#07070a]/40 border border-white/[0.04] rounded-xl p-3.5 flex flex-col gap-1 justify-between">
+                            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
+                              Selectores DKIM
+                            </span>
+                            <div className="flex items-baseline gap-2 mt-1">
+                              <span className="text-xl font-extrabold text-white">
+                                {meta?.dkimCount ?? 0}
+                              </span>
+                              <span className="text-[9px] font-bold text-zinc-400">Encontrados</span>
+                            </div>
+                            <span className="text-[8px] text-zinc-500 leading-normal mt-1">
+                              {meta?.dkimCount && meta.dkimCount > 0 ? '✓ Firmas criptográficas activas.' : '⚠ No se detectaron firmas estándar.'}
+                            </span>
+                          </div>
+
+                          <div className="bg-[#07070a]/40 border border-white/[0.04] rounded-xl p-3.5 flex flex-col gap-1 justify-between">
+                            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
+                              Protocolo BIMI
+                            </span>
+                            <div className="flex items-baseline gap-2 mt-1">
+                              <span className={`text-xs font-extrabold ${meta?.bimiSuccess ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                                {meta?.bimiSuccess ? 'Certificado' : 'No detectado'}
+                              </span>
+                            </div>
+                            <span className="text-[8px] text-zinc-500 leading-normal mt-1">
+                              {meta?.bimiSuccess ? '✓ Logo corporativo validado.' : 'Logo en bandeja de entrada inactivo.'}
+                            </span>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+
+                    {/* Right Column: Web Infrastructure & Security Headers */}
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-extrabold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <Server className="w-4 h-4 text-cyan-400" />
+                          Seguridad Web e Infraestructura
+                        </h4>
+                        {infraScore !== null && (
+                          <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                            infraScore >= 80 ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' : 'text-rose-400 border-rose-500/20 bg-rose-500/5'
+                          }`}>
+                            Score: {infraScore}/100
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        {/* HTTPS & Protocol Enforcement */}
+                        <div className="bg-[#07070a]/40 border border-white/[0.04] rounded-xl p-4 space-y-3.5">
+                          <span className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest block">
+                            Seguridad de Conexión y Transporte (TLS)
+                          </span>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                                <Lock className="w-4 h-4 text-emerald-400" />
+                              </div>
+                              <div>
+                                <div className="text-[9px] font-extrabold text-zinc-500 uppercase tracking-wider">Redirección HTTPS</div>
+                                <div className="text-xs font-bold text-white mt-0.5">
+                                  {meta?.redirectsToHttps ? 'Establecida' : 'Faltante / Débil'}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                                <Cpu className="w-4 h-4 text-cyan-400" />
+                              </div>
+                              <div>
+                                <div className="text-[9px] font-extrabold text-zinc-500 uppercase tracking-wider">Cifrado de Capa</div>
+                                <div className="text-xs font-bold text-white mt-0.5">
+                                  TLS v1.3 / v1.2
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Web Security Headers Compliance Checklist */}
+                        <div className="bg-[#07070a]/40 border border-white/[0.04] rounded-xl p-4 space-y-4">
+                          <span className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest block">
+                            Cumplimiento de Cabeceras de Seguridad
+                          </span>
+
+                          <div className="space-y-3">
+                            {[
+                              { 
+                                name: 'Content-Security-Policy (CSP)', 
+                                status: selectedDetails.findings.every(f => !f.title.includes('Content-Security-Policy')),
+                                description: 'Mitiga inyecciones XSS y secuestro de datos definiendo orígenes autorizados.' 
+                              },
+                              { 
+                                name: 'Strict-Transport-Security (HSTS)', 
+                                status: selectedDetails.findings.every(f => !f.title.includes('Strict-Transport-Security') && !f.description.includes('HSTS')),
+                                description: 'Fuerza conexiones cifradas HTTPS de forma estricta en el navegador.' 
+                              },
+                              { 
+                                name: 'X-Frame-Options (Clickjacking Protection)', 
+                                status: selectedDetails.findings.every(f => !f.title.includes('X-Frame-Options') && !f.title.includes('Clickjacking')),
+                                description: 'Evita que tu sitio web sea embebido de forma fraudulenta en iframes externos.' 
+                              },
+                              { 
+                                name: 'Cookie Security Flags (HttpOnly & Secure)', 
+                                status: selectedDetails.findings.every(f => !f.title.includes('HttpOnly') && !f.title.includes('Secure') && !f.title.includes('Cookie')),
+                                description: 'Protege las cookies de sesión contra el robo mediante scripts maliciosos.' 
+                              }
+                            ].map((header, idx) => (
+                              <div key={idx} className="flex items-start justify-between gap-4 border-b border-white/[0.02] pb-2.5 last:border-0 last:pb-0">
+                                <div className="space-y-0.5">
+                                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                    {header.name}
+                                  </span>
+                                  <p className="text-[10px] text-zinc-500 leading-normal">
+                                    {header.description}
+                                  </p>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase shrink-0 tracking-wider ${
+                                  header.status 
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                }`}>
+                                  {header.status ? 'Cumple' : 'Incompleto'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Bento-Row 2: Findings List Accordions */}
             <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">

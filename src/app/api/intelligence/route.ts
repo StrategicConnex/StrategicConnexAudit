@@ -99,6 +99,7 @@ async function checkHeaders(hostname: string): Promise<any> {
     clearTimeout(id);
 
     const headers = response.headers;
+    const cookies = (headers as any).getSetCookie ? (headers as any).getSetCookie() : [];
     return {
       success: true,
       statusCode: response.status,
@@ -109,7 +110,8 @@ async function checkHeaders(hostname: string): Promise<any> {
         xcto: headers.get("x-content-type-options") || null,
         xxp: headers.get("x-xss-protection") || null,
         server: headers.get("server") || null,
-      }
+      },
+      cookies
     };
   } catch (err: any) {
     // Try http fallback if https failed
@@ -124,6 +126,7 @@ async function checkHeaders(hostname: string): Promise<any> {
       clearTimeout(id);
       
       const headers = response.headers;
+      const cookies = (headers as any).getSetCookie ? (headers as any).getSetCookie() : [];
       return {
         success: true,
         statusCode: response.status,
@@ -134,10 +137,11 @@ async function checkHeaders(hostname: string): Promise<any> {
           xcto: headers.get("x-content-type-options") || null,
           xxp: headers.get("x-xss-protection") || null,
           server: headers.get("server") || null,
-        }
+        },
+        cookies
       };
     } catch (httpErr: any) {
-      return { success: false, error: err.message || "Unreachable host" };
+      return { success: false, error: err.message || "Unreachable host", securityHeaders: null, cookies: [] };
     }
   }
 }
@@ -149,6 +153,298 @@ async function resolveDns(hostname: string, recordType: "A" | "AAAA" | "MX" | "N
   } catch {
     return [];
   }
+}
+
+// SPF Parser & Recursive Lookup Counter
+function parseSpfRecord(spf: string): {
+  record: string;
+  dnsLookups: number;
+  isWeak: boolean;
+  weakReason: string | null;
+} {
+  const result = {
+    record: spf,
+    dnsLookups: 0,
+    isWeak: false,
+    weakReason: null as string | null
+  };
+
+  const mechanisms = spf.split(/\s+/);
+  for (const mech of mechanisms) {
+    const lower = mech.toLowerCase();
+    
+    // Lookups mechanisms defined by RFC 7208 section 4.6.4
+    if (
+      lower.startsWith("include:") || 
+      lower.startsWith("a:") || 
+      lower === "a" ||
+      lower.startsWith("mx:") || 
+      lower === "mx" ||
+      lower.startsWith("exists:") || 
+      lower.startsWith("redirect=") ||
+      lower.startsWith("ptr:") ||
+      lower === "ptr"
+    ) {
+      result.dnsLookups++;
+    }
+
+    // Weak mechanisms check
+    if (lower === "+all") {
+      result.isWeak = true;
+      result.weakReason = "Se detectó la directiva extremadamente permisiva '+all', lo que autoriza a cualquier IP del mundo a enviar correo falsificado usando tu dominio.";
+    } else if (lower === "?all" && !result.isWeak) {
+      result.isWeak = true;
+      result.weakReason = "Se detectó la directiva neutra '?all', lo que dificulta que los servidores de correo receptores bloqueen con confianza los correos falsificados.";
+    }
+  }
+
+  return result;
+}
+
+// DMARC Parser
+function parseDmarcRecord(record: string): {
+  record: string;
+  policy: "none" | "quarantine" | "reject" | "invalid";
+  rua: string[];
+  ruf: string[];
+  adkim: "r" | "s";
+  aspf: "r" | "s";
+} {
+  const result = {
+    record,
+    policy: "invalid" as any,
+    rua: [] as string[],
+    ruf: [] as string[],
+    adkim: "r" as "r" | "s",
+    aspf: "r" as "r" | "s"
+  };
+
+  const cleaned = record.trim();
+  if (!cleaned.startsWith("v=DMARC1")) {
+    return result;
+  }
+
+  const tags = cleaned.split(";").map(t => t.trim());
+  for (const tag of tags) {
+    const parts = tag.split("=");
+    if (parts.length !== 2) continue;
+    const key = parts[0]!.toLowerCase();
+    const val = parts[1]!;
+
+    if (key === "p") {
+      const lowerVal = val.toLowerCase();
+      if (lowerVal === "none" || lowerVal === "quarantine" || lowerVal === "reject") {
+        result.policy = lowerVal;
+      }
+    } else if (key === "rua") {
+      result.rua = val.split(",").map(email => email.trim().replace(/^mailto:/i, ""));
+    } else if (key === "ruf") {
+      result.ruf = val.split(",").map(email => email.trim().replace(/^mailto:/i, ""));
+    } else if (key === "adkim") {
+      result.adkim = val.toLowerCase() === "s" ? "s" : "r";
+    } else if (key === "aspf") {
+      result.aspf = val.toLowerCase() === "s" ? "s" : "r";
+    }
+  }
+
+  return result;
+}
+
+// Passive DKIM Multi-Selector Resolver
+async function scanDkimSelectors(domain: string): Promise<any> {
+  const selectors = ["google", "default", "mail", "k1", "picasso", "key1", "signing", "selector1", "mandrill", "amazonses", "m1", "m2"];
+  const results: Record<string, string | null> = {};
+
+  await Promise.all(
+    selectors.map(async (sel) => {
+      try {
+        const records = await dns.promises.resolve(`${sel}._domainkey.${domain}`, "TXT");
+        const joined = records.flat().join("");
+        if (joined.includes("v=DKIM1") || joined.includes("k=rsa")) {
+          results[sel] = joined;
+        } else {
+          results[sel] = null;
+        }
+      } catch {
+        results[sel] = null;
+      }
+    })
+  );
+
+  const found = Object.entries(results).filter(([_, val]) => val !== null);
+  return {
+    checked: selectors,
+    found: found.map(([sel, val]) => ({ selector: sel, record: val })),
+    count: found.length
+  };
+}
+
+// BIMI Parser & Resolver
+async function parseBimiRecord(domain: string): Promise<any> {
+  try {
+    const records = await dns.promises.resolve(`default._bimi.${domain}`, "TXT");
+    const record = records.flat().join("");
+    if (!record.includes("v=BIMI1")) {
+      return { success: false, error: "Registro BIMI no configurado con cabecera v=BIMI1" };
+    }
+
+    let logoUrl: string | null = null;
+    let vmcUrl: string | null = null;
+
+    const parts = record.split(";").map(p => p.trim());
+    for (const p of parts) {
+      const splitPart = p.split("=");
+      if (splitPart.length !== 2) continue;
+      const key = splitPart[0]!.toLowerCase();
+      const val = splitPart[1]!;
+
+      if (key === "l") {
+        logoUrl = val;
+      } else if (key === "a") {
+        vmcUrl = val;
+      }
+    }
+
+    return {
+      success: true,
+      record,
+      logoUrl,
+      vmcUrl,
+      isHttpsLogo: logoUrl ? logoUrl.startsWith("https://") : false
+    };
+  } catch {
+    return { success: false, error: "Registro default._bimi no encontrado en la zona DNS" };
+  }
+}
+
+// HTTP to HTTPS Redirect Checker
+async function checkHttpRedirects(domain: string): Promise<any> {
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch(`http://${domain}`, {
+      method: "GET",
+      redirect: "manual",
+      headers: { "User-Agent": "StrategicAuditPro-Intelligence/1.0" },
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    const status = response.status;
+    const location = response.headers.get("location") || "";
+    const redirectsToHttps = (status >= 300 && status < 400) && location.startsWith("https://");
+    return {
+      success: true,
+      statusCode: status,
+      redirectsToHttps,
+      targetLocation: location
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Host inaccesible sobre puerto HTTP 80" };
+  }
+}
+
+// Content-Security-Policy Directives Auditor
+function auditCspHeader(cspHeader: string | null): { 
+  hasCsp: boolean;
+  unsafeInline: boolean;
+  unsafeEval: boolean;
+  wildcardScript: boolean;
+  missingFrameAncestors: boolean;
+  findings: string[];
+} {
+  const result = {
+    hasCsp: !!cspHeader,
+    unsafeInline: false,
+    unsafeEval: false,
+    wildcardScript: false,
+    missingFrameAncestors: true,
+    findings: [] as string[]
+  };
+
+  if (!cspHeader) {
+    result.findings.push("Falta la cabecera Content-Security-Policy (CSP).");
+    return result;
+  }
+
+  const directives = cspHeader.split(";").map(d => d.trim().toLowerCase());
+  
+  for (const dir of directives) {
+    if (dir.startsWith("script-src ") || dir.startsWith("default-src ")) {
+      if (dir.includes("'unsafe-inline'")) {
+        result.unsafeInline = true;
+        result.findings.push("Se permite 'unsafe-inline' en las políticas de carga de scripts, anulando la mitigación contra inyecciones XSS.");
+      }
+      if (dir.includes("'unsafe-eval'")) {
+        result.unsafeEval = true;
+        result.findings.push("Se permite 'unsafe-eval', habilitando la compilación dinámica de código vulnerable en JavaScript.");
+      }
+      if (dir.includes(" *") || dir.includes("http:")) {
+        result.wildcardScript = true;
+        result.findings.push("Se detectaron comodines (*) u orígenes HTTP explícitos permitiendo la inclusión de scripts de terceros arbitrarios.");
+      }
+    }
+    if (dir.startsWith("frame-ancestors ")) {
+      result.missingFrameAncestors = false;
+    }
+  }
+
+  if (result.missingFrameAncestors) {
+    result.findings.push("Falta la directiva frame-ancestors en la política CSP para impedir clickjacking en navegadores modernos.");
+  }
+
+  return result;
+}
+
+// Cookie Flags Auditor
+function auditCookies(setCookieHeaders: string[]): {
+  totalCookies: number;
+  secureCount: number;
+  httpOnlyCount: number;
+  sameSiteStrictOrLaxCount: number;
+  findings: string[];
+  cookies: Array<{ name: string; secure: boolean; httpOnly: boolean; sameSite: string }>;
+} {
+  const result = {
+    totalCookies: setCookieHeaders.length,
+    secureCount: 0,
+    httpOnlyCount: 0,
+    sameSiteStrictOrLaxCount: 0,
+    findings: [] as string[],
+    cookies: [] as any[]
+  };
+
+  for (const cookieStr of setCookieHeaders) {
+    const parts = cookieStr.split(";").map(p => p.trim());
+    const namePart = parts[0] || "";
+    const name = namePart.split("=")[0] || "Unknown";
+
+    const isSecure = parts.some(p => p.toLowerCase() === "secure");
+    const isHttpOnly = parts.some(p => p.toLowerCase() === "httponly");
+    const sameSitePart = parts.find(p => p.toLowerCase().startsWith("samesite="));
+    const sameSiteValue = sameSitePart ? sameSitePart.split("=")[1] : "None";
+
+    if (isSecure) result.secureCount++;
+    if (isHttpOnly) result.httpOnlyCount++;
+    if (sameSiteValue && (sameSiteValue.toLowerCase() === "strict" || sameSiteValue.toLowerCase() === "lax")) {
+      result.sameSiteStrictOrLaxCount++;
+    }
+
+    result.cookies.push({
+      name,
+      secure: isSecure,
+      httpOnly: isHttpOnly,
+      sameSite: sameSiteValue || "None"
+    });
+
+    if (!isHttpOnly) {
+      result.findings.push(`La cookie '${name}' no posee la directiva HttpOnly, lo que permite que sea leída por scripts maliciosos de JavaScript.`);
+    }
+    if (!isSecure) {
+      result.findings.push(`La cookie '${name}' no posee el modificador Secure, transmitiéndose en texto plano sobre conexiones no cifradas.`);
+    }
+  }
+
+  return result;
 }
 
 export async function GET(req: NextRequest) {
@@ -347,7 +643,8 @@ export async function POST(req: NextRequest) {
     // Concurrent network scanning
     const [
       dnsA, dnsAAAA, dnsMX, dnsNS, dnsTXT,
-      sslInfo, headersInfo, dmarcTxt
+      sslInfo, headersInfo, dmarcTxt,
+      dkimResult, bimiResult, redirectResult
     ] = await Promise.all([
       resolveDns(normalizedTarget, "A"),
       resolveDns(normalizedTarget, "AAAA"),
@@ -356,7 +653,10 @@ export async function POST(req: NextRequest) {
       resolveDns(normalizedTarget, "TXT"),
       checkSslHandshake(normalizedTarget),
       checkHeaders(normalizedTarget),
-      resolveDns(`_dmarc.${normalizedTarget}`, "TXT")
+      resolveDns(`_dmarc.${normalizedTarget}`, "TXT"),
+      scanDkimSelectors(normalizedTarget),
+      parseBimiRecord(normalizedTarget),
+      checkHttpRedirects(normalizedTarget)
     ]);
 
     // Save individual runs in memory
@@ -383,14 +683,42 @@ export async function POST(req: NextRequest) {
       logEventInMemory("success", `Auditoría de cabeceras HTTP finalizada.`);
     }
 
+    saveToolRunInMemory("dkim_scanner", "security", {}, dkimResult);
+    logEventInMemory("success", `Escaneo pasivo de selectores DKIM finalizado. Encontrados: ${dkimResult.count}`);
+
+    saveToolRunInMemory("bimi_resolver", "security", {}, bimiResult, bimiResult.error);
+    if (bimiResult.success) {
+      logEventInMemory("success", `Registro BIMI verificado. URL de Logo: ${bimiResult.logoUrl}`);
+    } else {
+      logEventInMemory("info", `Información BIMI: ${bimiResult.error}`);
+    }
+
+    saveToolRunInMemory("redirect_checker", "security", {}, redirectResult, redirectResult.error);
+    if (redirectResult.success) {
+      logEventInMemory("success", `Verificación de redirección HTTP ➔ HTTPS completada.`);
+    } else {
+      logEventInMemory("warning", `Advertencia en redirección de protocolo: ${redirectResult.error}`);
+    }
+
     // Parse Email Protocols (SPF / DMARC)
     const spfRecord = dnsTXT.flat().find((rec: string) => rec.startsWith("v=spf1")) || null;
-    const dmarcRecord = dmarcTxt.flat().find((rec: string) => rec.startsWith("v=DMARC1")) || null;
-    const emailSecurityOutput = { spf: spfRecord, dmarc: dmarcRecord };
-    saveToolRunInMemory("email_security", "security", {}, emailSecurityOutput);
-    logEventInMemory("success", `Evaluación de protocolos SPF y DMARC completada.`);
+    const spfParsed = spfRecord ? parseSpfRecord(spfRecord) : null;
 
-    // --- FORMULATE FINDINGS ---
+    const dmarcRecord = dmarcTxt.flat().find((rec: string) => rec.startsWith("v=DMARC1")) || null;
+    const dmarcParsed = dmarcRecord ? parseDmarcRecord(dmarcRecord) : null;
+
+    const emailSecurityOutput = { 
+      spf: spfRecord, 
+      spfParsed,
+      dmarc: dmarcRecord,
+      dmarcParsed,
+      dkim: dkimResult,
+      bimi: bimiResult
+    };
+    saveToolRunInMemory("email_security", "security", {}, emailSecurityOutput);
+    logEventInMemory("success", `Evaluación de protocolos SPF, DMARC, DKIM y BIMI completada.`);
+
+    // --- FORMULATE FINDINGS & SCORES ---
     const findingsList: any[] = [];
 
     // SSL Findings
@@ -441,7 +769,27 @@ export async function POST(req: NextRequest) {
         recommendation: "Crea un registro DNS de tipo TXT en tu raíz que detalle los servidores SMTP autorizados para enviar correos, por ejemplo: 'v=spf1 include:_spf.google.com ~all'.",
         evidence: { recordsChecked: dnsTXT }
       });
+    } else if (spfParsed) {
+      if (spfParsed.isWeak) {
+        findingsList.push({
+          severity: "high",
+          title: `Directiva SPF Insegura (${spfRecord.includes("+all") ? "+all" : "?all"})`,
+          description: spfParsed.weakReason || "El registro SPF contiene directivas laxas.",
+          recommendation: "Cambia la directiva final de tu registro SPF a '~all' (SoftFail) o '-all' (HardFail) para indicar que las IPs no listadas no están autorizadas.",
+          evidence: spfParsed
+        });
+      }
+      if (spfParsed.dnsLookups > 10) {
+        findingsList.push({
+          severity: "high",
+          title: "Exceso de Consultas DNS en Registro SPF (RFC 7208)",
+          description: `Tu registro SPF genera ${spfParsed.dnsLookups} consultas de DNS recursivas, excediendo el límite estricto de 10. Los servidores receptores ignorarán este registro.`,
+          recommendation: "Simplifica los mecanismos de tu registro SPF. Utiliza rangos CIDR IP en lugar de múltiples inclusiones recursivas 'include:' o registros 'a' y 'mx'.",
+          evidence: spfParsed
+        });
+      }
     }
+
     if (!dmarcRecord) {
       findingsList.push({
         severity: "high",
@@ -450,9 +798,58 @@ export async function POST(req: NextRequest) {
         recommendation: "Crea un registro DNS TXT en '_dmarc' apuntando a una política inicial que reporte fallos: 'v=DMARC1; p=none; rua=mailto:seguridad@tudominio.com'.",
         evidence: { dmarcTxt }
       });
+    } else if (dmarcParsed) {
+      if (dmarcParsed.policy === "none") {
+        findingsList.push({
+          severity: "medium",
+          title: "Política DMARC configurada en Modo Monitoreo (p=none)",
+          description: "La directiva DMARC se encuentra configurada en 'p=none'. Permite recibir reportes de alineación pero no protege el dominio contra suplantación.",
+          recommendation: "Eleva progresivamente la política a 'p=quarantine' (enviar a spam) y finalmente a 'p=reject' (bloquear entrega) tras auditar remitentes legítimos.",
+          evidence: dmarcParsed
+        });
+      } else if (dmarcParsed.policy === "invalid") {
+        findingsList.push({
+          severity: "high",
+          title: "Formato de Política DMARC Inválido",
+          description: "El registro DMARC no posee un valor de política válido (p=none, quarantine o reject) o está mal formateado.",
+          recommendation: "Corrige la directiva de política 'p=' en tu registro TXT de _dmarc.",
+          evidence: dmarcParsed
+        });
+      }
     }
 
-    // Header Findings
+    if (dkimResult.count === 0) {
+      findingsList.push({
+        severity: "high",
+        title: "Falta Registro de Firma Criptográfica DKIM",
+        description: "No se encontró ningún registro DKIM activo al escanear los selectores más habituales de la industria. Sin firmas DKIM, el correo legítimo carece de validación de integridad criptográfica y tiene alta probabilidad de ir a spam.",
+        recommendation: "Genera un par de claves públicas/privadas en tu proveedor de correo (Workspace, Microsoft 365) e inyecta la clave pública como registro DNS TXT bajo el selector correspondiente.",
+        evidence: dkimResult
+      });
+    }
+
+    if (bimiResult.success && !bimiResult.isHttpsLogo) {
+      findingsList.push({
+        severity: "medium",
+        title: "Logotipo BIMI no alojado sobre HTTPS Seguro",
+        description: "El registro BIMI apunta a una URL de logotipo que no utiliza el esquema de seguridad HTTPS cifrado. Los clientes de correo receptores ignorarán el logotipo.",
+        recommendation: "Aloja tu imagen SVG BIMI en un servidor con HTTPS activo y actualiza la URL del parámetro 'l=' en tu DNS.",
+        evidence: bimiResult
+      });
+    }
+
+    // Web Redirect Findings
+    if (redirectResult.success && !redirectResult.redirectsToHttps) {
+      findingsList.push({
+        severity: "high",
+        title: "Falta Redirección Forzada HTTP a HTTPS",
+        description: "El servidor no redirige de manera automática las solicitudes entrantes en HTTP no seguro (puerto 80) a la versión cifrada HTTPS (puerto 443). Esto expone a los visitantes a interceptación de tráfico y ataques MITM.",
+        recommendation: "Configura una redirección permanente 301 en tu servidor web, proxy o CDN para desviar todo el tráfico HTTP a HTTPS.",
+        evidence: redirectResult
+      });
+    }
+
+    // Header & CSP Findings
     if (headersInfo.success && headersInfo.securityHeaders) {
       const sh = headersInfo.securityHeaders;
       if (!sh.hsts) {
@@ -461,15 +858,6 @@ export async function POST(req: NextRequest) {
           title: "Falta Cabecera de HSTS (Strict-Transport-Security)",
           description: "La cabecera de HSTS no está activa. Esto permite a los navegadores degradar la conexión a HTTP inseguro, facilitando ataques de tipo Man-In-The-Middle (MITM).",
           recommendation: "Configura tu servidor web o CDN para que inyecte la cabecera 'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload'.",
-          evidence: { securityHeaders: sh }
-        });
-      }
-      if (!sh.csp) {
-        findingsList.push({
-          severity: "low",
-          title: "Falta Cabecera de Content-Security-Policy (CSP)",
-          description: "No existe una política de seguridad de contenido configurada. Tu sitio es vulnerable a inyecciones de scripts de terceros (Cross-Site Scripting / XSS).",
-          recommendation: "Define políticas de origen restrictivas para recursos de imágenes, scripts y hojas de estilo a través de la directiva 'Content-Security-Policy'.",
           evidence: { securityHeaders: sh }
         });
       }
@@ -482,19 +870,134 @@ export async function POST(req: NextRequest) {
           evidence: { securityHeaders: sh }
         });
       }
+
+      // CSP auditor details
+      const cspAudit = auditCspHeader(sh.csp);
+      if (!cspAudit.hasCsp) {
+        findingsList.push({
+          severity: "low",
+          title: "Falta Cabecera de Content-Security-Policy (CSP)",
+          description: "No existe una política de seguridad de contenido configurada. Tu sitio es vulnerable a inyecciones de scripts de terceros (Cross-Site Scripting / XSS).",
+          recommendation: "Define políticas de origen restrictivas para recursos de imágenes, scripts y hojas de estilo a través de la directiva 'Content-Security-Policy'.",
+          evidence: { securityHeaders: sh }
+        });
+      } else {
+        if (cspAudit.unsafeInline) {
+          findingsList.push({
+            severity: "high",
+            title: "Directiva CSP Insegura: 'unsafe-inline' Detectada",
+            description: "La directiva 'unsafe-inline' está habilitada en Content-Security-Policy. Esto deshabilita por completo la protección del navegador contra ataques de inyección de scripts (Cross-Site Scripting).",
+            recommendation: "Elimina 'unsafe-inline' y reemplázalo por hashes SHA-256 o nonces criptográficos generados dinámicamente en el servidor.",
+            evidence: { cspHeader: sh.csp }
+          });
+        }
+        if (cspAudit.unsafeEval) {
+          findingsList.push({
+            severity: "medium",
+            title: "Directiva CSP Insegura: 'unsafe-eval' Detectada",
+            description: "Se permite 'unsafe-eval' en la política CSP. Permite que atacantes ejecuten código JavaScript dinámico inyectado.",
+            recommendation: "Elimina la necesidad de compilación dinámica en tu código de cliente y desactiva 'unsafe-eval'.",
+            evidence: { cspHeader: sh.csp }
+          });
+        }
+        if (cspAudit.wildcardScript) {
+          findingsList.push({
+            severity: "high",
+            title: "Política CSP con Comodín en Script-Src",
+            description: "Se detectó el comodín '*' o un esquema de protocolo general permitiendo la ejecución de scripts desde cualquier origen externo.",
+            recommendation: "Especifica explícitamente los dominios de confianza autorizados para proveer scripts y elimina comodines.",
+            evidence: { cspHeader: sh.csp }
+          });
+        }
+        if (cspAudit.missingFrameAncestors) {
+          findingsList.push({
+            severity: "low",
+            title: "Falta Directiva frame-ancestors en CSP",
+            description: "No se define la directiva frame-ancestors. Los navegadores modernos no tienen pautas para evitar clickjacking, confiando solo en cabeceras obsoletas.",
+            recommendation: "Añade 'frame-ancestors 'self'' en tu Content-Security-Policy para restringir quién puede incrustar el sitio.",
+            evidence: { cspHeader: sh.csp }
+          });
+        }
+      }
+
+      // Cookie security details
+      if (headersInfo.cookies && headersInfo.cookies.length > 0) {
+        const cookieAudit = auditCookies(headersInfo.cookies);
+        for (const cFind of cookieAudit.findings) {
+          findingsList.push({
+            severity: cFind.includes("HttpOnly") ? "high" : "medium",
+            title: cFind.includes("HttpOnly") ? "Cookie Vulnerable a Robo de Sesión (HttpOnly ausente)" : "Transmisión Insegura de Cookie (Secure ausente)",
+            description: cFind,
+            recommendation: cFind.includes("HttpOnly") 
+              ? "Configura la propiedad 'HttpOnly' al emitir la cookie en el servidor para evitar accesos por scripts maliciosos de terceros."
+              : "Añade el parámetro 'Secure' para garantizar que la cookie solo viaje en canales cifrados por HTTPS.",
+            evidence: { cookie: cookieAudit.cookies.find(c => cFind.includes(c.name)) }
+          });
+        }
+      }
     }
 
-    // Deduct score based on findings
-    let score = 100;
-    for (const f of findingsList) {
-      if (f.severity === "critical") score -= 25;
-      else if (f.severity === "high") score -= 15;
-      else if (f.severity === "medium") score -= 8;
-      else if (f.severity === "low") score -= 3;
+    // --- CALCULATE COMPONENT & GLOBAL POSTURE SCORES ---
+    // 1. Mail Health Composite Score
+    let mailHealthScore = 100;
+    if (!spfRecord) {
+      mailHealthScore -= 40;
+    } else if (spfParsed) {
+      if (spfParsed.isWeak) {
+        mailHealthScore -= spfRecord.includes("+all") ? 30 : 15;
+      }
+      if (spfParsed.dnsLookups > 10) {
+        mailHealthScore -= 15;
+      }
     }
-    score = Math.max(10, score);
+    if (!dmarcRecord) {
+      mailHealthScore -= 35;
+    } else if (dmarcParsed) {
+      if (dmarcParsed.policy === "invalid") {
+        mailHealthScore -= 30;
+      } else if (dmarcParsed.policy === "none") {
+        mailHealthScore -= 15;
+      } else if (dmarcParsed.policy === "quarantine") {
+        mailHealthScore -= 5;
+      }
+    }
+    if (dkimResult.count === 0) {
+      mailHealthScore -= 20;
+    }
+    if (!bimiResult.success) {
+      mailHealthScore -= 5;
+    }
+    mailHealthScore = Math.max(10, mailHealthScore);
 
-    logEventInMemory("info", `Auditoría de Infraestructura finalizada correctamente. Score global calculado: ${score}/100.`);
+    // 2. Web Security/Infrastructure Score
+    let infraScore = 100;
+    if (sslInfo.error) {
+      infraScore -= 40;
+    } else {
+      if (sslInfo.daysRemaining !== null && sslInfo.daysRemaining <= 14) {
+        infraScore -= 30;
+      } else if (sslInfo.daysRemaining !== null && sslInfo.daysRemaining <= 30) {
+        infraScore -= 15;
+      }
+      if (sslInfo.bits < 2048) {
+        infraScore -= 15;
+      }
+    }
+    if (headersInfo.success && headersInfo.securityHeaders) {
+      const sh = headersInfo.securityHeaders;
+      if (!sh.hsts) infraScore -= 15;
+      if (!sh.csp) infraScore -= 10;
+      if (!sh.xfo) infraScore -= 5;
+    }
+    if (redirectResult.success && !redirectResult.redirectsToHttps) {
+      infraScore -= 20;
+    }
+    infraScore = Math.max(10, infraScore);
+
+    // 3. Balanced Global Posture Score
+    const score = Math.round((infraScore * 0.5) + (mailHealthScore * 0.5));
+
+    logEventInMemory("info", `Auditoría completada. Web Score: ${infraScore}/100, Mail Composite Score: ${mailHealthScore}/100. Puntuación Postura Global: ${score}/100.`);
 
     // Block 3: Write findings, tool runs, events, and assets in a single atomic RLS transaction
     await withRLS(user.id, async (tx) => {
@@ -517,8 +1020,10 @@ export async function POST(req: NextRequest) {
         let toolId = "security_headers";
         if (f.evidence?.error || f.title.includes("SSL") || f.title.includes("Certificado")) {
           toolId = "ssl_check";
-        } else if (f.title.includes("SPF") || f.title.includes("DMARC")) {
+        } else if (f.title.includes("SPF") || f.title.includes("DMARC") || f.title.includes("DKIM") || f.title.includes("BIMI")) {
           toolId = "email_security";
+        } else if (f.title.includes("HTTP") || f.title.includes("HTTPS") || f.title.includes("Redirección")) {
+          toolId = "redirect_checker";
         }
         const toolRunId = toolRunIdsByToolId.get(toolId) || null;
 
@@ -565,11 +1070,20 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // 5. Finalize Main Investigation record
+      // 5. Finalize Main Investigation record with advanced metadata
       await tx.update(intelligenceInvestigations).set({
         status: "completed",
         score,
-        summary: `Auditoría finalizada. Se detectaron ${findingsList.length} hallazgos en total. Puntuación de Postura: ${score}/100.`,
+        summary: `Auditoría finalizada. Se detectaron ${findingsList.length} hallazgos en total. Puntuación de Postura: ${score}/100 (Correo: ${mailHealthScore}, Servidor: ${infraScore}).`,
+        metadata: {
+          mailHealthCompositeScore: mailHealthScore,
+          infrastructureScore: infraScore,
+          spfParsed,
+          dmarcParsed,
+          dkimCount: dkimResult.count,
+          bimiSuccess: bimiResult.success,
+          redirectsToHttps: redirectResult.redirectsToHttps
+        },
         completedAt: new Date(),
         updatedAt: new Date()
       }).where(eq(intelligenceInvestigations.id, investigation.id));
@@ -585,7 +1099,11 @@ export async function POST(req: NextRequest) {
         targetType,
         score,
         status: "completed",
-        summary: `Puntuación de Seguridad de Infraestructura: ${score}/100.`
+        summary: `Puntuación de Seguridad de Infraestructura: ${score}/100. Correo: ${mailHealthScore}/100. Servidor: ${infraScore}/100.`,
+        metadata: {
+          mailHealthCompositeScore: mailHealthScore,
+          infrastructureScore: infraScore
+        }
       },
       dns: {
         A: dnsA,
@@ -597,6 +1115,7 @@ export async function POST(req: NextRequest) {
       ssl: sslInfo,
       email: emailSecurityOutput,
       headers: headersInfo,
+      redirect: redirectResult,
       findings: findingsList
     });
 
