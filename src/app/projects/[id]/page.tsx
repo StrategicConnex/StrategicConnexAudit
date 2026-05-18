@@ -1,9 +1,8 @@
-import { db } from '@/shared/db';
 import { projects, audits, crawlResults, issues, uptimeLogs, webVitalsLogs } from '@/shared/db/schemas';
-import { eq, desc, sql, count, avg } from 'drizzle-orm';
+import { eq, desc, sql, count } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { ArrowLeft, Globe, Activity, FileText, AlertTriangle, ArrowRight, Download, FileSpreadsheet, Server, Zap, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Globe, Activity, FileText, AlertTriangle, ArrowRight, Download, FileSpreadsheet, Server, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import AuditControl from './components/AuditControl';
 import DeactivateButton from './components/DeactivateButton';
@@ -80,7 +79,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       }
 
       // 4. Fetch Uptime Logs (Resiliente)
-      let recentUptimes: any[] = [];
+      type UptimeLogType = typeof uptimeLogs.$inferSelect;
+      let recentUptimes: UptimeLogType[] = [];
       try {
         recentUptimes = await tx.select().from(uptimeLogs)
           .where(eq(uptimeLogs.projectId, projectId))
@@ -93,7 +93,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
         
       // 5. Fetch Web Vitals Logs (Resiliente)
-      let vitalsLogs: any[] = [];
+      type WebVitalsLogType = typeof webVitalsLogs.$inferSelect;
+      let vitalsLogs: WebVitalsLogType[] = [];
       try {
         vitalsLogs = await tx.select()
         .from(webVitalsLogs)
@@ -105,7 +106,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       }
 
       // Compute sophisticated RUM averages and counters using extracted engine
-      const vitalsAverages = computeVitalsAverages(vitalsLogs);
+      const vitalsAverages = computeVitalsAverages(vitalsLogs.map(log => ({
+        ...log,
+        errors: Array.isArray(log.errors) ? log.errors : null,
+        resources: Array.isArray(log.resources) ? log.resources : null,
+        memory: log.memory && typeof log.memory === 'object' ? log.memory : null
+      })));
 
       return {
         project,
@@ -118,7 +124,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         latestCompletedAudit
       };
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Critical error loading project detail:", error);
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-10 text-center bg-[#030303] text-zinc-100 relative overflow-hidden font-sans">
@@ -134,16 +140,17 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <Link href="/" className="px-8 py-3 bg-white/[0.04] text-zinc-300 font-bold border border-white/[0.08] rounded-xl hover:bg-white/[0.08] transition-all text-[14px]">
             Volver al Inicio
           </Link>
-          <button 
-            onClick={(() => { "use client"; window.location.reload(); }) as any}
-            className="px-8 py-3 bg-cyan-500 text-black font-extrabold rounded-xl hover:bg-cyan-400 transition-all text-[14px] shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+          <Link 
+            href={`/projects/${projectId}`}
+            className="px-8 py-3 bg-cyan-500 text-black font-extrabold rounded-xl hover:bg-cyan-400 transition-all text-[14px] shadow-[0_0_20px_rgba(6,182,212,0.3)] flex items-center justify-center"
           >
             Reintentar
-          </button>
+          </Link>
         </div>
       </div>
     );
   }
+
 
   if (!data) {
     notFound();

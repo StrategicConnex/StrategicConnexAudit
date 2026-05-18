@@ -1,6 +1,6 @@
 'use client';
 
-import { FileSpreadsheet, Download, Loader2 } from 'lucide-react';
+import { FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
 interface ExportCsvButtonProps {

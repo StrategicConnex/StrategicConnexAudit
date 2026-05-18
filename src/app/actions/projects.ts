@@ -2,11 +2,9 @@
 
 import { authenticatedAction } from "@/shared/lib/actions";
 import { z } from 'zod';
-import { db } from '@/shared/db';
 import { projects, users } from '@/shared/db/schemas';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 
 const CreateProjectSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
@@ -54,11 +52,12 @@ export const createProject = authenticatedAction(
 
       revalidatePath('/');
       return { success: true, message: "Proyecto creado correctamente" };
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { message?: string };
       // Capturamos el error personalizado de Postgres (LIMIT_EXCEEDED)
-      if (error.message?.includes('LIMIT_EXCEEDED')) {
+      if (err.message?.includes('LIMIT_EXCEEDED')) {
         // Extraemos el mensaje amigable que pusimos en el RAISE EXCEPTION
-        const cleanMessage = error.message.split('LIMIT_EXCEEDED: ')[1] || "Lmite de proyectos alcanzado.";
+        const cleanMessage = err.message.split('LIMIT_EXCEEDED: ')[1] || "Lmite de proyectos alcanzado.";
         return { 
           error: cleanMessage + " 🚀 Mejora tu plan para seguir creciendo." 
         };

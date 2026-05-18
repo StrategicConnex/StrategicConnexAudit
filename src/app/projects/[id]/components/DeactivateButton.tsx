@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { useState, useTransition } from 'react';
+import { useTransition } from 'react';
 import { deactivateProject } from '@/app/actions/projects';
 import { useRouter } from 'next/navigation';
 

@@ -2,7 +2,7 @@
 
 import {
   LayoutDashboard, Globe, Activity, Search, BarChart3, Settings,
-  Zap, ShieldAlert, Sparkles, ShieldCheck
+  ShieldCheck
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 

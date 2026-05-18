@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/shared/db';
 import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets } from '@/shared/db/schemas';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
@@ -9,6 +8,20 @@ import { RedisCircuitBreaker } from '@/shared/lib/circuit-breaker';
 import { withRLS } from '@/shared/db/rls';
 
 export const dynamic = 'force-dynamic';
+
+interface ResilientReportData {
+  totalClicks: number;
+  totalImpressions: number;
+  avgCtr: number | null;
+  avgPosition: number | null;
+  totalActiveUsers: number;
+  totalConversions: number;
+  avgEngagementRate: number | null;
+  healthScore: number | null;
+  crawledCount: number;
+  keywordsCount: number;
+  isNewProject: boolean;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -153,9 +166,9 @@ export async function POST(req: NextRequest) {
       : (!hasGscData ? '⚠️ Sin datos de Google Search Console aún.' : '') + (!hasGa4Data ? ' ⚠️ Sin datos de Google Analytics 4 aún.' : '');
 
     const prompt = `Actúa como el Consultor SEO Principal de una de las agencias de marketing digital orgánico más prestigiosas del mundo. Tu trabajo es redactar un Reporte Ejecutivo Mensual de Posicionamiento y Salud Técnica SEO de alta gama para el proyecto "${project.name}" (dominio: ${project.domain}).
-
+ 
 ${dataAvailabilityNote}
-
+ 
 Datos disponibles:
 - Clicks orgánicos (30d): ${hasGscData ? totalClicks : 'Sin datos — GSC no conectado'}
 - Impresiones (30d): ${hasGscData ? totalImpressions : 'Sin datos — GSC no conectado'}
@@ -164,7 +177,7 @@ Datos disponibles:
 - Usuarios activos (GA4, 30d): ${hasGa4Data ? totalActiveUsers : 'Sin datos — GA4 no conectado'}
 - Conversiones: ${hasGa4Data ? totalConversions : 'Sin datos'}
 - Salud Técnica: ${healthScore !== null ? healthScore + '/100' : 'Auditoría no ejecutada aún'}
-
+ 
 Instrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconnex.com.ar)". Usa Markdown elegante. Sé honesto sobre la disponibilidad de datos. Estructura: Resumen Ejecutivo, Análisis de Rendimiento (tabla), Diagnóstico Técnico y Plan de Acción (3-4 tareas).`;
 
     const aiCircuitBreaker = new RedisCircuitBreaker('ai_report_api', {
@@ -210,7 +223,8 @@ Instrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconn
       isFallback: false
     });
 
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as { message?: string };
     console.error('Error en el endpoint de reportes por IA:', error);
     
     // Global secondary highly resilient fallback in case of connection failure
@@ -223,8 +237,16 @@ Instrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconn
 }
 
 // Function to generate high-fidelity, beautifully presented report on fallback
-function generateResilientReport(project: any, data: any): string {
+function generateResilientReport(
+  project: { name: string; domain: string },
+  data: ResilientReportData
+): string {
   const dateStr = new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const avgCtrVal = data.avgCtr !== null ? data.avgCtr : 0;
+  const avgPositionVal = data.avgPosition !== null ? data.avgPosition : 0;
+  const avgEngagementRateVal = data.avgEngagementRate !== null ? data.avgEngagementRate : 0;
+  const healthScoreVal = data.healthScore !== null ? data.healthScore : 0;
+
   return `Desde Strategic Connex (strategicconnex.com.ar)
 
 # 📊 Reporte Estratégico Mensual SEO — ${project.name}
@@ -249,13 +271,13 @@ El tráfico orgánico ha mantenido una curva de interacción sumamente interesan
 | :--- | :--- | :--- |
 | **Clicks Orgánicos** | ${data.totalClicks.toLocaleString()} clicks | 🟢 Estable (+4.6% vs periodo anterior) |
 | **Impresiones Totales** | ${data.totalImpressions.toLocaleString()} búsquedas | 🟢 Incremento en visibilidad de marca |
-| **CTR Promedio** | ${data.avgCtr.toFixed(2)}% | 🟡 Estable (Meta de mejora: >3.5%) |
-| **Posición SERP Promedio** | #${data.avgPosition.toFixed(1)} global | 🟢 Top 5 en palabras clave principales |
+| **CTR Promedio** | ${avgCtrVal.toFixed(2)}% | 🟡 Estable (Meta de mejora: >3.5%) |
+| **Posición SERP Promedio** | #${avgPositionVal.toFixed(1)} global | 🟢 Top 5 en palabras clave principales |
 | **Usuarios Activos (GA4)** | ${data.totalActiveUsers.toLocaleString()} únicos | 🟢 Tráfico recurrente de alta calidad |
 | **Conversiones** | ${data.totalConversions} completadas | 🟢 Crecimiento constante de registros |
-| **Tasa de Interacción (GA4)** | ${data.avgEngagementRate.toFixed(1)}% | 🟢 Excelente retención de lectura |
+| **Tasa de Interacción (GA4)** | ${avgEngagementRateVal.toFixed(1)}% | 🟢 Excelente retención de lectura |
 
-*Análisis:* Las impresiones reflejan que la marca está ganando exposición para consultas técnicas avanzadas. Sin embargo, el CTR promedio de **${data.avgCtr.toFixed(2)}%** indica que reescribir y optimizar los títulos SEO aplicando disparadores emocionales y copywriting asertivo impulsará los clicks directos sin necesidad de crear nuevas páginas.
+*Análisis:* Las impresiones reflejan que la marca está ganando exposición para consultas técnicas avanzadas. Sin embargo, el CTR promedio de **${avgCtrVal.toFixed(2)}%** indica que reescribir y optimizar los títulos SEO aplicando disparadores emocionales y copywriting asertivo impulsará los clicks directos sin necesidad de crear nuevas páginas.
 
 ---
 
@@ -263,8 +285,8 @@ El tráfico orgánico ha mantenido una curva de interacción sumamente interesan
 
 Nuestros algoritmos de rastreo profundo han verificado un total de **${data.crawledCount} URLs** pertenecientes a su dominio, asignando una puntuación de salud de:
 
-# 🏆 ${data.healthScore} / 100
-*Clasificación: ${data.healthScore >= 80 ? 'Rendimiento Premium' : 'Requiere Optimización Crítica'}*
+# 🏆 ${healthScoreVal} / 100
+*Clasificación: ${healthScoreVal >= 80 ? 'Rendimiento Premium' : 'Requiere Optimización Crítica'}*
 
 ### ⚡ Core Web Vitals (Velocidad de Experiencia de Usuario):
 *   **Largest Contentful Paint (LCP):** 1.8 segundos (🟢 Rápido - Excelente velocidad de despliegue inicial).

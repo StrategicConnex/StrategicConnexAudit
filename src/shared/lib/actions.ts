@@ -6,6 +6,7 @@ import { NodePgQueryResultHKT } from 'drizzle-orm/node-postgres';
 import { PgTransaction } from 'drizzle-orm/pg-core';
 import * as schema from '../db/schemas/index';
 import { logger } from "@/shared/lib/logger";
+import { User } from "@supabase/supabase-js";
 
 export type ActionState<T> = {
   data?: T;
@@ -22,7 +23,7 @@ export type DbTransaction = PgTransaction<NodePgQueryResultHKT, typeof schema, E
  */
 export function authenticatedAction<Schema extends z.ZodTypeAny, T>(
   zodSchema: Schema,
-  action: (data: z.infer<Schema>, context: { user: any, tx: DbTransaction }) => Promise<T>
+  action: (data: z.infer<Schema>, context: { user: User, tx: DbTransaction }) => Promise<T>
 ) {
   return async (formData: z.infer<Schema> | FormData): Promise<ActionState<T>> => {
     try {
@@ -33,13 +34,13 @@ export function authenticatedAction<Schema extends z.ZodTypeAny, T>(
       if (authError || !user) {
         await logger.security({
           action: 'UNAUTHORIZED_ACTION_ATTEMPT',
-          metadata: { authError }
+          metadata: { authError: authError ? String(authError) : 'No user in session' }
         });
         return { error: "No autorizado. Debes iniciar sesin para realizar esta accin." };
       }
 
       // 2. Validar Datos de Entrada
-      let rawData: any;
+      let rawData: unknown;
       if (formData instanceof FormData) {
         rawData = Object.fromEntries(formData.entries());
       } else {
@@ -68,13 +69,15 @@ export function authenticatedAction<Schema extends z.ZodTypeAny, T>(
       });
 
       return { data };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       await logger.error({
         action: 'SERVER_ACTION_EXCEPTION',
-        error: error,
-        metadata: { stack: error.stack }
+        error: err,
+        metadata: { stack: err?.stack || 'No stack' }
       });
-      return { error: error instanceof Error ? error.message : "Ocurri un error inesperado." };
+      return { error: err instanceof Error ? err.message : "Ocurri un error inesperado." };
     }
   };
 }
+

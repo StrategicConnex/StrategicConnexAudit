@@ -20,6 +20,15 @@ export default function AuditControl({ projectId }: AuditControlProps) {
   const [showWorkerWarning, setShowWorkerWarning] = useState(false);
   const isAuditing = status === 'pending' || status === 'running';
 
+  const changeStatus = (newStatus: 'idle' | 'pending' | 'running' | 'completed' | 'failed') => {
+    setStatus(newStatus);
+    if (newStatus === 'idle' || newStatus === 'failed') {
+      setProgress(0);
+    } else if (newStatus === 'completed') {
+      setProgress(100);
+    }
+  };
+
   // Efecto para el contador regresivo del Rate Limit
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -31,34 +40,22 @@ export default function AuditControl({ projectId }: AuditControlProps) {
 
   // Efecto de interpolación de progreso súper suave y realista
   useEffect(() => {
-    if (status === 'idle') {
-      setProgress(0);
-      return;
-    }
+    if (status !== 'pending' && status !== 'running') return;
 
-    let intervalId: NodeJS.Timeout;
-
-    if (status === 'pending') {
-      intervalId = setInterval(() => {
-        setProgress((prev) => {
+    const intervalId = setInterval(() => {
+      setProgress((prev) => {
+        if (status === 'pending') {
           if (prev < 12) return prev + 1;
           if (prev < 19) return prev + 0.2;
-          return prev;
-        });
-      }, 200);
-    } else if (status === 'running') {
-      intervalId = setInterval(() => {
-        setProgress((prev) => {
+        } else if (status === 'running') {
           if (prev < 15) return prev + 2;
           if (prev < 45) return prev + (Math.random() > 0.4 ? 1 : 0.5);
           if (prev < 75) return prev + (Math.random() > 0.7 ? 0.5 : 0.2);
           if (prev < 92) return prev + (Math.random() > 0.9 ? 0.2 : 0.1);
-          return prev;
-        });
-      }, 300);
-    } else if (status === 'completed') {
-      setProgress(100);
-    }
+        }
+        return prev;
+      });
+    }, status === 'pending' ? 200 : 300);
 
     return () => clearInterval(intervalId);
   }, [status]);
@@ -79,9 +76,9 @@ export default function AuditControl({ projectId }: AuditControlProps) {
         const dbStatus = res.data?.status || 'pending';
         
         if (dbStatus === 'running' && status === 'pending') {
-          setStatus('running');
+          changeStatus('running');
         } else if (dbStatus === 'completed') {
-          setStatus('completed');
+          changeStatus('completed');
           clearInterval(pollInterval);
           
           setTimeout(() => {
@@ -89,7 +86,7 @@ export default function AuditControl({ projectId }: AuditControlProps) {
             router.refresh();
           }, 1000);
         } else if (dbStatus === 'failed') {
-          setStatus('failed');
+          changeStatus('failed');
           setErrorMessage(res.data?.errorMessage || "El rastreador falló al descargar la web. Verifica que el dominio sea accesible.");
           clearInterval(pollInterval);
         }
@@ -109,16 +106,20 @@ export default function AuditControl({ projectId }: AuditControlProps) {
         setShowWorkerWarning(true);
       }, 45000);
     } else {
-      setShowWorkerWarning(false);
+      if (showWorkerWarning) {
+        timeout = setTimeout(() => {
+          setShowWorkerWarning(false);
+        }, 0);
+      }
     }
-    return () => clearInterval(timeout);
-  }, [isAuditing, status, progress]);
+    return () => clearTimeout(timeout);
+  }, [isAuditing, status, progress, showWorkerWarning]);
 
   const handleStartAudit = () => {
     if (status === 'pending' || status === 'running') return;
     
     setErrorMessage(null);
-    setStatus('pending');
+    changeStatus('pending');
     setProgress(5);
 
     startTransition(async () => {
@@ -126,7 +127,7 @@ export default function AuditControl({ projectId }: AuditControlProps) {
         const res = await startAuditAction({ projectId });
         
         if (res.error) {
-          setStatus('failed');
+          changeStatus('failed');
           setErrorMessage(res.error);
           return;
         }
@@ -136,7 +137,7 @@ export default function AuditControl({ projectId }: AuditControlProps) {
           setAuditId(result.auditId);
           setCooldown(30);
         } else {
-          setStatus('failed');
+          changeStatus('failed');
           setErrorMessage(result?.message || "Error al solicitar inicio de auditoría.");
           
           const waitMatch = result?.message?.match(/\d+/);
@@ -144,12 +145,13 @@ export default function AuditControl({ projectId }: AuditControlProps) {
             setCooldown(parseInt(waitMatch[0]));
           }
         }
-      } catch (err) {
-        setStatus('failed');
+      } catch {
+        changeStatus('failed');
         setErrorMessage("Error de conexión al servidor.");
       }
     });
   };
+
 
   const isDisabled = isAuditing || isPending || cooldown > 0;
 

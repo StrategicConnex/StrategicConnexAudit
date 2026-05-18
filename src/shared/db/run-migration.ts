@@ -1,4 +1,3 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
@@ -33,8 +32,8 @@ async function run() {
       try {
         await pool.query(stmt);
         console.log('Success');
-      } catch (err: any) {
-        console.log('Failed:', err.message);
+      } catch (err: unknown) {
+        console.log('Failed:', err instanceof Error ? err.message : String(err));
         // Ignore if column already exists
       }
     }

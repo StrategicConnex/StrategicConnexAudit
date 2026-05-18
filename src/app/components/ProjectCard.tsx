@@ -1,9 +1,16 @@
 import React from 'react';
 import Link from 'next/link';
-import { Globe, ChevronRight, ShieldCheck, Zap } from 'lucide-react';
+import { Globe, ChevronRight, ShieldCheck } from 'lucide-react';
+import { projects } from '@/shared/db/schemas';
 
 interface ProjectCardProps {
-  project: any;
+  project: typeof projects.$inferSelect & {
+    latestAudit?: {
+      id: string;
+      status: string;
+    } | null;
+    integrations?: unknown[] | null;
+  };
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
@@ -87,7 +94,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         {/* Action bar footer */}
         <div className="pt-4 border-t border-white/[0.04] flex items-center justify-between relative z-10 mt-auto">
           <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
-            Sincronizado: {new Date(project.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+            Sincronizado: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Nunca'}
           </span>
           <span className="text-xs text-cyan-400 font-extrabold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
             Gestionar <ChevronRight size={14} strokeWidth={2.5} />

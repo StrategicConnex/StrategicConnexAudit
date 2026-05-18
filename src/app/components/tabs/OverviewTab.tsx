@@ -1,11 +1,20 @@
 import React from 'react';
-import { Globe, ChevronRight, Shield, Layers, ShieldAlert, Cpu, Terminal, Compass } from 'lucide-react';
+import { Globe, ChevronRight, Shield, Layers, ShieldAlert } from 'lucide-react';
 import { ProjectCard } from '../ProjectCard';
+import { projects } from '@/shared/db/schemas';
+
+export type ProjectWithNested = typeof projects.$inferSelect & {
+  latestAudit?: {
+    id: string;
+    status: string;
+  } | null;
+  integrations?: unknown[] | null;
+};
 
 interface OverviewTabProps {
-  initialProjects: any[];
-  dashboardData: any[];
-  setActiveTab: (tab: any) => void;
+  initialProjects: ProjectWithNested[];
+  dashboardData: ProjectWithNested[];
+  setActiveTab: (tab: string) => void;
 }
 
 export function OverviewTab({ initialProjects, dashboardData, setActiveTab }: OverviewTabProps) {

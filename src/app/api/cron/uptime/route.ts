@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/db';
 import { projects, uptimeLogs } from '@/shared/db/schemas';
-import { eq, isNull } from 'drizzle-orm';
-import * as https from 'https';
+import { isNull } from 'drizzle-orm';
 
 export const maxDuration = 60; // 1 minute timeout
 export const dynamic = 'force-dynamic';
@@ -61,8 +60,9 @@ export async function GET(request: Request) {
         
         statusCode = response.status;
         isUp = response.ok || (response.status >= 200 && response.status < 400);
-      } catch (err: any) {
-        error = err.message || 'Unknown error';
+      } catch (err) {
+        const fetchErr = err as { message?: string };
+        error = fetchErr.message || 'Unknown error';
       }
 
       const endTime = performance.now();
@@ -92,8 +92,9 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ success: true, results });
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as { message?: string };
     console.error('Uptime cron error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Cron error' }, { status: 500 });
   }
 }
