@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { dnsLookupExecutor } from "./dns-executors";
 import { emailSpfExecutor, emailDmarcExecutor } from "./email-executors";
+import {
+  networkAsnExecutor,
+  networkCdnExecutor,
+  networkWafExecutor,
+  networkReverseIpExecutor,
+  threatIpReputationExecutor
+} from "./network-executors";
 import { calculateRiskScore } from "../core/risk-engine";
 import { executeTool } from "../core/dispatcher";
 import { getExecutor } from "../core/executor-registry";
@@ -211,6 +218,44 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
       expect(result.success).toBe(false);
       // El dispatcher captura el error del EgressGuard y lo propaga en error
       expect(result.error).toBeDefined();
+    });
+  });
+
+  // ─────────────────────────────────────────────
+  describe("Phase 3 Network & Threat Executors", () => {
+    it("Debería consultar y enriquecer datos de ASN", async () => {
+      const result = await networkAsnExecutor.execute(dummyCtx, { ip: "8.8.8.8" });
+      expect(result.success).toBe(true);
+      expect(result.output.asn).toBeDefined();
+      expect(result.findings.length).toBeGreaterThan(0);
+    });
+
+    it("Debería detectar CDN pasivamente", async () => {
+      const result = await networkCdnExecutor.execute(dummyCtx, { domain: "google.com" });
+      expect(result.success).toBe(true);
+      expect(result.output.detected).toBeDefined();
+      expect(result.findings.length).toBeGreaterThan(0);
+    });
+
+    it("Debería detectar firmas de WAF pasivamente", async () => {
+      const result = await networkWafExecutor.execute(dummyCtx, { url: "https://example.com" });
+      expect(result.success).toBe(true);
+      expect(result.output.detected).toBeDefined();
+      expect(result.findings.length).toBeGreaterThan(0);
+    });
+
+    it("Debería realizar consulta reverse IP de dominios co-alojados", async () => {
+      const result = await networkReverseIpExecutor.execute(dummyCtx, { ip: "1.1.1.1" });
+      expect(result.success).toBe(true);
+      expect(result.output.domains).toBeDefined();
+      expect(result.findings.length).toBeGreaterThan(0);
+    });
+
+    it("Debería realizar análisis de reputación de IP", async () => {
+      const result = await threatIpReputationExecutor.execute(dummyCtx, { ip: "8.8.8.8" });
+      expect(result.success).toBe(true);
+      expect(result.output.reputationScore).toBeDefined();
+      expect(result.findings.length).toBeGreaterThan(0);
     });
   });
 });

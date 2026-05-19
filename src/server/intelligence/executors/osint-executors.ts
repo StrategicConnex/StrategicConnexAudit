@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
 import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import { whoisCircuit, CircuitOpenError } from "../core/circuit-breaker";
+import { geoipCache, IntelligenceCache } from "../core/cache";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 
@@ -20,12 +22,28 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, any> = {
 
     let rdapData: any = null;
     try {
-      const res = await safeFetch(`https://rdap.org/domain/${domain}`);
-      if (res.ok) {
-        rdapData = await res.json();
+      // Verificar caché antes de llamar a la API RDAP
+      const cacheKey = IntelligenceCache.buildKey("rdap", domain);
+      const cachedRdap = geoipCache.get<any>(cacheKey);
+
+      if (cachedRdap) {
+        rdapData = cachedRdap;
+        ctx.log(`RDAP recuperado desde caché para: ${domain}`);
+      } else {
+        rdapData = await whoisCircuit.execute(async () => {
+          const res = await safeFetch(`https://rdap.org/domain/${domain}`);
+          if (!res.ok) throw new Error(`RDAP HTTP ${res.status}`);
+          return res.json();
+        });
+        // Cachear resultado 30 minutos (datos WHOIS son muy estables)
+        geoipCache.set(cacheKey, rdapData, 30 * 60 * 1000);
       }
     } catch (e: any) {
-      ctx.log(`Error consumiendo API RDAP pública: ${e.message}`);
+      if (e instanceof CircuitOpenError) {
+        ctx.log(`Circuito WHOIS/RDAP abierto: ${e.message}. Usando estimación local.`);
+      } else {
+        ctx.log(`Error consumiendo API RDAP pública: ${e.message}`);
+      }
     }
 
     const findings: Finding[] = [];

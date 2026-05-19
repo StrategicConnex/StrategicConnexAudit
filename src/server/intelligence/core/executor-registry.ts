@@ -5,7 +5,12 @@ import {
   networkPingExecutor,
   networkReverseDnsExecutor,
   networkGeoIpExecutor,
-  networkTracerouteExecutor
+  networkTracerouteExecutor,
+  networkAsnExecutor,
+  networkCdnExecutor,
+  networkWafExecutor,
+  networkReverseIpExecutor,
+  threatIpReputationExecutor
 } from "../executors/network-executors";
 import {
   websiteHeadersExecutor,
@@ -27,6 +32,11 @@ export const executorRegistry: Record<string, ToolExecutor> = {
   "network.reverse_dns": networkReverseDnsExecutor,
   "network.geoip": networkGeoIpExecutor,
   "network.traceroute": networkTracerouteExecutor,
+  "network.asn": networkAsnExecutor,
+  "network.cdn": networkCdnExecutor,
+  "network.waf": networkWafExecutor,
+  "network.reverse_ip": networkReverseIpExecutor,
+  "threat.ip_reputation": threatIpReputationExecutor,
   "website.headers": websiteHeadersExecutor,
   "website.security_headers": websiteSecurityHeadersExecutor,
   "tls.scan": websiteTlsExecutor,
