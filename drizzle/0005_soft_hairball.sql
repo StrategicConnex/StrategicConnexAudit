@@ -1,0 +1,1 @@
+ALTER TABLE "intelligence_tool_runs" ALTER COLUMN "investigation_id" DROP NOT NULL;

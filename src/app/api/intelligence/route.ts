@@ -16,7 +16,7 @@ import {
 import { eq, and, desc } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { checkAiRateLimit } from "@/shared/lib/ratelimit";
-import { assertPublicHostname } from "@/shared/utils/egress-guard";
+import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 
 export const dynamic = "force-dynamic";
 
