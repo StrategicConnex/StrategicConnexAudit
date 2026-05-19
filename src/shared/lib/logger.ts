@@ -1,4 +1,4 @@
-import { db } from "@/shared/db";
+import { directDb } from "@/shared/db";
 import { auditLogs } from "@/shared/db/schemas";
 import { headers } from "next/headers";
 
@@ -50,9 +50,9 @@ export const logger = {
 
         const errObj = options.error instanceof Error ? options.error : null;
 
-        // Usamos una conexin normal (fuera de withRLS) para asegurar que el log se guarde
-        // incluso si la operacin principal fall por RLS.
-        await db.insert(auditLogs).values({
+        // Usamos una conexión directa (bypasseando RLS y a través de un pool dedicado directDb)
+        // para asegurar que el log se guarde incluso si el pool principal falló o sufrió timeout.
+        await directDb.insert(auditLogs).values({
           userId: options.userId,
           projectId: options.projectId,
           action: `${level.toUpperCase()}: ${options.action}`,
