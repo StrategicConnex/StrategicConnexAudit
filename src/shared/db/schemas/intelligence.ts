@@ -48,7 +48,7 @@ export const intelligenceInvestigations = pgTable("intelligence_investigations",
 // 2. Ejecuciones de Herramientas de Inteligencia (Tool Runs)
 export const intelligenceToolRuns = pgTable("intelligence_tool_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
-  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "cascade" }).notNull(),
+  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "cascade" }),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
   toolId: text("tool_id").notNull(),
   category: text("category").notNull(),
