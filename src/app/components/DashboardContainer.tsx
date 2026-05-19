@@ -134,7 +134,11 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
             )}
 
             {activeTab === 'settings' && (
-              <SettingsTab />
+              <SettingsTab 
+                initialProjects={initialProjects}
+                selectedProjectId={selectedProjectId}
+                setSelectedProjectId={setSelectedProjectId}
+              />
             )}
 
             {activeTab === 'intelligence' && (

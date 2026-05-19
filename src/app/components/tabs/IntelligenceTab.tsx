@@ -5,7 +5,8 @@ import {
   ShieldCheck, AlertCircle, Terminal, ArrowRight, Loader2, 
   ShieldAlert, Server, History, Sparkles, CheckCircle2, 
   Lock, Unlock, Key, Cpu, Copy, Check, Info, Globe, AlertTriangle,
-  Mail, Shield, X, Activity, MapPin, Wifi, Clock, Layers, Compass
+  Mail, Shield, X, Activity, MapPin, Wifi, Clock, Layers, Compass,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 
 interface Project {
@@ -161,9 +162,24 @@ export function IntelligenceTab({
   const [copilotOutput, setCopilotOutput] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<boolean>(false);
   const [copiedBlockIdx, setCopiedBlockIdx] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [copilotViewTab, setCopilotViewTab] = useState<'formatted' | 'html'>('formatted');
   const [copiedHtml, setCopiedHtml] = useState<boolean>(false);
+
+  // Advanced interaction states
+  const [expandedAccordions, setExpandedAccordions] = useState<Record<string, boolean>>({});
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [scanSpeed, setScanSpeed] = useState('0.0 KB/s');
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [copilotStep, setCopilotStep] = useState(0);
+
+  const toggleAccordion = (id: string) => {
+    setExpandedAccordions(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   const consoleEndRef = useRef<HTMLDivElement>(null);
 
@@ -501,18 +517,31 @@ export function IntelligenceTab({
     setIsScanning(true);
     setCopilotOutput(null);
     setErrorText(null);
+    setElapsedTime(0);
+    setScanSpeed('0.0 KB/s');
+    setProgressPercent(0);
 
     let idx = 0;
-    const interval = setInterval(() => {
+    const startTime = Date.now();
+    
+    const timeTimer = setInterval(() => {
+      setElapsedTime(Math.round((Date.now() - startTime) / 1000));
+      setScanSpeed((Math.random() * 15 + 22).toFixed(1) + ' KB/s');
+    }, 500);
+
+    const logTimer = setInterval(() => {
       if (idx < steps.length) {
         setScanProgress(prev => [...prev, steps[idx]]);
         setScanStatusMessage(steps[idx].replace(/\[\d+:\d+\] /, ''));
+        setProgressPercent(Math.round(((idx + 1) / steps.length) * 100));
         idx++;
       } else {
-        clearInterval(interval);
+        clearInterval(logTimer);
+        clearInterval(timeTimer);
+        setProgressPercent(100);
         onFinish();
       }
-    }, 900);
+    }, 800);
   };
 
   // Launch scan handler
@@ -560,6 +589,16 @@ export function IntelligenceTab({
     if (!selectedDetails?.investigation.id) return;
     setIsGeneratingCopilot(true);
     setErrorText(null);
+    setCopilotStep(1);
+    
+    const stepInterval = setInterval(() => {
+      setCopilotStep(prev => {
+        if (prev < 5) return prev + 1;
+        clearInterval(stepInterval);
+        return prev;
+      });
+    }, 1200);
+
     try {
       const res = await fetch('/api/intelligence/copilot', {
         method: 'POST',
@@ -570,6 +609,13 @@ export function IntelligenceTab({
       });
 
       const data = await res.json();
+      
+      // Let the steps animation complete naturally for high-fidelity feeling
+      await new Promise(resolve => setTimeout(resolve, 3600));
+      
+      clearInterval(stepInterval);
+      setCopilotStep(5);
+
       if (data.success) {
         setCopilotOutput(data.remediationPlan);
       } else {
@@ -578,15 +624,21 @@ export function IntelligenceTab({
     } catch (err: any) {
       setErrorText(`Error de comunicación con el motor de IA: ${err.message || err}`);
     } finally {
+      clearInterval(stepInterval);
       setIsGeneratingCopilot(false);
     }
   };
 
   // Copy to clipboard helper
-  const handleCopyToClipboard = (text: string) => {
+  const handleCopyToClipboard = (text: string, id?: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedIndex(true);
-    setTimeout(() => setCopiedIndex(false), 2000);
+    if (id) {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } else {
+      setCopiedIndex(true);
+      setTimeout(() => setCopiedIndex(false), 2000);
+    }
   };
 
   const getScoreRating = (score: number) => {
@@ -614,6 +666,100 @@ export function IntelligenceTab({
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 relative z-10 font-sans text-zinc-100 min-h-[calc(100vh-140px)]">
+      <style>{`
+        @keyframes scan {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.7; }
+        }
+        @keyframes dash {
+          to {
+            stroke-dashoffset: -40;
+          }
+        }
+        @keyframes dash-vertical {
+          to {
+            stroke-dashoffset: -40;
+          }
+        }
+        @keyframes node-pulse-emerald {
+          0%, 100% { r: 5px; opacity: 0.7; filter: drop-shadow(0 0 2px rgba(52, 211, 153, 0.6)); }
+          50% { r: 8px; opacity: 1; filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.9)); }
+        }
+        @keyframes node-pulse-cyan {
+          0%, 100% { r: 5px; opacity: 0.7; filter: drop-shadow(0 0 2px rgba(6, 182, 212, 0.6)); }
+          50% { r: 8px; opacity: 1; filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.9)); }
+        }
+        @keyframes line-flicker {
+          0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% { opacity: 0.99; filter: hue-rotate(0deg) saturate(1); }
+          20%, 21.999%, 63%, 63.999%, 65%, 69.999% { opacity: 0.4; filter: hue-rotate(5deg) saturate(1.2); }
+        }
+        @keyframes neural-node-glow {
+          0%, 100% { transform: scale(1); opacity: 0.4; filter: drop-shadow(0 0 1px rgba(6, 182, 212, 0.3)); }
+          50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.8)); }
+        }
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-scan {
+          animation: scan 4.5s linear infinite;
+        }
+        .animate-blink {
+          animation: blink 1s step-end infinite;
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 3s ease-in-out infinite;
+        }
+        .animate-dash-flow {
+          animation: dash 1.5s linear infinite;
+        }
+        .animate-dash-vertical-flow {
+          animation: dash-vertical 1.5s linear infinite;
+        }
+        .animate-node-emerald {
+          animation: node-pulse-emerald 2.5s ease-in-out infinite;
+        }
+        .animate-node-cyan {
+          animation: node-pulse-cyan 2.5s ease-in-out infinite;
+        }
+        .animate-terminal-flicker {
+          animation: line-flicker 6s infinite;
+        }
+        .animate-neural-glow {
+          animation: neural-node-glow 3s ease-in-out infinite;
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .phosphor-text-glow {
+          text-shadow: 0 0 4px rgba(52,211,153,0.5), 0 0 10px rgba(52,211,153,0.2);
+        }
+        .phosphor-border-glow {
+          box-shadow: 0 0 15px rgba(16, 185, 129, 0.08), inset 0 0 10px rgba(16, 185, 129, 0.03);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+          height: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.3);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(16, 185, 129, 0.3);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(16, 185, 129, 0.5);
+        }
+      `}</style>
       
       {/* ─── LEFT PANEL: List of Previous Investigations ─────────────────── */}
       <div className="w-full lg:w-72 shrink-0 flex flex-col gap-6">
@@ -766,37 +912,91 @@ export function IntelligenceTab({
 
         {/* ─── CASE A: Escaneo activo (Retro Console Timeline Terminal) ────── */}
         {isScanning && (
-          <div className="backdrop-blur-xl border border-white/[0.08] bg-[#030305]/95 rounded-2xl overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.8)] relative animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="backdrop-blur-3xl border border-emerald-500/20 bg-[#020204]/97 rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.95),0_0_40px_rgba(16,185,129,0.06)] relative animate-in fade-in slide-in-from-bottom-6 duration-700 animate-terminal-flicker phosphor-border-glow">
+            {/* Retro scanlines grid overlay */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,18,18,0)_50%,rgba(0,0,0,0.3)_50%),linear-gradient(90deg,rgba(16,185,129,0.03),rgba(0,0,0,0),rgba(16,185,129,0.03))] bg-[size:100%_4px,6px_100%] pointer-events-none z-10 opacity-80" />
+            
+            {/* Scan vertical sweep effect */}
+            <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/0 via-emerald-500/[0.08] to-emerald-500/0 h-[220px] w-full pointer-events-none animate-scan z-20" />
+            
             {/* Terminal Top Window Bar */}
-            <div className="h-10 px-5 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between shrink-0">
+            <div className="h-14 px-8 bg-black/40 border-b border-emerald-500/10 flex items-center justify-between shrink-0 relative z-30">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                <span className="w-3 h-3 rounded-full bg-rose-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                <span className="w-3 h-3 rounded-full bg-amber-500/80 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                <span className="w-3 h-3 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
               </div>
-              <span className="text-[10px] text-zinc-500 font-mono font-bold tracking-widest flex items-center gap-1.5 uppercase">
-                <Terminal className="w-3.5 h-3.5 text-cyan-500" /> terminal://intelligence-engine.v2
+              <span className="text-[10px] text-emerald-500/60 font-mono font-bold tracking-widest flex items-center gap-2.5 uppercase phosphor-text-glow">
+                <Terminal className="w-3.5 h-3.5 text-emerald-400 animate-pulse" /> terminal://intelligence-engine.v3.bin
               </span>
-              <div className="w-8" />
+              <div className="flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-500/20 px-3 py-1 rounded-md font-mono text-[9px] text-emerald-400 font-extrabold shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                <Activity className="w-2.5 h-2.5 animate-pulse text-emerald-400" /> LIVE_SCAN
+              </div>
+            </div>
+
+            {/* Terminal Top Status Metrics Panel */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-8 py-5 bg-[#030306]/90 border-b border-emerald-500/10 relative z-30 font-mono text-[9px] text-zinc-500">
+              <div className="space-y-1 border-r border-emerald-500/5 pr-4">
+                <span className="block text-[8px] font-bold text-zinc-600 uppercase tracking-widest">MÓDULO DE INTELIGENCIA</span>
+                <span className="font-extrabold text-zinc-300 uppercase truncate block">
+                  {progressPercent < 30 ? 'INICIALIZACIÓN' : progressPercent < 60 ? 'MÉTRICAS DNS / WHOIS' : progressPercent < 90 ? 'CUBIERTA SSL/TLS' : 'COMPILACIÓN FINAL'}
+                </span>
+              </div>
+              <div className="space-y-1 border-r border-emerald-500/5 pr-4">
+                <span className="block text-[8px] font-bold text-zinc-600 uppercase tracking-widest">TASA DE TRANSFERENCIA</span>
+                <span className="font-extrabold text-emerald-400 block phosphor-text-glow">{scanSpeed}</span>
+              </div>
+              <div className="space-y-1 border-r border-emerald-500/5 pr-4">
+                <span className="block text-[8px] font-bold text-zinc-600 uppercase tracking-widest">TIEMPO TRANSCURRIDO</span>
+                <span className="font-extrabold text-zinc-300 block">{elapsedTime}s</span>
+              </div>
+              <div className="space-y-1">
+                <span className="block text-[8px] font-bold text-zinc-600 uppercase tracking-widest">PROGRESO GENERAL</span>
+                <span className="font-extrabold text-emerald-400/90 block phosphor-text-glow">{progressPercent}%</span>
+              </div>
             </div>
 
             {/* Retro Phosphor Screen Body */}
-            <div className="p-8 font-mono text-[11px] leading-relaxed text-cyan-400 bg-[#030305] max-h-[350px] overflow-y-auto flex flex-col gap-2 border-b border-white/[0.04]">
+            <div className="p-8 font-mono text-[11.5px] leading-relaxed text-emerald-400/90 bg-[#010103] max-h-[350px] overflow-y-auto flex flex-col gap-3.5 border-b border-emerald-500/10 relative z-30 custom-scrollbar scroll-smooth">
               {scanProgress.map((line, idx) => (
-                <div key={idx} className="animate-in fade-in duration-300">
-                  {line}
+                <div key={idx} className="animate-in fade-in duration-200 font-semibold font-mono tracking-wide phosphor-text-glow flex items-start gap-1">
+                  <span className="text-emerald-500/50 select-none">&gt;</span>
+                  <span className="flex-1">{line}</span>
+                  {idx === scanProgress.length - 1 && (
+                    <span className="inline-block w-2.5 h-4 bg-emerald-400 animate-blink ml-1 text-center font-bold shadow-[0_0_6px_#10b981] select-none">▋</span>
+                  )}
                 </div>
               ))}
+              {scanProgress.length === 0 && (
+                <div className="text-emerald-500/30 animate-pulse-slow font-mono font-bold tracking-widest flex items-center gap-2">
+                  <span>Conectando a servicios de escaneo remoto...</span>
+                  <span className="inline-block w-2.5 h-4 bg-emerald-400 animate-blink shadow-[0_0_6px_#10b981] select-none">▋</span>
+                </div>
+              )}
               <div ref={consoleEndRef} />
             </div>
 
-            {/* Terminal Live Bar Indicator */}
-            <div className="p-4 bg-white/[0.005] flex items-center justify-between px-8 text-[10px] text-zinc-500 font-bold uppercase tracking-widest shrink-0">
-              <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping" />
-                {scanStatusMessage || 'Inicializando motor...'}
-              </span>
-              <span>100% SEGURO</span>
+            {/* Terminal Live Bar Indicator with Visual Progress Bar */}
+            <div className="p-6 bg-black/40 flex flex-col md:flex-row items-center justify-between gap-4 px-8 relative z-30 shrink-0">
+              <div className="flex items-center justify-between w-full md:w-auto text-[10px] text-emerald-400/80 font-bold uppercase tracking-widest phosphor-text-glow">
+                <span className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                  {scanStatusMessage || 'Inicializando motor...'}
+                </span>
+              </div>
+              
+              {/* Green Retro Progress Bar */}
+              <div className="w-full md:w-72 flex items-center gap-4">
+                <div className="flex-1 h-3 bg-black border border-emerald-500/20 rounded-full overflow-hidden p-0.5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <span className="font-mono text-[10px] text-emerald-400 font-extrabold min-w-[32px] text-right phosphor-text-glow">
+                  {progressPercent}%
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -921,92 +1121,293 @@ export function IntelligenceTab({
                       </div>
 
                       <div className="space-y-4">
-                        {/* SPF Card */}
-                        <div className="bg-[#07070a]/40 border border-white/[0.04] rounded-xl p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest">
-                              SPF (Sender Policy Framework)
-                            </span>
-                            {meta?.spfParsed ? (
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
-                                meta.spfParsed.isWeak 
-                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
-                                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              }`}>
-                                {meta.spfParsed.isWeak ? 'Vulnerable' : 'Seguro'}
+                        {/* SPF Accordion Card */}
+                        <div className="bg-zinc-950/[0.4] border border-white/[0.08] backdrop-blur-xl hover:border-white/[0.15] rounded-xl overflow-hidden transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+                          <button 
+                            type="button"
+                            onClick={() => toggleAccordion('spf')}
+                            className="w-full flex items-center justify-between p-4 cursor-pointer text-left focus:outline-none hover:bg-white/[0.02] transition-colors"
+                          >
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">
+                                SPF (Sender Policy Framework)
                               </span>
-                            ) : (
-                              <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded font-bold">
-                                No Configurado
-                              </span>
-                            )}
-                          </div>
-                          {meta?.spfParsed ? (
-                            <div className="space-y-2">
-                              <code className="block text-[10px] text-zinc-300 bg-white/[0.02] border border-white/[0.05] p-2 rounded font-mono break-all leading-normal">
-                                {meta.spfParsed.record}
-                              </code>
-                              <div className="flex items-center justify-between text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
-                                <span>Consultas DNS: {meta.spfParsed.dnsLookups} / 10</span>
-                                <span>Directiva: {meta.spfParsed.isWeak ? 'Débil (SoftFail/Neutral)' : 'Fuerte (HardFail)'}</span>
-                              </div>
-                              {meta.spfParsed.weakReason && (
-                                <p className="text-[9px] text-amber-400/90 bg-amber-500/5 border border-amber-500/10 p-2 rounded leading-relaxed">
-                                  ⚠️ {meta.spfParsed.weakReason}
-                                </p>
-                              )}
+                              <span className="text-[9px] text-zinc-500 font-medium">Verificación del registro TXT en DNS</span>
                             </div>
-                          ) : (
-                            <p className="text-[10px] text-zinc-500 leading-relaxed">
-                              El dominio no tiene un registro SPF en su zona DNS. Esto permite que cualquier atacante falsifique la identidad del remitente de tus correos institucionales.
-                            </p>
-                          )}
-                        </div>
-
-                        {/* DMARC Card */}
-                        <div className="bg-[#07070a]/40 border border-white/[0.04] rounded-xl p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest">
-                              DMARC Policy Enforcement
-                            </span>
-                            {meta?.dmarcParsed && meta.dmarcParsed.policy !== 'invalid' ? (
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
-                                meta.dmarcParsed.policy === 'reject' 
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                  : meta.dmarcParsed.policy === 'quarantine'
-                                  ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
-                                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              }`}>
-                                Política: {meta.dmarcParsed.policy.toUpperCase()}
-                              </span>
-                            ) : (
-                              <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded font-bold">
-                                Inactivo / Inválido
-                              </span>
-                            )}
-                          </div>
-                          {meta?.dmarcParsed && meta.dmarcParsed.policy !== 'invalid' ? (
-                            <div className="space-y-2">
-                              <code className="block text-[10px] text-zinc-300 bg-white/[0.02] border border-white/[0.05] p-2 rounded font-mono break-all leading-normal">
-                                {meta.dmarcParsed.record}
-                              </code>
-                              {meta.dmarcParsed.rua && meta.dmarcParsed.rua.length > 0 && (
-                                <div className="text-[9px] text-zinc-500 flex flex-col gap-1">
-                                  <span className="font-bold uppercase tracking-wider">Destino de Informes RUA:</span>
-                                  <span className="text-zinc-400 font-mono text-[9px] break-all">{meta.dmarcParsed.rua.join(', ')}</span>
+                            <div className="flex items-center gap-3">
+                              {meta?.spfParsed ? (
+                                <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded ${
+                                  meta.spfParsed.isWeak 
+                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
+                                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                }`}>
+                                  {meta.spfParsed.isWeak ? 'Vulnerable' : 'Seguro'}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-0.5 rounded font-bold">
+                                  No Configurado
+                                </span>
+                              )}
+                              <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform duration-300 ${expandedAccordions['spf'] ? 'rotate-180 text-cyan-400' : ''}`} />
+                            </div>
+                          </button>
+                          
+                          {/* Smooth transition container */}
+                          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedAccordions['spf'] ? 'max-h-[600px] border-t border-white/[0.08]' : 'max-h-0'}`}>
+                            <div className="p-5 space-y-4 text-xs bg-zinc-950/20">
+                              {meta?.spfParsed ? (
+                                <div className="space-y-4">
+                                  <div className="space-y-1.5">
+                                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Registro SPF Detectado</span>
+                                    <code className="block text-[10px] text-zinc-300 bg-white/[0.01] border border-white/[0.06] p-3 rounded-lg font-mono break-all leading-normal select-all">
+                                      {meta.spfParsed.record}
+                                    </code>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
+                                    <span>Consultas DNS: <span className="text-zinc-300 font-mono">{meta.spfParsed.dnsLookups} / 10</span></span>
+                                    <span>Directiva: <span className={meta.spfParsed.isWeak ? 'text-amber-400' : 'text-emerald-400'}>{meta.spfParsed.isWeak ? 'Débil (SoftFail/Neutral)' : 'Fuerte (HardFail)'}</span></span>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                    <div className="bg-white/[0.01] border border-white/[0.04] p-4 rounded-xl space-y-2">
+                                      <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest block">Diagnóstico de Seguridad</span>
+                                      <p className="text-zinc-300 leading-relaxed text-[11px]">
+                                        {meta.spfParsed.isWeak 
+                                          ? 'El registro utiliza una directiva de atenuación blanda (como ~all o ?all) o supera el límite máximo de 10 consultas DNS autorizadas, lo que reduce la protección contra atacantes.' 
+                                          : 'Filtro SPF robusto establecido. El dominio deniega de forma estricta (-all) todo correo enviado desde servidores SMTP no declarados en el registro.'}
+                                      </p>
+                                    </div>
+                                    <div className={`${meta.spfParsed.isWeak ? 'bg-rose-500/[0.02] border-rose-500/[0.08]' : 'bg-emerald-500/[0.02] border-emerald-500/[0.08]'} border p-4 rounded-xl space-y-2`}>
+                                      <span className={`text-[8px] font-bold ${meta.spfParsed.isWeak ? 'text-rose-400' : 'text-emerald-400'} uppercase tracking-widest block`}>Impacto del Riesgo</span>
+                                      <p className="text-zinc-300 leading-relaxed text-[11px]">
+                                        {meta.spfParsed.isWeak 
+                                          ? 'Un atacante puede enviar correos suplantando tu dominio institucional, burlando parcialmente la autenticación de servidores como Gmail o Microsoft 365.'
+                                          : 'Riesgo minimizado. Los proveedores de correo de destino rechazarán automáticamente los correos fraudulentos en tránsito que intenten suplantar tu identidad.'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {meta.spfParsed.isWeak && meta.spfParsed.weakReason && (
+                                    <div className="text-[10px] text-amber-400 bg-amber-500/[0.03] border border-amber-500/10 p-3 rounded-xl leading-relaxed flex items-start gap-2.5">
+                                      <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5 animate-pulse" />
+                                      <span>{meta.spfParsed.weakReason}</span>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="space-y-2 pt-3.5 border-t border-white/[0.06]">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[8px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+                                        Código de Remediación DNS
+                                      </span>
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleCopyToClipboard("v=spf1 include:_spf.google.com -all", "spf_remediation")}
+                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all flex items-center gap-1.5 cursor-pointer"
+                                      >
+                                        {copiedId === 'spf_remediation' ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-emerald-400 animate-scale-up" />
+                                            <span>Copiado</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3 h-3" />
+                                            <span>Copiar</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                    <code className="block text-[10px] text-emerald-400 phosphor-text-glow bg-emerald-950/[0.15] border border-emerald-900/30 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
+                                      v=spf1 include:_spf.google.com -all
+                                    </code>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  <p className="text-zinc-300 leading-relaxed text-[11px]">
+                                    El dominio no tiene un registro SPF configurado en su zona DNS. Esto permite que cualquier atacante falsifique la identidad del remitente de tus correos institucionales de manera directa.
+                                  </p>
+                                  <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[8px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+                                        Crear Registro TXT Recomendado
+                                      </span>
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleCopyToClipboard("v=spf1 include:_spf.google.com -all", "spf_unconfigured_remediation")}
+                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all flex items-center gap-1.5 cursor-pointer"
+                                      >
+                                        {copiedId === 'spf_unconfigured_remediation' ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-emerald-400 animate-scale-up" />
+                                            <span>Copiado</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3 h-3" />
+                                            <span>Copiar</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                    <code className="block text-[10px] text-emerald-400 phosphor-text-glow bg-emerald-950/[0.15] border border-emerald-900/30 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
+                                      v=spf1 include:_spf.google.com -all
+                                    </code>
+                                  </div>
                                 </div>
                               )}
-                              {meta.dmarcParsed.policy === 'none' && (
-                                <p className="text-[9px] text-amber-400/90 bg-amber-500/5 border border-amber-500/10 p-2 rounded leading-relaxed">
-                                  ⚠️ La política 'p=none' solo monitorea pero no bloquea ni rechaza correos fraudulentos. Se recomienda migrar a 'quarantine' o 'reject'.
-                                </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* DMARC Accordion Card */}
+                        <div className="bg-zinc-950/[0.4] border border-white/[0.08] backdrop-blur-xl hover:border-white/[0.15] rounded-xl overflow-hidden transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+                          <button 
+                            type="button"
+                            onClick={() => toggleAccordion('dmarc')}
+                            className="w-full flex items-center justify-between p-4 cursor-pointer text-left focus:outline-none hover:bg-white/[0.02] transition-colors"
+                          >
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">
+                                DMARC Policy Enforcement
+                              </span>
+                              <span className="text-[9px] text-zinc-500 font-medium">Instrucción de alineación SPF/DKIM</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {meta?.dmarcParsed && meta.dmarcParsed.policy !== 'invalid' ? (
+                                <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded ${
+                                  meta.dmarcParsed.policy === 'reject' 
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                    : meta.dmarcParsed.policy === 'quarantine'
+                                    ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                }`}>
+                                  Política: {meta.dmarcParsed.policy.toUpperCase()}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-0.5 rounded font-bold">
+                                  Inactivo / Inválido
+                                </span>
+                              )}
+                              <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform duration-300 ${expandedAccordions['dmarc'] ? 'rotate-180 text-cyan-400' : ''}`} />
+                            </div>
+                          </button>
+                          
+                          {/* Smooth transition container */}
+                          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedAccordions['dmarc'] ? 'max-h-[600px] border-t border-white/[0.08]' : 'max-h-0'}`}>
+                            <div className="p-5 space-y-4 text-xs bg-zinc-950/20">
+                              {meta?.dmarcParsed && meta.dmarcParsed.policy !== 'invalid' ? (
+                                <div className="space-y-4">
+                                  <div className="space-y-1.5">
+                                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Registro DMARC Detectado</span>
+                                    <code className="block text-[10px] text-zinc-300 bg-white/[0.01] border border-white/[0.06] p-3 rounded-lg font-mono break-all leading-normal select-all">
+                                      {meta.dmarcParsed.record}
+                                    </code>
+                                  </div>
+                                  
+                                  {meta.dmarcParsed.rua && meta.dmarcParsed.rua.length > 0 && (
+                                    <div className="text-[9.5px] text-zinc-400 flex flex-col gap-1.5 bg-white/[0.01] border border-white/[0.05] p-3 rounded-xl">
+                                      <span className="font-bold uppercase tracking-wider text-zinc-500 text-[8px]">Destino de Informes RUA (Agregados):</span>
+                                      <span className="text-zinc-300 font-mono text-[9.5px] break-all">{meta.dmarcParsed.rua.join(', ')}</span>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                    <div className="bg-white/[0.01] border border-white/[0.04] p-4 rounded-xl space-y-2">
+                                      <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest block">Diagnóstico de la Política</span>
+                                      <p className="text-zinc-300 leading-relaxed text-[11px]">
+                                        {meta.dmarcParsed.policy === 'none' 
+                                          ? 'La política "p=none" (Solo monitoreo) permite que los correos que fallen SPF/DKIM sigan entregándose en la bandeja de entrada del receptor. Es el nivel básico para auditar flujos.'
+                                          : meta.dmarcParsed.policy === 'quarantine'
+                                          ? 'La política "p=quarantine" solicita que los correos que fallen autenticación se envíen a la carpeta de correo no deseado (Spam).'
+                                          : 'Fidelidad extrema. La política "p=reject" rechaza completamente cualquier correo fraudulento, impidiendo su entrega por completo.'}
+                                      </p>
+                                    </div>
+                                    <div className={`${meta.dmarcParsed.policy === 'none' ? 'bg-rose-500/[0.02] border-rose-500/[0.08]' : 'bg-emerald-500/[0.02] border-emerald-500/[0.08]'} border p-4 rounded-xl space-y-2`}>
+                                      <span className={`text-[8px] font-bold ${meta.dmarcParsed.policy === 'none' ? 'text-rose-400' : 'text-emerald-400'} uppercase tracking-widest block`}>Impacto de Riesgo de Seguridad</span>
+                                      <p className="text-zinc-300 leading-relaxed text-[11px]">
+                                        {meta.dmarcParsed.policy === 'none' 
+                                          ? 'Ataque de suplantación viable. Un hacker puede seguir enviar phishing directo que aparente venir de tus directivos sin ser bloqueado.'
+                                          : 'Protección perimetral en curso. Los correos falsos se descartan o aíslan de las bandejas normales, limitando la tasa de éxito de campañas de phishing.'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {meta.dmarcParsed.policy === 'none' && (
+                                    <div className="text-[10px] text-amber-400 bg-amber-500/[0.03] border border-amber-500/10 p-3 rounded-xl leading-relaxed flex items-start gap-2.5">
+                                      <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5 animate-pulse" />
+                                      <span>La política \'p=none\' solo monitorea pero no bloquea ni rechaza correos fraudulentos. Se recomienda migrar a \'quarantine\' o \'reject\' gradualmente.</span>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="space-y-2 pt-3.5 border-t border-white/[0.06]">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[8px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+                                        Código de Remediación DMARC (Políticas de Rechazo)
+                                      </span>
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleCopyToClipboard(`v=DMARC1; p=reject; pct=100; rua=mailto:dmarc-reports@${selectedDetails.investigation.target}`, "dmarc_remediation")}
+                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all flex items-center gap-1.5 cursor-pointer"
+                                      >
+                                        {copiedId === 'dmarc_remediation' ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-emerald-400 animate-scale-up" />
+                                            <span>Copiado</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3 h-3" />
+                                            <span>Copiar</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                    <code className="block text-[10px] text-emerald-400 phosphor-text-glow bg-emerald-950/[0.15] border border-emerald-900/30 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
+                                      v=DMARC1; p=reject; pct=100; rua=mailto:dmarc-reports@{selectedDetails.investigation.target}
+                                    </code>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  <p className="text-zinc-300 leading-relaxed text-[11px]">
+                                    No se detectó una política DMARC válida en el host. DMARC es el escudo definitivo que ordena a los servidores del mundo cómo manejar correos fraudulentos que pretendan ser tuyos.
+                                  </p>
+                                  <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[8px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+                                        Crear Registro TXT Recomendado
+                                      </span>
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleCopyToClipboard(`v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc-reports@${selectedDetails.investigation.target}`, "dmarc_unconfigured_remediation")}
+                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all flex items-center gap-1.5 cursor-pointer"
+                                      >
+                                        {copiedId === 'dmarc_unconfigured_remediation' ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-emerald-400 animate-scale-up" />
+                                            <span>Copiado</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3 h-3" />
+                                            <span>Copiar</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                    <code className="block text-[10px] text-emerald-400 phosphor-text-glow bg-emerald-950/[0.15] border border-emerald-900/30 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
+                                      v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc-reports@{selectedDetails.investigation.target}
+                                    </code>
+                                  </div>
+                                </div>
                               )}
                             </div>
-                          ) : (
-                            <p className="text-[10px] text-zinc-500 leading-relaxed">
-                              No se detectó una política DMARC válida en el host. DMARC es el escudo definitivo que ordena a los servidores del mundo cómo manejar correos fraudulentos que pretendan ser tuyos.
-                            </p>
-                          )}
+                          </div>
                         </div>
 
                         {/* DKIM & BIMI Mini-grid */}
@@ -1095,52 +1496,123 @@ export function IntelligenceTab({
                         </div>
 
                         {/* Web Security Headers Compliance Checklist */}
-                        <div className="bg-[#07070a]/40 border border-white/[0.04] rounded-xl p-4 space-y-4">
+                        <div className="bg-zinc-950/[0.4] border border-white/[0.08] backdrop-blur-xl rounded-xl p-4 space-y-4">
                           <span className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest block">
                             Cumplimiento de Cabeceras de Seguridad
                           </span>
 
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             {[
-                              { 
+                              {
+                                id: 'csp',
                                 name: 'Content-Security-Policy (CSP)', 
                                 status: selectedDetails.findings.every(f => !f.title.includes('Content-Security-Policy')),
-                                description: 'Mitiga inyecciones XSS y secuestro de datos definiendo orígenes autorizados.' 
+                                description: 'Mitiga inyecciones XSS y secuestro de datos definiendo orígenes autorizados.',
+                                diagnostic: 'CSP restringe los recursos (scripts, estilos, fuentes) que el navegador tiene permitido cargar. Si un atacante inyecta un script malicioso (XSS), CSP impide su ejecución si no está explícitamente autorizado en la directiva.',
+                                risk: 'Crítico. Sin CSP, tu sitio es totalmente vulnerable al secuestro de tokens de sesión, lectura de cookies desprotegidas y alteración visual mediante ataques Cross-Site Scripting.',
+                                code: `# Directiva Nginx sugerida para bloques de servidor:\nadd_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:;" always;`
                               },
                               { 
+                                id: 'hsts',
                                 name: 'Strict-Transport-Security (HSTS)', 
                                 status: selectedDetails.findings.every(f => !f.title.includes('Strict-Transport-Security') && !f.description.includes('HSTS')),
-                                description: 'Fuerza conexiones cifradas HTTPS de forma estricta en el navegador.' 
+                                description: 'Fuerza conexiones cifradas HTTPS de forma estricta en el navegador.',
+                                diagnostic: 'HSTS le ordena al navegador web comunicarse únicamente mediante HTTPS seguro durante la vigencia máxima declarada, previniendo degradaciones de seguridad accidentales.',
+                                risk: 'Alto (SSL Stripping). Previene interceptaciones Man-in-the-Middle donde un atacante degrada la conexión de un cliente a HTTP para robar su sesión en tránsito.',
+                                code: `# En Nginx (asegúrate de que solo esté en el servidor HTTPS):\nadd_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;`
                               },
                               { 
+                                id: 'xframe',
                                 name: 'X-Frame-Options (Clickjacking Protection)', 
                                 status: selectedDetails.findings.every(f => !f.title.includes('X-Frame-Options') && !f.title.includes('Clickjacking')),
-                                description: 'Evita que tu sitio web sea embebido de forma fraudulenta en iframes externos.' 
+                                description: 'Evita que tu sitio web sea embebido de forma fraudulenta en iframes externos.',
+                                diagnostic: 'X-Frame-Options o las directivas CSP prohíben que otros sitios embeban tus páginas en iframes, previniendo que realicen trucos visuales interactivos.',
+                                risk: 'Medio (Clickjacking). Un atacante puede superponer tus botones importantes (como "Pagar" o "Autorizar") dentro de un iframe invisible para hacer que tus usuarios los pulsen sin saberlo.',
+                                code: `# En Nginx para evitar incrustaciones de forma global:\nadd_header X-Frame-Options "DENY" always;`
                               },
                               { 
+                                id: 'cookie_flags',
                                 name: 'Cookie Security Flags (HttpOnly & Secure)', 
                                 status: selectedDetails.findings.every(f => !f.title.includes('HttpOnly') && !f.title.includes('Secure') && !f.title.includes('Cookie')),
-                                description: 'Protege las cookies de sesión contra el robo mediante scripts maliciosos.' 
+                                description: 'Protege las cookies de sesión contra el robo mediante scripts maliciosos.',
+                                diagnostic: 'Fuerza a las cookies a operar de forma aislada. HttpOnly impide el acceso mediante document.cookie en JavaScript, Secure prohíbe el envío sobre conexiones HTTP no cifradas y SameSite mitiga ataques CSRF.',
+                                risk: 'Crítico. Sin HttpOnly, cualquier script malicioso inyectado localmente puede leer la cookie de autenticación del usuario final y secuestrar su sesión al instante.',
+                                code: `// En Next.js (Server Actions / Route Handlers):\ncookies().set('session', token, {\n  httpOnly: true,\n  secure: true,\n  sameSite: 'lax',\n  path: '/'\n});`
                               }
-                            ].map((header, idx) => (
-                              <div key={idx} className="flex items-start justify-between gap-4 border-b border-white/[0.02] pb-2.5 last:border-0 last:pb-0">
-                                <div className="space-y-0.5">
-                                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                                    {header.name}
-                                  </span>
-                                  <p className="text-[10px] text-zinc-500 leading-normal">
-                                    {header.description}
-                                  </p>
+                            ].map((header, idx) => {
+                              const isOpen = !!expandedAccordions[header.id];
+                              const copyId = `${header.id}_remediation`;
+                              return (
+                                <div key={idx} className="flex flex-col">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleAccordion(header.id)}
+                                    className="w-full flex items-start justify-between gap-4 cursor-pointer text-left focus:outline-none bg-zinc-950/[0.2] border border-white/[0.04] hover:border-white/[0.1] rounded-xl px-4 py-3 transition-all duration-200"
+                                  >
+                                    <div className="space-y-0.5 flex-1 min-w-0">
+                                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                        {header.name}
+                                      </span>
+                                      <p className="text-[10px] text-zinc-500 leading-normal truncate">
+                                        {header.description}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                      <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider ${
+                                        header.status 
+                                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                      }`}>
+                                        {header.status ? 'Cumple' : 'Incompleto'}
+                                      </span>
+                                      <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-300 ${isOpen ? 'rotate-180 text-cyan-400' : ''}`} />
+                                    </div>
+                                  </button>
+                                  
+                                  {/* Collapsable Content */}
+                                  <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[450px] mt-2 mb-3' : 'max-h-0'}`}>
+                                    <div className="bg-zinc-950/[0.5] border border-white/[0.06] p-4 rounded-xl space-y-3.5 text-[11px] leading-relaxed">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                          <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Diagnóstico Detallado</span>
+                                          <p className="text-zinc-400">{header.diagnostic}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <span className="text-[8px] font-bold text-rose-500 uppercase tracking-widest block">Impacto y Explotabilidad</span>
+                                          <p className="text-zinc-400">{header.risk}</p>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="space-y-2 pt-2 border-t border-white/[0.04]">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-[8px] font-bold text-cyan-400 uppercase tracking-widest">Código de Remediación / Configuración</span>
+                                          <button 
+                                            type="button"
+                                            onClick={() => handleCopyToClipboard(header.code, copyId)}
+                                            className="text-[9px] font-bold text-zinc-500 hover:text-white uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all duration-200"
+                                          >
+                                            {copiedId === copyId ? (
+                                              <>
+                                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                                <span className="text-emerald-400 font-bold">¡Copiado!</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Copy className="w-3 h-3" />
+                                                <span>Copiar</span>
+                                              </>
+                                            )}
+                                          </button>
+                                        </div>
+                                        <pre className="p-3.5 overflow-x-auto text-[10px] font-mono text-emerald-400 phosphor-text-glow bg-emerald-950/[0.15] border border-emerald-900/30 rounded-lg max-h-[120px] leading-relaxed select-all">
+                                          {header.code}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
-                                <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase shrink-0 tracking-wider ${
-                                  header.status 
-                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                }`}>
-                                  {header.status ? 'Cumple' : 'Incompleto'}
-                                </span>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -1588,41 +2060,107 @@ export function IntelligenceTab({
                     </div>
 
                     {traceroute && traceroute.length > 0 ? (
-                      <div className="relative py-6 overflow-x-auto select-none no-scrollbar">
-                        {/* Transit neon trace background line */}
-                        <div className="absolute top-1/2 left-8 right-8 h-[2px] bg-gradient-to-r from-indigo-500 via-pink-500 to-cyan-500 -translate-y-1/2 opacity-25 blur-[1px] hidden md:block"></div>
-                        <div className="absolute top-1/2 left-8 right-8 h-[1px] bg-gradient-to-r from-indigo-400 via-pink-400 to-cyan-400 -translate-y-1/2 opacity-40 hidden md:block"></div>
+                      <div className="relative py-8 px-4 overflow-x-auto select-none no-scrollbar">
+                        {/* Local CSS styles for high-fidelity animations */}
+                        <style>{`
+                          @keyframes dash-flow {
+                            to { stroke-dashoffset: -40; }
+                          }
+                          .animate-dash-flow {
+                            stroke-dasharray: 8 8;
+                            animation: dash-flow 2s linear infinite;
+                          }
+                          @keyframes dash-vertical-flow {
+                            to { stroke-dashoffset: -40; }
+                          }
+                          .animate-dash-vertical-flow {
+                            stroke-dasharray: 8 8;
+                            animation: dash-vertical-flow 2s linear infinite;
+                          }
+                          @keyframes ring-pulse {
+                            0% { transform: scale(0.95); opacity: 0.5; }
+                            50% { transform: scale(1.3); opacity: 0; }
+                            100% { transform: scale(0.95); opacity: 0; }
+                          }
+                          .animate-ring-pulse {
+                            animation: ring-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+                          }
+                        `}</style>
+
+                        {/* Desktop Horizontal Connecting SVG */}
+                        <svg className="absolute top-[50px] left-0 w-full h-[6px] pointer-events-none hidden md:block" style={{ width: '100%', minWidth: `${traceroute.length * 180}px` }}>
+                          <path
+                            d={`M 40 3 L ${traceroute.length * 180 - 40} 3`}
+                            fill="none"
+                            stroke="url(#trace-flow-grad)"
+                            strokeWidth="3"
+                            className="animate-dash-flow"
+                          />
+                          <defs>
+                            <linearGradient id="trace-flow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#818cf8" />
+                              <stop offset="50%" stopColor="#f472b6" />
+                              <stop offset="100%" stopColor="#22d3ee" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+
+                        {/* Mobile Vertical Connecting Dotted Line */}
+                        <div className="absolute top-12 bottom-12 left-10 w-[2px] bg-gradient-to-b from-indigo-500 via-pink-500 to-cyan-500 opacity-20 md:hidden pointer-events-none" />
+                        <svg className="absolute top-12 bottom-12 left-[39px] w-[3px] h-[calc(100%-96px)] pointer-events-none md:hidden opacity-45">
+                          <line
+                            x1="1.5" y1="0" x2="1.5" y2="100%"
+                            fill="none"
+                            stroke="url(#trace-vertical-grad)"
+                            strokeWidth="3"
+                            className="animate-dash-vertical-flow"
+                          />
+                          <defs>
+                            <linearGradient id="trace-vertical-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#818cf8" />
+                              <stop offset="50%" stopColor="#f472b6" />
+                              <stop offset="100%" stopColor="#22d3ee" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
 
                         {/* Steps Grid */}
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center min-w-max gap-8 md:gap-4 px-4 relative z-10">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center min-w-max gap-12 md:gap-4 px-4 relative z-10 font-sans">
                           {traceroute.map((hop, index) => {
-                            // Determine color based on carrying node type
-                            const colorClass = (() => {
-                              switch (hop.type) {
-                                case 'local': return 'border-zinc-500 bg-zinc-950 text-zinc-400 shadow-[0_0_15px_rgba(255,255,255,0.05)]';
-                                case 'isp': return 'border-indigo-500 bg-[#0c0d1b] text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.15)]';
-                                case 'transit': return 'border-pink-500 bg-[#1b0c14] text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.15)]';
-                                case 'edge': return 'border-purple-500 bg-[#160c1b] text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.15)]';
-                                case 'destination': return 'border-cyan-400 bg-[#0c1b1b] text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.25)]';
-                                default: return 'border-zinc-500 bg-zinc-900 text-zinc-400';
-                              }
-                            })();
+                            // Determine latency tier colors and styling
+                            const latencyColor = hop.latencyMs < 50 
+                              ? 'border-emerald-500 bg-emerald-950/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
+                              : hop.latencyMs < 150 
+                              ? 'border-amber-500 bg-amber-950/20 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.3)]' 
+                              : 'border-rose-500 bg-rose-950/20 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.3)]';
+
+                            const pulseRingColor = hop.latencyMs < 50 
+                              ? 'bg-emerald-500/30' 
+                              : hop.latencyMs < 150 
+                              ? 'bg-amber-500/30' 
+                              : 'bg-rose-500/30';
 
                             return (
-                              <div key={hop.hop} className="flex flex-row md:flex-col items-center gap-4 md:gap-3 group/hop relative min-w-[150px] max-w-[200px]">
-                                {/* Horizontal connector dot */}
-                                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-black text-xs shrink-0 transition-transform duration-300 group-hover/hop:scale-110 relative z-20 ${colorClass}`}>
-                                  {hop.hop}
+                              <div key={hop.hop} className="flex flex-row md:flex-col items-center gap-5 md:gap-4 group/hop relative min-w-[150px] max-w-[200px]">
+                                
+                                {/* Visual node representation */}
+                                <div className="relative shrink-0 z-20 cursor-pointer">
+                                  {/* Pulsing glow ring based on latency */}
+                                  <span className={`absolute -inset-1 rounded-full animate-ring-pulse ${pulseRingColor}`} />
+                                  
+                                  <div className={`w-[38px] h-[38px] rounded-full border-2 flex items-center justify-center font-black text-[11px] relative z-10 transition-all duration-300 group-hover/hop:scale-115 group-hover/hop:border-cyan-400 group-hover/hop:text-cyan-400 group-hover/hop:shadow-[0_0_20px_rgba(34,211,238,0.5)] ${latencyColor}`}>
+                                    {hop.hop}
+                                  </div>
                                 </div>
 
                                 {/* Step Label Details */}
-                                <div className="space-y-1 text-left md:text-center flex-1">
+                                <div className="space-y-1 text-left md:text-center flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 md:justify-center">
-                                    <span className="text-[10px] font-black text-white block max-w-[140px] truncate" title={hop.hostname}>
+                                    <span className="text-[10.5px] font-black text-white block max-w-[120px] truncate group-hover/hop:text-cyan-400 transition-colors duration-200" title={hop.hostname}>
                                       {hop.hostname}
                                     </span>
                                     {hop.countryCode && hop.countryCode !== 'LAN' && (
-                                      <span className="text-[8px] bg-white/[0.04] text-zinc-500 font-extrabold uppercase px-1 rounded scale-90">
+                                      <span className="text-[8px] bg-white/[0.04] text-zinc-400 border border-white/[0.05] font-extrabold uppercase px-1 rounded scale-90 select-none">
                                         {hop.countryCode}
                                       </span>
                                     )}
@@ -1630,26 +2168,78 @@ export function IntelligenceTab({
                                   
                                   <span className="text-[9px] font-mono text-zinc-500 block truncate" title={hop.ip}>{hop.ip}</span>
                                   
-                                  <span className="text-[9.5px] text-zinc-400 font-bold block leading-snug truncate max-w-[150px]" title={hop.asnOrg || ''}>
+                                  <span className="text-[9.5px] text-zinc-400 font-bold block leading-snug truncate max-w-[140px]" title={hop.asnOrg || ''}>
                                     {hop.asnOrg}
                                   </span>
 
                                   {/* Latency badge */}
-                                  <div className="pt-1 flex items-center gap-1 md:justify-center">
-                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded font-mono ${
+                                  <div className="pt-0.5 flex items-center gap-1.5 md:justify-center">
+                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded font-mono border ${
                                       hop.latencyMs < 50 
-                                        ? 'bg-emerald-500/10 text-emerald-400' 
+                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                                         : hop.latencyMs < 150 
-                                        ? 'bg-amber-500/10 text-amber-400' 
-                                        : 'bg-rose-500/10 text-rose-400'
+                                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                                     }`}>
                                       {hop.latencyMs} ms
                                     </span>
                                     {hop.asn && (
-                                      <span className="text-[8px] text-zinc-600 font-mono font-bold select-none">{hop.asn}</span>
+                                      <span className="text-[8.5px] text-zinc-600 font-mono font-bold select-none">{hop.asn}</span>
                                     )}
                                   </div>
                                 </div>
+
+                                {/* PREMIUM HOVER INTERACTIVE TOOLTIP POPOVER */}
+                                <div className="group-hover/hop:opacity-100 group-hover/hop:translate-y-0 opacity-0 translate-y-2 pointer-events-none absolute bottom-[105%] left-1/2 -translate-x-1/2 mb-4 bg-zinc-950/[0.95] backdrop-blur-xl border border-white/[0.08] p-4.5 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.9),0_0_20px_rgba(255,255,255,0.01)] transition-all duration-300 w-64 z-50 flex flex-col gap-3 text-xs select-text text-left font-sans">
+                                  <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
+                                    <span className="text-[8px] font-extrabold text-zinc-500 uppercase tracking-widest">DETALLES DEL SALTO #{hop.hop}</span>
+                                    <span className="text-[9px] font-mono text-cyan-400 font-extrabold">{hop.type.toUpperCase()}</span>
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <div className="space-y-0.5">
+                                      <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Servidor (Host)</span>
+                                      <span className="text-[11px] font-black text-white block break-all leading-normal">{hop.hostname}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <div className="space-y-0.5 flex-1 min-w-0">
+                                        <span className="text-[8px] font-bold text-zinc-500 tracking-wider block">Dirección IP</span>
+                                        <span className="text-[10px] font-mono text-zinc-300 font-bold block truncate select-all">{hop.ip}</span>
+                                      </div>
+                                      {hop.countryCode && (
+                                        <div className="space-y-0.5 text-right shrink-0">
+                                          <span className="text-[8px] font-bold text-zinc-500 tracking-wider block">Geolocalización</span>
+                                          <span className="text-[10px] font-bold text-zinc-300 block">
+                                            {hop.cityName ? `${hop.cityName}, ` : ''}{hop.countryCode}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="space-y-0.5 border-t border-white/[0.04] pt-2">
+                                      <span className="text-[8px] font-bold text-zinc-500 tracking-wider block">Sistema Autónomo e ISP</span>
+                                      <span className="text-[10px] text-zinc-300 font-bold block leading-snug truncate" title={hop.asnOrg || ''}>{hop.asnOrg || 'Proveedor Local'}</span>
+                                      {hop.asn && <span className="text-[9px] text-zinc-500 font-mono font-bold">{hop.asn}</span>}
+                                    </div>
+                                    
+                                    {/* HSL-tuned relative latency comparison bar */}
+                                    <div className="space-y-1.5 border-t border-white/[0.04] pt-2">
+                                      <div className="flex justify-between text-[9px] font-bold uppercase">
+                                        <span className="text-zinc-500">Latencia</span>
+                                        <span className="text-white font-mono">{hop.latencyMs} ms</span>
+                                      </div>
+                                      <div className="w-full h-2 bg-zinc-950 border border-white/[0.04] rounded-full overflow-hidden p-0.5">
+                                        <div 
+                                          className="h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(255,255,255,0.2)]" 
+                                          style={{ 
+                                            width: `${Math.max(8, Math.min(100, (hop.latencyMs / 300) * 100))}%`, 
+                                            backgroundColor: `hsl(${Math.max(0, 120 - (hop.latencyMs / 300) * 120)}, 85%, 48%)` 
+                                          }} 
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
                               </div>
                             );
                           })}
@@ -1808,24 +2398,144 @@ export function IntelligenceTab({
                   </p>
                 </div>
 
-                {!copilotOutput && (
+                {!copilotOutput && !isGeneratingCopilot && (
                   <button
                     onClick={handleGenerateCopilot}
                     disabled={isGeneratingCopilot}
                     className="bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-cyan-500/20 cursor-pointer hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed text-center shrink-0 shadow-lg"
                   >
-                    {isGeneratingCopilot ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Compilando Plan...
-                      </>
-                    ) : (
-                      <>
-                        Generar Plan IA <Sparkles className="w-3.5 h-3.5" />
-                      </>
-                    )}
+                    Generar Plan IA <Sparkles className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
+
+              {/* Copilot plan loader workspace */}
+              {isGeneratingCopilot && (
+                <div className="p-8 bg-[#030305]/95 border-t border-white/[0.04] flex flex-col lg:flex-row gap-8 items-center justify-center min-h-[380px] relative overflow-hidden animate-in fade-in duration-500">
+                  {/* Glowing background circles */}
+                  <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-cyan-500/5 blur-3xl animate-pulse pointer-events-none" />
+                  <div className="absolute bottom-1/4 right-1/4 w-72 h-72 rounded-full bg-indigo-500/5 blur-3xl animate-pulse pointer-events-none" />
+                  
+                  {/* Left Side: SVG Pulsing Neural Network Grid */}
+                  <div className="w-full lg:w-1/2 flex flex-col items-center justify-center relative py-6 select-none">
+                    <svg className="w-56 h-56 text-cyan-400" viewBox="0 0 120 120">
+                      <style>{`
+                        .pulse-core { animation: core-glow 2.5s infinite ease-in-out; }
+                        .pulse-satellite { animation: satellite-pulse 2s infinite ease-in-out; }
+                        .neural-path { stroke-dasharray: 6 6; animation: signal-flow 4s infinite linear; }
+                        .neural-path-fast { stroke-dasharray: 4 4; animation: signal-flow 2s infinite linear; }
+                        
+                        @keyframes core-glow {
+                          0%, 100% { r: 12; fill: rgba(6, 182, 212, 0.1); stroke-width: 2.5; filter: drop-shadow(0 0 4px rgba(6, 182, 212, 0.4)); }
+                          50% { r: 16; fill: rgba(6, 182, 212, 0.35); stroke-width: 4; filter: drop-shadow(0 0 16px rgba(6, 182, 212, 0.8)); }
+                        }
+                        @keyframes satellite-pulse {
+                          0%, 100% { r: 4.5; opacity: 0.6; stroke-width: 1.5; }
+                          50% { r: 6.5; opacity: 1; stroke-width: 2.5; filter: drop-shadow(0 0 8px currentColor); }
+                        }
+                        @keyframes signal-flow {
+                          to { stroke-dashoffset: -20; }
+                        }
+                      `}</style>
+                      
+                      <defs>
+                        <radialGradient id="core-gradient" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.8" />
+                          <stop offset="100%" stopColor="#0891b2" stopOpacity="0" />
+                        </radialGradient>
+                        <linearGradient id="link-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#6366f1" />
+                          <stop offset="100%" stopColor="#22d3ee" />
+                        </linearGradient>
+                        <linearGradient id="link-grad-2" x1="100%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#ec4899" />
+                          <stop offset="100%" stopColor="#818cf8" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Connection paths (connecting satellite nodes in a gorgeous mesh pattern) */}
+                      <line x1="25" y1="25" x2="60" y2="60" stroke="url(#link-grad-1)" strokeWidth="1.5" className="neural-path" style={{ animationDelay: '0s' }} />
+                      <line x1="95" y1="25" x2="60" y2="60" stroke="url(#link-grad-2)" strokeWidth="1.5" className="neural-path-fast" style={{ animationDelay: '0.4s' }} />
+                      <line x1="95" y1="95" x2="60" y2="60" stroke="url(#link-grad-1)" strokeWidth="1.5" className="neural-path" style={{ animationDelay: '0.8s' }} />
+                      <line x1="25" y1="95" x2="60" y2="60" stroke="url(#link-grad-2)" strokeWidth="1.5" className="neural-path-fast" style={{ animationDelay: '1.2s' }} />
+                      <line x1="60" y1="15" x2="60" y2="60" stroke="#a855f7" strokeWidth="1.5" className="neural-path" style={{ animationDelay: '1.6s' }} />
+                      <line x1="60" y1="105" x2="60" y2="60" stroke="#f43f5e" strokeWidth="1.5" className="neural-path-fast" style={{ animationDelay: '2.0s' }} />
+                      
+                      {/* Inter-satellite connections forming a beautiful outer boundary loop */}
+                      <line x1="25" y1="25" x2="60" y2="15" stroke="#6366f1" strokeWidth="1" strokeOpacity="0.3" className="neural-path" />
+                      <line x1="60" y1="15" x2="95" y2="25" stroke="#ec4899" strokeWidth="1" strokeOpacity="0.3" className="neural-path" />
+                      <line x1="95" y1="25" x2="95" y2="95" stroke="#a855f7" strokeWidth="1" strokeOpacity="0.3" className="neural-path-fast" />
+                      <line x1="95" y1="95" x2="60" y2="105" stroke="#f43f5e" strokeWidth="1" strokeOpacity="0.3" className="neural-path" />
+                      <line x1="60" y1="105" x2="25" y2="95" stroke="#10b981" strokeWidth="1" strokeOpacity="0.3" className="neural-path-fast" />
+                      <line x1="25" y1="95" x2="25" y2="25" stroke="#3b82f6" strokeWidth="1" strokeOpacity="0.3" className="neural-path" />
+
+                      {/* Central Core glowing node */}
+                      <circle cx="60" cy="60" r="14" fill="url(#core-gradient)" className="pulse-core" />
+                      <circle cx="60" cy="60" r="6" fill="#030712" stroke="#22d3ee" strokeWidth="2.5" />
+                      
+                      {/* Outer satellite nodes with reactive glow delays */}
+                      <circle cx="25" cy="25" r="5.5" fill="#030712" stroke="#6366f1" strokeWidth="2" className="pulse-satellite text-indigo-400" style={{ animationDelay: '0.2s' }} />
+                      <circle cx="95" cy="25" r="5.5" fill="#030712" stroke="#ec4899" strokeWidth="2" className="pulse-satellite text-pink-400" style={{ animationDelay: '0.6s' }} />
+                      <circle cx="95" cy="95" r="5.5" fill="#030712" stroke="#a855f7" strokeWidth="2" className="pulse-satellite text-purple-400" style={{ animationDelay: '1.0s' }} />
+                      <circle cx="25" cy="95" r="5.5" fill="#030712" stroke="#10b981" strokeWidth="2" className="pulse-satellite text-emerald-400" style={{ animationDelay: '1.4s' }} />
+                      <circle cx="60" cy="15" r="5.5" fill="#030712" stroke="#3b82f6" strokeWidth="2" className="pulse-satellite text-blue-400" style={{ animationDelay: '1.8s' }} />
+                      <circle cx="60" cy="105" r="5.5" fill="#030712" stroke="#f43f5e" strokeWidth="2" className="pulse-satellite text-rose-400" style={{ animationDelay: '2.2s' }} />
+                    </svg>
+                    
+                    <div className="absolute text-center mt-44">
+                      <span className="text-[10px] bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 px-3.5 py-1.5 rounded-full font-mono font-bold tracking-widest animate-pulse uppercase">
+                        AI_COPILOT_REASONING
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Side: Step-by-Step Interactive Scanning Checklist Log */}
+                  <div className="w-full lg:w-1/2 p-6 rounded-2xl bg-zinc-950/60 border border-white/[0.05] relative overflow-hidden font-mono text-[11px] leading-relaxed text-zinc-400 pl-6 lg:pl-8 text-left shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)]">
+                    {/* Retro console scan lines overlay */}
+                    <div className="absolute inset-0 pointer-events-none bg-scanlines opacity-[0.03]" />
+                    
+                    <div className="flex items-center gap-2 border-b border-white/[0.06] pb-3 mb-4">
+                      <div className="flex gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-rose-500/80 animate-pulse" />
+                        <div className="w-2 h-2 rounded-full bg-amber-500/80" />
+                        <div className="w-2 h-2 rounded-full bg-emerald-500/80" />
+                      </div>
+                      <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2">CONSOLA DE EJECUCIÓN CO-PILOTO</span>
+                    </div>
+
+                    <div className="space-y-3.5 font-mono">
+                      {[
+                        { stepNum: 1, text: 'Leyendo evidencias de red normalizadas...' },
+                        { stepNum: 2, text: 'Correlacionando brechas DNS con directivas OWASP...' },
+                        { stepNum: 3, text: 'Redactando código de remediación automatizado...' },
+                        { stepNum: 4, text: 'Compilando configuraciones Nginx, Apache y DNS TXT...' },
+                        { stepNum: 5, text: 'Verificando consistencia semántica del plan...' }
+                      ].map((s) => {
+                        const isActive = copilotStep === s.stepNum;
+                        const isDone = copilotStep > s.stepNum;
+                        return (
+                          <div key={s.stepNum} className={`flex items-center gap-3 transition-colors duration-300 ${isActive ? 'text-cyan-400 font-bold' : isDone ? 'text-emerald-400/70 font-semibold' : 'text-zinc-600'}`}>
+                            <div className="shrink-0 font-mono">
+                              {isDone ? (
+                                <span className="text-emerald-400 font-black drop-shadow-[0_0_4px_rgba(16,185,129,0.5)]">✓</span>
+                              ) : isActive ? (
+                                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                                  <Loader2 className="w-3 h-3 text-cyan-400 animate-spin" />
+                                </div>
+                              ) : (
+                                <span className="text-zinc-800 font-black">&bull;</span>
+                              )}
+                            </div>
+                            <span className={isActive ? 'drop-shadow-[0_0_6px_rgba(34,211,238,0.5)] phosphor-text-glow font-bold' : ''}>
+                              {isActive ? `> ${s.text}` : `  ${s.text}`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Copilot plan output display */}
               {copilotOutput && (

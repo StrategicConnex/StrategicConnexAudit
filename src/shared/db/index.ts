@@ -32,11 +32,14 @@ const globalForDb = globalThis as unknown as {
 const dbUrl = process.env.DATABASE_URL;
 let cleanUrl = dbUrl;
 
+console.log("[DB Init] DATABASE_URL =", dbUrl ? dbUrl.replace(/:[^:@/]+@/, ":****@") : "undefined");
+
 if (dbUrl) {
   try {
     const parsedUrl = new URL(dbUrl);
     parsedUrl.searchParams.delete('sslmode');
     cleanUrl = parsedUrl.toString();
+    console.log("[DB Init] cleanUrl =", cleanUrl.replace(/:[^:@/]+@/, ":****@"));
   } catch (err) {
     console.error('Error parsing DATABASE_URL:', err);
   }
