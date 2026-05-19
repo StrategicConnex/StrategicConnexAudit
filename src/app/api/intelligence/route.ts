@@ -218,6 +218,11 @@ export async function POST(req: NextRequest) {
       { id: "network.reverse_dns", category: "network" },
       { id: "network.geoip", category: "network" },
       { id: "network.traceroute", category: "network" },
+      { id: "network.asn", category: "network" },
+      { id: "network.cdn", category: "network" },
+      { id: "network.waf", category: "network" },
+      { id: "network.reverse_ip", category: "network" },
+      { id: "threat.ip_reputation", category: "security" },
       { id: "website.headers", category: "security" },
       { id: "website.security_headers", category: "security" },
       { id: "tls.scan", category: "security" },
@@ -322,6 +327,11 @@ export async function POST(req: NextRequest) {
     const pingResult = executionResults.find(r => r.toolId === "network.ping")?.output || {};
     const reverseDnsResult = executionResults.find(r => r.toolId === "network.reverse_dns")?.output || {};
     const tracerouteResult = executionResults.find(r => r.toolId === "network.traceroute")?.output || {};
+    const asnResult = executionResults.find(r => r.toolId === "network.asn")?.output || {};
+    const cdnResult = executionResults.find(r => r.toolId === "network.cdn")?.output || {};
+    const wafResult = executionResults.find(r => r.toolId === "network.waf")?.output || {};
+    const reverseIpResult = executionResults.find(r => r.toolId === "network.reverse_ip")?.output || {};
+    const reputationResult = executionResults.find(r => r.toolId === "threat.ip_reputation")?.output || {};
 
     const primaryIp = dnsLookupResult.A?.[0] || null;
 
@@ -392,12 +402,19 @@ export async function POST(req: NextRequest) {
           redirectsToHttps: securityHeadersResult.securityHeaders?.hsts ? true : false,
           // Datos de red e infraestructura geolocalizada
           whois: whoisResult,
-          asnGeo: geoIpResult,
+          asnGeo: { ...geoIpResult, ...asnResult },
           reverseDns: reverseDnsResult.ptr || [],
           ping: pingResult,
-          cdnWaf: securityHeadersResult.cdnWaf || { detected: false, name: null, provider: null },
-          reverseIp: [],
-          dnsbl: [],
+          cdnWaf: {
+            detected: cdnResult.detected || wafResult.detected || false,
+            cdnProvider: cdnResult.provider || null,
+            wafProvider: wafResult.wafProvider || null,
+            cdnMethod: cdnResult.method || null,
+            wafConfidence: wafResult.confidence || 0
+          },
+          reverseIp: reverseIpResult.domains || [],
+          dnsbl: reputationResult.blacklistsListed || [],
+          reputation: reputationResult,
           traceroute: tracerouteResult.hops || []
         },
         completedAt: new Date(),
@@ -440,7 +457,12 @@ export async function POST(req: NextRequest) {
       },
       headers: headersResult,
       redirect: { success: true, redirectsToHttps: securityHeadersResult.securityHeaders?.hsts ? true : false },
-      findings: aggregatedFindings
+      findings: aggregatedFindings,
+      asn: asnResult,
+      cdn: cdnResult,
+      waf: wafResult,
+      reverseIp: reverseIpResult,
+      reputation: reputationResult
     });
 
   } catch (error: any) {

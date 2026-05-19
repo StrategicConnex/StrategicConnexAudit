@@ -1671,12 +1671,12 @@ Billing meters:
 
 ### Phase 2: Email and website security
 
-| Priority | Work |
-|---|---|
-| P0 | SPF, DMARC, DKIM, BIMI |
-| P0 | Security Headers, CSP, Redirects, Cookies |
-| P1 | Mail Health composite |
-| P1 | PDF report export |
+| Priority | Work | Status |
+|---|---|---|
+| P0 | SPF, DMARC, DKIM, BIMI | COMPLETED |
+| P0 | Security Headers, CSP, Redirects, Cookies | COMPLETED |
+| P1 | Mail Health composite | COMPLETED |
+| P1 | PDF report export | COMPLETED |
 
 ### Phase 3: Network and OSINT
 
