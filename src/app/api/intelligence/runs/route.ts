@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, and, desc } from "drizzle-orm";
-import dns from "node:dns/promises";
+import { eq, desc } from "drizzle-orm";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
 import { db } from "@/shared/db";
 import { withRLS } from "@/shared/db/rls";
 import {
   projects,
   intelligenceToolRuns,
-  intelligenceInvestigations
+  intelligenceFindings,
+  intelligenceAssets
 } from "@/shared/db/schemas";
 import { runToolSchema } from "@/features/intelligence/validators/intelligence.schema";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { getToolDefinition } from "@/server/intelligence/registry/tool-registry";
+import { executeTool } from "@/server/intelligence/core/dispatcher";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     const { projectId, investigationId, toolId, input } = parseResult.data;
 
-    // Check tool exists in registry
+    // Verificar si la herramienta existe en el registro
     const toolDef = getToolDefinition(toolId);
     if (!toolDef) {
       return NextResponse.json({
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Verify project access in RLS
+    // Verificar acceso al proyecto a través de RLS
     const project = await withRLS(user.id, async (tx) => {
       return await tx.query.projects.findFirst({
         where: eq(projects.id, projectId)
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Proyecto no encontrado o acceso denegado" }, { status: 404 });
     }
 
-    // Validate target inside input
+    // Validar el target del input
     const target = (input.target as string || "").trim().toLowerCase();
     if (!target) {
       return NextResponse.json({
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // SSRF target check
+    // Control preventivo de SSRF
     try {
       await assertPublicHostname(target);
     } catch (ssrfError: any) {
@@ -118,55 +119,58 @@ export async function POST(req: NextRequest) {
     const startedAt = new Date();
     const tStart = Date.now();
 
-    // Execute ad-hoc tool logic
-    let output: any = {};
-    let errorStr: string | null = null;
-    let status: "completed" | "failed" = "completed";
-
-    try {
-      if (toolId === "dns_lookup") {
-        const [a, mx, txt] = await Promise.all([
-          dns.resolve(target, "A").catch(() => []),
-          dns.resolve(target, "MX").catch(() => []),
-          dns.resolve(target, "TXT").catch(() => [])
-        ]);
-        output = { A: a, MX: mx, TXT: txt };
-      } else {
-        // Fallback or generic dynamic handler for ad-hoc tool simulation
-        output = {
-          message: `Ejecución simulada exitosa de herramienta ${toolId}`,
-          target,
-          executedAt: new Date().toISOString()
-        };
-      }
-    } catch (err: any) {
-      status = "failed";
-      errorStr = err.message || "Fallo en ejecución de herramienta";
-      output = { error: errorStr };
-    }
+    // Despachar a nuestro motor dinámico técnico
+    const executionResult = await executeTool(
+      toolId,
+      target,
+      input,
+      projectId,
+      investigationId,
+      user.id
+    );
 
     const durationMs = Date.now() - tStart;
+    const status = executionResult.success ? "completed" : "failed";
 
-    // Save ad-hoc tool run record
+    // Guardar el registro de la ejecución del ejecutor real y sus findings si existiesen
     const record = await withRLS(user.id, async (tx) => {
-      const [inserted] = await tx.insert(intelligenceToolRuns).values({
+      // 1. Insertar la ejecución de la herramienta
+      const [insertedRun] = await tx.insert(intelligenceToolRuns).values({
         projectId,
         investigationId: investigationId || null,
         toolId,
         category: toolDef.category,
         status,
         input,
-        output,
-        error: errorStr,
+        output: executionResult.output,
+        error: executionResult.error || null,
         durationMs,
         startedAt,
         completedAt: new Date()
       }).returning();
-      return inserted;
+
+      // 2. Si hubo findings reales, insertarlos de forma atómica
+      if (executionResult.findings && executionResult.findings.length > 0 && investigationId) {
+        const findingsToInsert = executionResult.findings.map(finding => ({
+          projectId,
+          investigationId,
+          toolRunId: insertedRun.id,
+          severity: finding.severity as "info" | "low" | "medium" | "high" | "critical",
+          confidence: String(Number(finding.confidence) || 0.7),
+          title: finding.title,
+          description: finding.description,
+          recommendation: finding.remediation || finding.recommendation || null,
+          evidence: (finding.evidence ?? {}) as Record<string, unknown>,
+          affectedAsset: finding.affectedAsset ?? null,
+        }));
+        await tx.insert(intelligenceFindings).values(findingsToInsert);
+      }
+
+      return insertedRun;
     });
 
     return NextResponse.json({
-      success: status === "completed",
+      success: executionResult.success,
       run: record
     });
 
@@ -178,3 +182,4 @@ export async function POST(req: NextRequest) {
     }, { status: error.message === "No autorizado" ? 401 : 500 });
   }
 }
+
