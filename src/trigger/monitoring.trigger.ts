@@ -37,11 +37,16 @@ export const evaluateMonitorsTask = schedules.task({
           where: eq(projects.id, monitor.projectId)
         });
 
-        if (!project || !project.url) {
+        if (!project || !project.domain) {
           continue;
         }
 
-        const domainTarget = new URL(project.url).hostname || project.url;
+        let domainTarget = project.domain;
+        try {
+          domainTarget = new URL(project.domain.startsWith('http') ? project.domain : `https://${project.domain}`).hostname;
+        } catch {
+          domainTarget = project.domain;
+        }
 
         // Ejecutar TLS Scan de manera desatendida
         const result = await executeTool(
