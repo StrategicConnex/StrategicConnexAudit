@@ -64,7 +64,6 @@ export const exportAuditToPdf = async (
       backgroundColor: '#ffffff', // Professional white background
       windowWidth: 1100, // Optimized width to prevent text cutting
       onclone: (clonedDoc) => {
-        const modernColorRegex = /(oklch|oklab|lab)\((?:[^()]+|\([^()]*\))*\)/gi;
         const colorSpaceRegex = /oklch|oklab|lab/gi;
 
         // 0. High Impact Light Theme Styles
@@ -77,7 +76,7 @@ export const exportAuditToPdf = async (
               for (const rule of rules) {
                 combinedCss += rule.cssText + '\n';
               }
-            } catch (e) {}
+            } catch {}
           }
 
           clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());

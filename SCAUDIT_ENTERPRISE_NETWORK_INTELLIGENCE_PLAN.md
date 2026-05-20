@@ -1661,13 +1661,14 @@ Billing meters:
 
 ### Phase 1: Intelligence MVP
 
-| Priority | Work |
-|---|---|
-| P0 | `/intelligence` shell, command input, tool registry |
-| P0 | DNS Lookup, MX, TXT, NS, HTTP Headers, TLS Scanner |
-| P0 | Investigation persistence and realtime run events |
-| P1 | Risk score panel and findings normalization |
-| P1 | AI summary grounded in evidence |
+| Priority | Work | Status |
+|---|---|---|
+| P0 | `/intelligence` shell, command input, tool registry | COMPLETED |
+| P0 | DNS Lookup, MX, TXT, NS, HTTP Headers, TLS Scanner | COMPLETED |
+| P0 | Investigation persistence and realtime run events | COMPLETED |
+| P1 | Risk score panel and findings normalization | COMPLETED |
+| P1 | AI summary grounded in evidence | COMPLETED |
+
 
 ### Phase 2: Email and website security
 
@@ -1680,20 +1681,22 @@ Billing meters:
 
 ### Phase 3: Network and OSINT
 
-| Priority | Work |
-|---|---|
-| P0 | WHOIS/RDAP, ASN, GeoIP, Reverse DNS |
-| P1 | Ping, traceroute, CDN/WAF detection |
-| P1 | Reverse IP and reputation feeds |
+| Priority | Work | Status |
+|---|---|---|
+| P0 | WHOIS/RDAP, ASN, GeoIP, Reverse DNS | COMPLETED |
+| P1 | Ping, traceroute, CDN/WAF detection | COMPLETED |
+| P1 | Reverse IP and reputation feeds | COMPLETED |
+
 
 ### Phase 4: Enterprise operations
 
-| Priority | Work |
-|---|---|
-| P0 | Monitoring, alerts, scheduled runs |
-| P0 | Usage metering and plan enforcement |
-| P1 | Bulk investigations |
-| P1 | API keys and webhooks |
+| Priority | Work | Status |
+|---|---|---|
+| P0 | Monitoring, alerts, scheduled runs | COMPLETED |
+| P0 | Usage metering and plan enforcement | COMPLETED |
+| P1 | Bulk investigations | COMPLETED |
+| P2 | API keys and webhooks | COMPLETED |
+
 
 ### Phase 5: Advanced intelligence
 

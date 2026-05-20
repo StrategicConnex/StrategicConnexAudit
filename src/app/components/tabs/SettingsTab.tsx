@@ -14,9 +14,6 @@ import {
   Loader2, 
   AlertTriangle, 
   ShieldCheck, 
-  Eye, 
-  EyeOff, 
-  ExternalLink,
   Info
 } from 'lucide-react';
 

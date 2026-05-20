@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Bell, Key, Link2, Plus, Trash2, Cpu, CheckCircle2, AlertTriangle, Info,
-  Sliders, Play, Copy, Check, ShieldAlert, Sparkles, Send, ShieldCheck, Zap
+  Bell, Key, Link2, Plus, Trash2, Cpu, CheckCircle2, AlertTriangle,
+  Sliders, Play, Copy, Check, Sparkles, Send, ShieldCheck, Zap
 } from 'lucide-react';
 
 interface MonitoringTabProps {
@@ -55,21 +55,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
   const [currentPlan, setCurrentPlan] = useState<'starter' | 'business' | 'enterprise'>('business');
   const [showPlanModal, setShowPlanModal] = useState(false);
 
-  // Fetch all Phase 4 data whenever project changes
-  useEffect(() => {
-    if (!selectedProjectId) return;
-    
-    fetchMonitoringData();
-    fetchWebhooks();
-    fetchApiKeys();
-    
-    // Clear temporary clear keys or bulk logs on project switch
-    setCreatedClearKey(null);
-    setBulkMessage(null);
-    setBulkError(null);
-  }, [selectedProjectId]);
-
-  const fetchMonitoringData = async () => {
+  const fetchMonitoringData = useCallback(async () => {
     try {
       setIsLoadingSchedule(true);
       const res = await fetch(`/api/monitoring?projectId=${selectedProjectId}`);
@@ -90,9 +76,9 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
     } finally {
       setIsLoadingSchedule(false);
     }
-  };
+  }, [selectedProjectId]);
 
-  const fetchWebhooks = async () => {
+  const fetchWebhooks = useCallback(async () => {
     try {
       setIsLoadingWebhooks(true);
       const res = await fetch(`/api/webhooks?projectId=${selectedProjectId}`);
@@ -105,9 +91,9 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
     } finally {
       setIsLoadingWebhooks(false);
     }
-  };
+  }, [selectedProjectId]);
 
-  const fetchApiKeys = async () => {
+  const fetchApiKeys = useCallback(async () => {
     try {
       setIsLoadingKeys(true);
       const res = await fetch('/api/api-keys');
@@ -120,7 +106,21 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
     } finally {
       setIsLoadingKeys(false);
     }
-  };
+  }, []);
+
+  // Fetch all Phase 4 data whenever project changes
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    
+    fetchMonitoringData();
+    fetchWebhooks();
+    fetchApiKeys();
+    
+    // Clear temporary clear keys or bulk logs on project switch
+    setCreatedClearKey(null);
+    setBulkMessage(null);
+    setBulkError(null);
+  }, [selectedProjectId, fetchMonitoringData, fetchWebhooks, fetchApiKeys]);
 
   // Mutators
   const saveScheduleSettings = async (e: React.FormEvent) => {

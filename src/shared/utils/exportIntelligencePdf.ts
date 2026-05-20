@@ -75,7 +75,7 @@ export const exportIntelligenceToPdf = async (
               for (const rule of rules) {
                 combinedCss += rule.cssText + '\n';
               }
-            } catch (e) {}
+            } catch {}
           }
 
           clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());

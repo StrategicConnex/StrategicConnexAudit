@@ -69,6 +69,7 @@ export const toolRegistry: IntelligenceToolDefinition[] = [
   { id: "website.csp", name: "CSP Analysis", category: "website", description: "Parse and score Content-Security-Policy.", inputSchema: urlInput, requiredPlan: "pro", risk: "active-safe", costUnits: 3, cacheTtlSeconds: 600, timeoutMs: 12000, executor: "website.csp" },
   { id: "website.performance", name: "Performance Diagnostics", category: "website", description: "Lighthouse-style metrics and bottlenecks.", inputSchema: urlInput, requiredPlan: "business", risk: "active-safe", costUnits: 8, cacheTtlSeconds: 1800, timeoutMs: 90000, executor: "website.performance" },
   { id: "website.fingerprint", name: "Fingerprinting", category: "website", description: "Collect passive application fingerprints.", inputSchema: urlInput, requiredPlan: "business", risk: "active-safe", costUnits: 4, cacheTtlSeconds: 1800, timeoutMs: 20000, executor: "website.fingerprint" },
+  { id: "threat.custom_intel", name: "Custom Threat Intel", category: "threat", description: "Cross reference with custom private intel feeds.", inputSchema: domainInput, requiredPlan: "enterprise", risk: "passive", costUnits: 10, cacheTtlSeconds: 600, timeoutMs: 15000, executor: "threat.custom_intel" },
 ];
 
 export function getToolDefinition(id: string): IntelligenceToolDefinition | undefined {

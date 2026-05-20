@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { projects, audits, integrations } from '@/shared/db/schemas';
-import { eq, desc, isNull, and } from 'drizzle-orm';
+import { eq, desc, isNull, and, inArray } from 'drizzle-orm';
 import { DashboardContainer } from './components/DashboardContainer';
 import { createClient } from '@/shared/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -31,30 +31,37 @@ async function DashboardContent() {
       )
       .orderBy(desc(projects.createdAt));
 
-    // 3. Fetch integration counts and latest audits sequentially for user's projects
-    // Note: Promise.all with the transaction object (tx) causes "client is already executing a query" warnings.
-    const data = [];
-    for (const project of projectsList) {
-      const projectIntegrations = await tx
+    // 3. Optimize fetching by doing inArray queries instead of sequential queries (fixes N+1)
+    const projectIds = projectsList.map(p => p.id);
+    let allIntegrations: any[] = [];
+    let allAudits: any[] = [];
+
+    if (projectIds.length > 0) {
+      allIntegrations = await tx
         .select()
         .from(integrations)
-        .where(eq(integrations.projectId, project.id));
+        .where(inArray(integrations.projectId, projectIds));
 
-      const latestAudits = await tx
+      allAudits = await tx
         .select()
         .from(audits)
-        .where(eq(audits.projectId, project.id))
-        .orderBy(desc(audits.createdAt))
-        .limit(1);
-
-      data.push({
-        ...project,
-        integrations: projectIntegrations,
-        latestAudit: latestAudits[0] || null,
-      });
+        .where(inArray(audits.projectId, projectIds))
+        .orderBy(desc(audits.createdAt));
     }
 
-    return { allProjects: projectsList, dashboardData: data };
+    // Map the results back to their respective projects in memory
+    const dashboardData = projectsList.map(project => {
+      const projectIntegrations = allIntegrations.filter(i => i.projectId === project.id);
+      const projectAudits = allAudits.filter(a => a.projectId === project.id);
+      
+      return {
+        ...project,
+        integrations: projectIntegrations,
+        latestAudit: projectAudits.length > 0 ? projectAudits[0] : null,
+      };
+    });
+
+    return { allProjects: projectsList, dashboardData };
   });
 
   return (

@@ -4,9 +4,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   ShieldCheck, AlertCircle, Terminal, ArrowRight, Loader2, 
   ShieldAlert, Server, History, Sparkles, CheckCircle2, 
-  Lock, Unlock, Key, Cpu, Copy, Check, Info, Globe, AlertTriangle,
-  Mail, Shield, X, Activity, MapPin, Wifi, Clock, Layers, Compass,
-  ChevronDown, ChevronUp
+  Lock, Cpu, Copy, Check, Info, Globe, AlertTriangle,
+  Mail, Shield, Activity, MapPin, Layers, Compass,
+  ChevronDown
 } from 'lucide-react';
 
 interface Project {
@@ -154,7 +154,6 @@ export function IntelligenceTab({
   const [targetInput, setTargetInput] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState<string[]>([]);
-  const [scanStepIndex, setScanStepIndex] = useState(0);
   const [scanStatusMessage, setScanStatusMessage] = useState('');
   
   // IA Copilot remediation state
@@ -164,8 +163,6 @@ export function IntelligenceTab({
   const [copiedBlockIdx, setCopiedBlockIdx] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
-  const [copilotViewTab, setCopilotViewTab] = useState<'formatted' | 'html'>('formatted');
-  const [copiedHtml, setCopiedHtml] = useState<boolean>(false);
 
   // Advanced interaction states
   const [expandedAccordions, setExpandedAccordions] = useState<Record<string, boolean>>({});
@@ -310,118 +307,6 @@ export function IntelligenceTab({
     });
   };
 
-  const convertMarkdownToHtml = (md: string): string => {
-    if (!md) return '';
-    const lines = md.split('\n');
-    let html = '';
-    let inList = false;
-    let listType: 'ul' | 'ol' | null = null;
-    let inCode = false;
-    let codeLang = '';
-    let codeContent: string[] = [];
-
-    const formatInline = (text: string): string => {
-      let formatted = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      
-      // Bold
-      formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      // Inline Code
-      formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
-      
-      return formatted;
-    };
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmed = line.trim();
-
-      // Handle Code Blocks
-      if (line.trim().startsWith('```')) {
-        if (inCode) {
-          html += `<pre><code class="language-${codeLang || 'generic'}">${codeContent.join('\n')}</code></pre>\n`;
-          codeContent = [];
-          inCode = false;
-          codeLang = '';
-        } else {
-          inCode = true;
-          codeLang = line.trim().substring(3).trim();
-        }
-        continue;
-      }
-
-      if (inCode) {
-        codeContent.push(line
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-        );
-        continue;
-      }
-
-      // Close open list if we transition to non-list item
-      const isListItem = trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s+/.test(trimmed);
-      if (inList && (!isListItem || trimmed === '')) {
-        html += listType === 'ul' ? '</ul>\n' : '</ol>\n';
-        inList = false;
-        listType = null;
-      }
-
-      if (trimmed === '') {
-        continue;
-      }
-
-      // Headings
-      if (trimmed.startsWith('# ')) {
-        html += `<h1>${formatInline(trimmed.substring(2))}</h1>\n`;
-        continue;
-      }
-      if (trimmed.startsWith('## ')) {
-        html += `<h2>${formatInline(trimmed.substring(3))}</h2>\n`;
-        continue;
-      }
-      if (trimmed.startsWith('### ')) {
-        html += `<h3>${formatInline(trimmed.substring(4))}</h3>\n`;
-        continue;
-      }
-
-      // Lists
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        if (!inList) {
-          html += '<ul>\n';
-          inList = true;
-          listType = 'ul';
-        }
-        html += `  <li>${formatInline(trimmed.substring(2))}</li>\n`;
-        continue;
-      }
-
-      const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
-      if (olMatch) {
-        if (!inList) {
-          html += '<ol>\n';
-          inList = true;
-          listType = 'ol';
-        }
-        html += `  <li>${formatInline(olMatch[2])}</li>\n`;
-        continue;
-      }
-
-      // Regular Paragraph
-      html += `<p>${formatInline(line)}</p>\n`;
-    }
-
-    if (inList) {
-      html += listType === 'ul' ? '</ul>\n' : '</ol>\n';
-    }
-    if (inCode && codeContent.length > 0) {
-      html += `<pre><code class="language-${codeLang || 'generic'}">${codeContent.join('\n')}</code></pre>\n`;
-    }
-
-    return html;
-  };
 
   // Fetch investigations list for current project
   const fetchInvestigations = useCallback(async (projId: string) => {
@@ -1338,7 +1223,7 @@ export function IntelligenceTab({
                                   {meta.dmarcParsed.policy === 'none' && (
                                     <div className="text-[10px] text-amber-400 bg-amber-500/[0.03] border border-amber-500/10 p-3 rounded-xl leading-relaxed flex items-start gap-2.5">
                                       <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5 animate-pulse" />
-                                      <span>La política \'p=none\' solo monitorea pero no bloquea ni rechaza correos fraudulentos. Se recomienda migrar a \'quarantine\' o \'reject\' gradualmente.</span>
+                                      <span>La política &apos;p=none&apos; solo monitorea pero no bloquea ni rechaza correos fraudulentos. Se recomienda migrar a &apos;quarantine&apos; o &apos;reject&apos; gradualmente.</span>
                                     </div>
                                   )}
                                   
@@ -2126,7 +2011,7 @@ export function IntelligenceTab({
 
                         {/* Steps Grid */}
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center min-w-max gap-12 md:gap-4 px-4 relative z-10 font-sans">
-                          {traceroute.map((hop, index) => {
+                          {traceroute.map((hop) => {
                             // Determine latency tier colors and styling
                             const latencyColor = hop.latencyMs < 50 
                               ? 'border-emerald-500 bg-emerald-950/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]' 

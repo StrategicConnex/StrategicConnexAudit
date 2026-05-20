@@ -9,6 +9,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { IntelligenceToolDefinition } from "../registry/tool-registry";
 import crypto from "crypto";
+import { checkQuota } from "../enterprise/usage-metering";
 
 const PLAN_HIERARCHY: Record<string, number> = {
   free: 0,
@@ -80,11 +81,20 @@ export async function enforceToolRunPolicy(
     const userTier = PLAN_HIERARCHY[planName] ?? 0;
     const requiredTier = PLAN_HIERARCHY[tool.requiredPlan.toLowerCase()] ?? 0;
 
-    let allowed = userTier >= requiredTier;
+    const allowed = userTier >= requiredTier;
     let reason: string | undefined = undefined;
 
     if (!allowed) {
       reason = `Plan '${planName}' does not support the '${tool.name}' tool. Upgrade to '${tool.requiredPlan}' required.`;
+    }
+
+    // Si tiene el tier correcto, revisar la cuota
+    if (allowed) {
+      const requiredUnits = tool.costUnits || 1;
+      const quotaCheck = await checkQuota(projectId, planName, requiredUnits);
+      if (!quotaCheck.allowed) {
+        return { allowed: false, reason: quotaCheck.reason, planName };
+      }
     }
 
     // 4. Log the usage event in the database

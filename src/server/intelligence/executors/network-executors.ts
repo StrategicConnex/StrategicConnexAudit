@@ -5,6 +5,7 @@ import { assertPublicHostname, safeFetch } from "../security/egress-guard";
 import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
 
 const hostSchema = z.object({ host: z.string().min(3).max(253) });
+const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 const ipSchema = z.object({ ip: z.string().min(3).max(64) });
 const urlSchema = z.object({ url: z.string().min(3).max(2048) });
 
@@ -329,7 +330,7 @@ export const networkCdnExecutor: ToolExecutor<{ domain: string }, any> = {
   timeoutMs: 15000,
   category: "network",
   validate(input: unknown) {
-    return hostSchema.parse(input);
+    return domainSchema.parse(input);
   },
   async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
     ctx.log(`Iniciando detección pasiva de CDN para: ${domain}`);
