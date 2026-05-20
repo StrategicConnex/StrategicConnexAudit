@@ -24,7 +24,6 @@ export const websiteHeadersExecutor: ToolExecutor<{ url: string }, any> = {
     const headers: Record<string, string> = {};
     let status = 0;
     let statusText = "OK";
-    let redirectCount = 0;
 
     try {
       const res = await safeFetch(url, { method: "HEAD" });
@@ -84,7 +83,7 @@ export const websiteSecurityHeadersExecutor: ToolExecutor<{ url: string }, any> 
     const parsed = new URL(url);
     await assertPublicHostname(parsed.hostname);
 
-    let headers: Record<string, string> = {};
+    const headers: Record<string, string> = {};
     try {
       const res = await safeFetch(url, { method: "HEAD" });
       res.headers.forEach((val, key) => {
@@ -112,8 +111,6 @@ export const websiteSecurityHeadersExecutor: ToolExecutor<{ url: string }, any> 
     const hasHsts = !!headers["strict-transport-security"];
     const hasCsp = !!headers["content-security-policy"];
     const hasXfo = !!headers["x-frame-options"];
-    const hasXcto = !!headers["x-content-type-options"];
-    const hasRp = !!headers["referrer-policy"];
 
     const output = {
       url,

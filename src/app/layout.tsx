@@ -15,8 +15,20 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StrategicAudit Pro | Consultoría IT/OT & Ciberseguridad",
-  description: "Auditoría SEO técnica de alto impacto para infraestructuras críticas.",
+  title: "SCAUDIT | Enterprise Network Intelligence & Security",
+  description: "Plataforma avanzada de inteligencia de red, monitoreo de superficie de ataque y auditoría de ciberseguridad continua.",
+  robots: { index: true, follow: true },
+  openGraph: {
+    title: "SCAUDIT | Enterprise Network Intelligence",
+    description: "Plataforma avanzada de inteligencia de red, monitoreo de superficie de ataque y auditoría de ciberseguridad continua.",
+    type: "website",
+    siteName: "SCAUDIT Pro",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SCAUDIT | Enterprise Network Intelligence",
+    description: "Monitoreo de superficie de ataque y auditoría de ciberseguridad.",
+  },
 };
 
 export default function RootLayout({

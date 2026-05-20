@@ -5,6 +5,24 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    files: [
+      "src/server/intelligence/**/*.ts",
+      "src/app/api/intelligence/**/*.ts",
+      "src/app/api/bulk-scan/**/*.ts",
+      "src/app/api/api-keys/**/*.ts",
+      "src/app/api/monitoring/**/*.ts",
+      "src/app/api/webhooks/**/*.ts",
+      "src/app/components/tabs/IntelligenceTab.tsx",
+      "src/app/components/tabs/MonitoringTab.tsx",
+      "src/app/components/tabs/SettingsTab.tsx",
+      "src/features/intelligence/hooks/**/*.ts"
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

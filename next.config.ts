@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: [
           {
+            key: "X-Robots-Tag",
+            value: "index, follow",
+          },
+          {
             key: "X-Content-Type-Options",
             value: "nosniff",
           },

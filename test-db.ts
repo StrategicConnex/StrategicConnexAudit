@@ -16,7 +16,7 @@ async function testConnection() {
   try {
     ca = fs.readFileSync(caPath, 'utf8');
     console.log("CA cert found, length:", ca.length);
-  } catch (err) {
+  } catch {
     console.log("CA cert not found at", caPath);
   }
 

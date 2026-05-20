@@ -6,28 +6,22 @@ import { useIntelligenceStore } from "../stores/intelligence-store";
 import { useInvestigationRealtime } from "../hooks/useInvestigationRealtime";
 import GlobalTargetCommand from "./GlobalTargetCommand";
 import ToolCatalog from "./ToolCatalog";
+import { AttackSurfaceGraph } from "./AttackSurfaceGraph";
 import { exportIntelligenceToPdf } from "@/shared/utils/exportIntelligencePdf";
 import { 
   Sparkles, 
   Terminal, 
   Activity, 
-  Layers, 
   ShieldCheck, 
   History, 
   BookOpen, 
   ChevronRight, 
-  Cpu, 
-  MessageSquare,
   ArrowRight,
   TrendingUp,
-  AlertTriangle,
-  Lock,
   Menu,
   X,
   ArrowLeft,
   Loader2,
-  CheckCircle,
-  AlertCircle,
   Download
 } from "lucide-react";
 
@@ -62,9 +56,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
   const {
     investigation,
     findings,
-    events,
-    isLoading: isRealtimeLoading,
-    error: realtimeError
+    events
   } = useInvestigationRealtime(activeInvestigationId);
 
   const [aiMessage, setAiMessage] = useState("");
@@ -73,7 +65,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
   const [aiChat, setAiChat] = useState<{ role: "user" | "assistant"; text: string }[]>([
     { role: "assistant", text: "Hola. Soy tu Asistente de Inteligencia de Red. Ingresa un objetivo o selecciona una herramienta para comenzar la auditoría." }
   ]);
-  const [activeTab, setActiveTab] = useState<"telemetry" | "evidence">("telemetry");
+  const [activeTab, setActiveTab] = useState<"telemetry" | "evidence" | "topology">("telemetry");
   const [isMobileCatalogOpen, setIsMobileCatalogOpen] = useState(false);
 
   // Dynamic Mail Health Composite calculations
@@ -127,13 +119,16 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
   // Auto-respond when a tool is selected in Zustand to demonstrate cognitive AI response
   useEffect(() => {
     if (selectedToolId) {
-      setAiChat((prev) => [
-        ...prev,
-        { 
-          role: "assistant", 
-          text: `Has seleccionado la herramienta \`${selectedToolId}\`. Si tienes un objetivo ingresado, esta prueba pasiva recopilará metadatos valiosos analizados bajo la arquitectura EgressGuard.` 
-        }
-      ]);
+      const timer = setTimeout(() => {
+        setAiChat((prev) => [
+          ...prev,
+          { 
+            role: "assistant", 
+            text: `Has seleccionado la herramienta \`${selectedToolId}\`. Si tienes un objetivo ingresado, esta prueba pasiva recopilará metadatos valiosos analizados bajo la arquitectura EgressGuard.` 
+          }
+        ]);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [selectedToolId]);
 
@@ -164,10 +159,11 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
           { role: "assistant", text: `⚠️ No se pudo generar el plan: ${data.error || "Error desconocido"}` }
         ]);
       }
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
       setAiChat((prev) => [
         ...prev,
-        { role: "assistant", text: `⚠️ Error de conexión al generar el plan: ${err.message || err}` }
+        { role: "assistant", text: `⚠️ Error de conexión al generar el plan: ${errorMessage}` }
       ]);
     } finally {
       setIsGeneratingPlan(false);
@@ -434,6 +430,16 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
             >
               Evidencias Encontradas ({activeInvestigationId ? findings.length : ONBOARDING_PREVIEW_EVIDENCES.length})
             </button>
+            <button
+              onClick={() => setActiveTab("topology")}
+              className={`pb-2.5 text-xs font-mono uppercase tracking-wide border-b-2 transition-all ${
+                activeTab === "topology" 
+                  ? "border-emerald-500 text-white font-semibold" 
+                  : "border-transparent text-[#71717a] hover:text-[#a1a1aa]"
+              }`}
+            >
+              Superficie de Ataque
+            </button>
           </div>
 
           {/* Telemetry Timeline Tab */}
@@ -593,6 +599,23 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
               </div>
             </div>
           )}
+
+          {/* Topology Tab */}
+          {activeTab === "topology" && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Activity className="w-4 h-4 text-[#71717a]" />
+                  <span className="text-xs text-[#a1a1aa] font-mono">
+                    Mapa Topológico de Superficie de Ataque
+                  </span>
+                </div>
+              </div>
+              <div className="p-4 bg-[#0c0c0e] border border-[#1f1f23] rounded-xl">
+                <AttackSurfaceGraph projectId={projectId} />
+              </div>
+            </div>
+          )}
           </div>
         </section>
       </main>
@@ -634,7 +657,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Generar Plan Coplilot IA</span>
+                  <span>Generar Plan Copilot IA</span>
                 </>
               )}
             </button>

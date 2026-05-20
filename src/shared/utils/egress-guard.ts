@@ -151,7 +151,7 @@ export async function assertPublicHostname(target: string): Promise<boolean> {
     for (const addr of addresses) {
       validateIp(addr);
     }
-  } catch (err) {
+  } catch {
     // If A resolution fails, try AAAA
     try {
       const addressesV6 = await dns.promises.resolve(host, "AAAA");
@@ -163,7 +163,7 @@ export async function assertPublicHostname(target: string): Promise<boolean> {
       try {
         const result = await dns.promises.lookup(host);
         validateIp(result.address);
-      } catch (dnsErr) {
+      } catch {
         // If entirely unresolvable, continue to let connection level fail normally
       }
     }

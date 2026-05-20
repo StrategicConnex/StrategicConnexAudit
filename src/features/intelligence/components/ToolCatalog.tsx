@@ -13,7 +13,8 @@ import {
   Cpu,
   Terminal,
   Activity,
-  Layers
+  Layers,
+  LucideIcon
 } from "lucide-react";
 
 type ToolCategory = "dns" | "network" | "email-security" | "website" | "ssl-tls" | "threat" | "osint" | "ai";
@@ -59,7 +60,7 @@ const UI_TOOLS: ToolDefinition[] = [
   { id: "website.cookies", name: "Cookie Analysis", category: "website", description: "Analiza flags Secure, HttpOnly y SameSite de cookies.", requiredPlan: "free", risk: "active-safe", costUnits: 2 }
 ];
 
-const categoryMetadata: Record<ToolCategory, { label: string; icon: any }> = {
+const categoryMetadata: Record<ToolCategory, { label: string; icon: LucideIcon }> = {
   dns: { label: "DNS", icon: Layers },
   network: { label: "Redes", icon: Activity },
   "email-security": { label: "Email", icon: Mail },

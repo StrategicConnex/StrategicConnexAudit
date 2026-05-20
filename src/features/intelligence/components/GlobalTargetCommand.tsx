@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useCreateInvestigation } from "../hooks/useCreateInvestigation";
 import { 
   Globe, 
@@ -10,7 +10,8 @@ import {
   Cpu, 
   Binary, 
   CornerDownLeft, 
-  Loader2 
+  Loader2,
+  LucideIcon
 } from "lucide-react";
 
 interface GlobalTargetCommandProps {
@@ -55,7 +56,7 @@ function classifyTarget(val: string): TargetType {
   return "unknown";
 }
 
-const targetTypeStyles: Record<TargetType, { bg: string; text: string; icon: any; label: string }> = {
+const targetTypeStyles: Record<TargetType, { bg: string; text: string; icon: LucideIcon; label: string }> = {
   domain: { bg: "bg-blue-500/10 border-blue-500/20", text: "text-blue-400", icon: Globe, label: "Dominio" },
   url: { bg: "bg-teal-500/10 border-teal-500/20", text: "text-teal-400", icon: Globe, label: "Enlace Web" },
   ip: { bg: "bg-emerald-500/10 border-emerald-500/20", text: "text-emerald-400", icon: Binary, label: "Dirección IP" },
@@ -67,14 +68,10 @@ const targetTypeStyles: Record<TargetType, { bg: string; text: string; icon: any
 
 export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTargetCommandProps) {
   const [inputVal, setInputVal] = useState("");
-  const [targetType, setTargetType] = useState<TargetType>("unknown");
   const { createInvestigation, isLoading, error: apiError } = useCreateInvestigation();
   const [localError, setLocalError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setTargetType(classifyTarget(inputVal));
-    setLocalError(null);
-  }, [inputVal]);
+  const targetType = classifyTarget(inputVal);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +105,7 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
       if (inv && onSuccess) {
         onSuccess(inv.id);
       }
-    } catch (err) {
+    } catch {
       // Handled by API error state
     }
   };
@@ -133,7 +130,7 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
           <input
             type="text"
             value={inputVal}
-            onChange={(e) => setInputVal(e.target.value)}
+            onChange={(e) => { setInputVal(e.target.value); setLocalError(null); }}
             placeholder="Ingrese un dominio, IP, ASN o Email (ej. google.com, 8.8.8.8)..."
             className="flex-1 bg-transparent border-0 outline-none text-sm text-[#e4e4e7] placeholder-[#52525b] py-3.5 px-1 font-sans selection:bg-emerald-500/20"
             disabled={isLoading}

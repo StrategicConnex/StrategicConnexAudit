@@ -15,7 +15,7 @@ function getRedisInstance(): Redis {
 
 // Proxied redis client to prevent eager instantiation during build phase
 export const redis = new Proxy({} as Redis, {
-  get(target, prop, receiver) {
+  get(_, prop) {
     const instance = getRedisInstance();
     const value = Reflect.get(instance, prop);
     if (typeof value === "function") {
