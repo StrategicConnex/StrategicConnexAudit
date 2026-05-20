@@ -13,7 +13,7 @@ export interface WebhookPayload {
 // Tarea asíncrona para despachar webhooks a clientes (con reintentos automáticos)
 export const dispatchWebhookTask = task({
   id: "dispatch-webhook-task",
-  maxRetries: 5, // Trigger.dev manejará backoff exponencial automáticamente
+  retry: { maxAttempts: 5 }, // Trigger.dev manejará backoff exponencial automáticamente
   run: async (payload: WebhookPayload, { ctx }) => {
     logger.info(`Iniciando envío de webhook event '${payload.event}' para proyecto ${payload.projectId}`);
 
