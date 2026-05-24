@@ -6,8 +6,11 @@ import {
   ShieldAlert, Server, History, Sparkles, CheckCircle2, 
   Lock, Cpu, Copy, Check, Info, Globe, AlertTriangle,
   Mail, Shield, Activity, MapPin, Layers, Compass,
-  ChevronDown
+  ChevronDown, FileText, TrendingDown, TrendingUp, Network
 } from 'lucide-react';
+import { ScoreGauge } from '@/app/components/ScoreGauge';
+import { AttackSurfaceGraph } from '@/app/components/AttackSurfaceGraph';
+import { IncidentBriefModal } from '@/app/components/IncidentBriefModal';
 
 interface Project {
   id: string;
@@ -140,6 +143,7 @@ export function IntelligenceTab({
 }: IntelligenceTabProps) {
   // Navigation & session state
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
+  const [driftStates, setDriftStates] = useState<Record<string, boolean>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   
   // Details of the selected investigation
@@ -170,6 +174,16 @@ export function IntelligenceTab({
   const [scanSpeed, setScanSpeed] = useState('0.0 KB/s');
   const [progressPercent, setProgressPercent] = useState(0);
   const [copilotStep, setCopilotStep] = useState(0);
+
+  // AI Integrations state
+  const [showBriefModal, setShowBriefModal] = useState(false);
+  const [driftData, setDriftData] = useState<{
+    hasDrift: boolean;
+    changes: Array<{ field: string; label: string; previous: string | null; current: string | null; severity: 'critical' | 'warning' | 'info' }>;
+    deltaScore: number | null;
+    previousScore: number | null;
+  } | null>(null);
+  const [showAttackSurface, setShowAttackSurface] = useState(false);
 
   const toggleAccordion = (id: string) => {
     setExpandedAccordions(prev => ({
@@ -359,6 +373,35 @@ export function IntelligenceTab({
       fetchInvestigations(selectedProjectId);
     }
   }, [selectedProjectId, fetchInvestigations]);
+
+  // Sync drift states when investigations change
+  useEffect(() => {
+    if (investigations.length === 0) return;
+    
+    const checkDrift = async () => {
+      const states: Record<string, boolean> = {};
+      // Only check the most recent 10 to avoid excessive API calls
+      const checks = investigations.slice(0, 10).map(async (inv) => {
+        if (driftStates[inv.id] !== undefined) return; // already checked
+        try {
+          const res = await fetch(`/api/intelligence/drift?investigationId=${inv.id}`);
+          const data = await res.json();
+          if (data.success && data.hasDrift) {
+            states[inv.id] = true;
+          } else {
+            states[inv.id] = false;
+          }
+        } catch (e) {
+          console.error("Drift check failed for", inv.id);
+        }
+      });
+      await Promise.all(checks);
+      if (Object.keys(states).length > 0) {
+        setDriftStates(prev => ({...prev, ...states}));
+      }
+    };
+    checkDrift();
+  }, [investigations]);
 
   // Sync on selection change
   useEffect(() => {
@@ -709,15 +752,22 @@ export function IntelligenceTab({
                       <span className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors truncate max-w-[140px]">
                         {inv.target}
                       </span>
-                      {inv.score !== null ? (
-                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded border ${scoreInfo?.color.split(' ')[0]} ${scoreInfo?.color.split(' ')[1]}`}>
-                          {inv.score}
-                        </span>
-                      ) : (
-                        <span className="text-[9px] bg-white/5 border border-white/10 text-zinc-500 px-2 py-0.5 rounded font-bold">
-                          Pendiente
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {driftStates[inv.id] && (
+                          <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded border border-rose-500/30 text-rose-400 bg-rose-500/10 animate-pulse">
+                            DRIFT
+                          </span>
+                        )}
+                        {inv.score !== null ? (
+                          <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded border ${scoreInfo?.color.split(' ')[0]} ${scoreInfo?.color.split(' ')[1]}`}>
+                            {inv.score}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] bg-white/5 border border-white/10 text-zinc-500 px-2 py-0.5 rounded font-bold">
+                            Pendiente
+                          </span>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="flex items-center justify-between text-[9px] text-zinc-500 uppercase tracking-wider">
@@ -893,39 +943,42 @@ export function IntelligenceTab({
             {/* Bento-Row 1: Posture Score & Vulnerability Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               
-              {/* Score Gauge Ring */}
-              <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.5)] md:col-span-1">
+              {/* Score Gauge — Velocímetro SVG Cinematico */}
+              <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.5)] md:col-span-1">
                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                   Índice de Seguridad
                 </h3>
-                
+
                 {selectedDetails.investigation.score !== null ? (
-                  <div className="relative flex items-center justify-center">
-                    {/* Retro ring container */}
-                    <div className="w-36 h-36 rounded-full border-4 border-white/[0.02] flex items-center justify-center flex-col gap-0.5">
-                      <span className="text-4xl font-extrabold tracking-tighter text-white">
-                        {selectedDetails.investigation.score}
-                      </span>
-                      <span className="text-[9px] font-extrabold text-zinc-500 uppercase tracking-widest">
-                        / 100
-                      </span>
-                    </div>
-                    {/* Glowing outer aura depending on score */}
-                    <div className={`absolute inset-0 rounded-full blur-2xl opacity-15 pointer-events-none ${
-                      selectedDetails.investigation.score >= 80 ? 'bg-emerald-500' : 'bg-rose-500'
-                    }`} />
-                  </div>
+                  <ScoreGauge
+                    score={selectedDetails.investigation.score}
+                    previousScore={driftData?.previousScore}
+                    size="md"
+                  />
                 ) : (
                   <div className="w-36 h-36 rounded-full border-4 border-dashed border-white/[0.08] flex items-center justify-center text-zinc-600 text-sm font-bold">
                     N/A
                   </div>
                 )}
 
-                {selectedDetails.investigation.score !== null && (
-                  <div className={`text-[10px] font-extrabold px-3 py-1 rounded-full border uppercase tracking-widest ${
-                    getScoreRating(selectedDetails.investigation.score).color
-                  }`}>
-                    {getScoreRating(selectedDetails.investigation.score).label}
+                {/* Drift alert badges */}
+                {driftData?.hasDrift && driftData.changes.length > 0 && (
+                  <div className="flex flex-col gap-1.5 w-full">
+                    {driftData.changes.slice(0, 2).map((change, i) => (
+                      <div key={i} className={`flex items-center gap-1.5 text-[9px] font-bold px-2 py-1 rounded border ${
+                        change.severity === 'critical'
+                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                          : change.severity === 'warning'
+                          ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                          : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'
+                      }`}>
+                        <TrendingDown className="w-3 h-3 shrink-0" />
+                        <span className="truncate">Drift: {change.label}</span>
+                      </div>
+                    ))}
+                    {driftData.changes.length > 2 && (
+                      <span className="text-[9px] text-zinc-500">+{driftData.changes.length - 2} cambios más</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -933,13 +986,27 @@ export function IntelligenceTab({
               {/* Vulnerabilities counts, Summary & Target Info */}
               <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-8 flex flex-col justify-between gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.5)] md:col-span-2">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest">
                       Análisis Finalizado
                     </span>
-                    <span className="text-[10px] text-zinc-500 font-medium">
-                      {new Date(selectedDetails.investigation.createdAt).toLocaleString('es-ES')}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-zinc-500 font-medium">
+                        {new Date(selectedDetails.investigation.createdAt).toLocaleString('es-ES')}
+                      </span>
+                      {/* Attack Surface toggle */}
+                      <button
+                        onClick={() => setShowAttackSurface(prev => !prev)}
+                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all duration-200 cursor-pointer ${
+                          showAttackSurface
+                            ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-400'
+                            : 'bg-white/[0.02] border-white/[0.06] text-zinc-500 hover:text-zinc-300'
+                        }`}
+                      >
+                        <Network className="w-3 h-3" />
+                        Superficie
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <h4 className="font-extrabold text-white text-lg tracking-tight">
@@ -965,9 +1032,51 @@ export function IntelligenceTab({
                     </div>
                   ))}
                 </div>
+
+                {/* Incident Brief CTA — Only shown when critical/high findings exist */}
+                {(selectedDetails.findings.filter(f => f.severity === 'critical' || f.severity === 'high').length > 0) && (
+                  <button
+                    onClick={() => setShowBriefModal(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 font-extrabold text-xs px-4 py-3 rounded-xl transition-all duration-300 hover:scale-[1.01] cursor-pointer group"
+                  >
+                    <FileText className="w-4 h-4 group-hover:animate-pulse" />
+                    Generar Incident Brief con IA
+                    <span className="text-[9px] font-black bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 rounded uppercase tracking-wider">
+                      {selectedDetails.findings.filter(f => f.severity === 'critical' || f.severity === 'high').length} hallazgos
+                    </span>
+                  </button>
+                )}
               </div>
 
             </div>
+
+            {/* Attack Surface Graph — toggleable panel */}
+            {showAttackSurface && (
+              <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.5)] animate-in slide-in-from-top-4 fade-in duration-400">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-2">
+                      <Network className="w-4 h-4 text-indigo-400" />
+                      Attack Surface Graph
+                    </h3>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">
+                      Topología de red del objetivo con vectores de exposición
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAttackSurface(false)}
+                    className="text-zinc-600 hover:text-zinc-300 transition-colors text-xs font-bold cursor-pointer"
+                  >
+                    Cerrar ×
+                  </button>
+                </div>
+                <AttackSurfaceGraph
+                  target={selectedDetails.investigation.target}
+                  metadata={selectedDetails.investigation.metadata as any}
+                  score={selectedDetails.investigation.score}
+                />
+              </div>
+            )}
 
             {/* Bento-Row 1.5: Mail Health & Web Security Audit Panel */}
             {(() => {
@@ -2166,73 +2275,127 @@ export function IntelligenceTab({
                 </div>
               ) : (
                 <div className="divide-y divide-white/[0.04]">
-                  {selectedDetails.findings.map((finding) => (
-                    <div key={finding.id} className="p-8 hover:bg-white/[0.005] transition-all duration-300 flex flex-col gap-4">
-                      
-                      {/* Header row */}
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                          <span className={`text-[9px] font-extrabold uppercase tracking-widest px-3 py-1 rounded border shrink-0 mt-0.5 ${getSeverityBadge(finding.severity)}`}>
-                            {finding.severity}
-                          </span>
-                          <div>
-                            <h4 className="font-extrabold text-white text-sm tracking-tight">
-                              {finding.title}
-                            </h4>
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mt-0.5">
-                              Activo Afectado: <span className="text-zinc-300 font-mono font-medium">{finding.affectedAsset || 'General'}</span>
-                            </p>
+                  {selectedDetails.findings.map((finding) => {
+                    const severityConfig = {
+                      critical: { glow: 'shadow-[0_0_15px_rgba(225,29,72,0.15)]', bg: 'bg-rose-500/5', border: 'border-rose-500/20', icon: 'text-rose-400' },
+                      high: { glow: 'shadow-[0_0_15px_rgba(249,115,22,0.1)]', bg: 'bg-orange-500/5', border: 'border-orange-500/20', icon: 'text-orange-400' },
+                      medium: { glow: '', bg: 'bg-amber-500/5', border: 'border-amber-500/10', icon: 'text-amber-400' },
+                      low: { glow: '', bg: 'bg-teal-500/5', border: 'border-teal-500/10', icon: 'text-teal-400' },
+                    }[finding.severity] || { glow: '', bg: 'bg-zinc-500/5', border: 'border-zinc-500/10', icon: 'text-zinc-400' };
+
+                    return (
+                      <div key={finding.id} className={`p-6 md:p-8 m-4 rounded-xl transition-all duration-300 flex flex-col gap-5 ${severityConfig.bg} ${severityConfig.border} border ${severityConfig.glow} hover:bg-white/[0.02]`}>
+                        
+                        {/* Header row */}
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                          <div className="flex items-start gap-4">
+                            <div className="mt-0.5">
+                               <AlertTriangle className={`w-5 h-5 ${severityConfig.icon}`} />
+                            </div>
+                            <div>
+                              <h4 className="font-extrabold text-white text-base tracking-tight flex items-center gap-2">
+                                {finding.title}
+                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${getSeverityBadge(finding.severity)}`}>
+                                  {finding.severity}
+                                </span>
+                              </h4>
+                              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mt-2 flex items-center gap-1.5">
+                                <Server className="w-3.5 h-3.5" /> Activo: <span className="text-zinc-300 font-mono font-medium bg-black/40 px-1.5 py-0.5 rounded border border-white/[0.04]">{finding.affectedAsset || 'General'}</span>
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Description & Recommendations */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs leading-relaxed pt-2">
-                        <div className="space-y-2">
-                          <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
-                            <Info className="w-3.5 h-3.5" /> Descripción de Falla
-                          </h5>
-                          <p className="text-zinc-400 font-medium">
-                            {finding.description}
-                          </p>
-                        </div>
-                        {finding.recommendation && (
-                          <div className="space-y-2">
-                            <h5 className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-1.5">
-                              <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> Recomendación Técnica
+                        {/* Description & Recommendations */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs leading-relaxed pt-4 border-t border-white/[0.04]">
+                          <div className="space-y-2.5">
+                            <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
+                              <Info className="w-3.5 h-3.5" /> Contexto Técnico
                             </h5>
-                            <p className="text-zinc-300 font-medium">
-                              {finding.recommendation}
+                            <p className="text-zinc-400 font-medium">
+                              {finding.description}
                             </p>
+                          </div>
+                          {finding.recommendation && (
+                            <div className="space-y-2.5">
+                              <h5 className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${severityConfig.icon}`}>
+                                <Shield className="w-3.5 h-3.5" /> Plan de Acción
+                              </h5>
+                              <p className="text-zinc-300 font-medium bg-black/20 p-3.5 rounded-lg border border-white/[0.02]">
+                                {finding.recommendation}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Evidence JSON payload */}
+                        {finding.evidence && Object.keys(finding.evidence).length > 0 && (
+                          <div className="mt-2 bg-[#050508] border border-white/[0.04] p-4 rounded-xl relative overflow-hidden group">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest flex items-center gap-1.5">
+                                <Terminal className="w-3.5 h-3.5 text-zinc-500" /> Evidencia RAW
+                              </span>
+                              <button
+                                onClick={() => handleCopyToClipboard(JSON.stringify(finding.evidence, null, 2))}
+                                className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white transition-colors cursor-pointer bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] px-2.5 py-1 rounded"
+                              >
+                                Copiar Payload
+                              </button>
+                            </div>
+                            <pre className="text-[10px] font-mono text-zinc-500 overflow-x-auto select-all max-h-[140px] leading-relaxed custom-scrollbar p-3 bg-black/40 rounded-lg border border-white/[0.02]">
+                              {JSON.stringify(finding.evidence, null, 2)}
+                            </pre>
                           </div>
                         )}
+
                       </div>
-
-                      {/* Evidence JSON payload */}
-                      {finding.evidence && Object.keys(finding.evidence).length > 0 && (
-                        <div className="mt-4 bg-[#07070a] border border-white/[0.04] p-5 rounded-xl relative overflow-hidden group">
-                          <div className="flex justify-between items-center mb-3">
-                            <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest flex items-center gap-1">
-                              <Terminal className="w-3 h-3 text-zinc-500" /> Evidencia Técnica Recuperada
-                            </span>
-                            <button
-                              onClick={() => handleCopyToClipboard(JSON.stringify(finding.evidence, null, 2))}
-                              className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white transition-colors cursor-pointer"
-                            >
-                              Copiar Payload
-                            </button>
-                          </div>
-                          <pre className="text-[10px] font-mono text-zinc-400 overflow-x-auto select-all max-h-[140px] leading-relaxed">
-                            {JSON.stringify(finding.evidence, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
+
+            {/* Bento-Row 2.5: Event Timeline */}
+            {selectedDetails.events && selectedDetails.events.length > 0 && (
+              <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)] mt-8">
+                <div className="p-8 border-b border-white/[0.06] bg-white/[0.005]">
+                  <h3 className="font-extrabold text-white text-base tracking-tight flex items-center gap-2">
+                    <History className="w-4 h-4 text-cyan-400" /> Timeline de Ejecución
+                  </h3>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+                    Secuencia de eventos y estado del análisis
+                  </p>
+                </div>
+                <div className="p-8">
+                  <div className="relative border-l-2 border-white/[0.06] ml-3 space-y-7">
+                    {selectedDetails.events.map((evt, idx) => (
+                      <div key={evt.id} className="relative pl-6" style={{ animation: `fade-in 0.5s ease-out ${idx * 0.1}s both` }}>
+                        {/* Timeline Node */}
+                        <div className="absolute -left-[7px] top-1.5 w-3 h-3 rounded-full bg-[#050508] border-2 border-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
+                        
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded w-fit">
+                            {new Date(evt.createdAt).toLocaleTimeString()} · {evt.eventType}
+                          </span>
+                          <span className="text-xs font-medium text-zinc-300">
+                            {evt.message}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Live indicator if status is not completed */}
+                    {selectedDetails.investigation.status !== 'completed' && (
+                      <div className="relative pl-6 animate-pulse mt-7">
+                        <div className="absolute -left-[7px] top-1.5 w-3 h-3 rounded-full bg-[#050508] border-2 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded w-fit">
+                          Escaneando en vivo...
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Bento-Row 3: Discovered Assets Grid */}
             {selectedDetails.assets && selectedDetails.assets.length > 0 && (
@@ -2572,6 +2735,16 @@ export function IntelligenceTab({
 
       </div>
 
+      {showBriefModal && selectedDetails && (
+        <IncidentBriefModal
+          investigationId={selectedDetails.investigation.id}
+          target={selectedDetails.investigation.target}
+          score={selectedDetails.investigation.score}
+          criticalCount={selectedDetails.findings.filter(f => f.severity === 'critical').length}
+          highCount={selectedDetails.findings.filter(f => f.severity === 'high').length}
+          onClose={() => setShowBriefModal(false)}
+        />
+      )}
     </div>
   );
 }
