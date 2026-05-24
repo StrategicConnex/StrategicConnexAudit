@@ -243,11 +243,30 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, any> = {
     ctx.log(`Iniciando GeoIP + ASN seguro para: ${ip}`);
     await assertPublicHostname(ip);
 
+    let targetIp = ip;
+    let ipv4: string | null = null;
+    let ipv6: string | null = null;
+    
+    if (!net.isIP(ip)) {
+      try {
+        const resolved4 = await dns.resolve4(ip).catch(() => []);
+        if (resolved4.length > 0) ipv4 = resolved4[0];
+        
+        const resolved6 = await dns.resolve6(ip).catch(() => []);
+        if (resolved6.length > 0) ipv6 = resolved6[0];
+        
+        targetIp = ipv4 || ipv6 || ip;
+      } catch {}
+    } else {
+      if (ip.includes(":")) ipv6 = ip;
+      else ipv4 = ip;
+    }
+
     let data: any = null;
     
     // 1. Intentar API 1: freeipapi.com
     try {
-      const res = await safeFetch(`https://freeipapi.com/api/json/${ip}`);
+      const res = await safeFetch(`https://freeipapi.com/api/json/${targetIp}`);
       if (res.ok) {
         data = await res.json();
       }
@@ -258,7 +277,7 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, any> = {
     // 2. Intentar API 2: ip-api.com si la primera falla
     if (!data) {
       try {
-        const res = await safeFetch(`http://ip-api.com/json/${ip}`);
+        const res = await safeFetch(`http://ip-api.com/json/${targetIp}`);
         if (res.ok) {
           const apiData = await res.json();
           if (apiData && apiData.status === "success") {
@@ -283,14 +302,16 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, any> = {
     // 3. Fallback a base de datos local simulada determinista (100% de éxito garantizado)
     if (!data) {
       ctx.log(`Todos los servicios GeoIP públicos fallaron. Utilizando base de datos local.`);
-      data = getLocalGeoIPFallback(ip);
+      data = getLocalGeoIPFallback(targetIp);
     }
 
     const output = {
       success: true, // Crucial para UI
       ip,
-      ipAddress: ip, // Mapeo para frontend
-      ipVersion: ip.includes(":") ? 6 : 4,
+      ipAddress: targetIp, // Mapeo para frontend
+      ipv4,
+      ipv6,
+      ipVersion: targetIp.includes(":") ? 6 : 4,
       country: data.countryName || "Desconocido",
       countryName: data.countryName || "Desconocido", // Mapeo para frontend
       countryCode: data.countryCode || "XX",
