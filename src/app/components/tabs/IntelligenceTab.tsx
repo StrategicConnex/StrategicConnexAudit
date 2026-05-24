@@ -1277,6 +1277,7 @@ export function IntelligenceTab({
                                     : meta.dmarcParsed.policy === 'quarantine'
                                     ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
                                     : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                }`}>
                                   Política: {meta.dmarcParsed.policy?.toUpperCase() || 'NINGUNA'}
                                 </span>
                               ) : (
