@@ -1009,7 +1009,7 @@ export function IntelligenceTab({
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-extrabold text-white text-lg tracking-tight">
+                    <h4 className="font-extrabold text-white text-lg tracking-tight truncate max-w-full" title={selectedDetails.investigation.target}>
                       {selectedDetails.investigation.target}
                     </h4>
                     <p className="text-xs text-zinc-400 leading-relaxed mt-1">
@@ -1880,32 +1880,45 @@ export function IntelligenceTab({
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
                         {/* Geo Coordinates conceptual map (Beautiful retro scanning radar grid!) */}
-                        <div className="flex flex-col items-center justify-center gap-2 bg-[#050508]/60 border border-white/[0.04] rounded-xl p-3 relative overflow-hidden h-[180px]">
-                          {/* Conceptual Map Grid Background */}
-                          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:14px_14px]"></div>
-                          
-                          {/* Radial Scanning line */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/10 to-transparent w-full h-full animate-[pulse_3s_infinite]" style={{ transform: 'skewX(-20deg)' }}></div>
+                        <div className="flex flex-col items-center justify-center gap-2 bg-[#050508]/60 border border-white/[0.04] rounded-xl relative overflow-hidden h-[180px]">
+                          {asnGeo?.latitude && asnGeo?.longitude ? (
+                            <div className="absolute inset-0 z-0 pointer-events-none opacity-60 mix-blend-screen overflow-hidden">
+                              <iframe
+                                width="100%"
+                                height="100%"
+                                frameBorder="0"
+                                scrolling="no"
+                                src={`https://www.openstreetmap.org/export/embed.html?bbox=${asnGeo.longitude - 2},${asnGeo.latitude - 2},${asnGeo.longitude + 2},${asnGeo.latitude + 2}&layer=mapnik&marker=${asnGeo.latitude},${asnGeo.longitude}`}
+                                className="w-full h-full object-cover scale-[1.3] grayscale invert contrast-125"
+                                style={{ pointerEvents: 'none' }}
+                              ></iframe>
+                              <div className="absolute inset-0 bg-gradient-to-t from-[#020204] via-transparent to-[#020204]/80 z-10" />
+                            </div>
+                          ) : (
+                            <>
+                              {/* Conceptual Map Grid Background Fallback */}
+                              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:14px_14px]"></div>
+                              
+                              {/* Radial Scanning line */}
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/10 to-transparent w-full h-full animate-[pulse_3s_infinite]" style={{ transform: 'skewX(-20deg)' }}></div>
 
-                          {/* SVG Radar circle & scan lines */}
-                          <svg className="w-24 h-24 text-cyan-500/20 absolute z-0 shrink-0" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" />
-                            <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="0.5" />
-                            <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 2" />
-                            <line x1="50" y1="5" x2="50" y2="95" stroke="currentColor" strokeWidth="0.5" />
-                            <line x1="5" y1="50" x2="95" y2="50" stroke="currentColor" strokeWidth="0.5" />
-                            {/* Scanning blip */}
-                            {asnGeo?.success && (
-                              <circle cx="65" cy="35" r="3" fill="#22d3ee" className="animate-ping" style={{ animationDuration: '1.5s' }} />
-                            )}
-                          </svg>
+                              {/* SVG Radar circle & scan lines */}
+                              <svg className="w-24 h-24 text-cyan-500/20 absolute z-0 shrink-0" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" />
+                                <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="0.5" />
+                                <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 2" />
+                                <line x1="50" y1="5" x2="50" y2="95" stroke="currentColor" strokeWidth="0.5" />
+                                <line x1="5" y1="50" x2="95" y2="50" stroke="currentColor" strokeWidth="0.5" />
+                              </svg>
+                            </>
+                          )}
 
-                          <div className="relative z-10 flex flex-col items-center text-center space-y-1">
-                            <MapPin className="w-6 h-6 text-cyan-400 animate-bounce" />
-                            <span className="text-[10px] font-black text-white">{asnGeo?.cityName}, {asnGeo?.countryCode}</span>
-                            <span className="text-[8px] text-zinc-500 font-mono tracking-wider uppercase">Coords: {asnGeo?.latitude?.toFixed(4) ?? '0.0000'}, {asnGeo?.longitude?.toFixed(4) ?? '0.0000'}</span>
-                            <span className="text-[9px] bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded mt-1 max-w-[150px] truncate block font-bold">
-                              {asnGeo?.countryName}
+                          <div className="relative z-20 flex flex-col items-center text-center space-y-1 p-2 rounded-xl bg-[#020204]/60 backdrop-blur-md border border-white/[0.05] mt-4">
+                            <MapPin className="w-6 h-6 text-cyan-400 animate-bounce drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                            <span className="text-[10px] font-black text-white drop-shadow-md">{asnGeo?.cityName || 'Ciudad Desconocida'}, {asnGeo?.countryCode || 'N/A'}</span>
+                            <span className="text-[8px] text-zinc-400 font-mono tracking-wider uppercase bg-black/50 px-1.5 py-0.5 rounded">Coords: {asnGeo?.latitude?.toFixed(4) ?? '0.0000'}, {asnGeo?.longitude?.toFixed(4) ?? '0.0000'}</span>
+                            <span className="text-[9px] bg-cyan-950/80 text-cyan-400 border border-cyan-500/30 px-2 py-0.5 rounded mt-1 max-w-[150px] truncate block font-bold">
+                              {asnGeo?.countryName || 'País Desconocido'}
                             </span>
                           </div>
                         </div>
@@ -1914,7 +1927,18 @@ export function IntelligenceTab({
                         <div className="space-y-4 flex flex-col justify-between">
                           <div className="space-y-1">
                             <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest block">Dirección IP de Destino</span>
-                            <span className="text-xs font-mono font-extrabold text-white block bg-white/[0.02] border border-white/[0.04] p-1.5 rounded">{asnGeo?.ipAddress || 'Desconocido'}</span>
+                            <span 
+                              className="text-xs font-mono font-extrabold text-white block bg-white/[0.02] border border-white/[0.04] p-1.5 rounded truncate max-w-full overflow-hidden"
+                              title={asnGeo?.ipAddress || 'Desconocido'}
+                            >
+                              {asnGeo?.ipAddress || 'Desconocido'}
+                            </span>
+                            {((asnGeo as any)?.ipv4 || (asnGeo as any)?.ipv6) && (
+                              <div className="flex gap-2 mt-1">
+                                {(asnGeo as any)?.ipv4 && <span className="text-[9px] font-mono text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20" title={(asnGeo as any).ipv4}>IPv4: {(asnGeo as any).ipv4}</span>}
+                                {(asnGeo as any)?.ipv6 && <span className="text-[9px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20 truncate max-w-[120px]" title={(asnGeo as any).ipv6}>IPv6: {(asnGeo as any).ipv6}</span>}
+                              </div>
+                            )}
                           </div>
 
                           <div className="space-y-1">

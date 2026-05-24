@@ -86,11 +86,13 @@ export function calculateRiskScore(findings: Finding[]): RiskResult {
     });
   }
 
-  // Fórmula premium: Penalización ponderada atenuada por la raíz de N
-  const calculatedPenalty = totalPenalties / Math.sqrt(N);
+  // Fórmula de decaimiento asintótico para evitar que llegue a 0 tan rápido
+  // Penalización efectiva que se satura asintóticamente a 100
+  const calculatedPenalty = 100 * (1 - Math.exp(-totalPenalties / 150));
   const baseScore = 100 - calculatedPenalty;
 
   // Ajustes de mitigación y límites estrictos [0, 100]
+  // Asegurar que al menos quede 1 si hay score > 0, o 0 si es catastrófico
   const score = Math.max(0, Math.min(100, Math.round(baseScore)));
 
   return {
