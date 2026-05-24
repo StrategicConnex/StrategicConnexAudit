@@ -72,15 +72,41 @@ export function ReportsTab({
             </div>
             <div className="space-y-2">
               <h4 className="font-extrabold text-white text-[19px] tracking-tight">Keywords & Rankings (CSV)</h4>
-              <p className="text-[13px] leading-relaxed text-zinc-500">Conjunto completo de datos que presenta palabras clave indexadas, volúmenes de búsqueda mensuales, tendencias y páginas de destino.</p>
+              <p className="text-[13px] leading-relaxed text-zinc-500">Conjunto completo de datos reales (DB) que presenta palabras clave indexadas, volúmenes, posiciones y URLs.</p>
             </div>
           </div>
           <button 
-            onClick={() => alert("CSV Export estará disponible en la Fase 2 de optimizaciones.")}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white/[0.01] border border-white/[0.04] text-zinc-600 rounded-xl cursor-not-allowed text-[11px] font-bold uppercase tracking-widest"
-            disabled
+            onClick={async () => {
+              if (!selectedProjectId) {
+                alert("Por favor selecciona un proyecto en el menú desplegable inferior primero.");
+                return;
+              }
+              try {
+                // Dynamically import the action so we don't break Server/Client boundaries if this is imported loosely
+                const { exportKeywordsCSV } = await import('@/app/actions/reports');
+                const result = await exportKeywordsCSV({ projectId: selectedProjectId });
+                if (result.data && result.data.success && result.data.csv) {
+                  const blob = new Blob([result.data.csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = result.data.filename || "keywords_export.csv";
+                  link.style.display = 'none';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  URL.revokeObjectURL(url);
+                } else if (result.error) {
+                  alert(result.error);
+                }
+              } catch (e) {
+                console.error(e);
+                alert("Ocurrió un error al descargar el CSV.");
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-xl hover:bg-emerald-500/20 transition-all text-[11px] font-bold uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
           >
-            <Download className="w-4 h-4" /> Próximamente
+            <Download className="w-4 h-4" /> Descargar CSV
           </button>
         </div>
 
