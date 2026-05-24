@@ -4,6 +4,8 @@ import { getToolDefinition } from "../registry/tool-registry";
 import { httpSemaphore, dnsSemaphore } from "./concurrency";
 import { executionCache, IntelligenceCache } from "./cache";
 import { enforceToolRunPolicy } from "./policy-enforcer";
+import net from "node:net";
+import dns from "node:dns/promises";
 
 /**
  * Despacha y ejecuta dinámicamente una herramienta de ciberseguridad
@@ -52,7 +54,18 @@ export async function executeTool(
   // 1. Validar esquemas de entrada de la herramienta
   let validatedInput: any = {};
   try {
-    const combinedInput = { ...input, domain: target, host: target, ip: target, url: target };
+    const targetUrl = target.startsWith("http") ? target : `https://${target}`;
+    let targetIp = target;
+    if (!net.isIP(target)) {
+      try {
+        const resolved = await dns.resolve4(target);
+        if (resolved.length > 0) targetIp = resolved[0];
+      } catch {
+        // Silently fallback if it cannot be resolved to IP
+      }
+    }
+
+    const combinedInput = { ...input, domain: target, host: target, ip: targetIp, url: targetUrl };
     validatedInput = executor.validate(combinedInput);
   } catch (err: any) {
     return {
