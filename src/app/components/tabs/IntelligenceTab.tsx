@@ -1277,8 +1277,7 @@ export function IntelligenceTab({
                                     : meta.dmarcParsed.policy === 'quarantine'
                                     ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
                                     : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                }`}>
-                                  Política: {meta.dmarcParsed.policy.toUpperCase()}
+                                  Política: {meta.dmarcParsed.policy?.toUpperCase() || 'NINGUNA'}
                                 </span>
                               ) : (
                                 <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-0.5 rounded font-bold">
@@ -2187,7 +2186,7 @@ export function IntelligenceTab({
                                 <div className="group-hover/hop:opacity-100 group-hover/hop:translate-y-0 opacity-0 translate-y-2 pointer-events-none absolute bottom-[105%] left-1/2 -translate-x-1/2 mb-4 bg-zinc-950/[0.95] backdrop-blur-xl border border-white/[0.08] p-4.5 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.9),0_0_20px_rgba(255,255,255,0.01)] transition-all duration-300 w-64 z-50 flex flex-col gap-3 text-xs select-text text-left font-sans">
                                   <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
                                     <span className="text-[8px] font-extrabold text-zinc-500 uppercase tracking-widest">DETALLES DEL SALTO #{hop.hop}</span>
-                                    <span className="text-[9px] font-mono text-cyan-400 font-extrabold">{hop.type.toUpperCase()}</span>
+                                    <span className="text-[9px] font-mono text-cyan-400 font-extrabold">{hop.type?.toUpperCase() || 'UNKNOWN'}</span>
                                   </div>
                                   
                                   <div className="space-y-2">
