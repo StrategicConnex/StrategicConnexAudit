@@ -2276,21 +2276,23 @@ export function IntelligenceTab({
               ) : (
                 <div className="divide-y divide-white/[0.04]">
                   {selectedDetails.findings.map((finding) => {
-                    const severityConfig = {
+                    const severityConfig: Record<string, { glow: string; bg: string; border: string; icon: string }> = {
                       critical: { glow: 'shadow-[0_0_15px_rgba(225,29,72,0.15)]', bg: 'bg-rose-500/5', border: 'border-rose-500/20', icon: 'text-rose-400' },
                       high: { glow: 'shadow-[0_0_15px_rgba(249,115,22,0.1)]', bg: 'bg-orange-500/5', border: 'border-orange-500/20', icon: 'text-orange-400' },
                       medium: { glow: '', bg: 'bg-amber-500/5', border: 'border-amber-500/10', icon: 'text-amber-400' },
                       low: { glow: '', bg: 'bg-teal-500/5', border: 'border-teal-500/10', icon: 'text-teal-400' },
-                    }[finding.severity] || { glow: '', bg: 'bg-zinc-500/5', border: 'border-zinc-500/10', icon: 'text-zinc-400' };
+                      info: { glow: '', bg: 'bg-cyan-500/5', border: 'border-cyan-500/10', icon: 'text-cyan-400' },
+                    };
+                    const config = severityConfig[finding.severity] || { glow: '', bg: 'bg-zinc-500/5', border: 'border-zinc-500/10', icon: 'text-zinc-400' };
 
                     return (
-                      <div key={finding.id} className={`p-6 md:p-8 m-4 rounded-xl transition-all duration-300 flex flex-col gap-5 ${severityConfig.bg} ${severityConfig.border} border ${severityConfig.glow} hover:bg-white/[0.02]`}>
+                      <div key={finding.id} className={`p-6 md:p-8 m-4 rounded-xl transition-all duration-300 flex flex-col gap-5 ${config.bg} ${config.border} border ${config.glow} hover:bg-white/[0.02]`}>
                         
                         {/* Header row */}
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                           <div className="flex items-start gap-4">
                             <div className="mt-0.5">
-                               <AlertTriangle className={`w-5 h-5 ${severityConfig.icon}`} />
+                               <AlertTriangle className={`w-5 h-5 ${config.icon}`} />
                             </div>
                             <div>
                               <h4 className="font-extrabold text-white text-base tracking-tight flex items-center gap-2">
