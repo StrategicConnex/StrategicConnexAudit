@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, context } = await req.json();
+    const { messages, context, mode = 'copilot' } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ success: false, error: 'Mensajes inválidos' }, { status: 400 });
@@ -36,12 +36,13 @@ export async function POST(req: NextRequest) {
     const aiUrl = env.openRouterBaseUrl ? `${env.openRouterBaseUrl}/chat/completions` : (env.aiBaseUrl || 'https://api.openai.com/v1/chat/completions');
     const aiModel = env.openRouterApiKey ? "openai/gpt-3.5-turbo" : "gpt-3.5-turbo";
 
+    const basePrompt = mode === 'analyst' 
+      ? 'Eres un Analista de Ciberseguridad Senior (Blue Team / Threat Intelligence). Tu objetivo es analizar la superficie de ataque de infraestructura, logs y hallazgos técnicos. Eres altamente técnico, objetivo y vas directo al punto. Responde en un tono analítico y forense.'
+      : 'Eres Strategic Copilot, un asistente IA Enterprise experto en Auditorías Técnicas, Ciberseguridad y Arquitectura. Tu misión es explicar problemas en lenguaje humano, priorizar tareas, generar planes de acción y sugerir fixes técnicos. Sé conciso, directo y usa un tono profesional de agencia.';
+
     const systemMessage = {
       role: 'system',
-      content: `Eres Strategic Copilot, un asistente IA Enterprise experto en SEO Técnico, Arquitectura Web y CRO. 
-Tu misión es explicar problemas SEO en lenguaje humano, priorizar tareas, generar planes de acción y sugerir fixes técnicos.
-Sé conciso, directo y usa un tono profesional de agencia.
-Contexto actual del usuario: ${JSON.stringify(context || 'Sin contexto específico')}`
+      content: `${basePrompt}\n\nContexto actual del objetivo analizado:\n${JSON.stringify(context || 'Sin contexto específico')}`
     };
 
     const apiMessages = [systemMessage, ...messages];

@@ -106,7 +106,6 @@ function initDirectDb(): DbInstance {
       const u = new URL(directUrl ?? '');
       // Only delete if we are manually providing SSL config in the Pool object
       u.searchParams.delete('sslmode');
-      u.searchParams.delete('supavisor_session_id');
       return u.toString();
     } catch {
       return directUrl;

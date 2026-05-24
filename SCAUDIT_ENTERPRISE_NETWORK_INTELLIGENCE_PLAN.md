@@ -1700,12 +1700,12 @@ Billing meters:
 
 ### Phase 5: Advanced intelligence
 
-| Priority | Work |
-|---|---|
-| P1 | BGP analysis |
-| P1 | Attack surface graph |
-| P2 | Anomaly detection and baseline drift |
-| P2 | Custom threat intel feeds |
+| Priority | Work | Status |
+|---|---|---|
+| P1 | BGP analysis | COMPLETED |
+| P1 | Attack surface graph | COMPLETED |
+| P2 | Anomaly detection and baseline drift | COMPLETED |
+| P2 | Custom threat intel feeds | COMPLETED |
 
 ---
 
