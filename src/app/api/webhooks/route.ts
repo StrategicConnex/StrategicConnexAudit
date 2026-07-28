@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/shared/db";
 import { withRLS } from "@/shared/db/rls";
 import {
   projects,
@@ -9,6 +8,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import crypto from "crypto";
+import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -62,13 +62,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("GET webhooks route failure:", error);
     return NextResponse.json({
       success: false,
-      error: `Error interno: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }
@@ -88,6 +86,17 @@ export async function POST(req: NextRequest) {
     }
 
     const { projectId, name, url, events, active } = parseResult.data;
+
+    // SECURITY: Validar que la URL del webhook no apunte a IPs internas (SSRF)
+    try {
+      const parsedUrl = new URL(url);
+      await assertPublicHostname(parsedUrl.hostname);
+    } catch (ssrfErr: any) {
+      return NextResponse.json({
+        success: false,
+        error: "La URL del webhook no es válida o apunta a una dirección no permitida."
+      }, { status: 400 });
+    }
 
     const result = await withRLS(user.id, async (tx) => {
       // Check authorization
@@ -124,13 +133,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("POST webhooks route failure:", error);
     return NextResponse.json({
       success: false,
-      error: `Error interno: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }
@@ -179,13 +186,11 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({
       success: true
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("DELETE webhooks route failure:", error);
     return NextResponse.json({
       success: false,
-      error: `Error interno: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }

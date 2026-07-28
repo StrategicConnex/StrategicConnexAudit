@@ -1,54 +1,143 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useCallback, useRef, useEffect } from 'react';
 import { createClient } from '@/shared/lib/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
-import { Mail, Lock, Loader2, Sparkles } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { Mail, Loader2, CheckCircle2, AlertCircle, ArrowRight, Shield, Sparkles } from 'lucide-react';
+import AiCoreVisual from '../components/AiCoreVisual';
 
-const AiCoreVisual = dynamic(() => import('../components/AiCoreVisual'), { ssr: false });
+// ─── Placeholder rotativo ──────────────────────────────────────────
+const PLACEHOLDER_TEXTS = [
+  'tu@empresa.com',
+  'juan@correo.com',
+  'analista@dominio.com',
+  'tu@outlook.com',
+];
 
+function AnimatedPlaceholder() {
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    let innerTimer: ReturnType<typeof setTimeout>;
+    const interval = setInterval(() => {
+      setVisible(false);
+      innerTimer = setTimeout(() => {
+        setIndex((i) => (i + 1) % PLACEHOLDER_TEXTS.length);
+        setVisible(true);
+      }, 300);
+    }, 3500);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(innerTimer);
+    };
+  }, []);
+
+  return (
+    <span
+      className={`inline-block transition-all duration-300 ${
+        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+      }`}
+    >
+      {PLACEHOLDER_TEXTS[index]}
+    </span>
+  );
+}
 
 function LoginContent() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
-  const router = useRouter();
+  const [message, setMessage] = useState<{ type: 'error' | 'success' | 'warning', text: string } | null>(null);
+  const [validationState, setValidationState] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
+  const [validationReason, setValidationReason] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [showContent, setShowContent] = useState(false);
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/';
   const supabase = createClient();
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage(null);
+  // ─── Entrance stagger ───────────────────────────────────────────
+  useEffect(() => {
+    const t = setTimeout(() => setShowContent(true), 80);
+    return () => clearTimeout(t);
+  }, []);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setMessage({ type: 'error', text: error.message });
-      setLoading(false);
-    } else {
-      router.push(next);
-      router.refresh();
-    }
-  };
-
-  const handleMagicLink = async () => {
-    if (!email) {
-      setMessage({ type: 'error', text: 'Por favor, ingresa tu correo primero.' });
+  // ─── Validación de email en tiempo real ─────────────────────────
+  const validateEmail = useCallback(async (value: string) => {
+    if (!value || !value.includes('@')) {
+      setValidationState('idle');
+      setValidationReason(null);
       return;
     }
+
+    setValidationState('validating');
+
+    try {
+      const res = await fetch('/api/auth/validate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: value.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 429) {
+        // Rate limited — mostrar advertencia pero permitir reintentar
+        setValidationState('invalid');
+        setValidationReason(data.retryAfter
+          ? `Límite de intentos alcanzado. Espera ${data.retryAfter} segundos.`
+          : 'Demasiadas solicitudes. Intenta de nuevo en un minuto.'
+        );
+        return;
+      }
+
+      if (data.valid) {
+        setValidationState('valid');
+        setValidationReason(null);
+      } else {
+        setValidationState('invalid');
+        setValidationReason(data.reason || 'Correo no válido');
+      }
+    } catch {
+      // Fallback: si la API falla, validación básica local
+      const basicValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+      setValidationState(basicValid ? 'valid' : 'invalid');
+      setValidationReason(basicValid ? null : 'Error de conexión. Verifica tu conexión a internet.');
+    }
+  }, []);
+
+  // ─── Referencia para el timer de debounce ──────────────────────
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    setMessage(null);
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => validateEmail(value), 400);
+  };
+
+  // ─── Envío del Magic Link ──────────────────────────────────────
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email.trim()) {
+      setMessage({ type: 'error', text: 'Por favor, ingresa tu correo electrónico.' });
+      return;
+    }
+
+    if (validationState === 'invalid') {
+      setMessage({ type: 'error', text: validationReason || 'Correo no válido.' });
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: email.trim(),
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${next}`,
       },
@@ -57,112 +146,307 @@ function LoginContent() {
     if (error) {
       setMessage({ type: 'error', text: error.message });
     } else {
-      setMessage({ type: 'success', text: '¡Enlace enviado! Revisa tu bandeja de entrada.' });
+      setEmailSent(true);
+      setMessage({
+        type: 'success',
+        text: '¡Enlace enviado! Revisa tu bandeja de entrada (y la carpeta de spam si no lo ves en unos minutos).',
+      });
     }
     setLoading(false);
   };
 
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden">
-      {/* Background Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/20 blur-[120px] rounded-full animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full animate-pulse" />
+  // ═════════════════════════════════════════════════════════════════
+  // Pantalla: Email Enviado
+  // ═════════════════════════════════════════════════════════════════
+  if (emailSent) {
+    return (
+      <div className="min-h-dvh w-full flex items-center justify-center bg-background relative overflow-hidden">
+        {/* Background orbs */}
+        <div className="absolute top-[-15%] left-[-15%] w-[50%] h-[50%] bg-indigo-600/10 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '8s', animationDelay: '0s' }} />
+        <div className="absolute bottom-[-15%] right-[-15%] w-[50%] h-[50%] bg-chartreuse/8 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '10s', animationDelay: '-3s' }} />
 
-      <div className="z-10 w-full max-w-md p-8">
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
-          {/* Subtle line glow */}
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50" />
-          
-          <div className="text-center mb-8">
-            <div className="inline-flex mb-4 justify-center items-center">
-              <AiCoreVisual size={90} interactive={true} />
-            </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">StrategicAudit Pro</h1>
-            <p className="text-gray-400 mt-2">Bienvenido de nuevo. Accede a tu panel.</p>
-          </div>
+        <div className="z-10 w-full max-w-md px-4 sm:px-6 md:px-8">
+          <div className="glass-card p-6 sm:p-8">
+            {/* Top glow line */}
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
-          <form onSubmit={handleEmailLogin} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300 ml-1">Correo Electrónico</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@empresa.com"
-                  className="block w-full pl-10 pr-3 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
-                />
+            <div className="animate-fade-in">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-chartreuse/10 border border-chartreuse/20 flex items-center justify-center mx-auto mb-5 sm:mb-6">
+                <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8 text-chartreuse" style={{ animation: 'scale-check 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <label className="text-sm font-medium text-gray-300">Contraseña</label>
-                <button type="button" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">¿Olvidaste tu contraseña?</button>
+              <h2 className="font-display text-xl sm:text-2xl font-extrabold text-foreground tracking-tight mb-3 text-center">
+                Revisa tu correo
+              </h2>
+
+              <p className="text-sm sm:text-base text-muted-fg mb-2 leading-relaxed text-center">
+                Hemos enviado un enlace mágico a{' '}
+                <strong className="text-foreground/90">{email}</strong>.
+              </p>
+
+              <p className="text-xs sm:text-sm text-muted-fg/70 mb-6 sm:mb-8 leading-relaxed text-center">
+                Haz clic en el enlace para acceder. Si no lo ves en unos minutos,
+                revisa tu carpeta de <strong className="text-foreground/60">spam</strong>.
+              </p>
+
+              <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4 mb-6 sm:mb-8 text-left">
+                <p className="text-xs sm:text-sm text-amber-400/80 leading-relaxed flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  ¿No recibiste el correo? Verifica que escribiste bien tu dirección y revisa la carpeta de spam.
+                  El enlace es válido por <strong>10 minutos</strong>.
+                </p>
               </div>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
-                </div>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="block w-full pl-10 pr-3 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
-                />
-              </div>
-            </div>
 
-            {message && (
-              <div className={`p-3 rounded-xl text-sm ${message.type === 'error' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
-                {message.text}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center py-3 px-4 rounded-xl text-white font-semibold bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-purple-500/25"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar ahora'}
-            </button>
-          </form>
-
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-transparent text-gray-500 backdrop-blur-sm">O continúa con</span>
+              <button
+                onClick={() => {
+                  setEmailSent(false);
+                  setMessage(null);
+                }}
+                className="block mx-auto text-sm text-muted-fg hover:text-foreground transition-colors"
+              >
+                ← Usar otro correo
+              </button>
             </div>
           </div>
 
-          <button
-            onClick={handleMagicLink}
-            disabled={loading}
-            className="w-full py-3 px-4 rounded-xl text-white font-medium bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-2"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-4 h-4" />}
-            Magic Link por Correo
-          </button>
-
-          <p className="mt-8 text-center text-sm text-gray-500">
-            ¿No tienes una cuenta?{' '}
-            <button className="text-purple-400 hover:text-purple-300 font-medium transition-colors">Contactar Soporte</button>
-          </p>
-        </div>
-
-        <div className="mt-8 text-center">
-          <p className="text-xs text-gray-600">
+          <p className="mt-6 text-center text-[10px] sm:text-xs text-muted-fg/40">
             Protegido por Supabase Auth & StrategicAudit Pro Infrastructure
           </p>
         </div>
+      </div>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════
+  // Pantalla: Login
+  // ═════════════════════════════════════════════════════════════════
+  return (
+    <div className="min-h-dvh w-full flex items-center justify-center bg-background relative overflow-hidden">
+      {/* ── Background orbs animadas ── */}
+      <div className="absolute top-[-15%] left-[-15%] w-[50%] h-[50%] bg-indigo-600/12 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '8s', animationDelay: '0s' }} />
+      <div className="absolute bottom-[-15%] right-[-15%] w-[50%] h-[50%] bg-chartreuse/8 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '10s', animationDelay: '-3s' }} />
+      <div className="absolute top-[40%] left-[60%] w-[30%] h-[30%] bg-indigo-600/6 blur-[120px] rounded-full animate-pulse hidden sm:block" style={{ animationDuration: '12s', animationDelay: '-1.5s' }} />
+
+      {/* ── Scan-line overlay ── */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.015]"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(255,255,255,0.03) 1px, rgba(255,255,255,0.03) 2px)',
+          backgroundSize: '100% 2px',
+        }}
+      />
+
+      <div
+        className={`z-10 w-full max-w-sm sm:max-w-md px-4 sm:px-6 md:px-8 transition-all duration-700 ${
+          showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+        }`}
+      >
+        <div className="glass-card p-6 sm:p-8 relative">
+          {/* Top glow line */}
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+
+          {/* ── Header ── */}
+          <div className="text-center mb-7 sm:mb-8">
+            <div className="inline-flex mb-4 justify-center items-center">
+              <AiCoreVisual size={80} interactive={true} />
+            </div>
+            <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+              StrategicAudit Pro
+            </h1>
+            <p className="text-sm sm:text-base text-muted-fg mt-2">
+              Ingresa tu correo para acceder
+            </p>
+          </div>
+
+          {/* ── Formulario ── */}
+          <form onSubmit={handleMagicLink} className="space-y-4 sm:space-y-5">
+            <div className="space-y-1.5 sm:space-y-2">
+              <label
+                htmlFor="login-email"
+                className="text-xs sm:text-sm font-medium text-card-fg/80 ml-1 transition-colors"
+              >
+                Correo Electrónico
+              </label>
+
+              <div className="relative group">
+                {/* Mail icon — cambia de color según estado */}
+                <div className="absolute inset-y-0 left-0 pl-3 sm:pl-3.5 flex items-center pointer-events-none">
+                  <Mail className={`h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300 ${
+                    validationState === 'valid'
+                      ? 'text-chartreuse scale-110'
+                      : validationState === 'invalid'
+                      ? 'text-destructive'
+                      : validationState === 'validating'
+                      ? 'text-chartreuse/60'
+                      : 'text-muted-fg group-focus-within:text-primary'
+                  }`} />
+                </div>
+
+                <input
+                  id="login-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={handleEmailChange}
+                  placeholder=" "
+                  autoFocus
+                  autoComplete="email"
+                  aria-describedby={validationReason ? 'email-validation-msg' : undefined}
+                  className={`block w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 bg-black/40 border rounded-xl text-sm sm:text-base text-foreground placeholder-transparent focus:outline-none focus:ring-2 transition-all duration-300 ${
+                    validationState === 'valid'
+                      ? 'border-chartreuse/50 focus:ring-chartreuse/30 focus:border-chartreuse shadow-[0_0_20px_-8px_oklch(0.78_0.18_140/0.15)]'
+                      : validationState === 'invalid'
+                      ? 'border-destructive/50 focus:ring-destructive/30 focus:border-destructive shadow-[0_0_20px_-8px_oklch(0.55_0.22_25/0.15)]'
+                      : validationState === 'validating'
+                      ? 'border-chartreuse/30 focus:ring-chartreuse/20 focus:border-chartreuse/40'
+                      : 'border-border focus:ring-primary/30 focus:border-primary/50'
+                  }`}
+                />
+
+                {/* Floating label (placeholder animado como label flotante) */}
+                <div
+                  className={`absolute left-9 sm:left-10 top-1/2 -translate-y-1/2 text-sm sm:text-base text-muted-fg pointer-events-none transition-all duration-300 origin-left ${
+                    email
+                      ? 'opacity-0 translate-y-[-1.2rem] scale-75'
+                      : 'opacity-100'
+                  }`}
+                >
+                  <AnimatedPlaceholder />
+                </div>
+
+                {/* Validation icon animado */}
+                <div className="absolute inset-y-0 right-0 pr-3 sm:pr-3.5 flex items-center pointer-events-none">
+                  {validationState === 'validating' && (
+                    <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-chartreuse animate-spin" />
+                  )}
+                  {validationState === 'valid' && (
+                    <CheckCircle2
+                      className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-chartreuse"
+                      style={{ animation: 'scale-check 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+                    />
+                  )}
+                  {validationState === 'invalid' && (
+                    <AlertCircle
+                      className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive"
+                      style={{ animation: 'scale-check 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Validation message animado */}
+              <div
+                id="email-validation-msg"
+                role="status"
+                aria-live="polite"
+                className="overflow-hidden transition-all duration-300"
+                style={{
+                  maxHeight: validationState === 'invalid' || validationState === 'valid' ? '4rem' : '0',
+                  opacity: validationState === 'invalid' || validationState === 'valid' ? 1 : 0,
+                }}
+              >
+                {validationState === 'invalid' && validationReason && (
+                  <p className="text-[11px] sm:text-xs text-destructive mt-1.5 ml-1 flex items-center gap-1.5"
+                     style={{ animation: 'message-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    {validationReason}
+                  </p>
+                )}
+                {validationState === 'valid' && (
+                  <p className="text-[11px] sm:text-xs text-chartreuse/80 mt-1.5 ml-1 flex items-center gap-1"
+                     style={{ animation: 'message-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                    <CheckCircle2 className="w-3 h-3 shrink-0" />
+                    Correo válido
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Message banner animado */}
+            <div
+              className="overflow-hidden transition-all duration-400 ease-out"
+              style={{
+                maxHeight: message ? '6rem' : '0',
+                opacity: message ? 1 : 0,
+                transform: message ? 'scaleY(1)' : 'scaleY(0.97)',
+              }}
+            >
+              {message && (
+                <div className={`p-3 sm:p-3.5 rounded-xl text-xs sm:text-sm flex items-start gap-2.5 origin-top ${
+                  message.type === 'error'
+                    ? 'bg-destructive/10 text-destructive border border-destructive/15'
+                    : message.type === 'warning'
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/15'
+                    : 'bg-chartreuse/10 text-chartreuse border border-chartreuse/15'
+                }`}>
+                  <div className={`shrink-0 transition-transform duration-300 ${
+                    message ? 'scale-100' : 'scale-0'
+                  }`}>
+                    {message.type === 'error' || message.type === 'warning'
+                      ? <AlertCircle className="w-4 h-4 mt-0.5" />
+                      : <CheckCircle2 className="w-4 h-4 mt-0.5" />
+                    }
+                  </div>
+                  <span>{message.text}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Botón principal con micro-interacciones */}
+            <button
+              type="submit"
+              disabled={loading || validationState === 'invalid' || !email.trim()}
+              className={`group relative w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 px-4 rounded-xl text-primary-fg font-semibold focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all duration-300 active:scale-[0.97] overflow-hidden ${
+                loading || validationState === 'invalid' || !email.trim()
+                  ? 'opacity-40 cursor-not-allowed bg-white/5'
+                  : 'bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-primary/30'
+              }`}
+            >
+              {/* Shimmer overlay solo en hover (cuando está habilitado) */}
+              {(validationState === 'valid' || validationState === 'idle' || validationState === 'validating') && !loading && (
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              )}
+
+              <span className="relative z-10 flex items-center gap-2">
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                    <span className="text-sm sm:text-base">Enviando enlace...</span>
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm sm:text-base">Enviar enlace mágico</span>
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </span>
+            </button>
+
+            <p className="text-[10px] sm:text-xs text-muted-fg/70 text-center leading-relaxed">
+              Te enviaremos un enlace de acceso por correo. No necesita contraseña.
+              {validationState === 'invalid' && validationReason?.toLowerCase().includes('desechable') && (
+                <span className="block mt-1.5 text-amber-400/60 text-[10px] sm:text-xs">
+                  Usa tu correo corporativo o personal (Gmail, Outlook, etc.)
+                </span>
+              )}
+            </p>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-7 sm:mt-8 pt-5 sm:pt-6 border-t border-border">
+            <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-muted-fg/60">
+              <Shield className="w-3 h-3" />
+              <span>Protegido por Supabase Auth</span>
+              <span className="text-border mx-1">·</span>
+              <Sparkles className="w-3 h-3" />
+              <span>Enterprise Grade</span>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-5 sm:mt-6 text-center text-[10px] sm:text-xs text-muted-fg/40">
+          StrategicAudit Pro &mdash; Enterprise Cyber Intelligence
+        </p>
       </div>
     </div>
   );
@@ -170,7 +454,14 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-500" /></div>}>
+    <Suspense fallback={
+      <div className="min-h-dvh bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-primary" />
+          <span className="text-xs sm:text-sm text-muted-fg">Cargando...</span>
+        </div>
+      </div>
+    }>
       <LoginContent />
     </Suspense>
   );

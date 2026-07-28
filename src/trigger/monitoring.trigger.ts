@@ -1,7 +1,7 @@
-import { logger, task, schedules } from "@trigger.dev/sdk/v3";
+import { logger, schedules } from "@trigger.dev/sdk/v3";
 import { db } from "@/shared/db";
 import { monitoringSchedules, monitoringAlerts, projects } from "@/shared/db/schemas";
-import { eq, and, lt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
 
 // Tarea programada que evalúa los monitores activos
@@ -10,12 +10,11 @@ export const evaluateMonitorsTask = schedules.task({
   // Se ejecutaría según la configuración cron, por ejemplo diario a las 00:00
   // Aquí usamos un patrón de ejemplo para la definición del schedule trigger
   cron: "0 0 * * *", 
-  run: async (payload, { ctx }) => {
+  run: async (_p, _c) => {
+    void _p; void _c;
     logger.info("Iniciando evaluación de monitores de seguridad");
 
-    const now = new Date();
-    
-    // Obtener todos los schedules activos que deberían ejecutarse (lastRunAt < hoy o nulo)
+    // Obtener todos los schedules activos que deberían ejecutarse
     // Para simplificar, buscamos los que están enabled
     const activeMonitors = await db.query.monitoringSchedules.findMany({
       where: eq(monitoringSchedules.enabled, true),
@@ -82,8 +81,9 @@ export const evaluateMonitorsTask = schedules.task({
           .set({ lastRunAt: new Date(), updatedAt: new Date() })
           .where(eq(monitoringSchedules.id, monitor.id));
 
-      } catch (err: any) {
-        logger.error(`Error evaluando monitor ${monitor.id}: ${err.message}`);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        logger.error(`Error evaluando monitor ${monitor.id}: ${errorMessage}`);
       }
     }
 

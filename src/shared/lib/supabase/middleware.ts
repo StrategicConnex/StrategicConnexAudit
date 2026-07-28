@@ -28,6 +28,15 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // ── Dev bypass: saltea auth si NEXT_PUBLIC_DEV_BYPASS_AUTH=true ──
+  // Esto permite testear el dashboard sin autenticarse en desarrollo.
+  const DEV_BYPASS = process.env.NODE_ENV === 'development' &&
+    process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
+
+  if (DEV_BYPASS) {
+    return supabaseResponse;
+  }
+
   // NOTA: Es mandatorio llamar a getUser() para que la sesión se refresque si está a punto de expirar.
   const {
     data: { user },

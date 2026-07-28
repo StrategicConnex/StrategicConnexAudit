@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/shared/db";
 import { withRLS } from "@/shared/db/rls";
 import {
   projects,
   monitoringSchedules,
   monitoringAlerts
 } from "@/shared/db/schemas";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -77,13 +76,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("GET monitoring active route failure:", error);
     return NextResponse.json({
       success: false,
-      error: `Error interno: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }
@@ -154,13 +151,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("POST monitoring active route failure:", error);
     return NextResponse.json({
       success: false,
-      error: `Error interno: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }

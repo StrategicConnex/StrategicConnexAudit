@@ -1,101 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { env } from '@/shared/config/env';
 import { createClient } from '@/shared/lib/supabase/server';
-import { checkAiRateLimit } from '@/shared/lib/ratelimit';
-import { RedisCircuitBreaker } from '@/shared/lib/circuit-breaker';
+import { withRateLimit } from '@/shared/lib/ratelimit';
+import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from '@/server/ai/ai-router';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
-  try {
-    const { messages, context, mode = 'copilot' } = await req.json();
-
-    if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json({ success: false, error: 'Mensajes inválidos' }, { status: 400 });
+export const POST = withRateLimit(
+  {
+    limit: 5,
+    window: 60,
+    prefix: "ai_copilot",
+    authenticate: async () => {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      return user ? { id: user.id } : null;
     }
+  },
+  async (req: NextRequest, _userId: string) => {
+    try {
+      const { messages, context, mode = 'copilot' } = await req.json();
 
-    // Authenticate user
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
-    }
-
-    // Rate Limiting
-    const { success } = await checkAiRateLimit(user.id);
-    if (!success) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Límite excedido. Espera un momento.'
-      }, { status: 429 });
-    }
-
-    // Call LLM
-    const apiKey = env.openRouterApiKey || env.bearerApiKey || env.geminiApiKey || '';
-    const aiUrl = env.openRouterBaseUrl ? `${env.openRouterBaseUrl}/chat/completions` : (env.aiBaseUrl || 'https://api.openai.com/v1/chat/completions');
-    const aiModel = env.openRouterApiKey ? "openai/gpt-3.5-turbo" : "gpt-3.5-turbo";
-
-    const basePrompt = mode === 'analyst' 
-      ? 'Eres un Analista de Ciberseguridad Senior (Blue Team / Threat Intelligence). Tu objetivo es analizar la superficie de ataque de infraestructura, logs y hallazgos técnicos. Eres altamente técnico, objetivo y vas directo al punto. Responde en un tono analítico y forense.'
-      : 'Eres Strategic Copilot, un asistente IA Enterprise experto en Auditorías Técnicas, Ciberseguridad y Arquitectura. Tu misión es explicar problemas en lenguaje humano, priorizar tareas, generar planes de acción y sugerir fixes técnicos. Sé conciso, directo y usa un tono profesional de agencia.';
-
-    const systemMessage = {
-      role: 'system',
-      content: `${basePrompt}\n\nContexto actual del objetivo analizado:\n${JSON.stringify(context || 'Sin contexto específico')}`
-    };
-
-    const apiMessages = [systemMessage, ...messages];
-
-    if (!apiKey) {
-      return NextResponse.json({
-        success: true,
-        message: "¡Hola! Parece que tu API Key de IA no está configurada en las variables de entorno (OPENROUTER_API_KEY o Bearer_API_KEY). Por favor, configúrala para activar el AI Copilot."
-      });
-    }
-
-    const aiCircuitBreaker = new RedisCircuitBreaker('ai_copilot_api', {
-      failureThreshold: 3,
-      recoveryTimeout: 60000,
-    });
-
-    const resData = await aiCircuitBreaker.execute(async () => {
-      const res = await fetch(aiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: aiModel,
-          messages: apiMessages,
-          temperature: 0.4
-        })
-      });
-
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-           throw new Error(`Credenciales de IA inválidas o sin permisos (${res.status}). Verifica tu API Key.`);
-        }
-        throw new Error(`AI API error: ${res.status}`);
+      if (!messages || !Array.isArray(messages)) {
+        return NextResponse.json({ success: false, error: 'Mensajes inválidos' }, { status: 400 });
       }
 
-      return res.json();
-    });
+      // Build system prompt with mode context
+      const basePrompt = mode === 'analyst'
+        ? 'Eres un Analista de Ciberseguridad Senior (Blue Team / Threat Intelligence). Tu objetivo es analizar la superficie de ataque de infraestructura, logs y hallazgos técnicos. Eres altamente técnico, objetivo y vas directo al punto. Responde en un tono analítico y forense.'
+        : 'Eres Strategic Copilot, un asistente IA Enterprise experto en Auditorías Técnicas, Ciberseguridad y Arquitectura. Tu misión es explicar problemas en lenguaje humano, priorizar tareas, generar planes de acción y sugerir fixes técnicos. Sé conciso, directo y usa un tono profesional de agencia.';
 
-    const reply = resData.choices?.[0]?.message?.content || "No pude procesar la respuesta.";
+      const systemMsg: AIMessage = {
+        role: 'system',
+        content: `${basePrompt}\n\nContexto actual del objetivo analizado:\n${JSON.stringify(context || 'Sin contexto específico')}`
+      };
 
-    return NextResponse.json({
-      success: true,
-      message: reply
-    });
+      // Convert user messages to AIMessage format and prepend system
+      const aiMessages: AIMessage[] = [
+        systemMsg,
+        ...messages.map((m: { role: string; content: string }) => ({ role: m.role as 'user' | 'assistant', content: m.content } as AIMessage))
+      ];
 
-  } catch (error) {
-    const err = error as { message?: string };
-    console.error('Error in Copilot endpoint:', error);
-    return NextResponse.json({
-      success: false,
-      error: `Error Copilot: ${err.message || 'Servicio no disponible'}`
-    }, { status: 503 });
+      // Call AI with model pool and automatic fallback
+      const aiResult = await callAIWithFallback({
+        taskType: 'general-chat',
+        messages: aiMessages,
+        temperature: 0.4,
+        maxTokens: 4096,
+      });
+
+      if (!aiResult.success) {
+        return NextResponse.json({
+          success: true,
+          message: getNoApiKeyResponse('general-chat'),
+          error: aiResult.error,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: aiResult.content,
+        modelUsed: aiResult.modelUsed,
+        fromCache: aiResult.fromCache,
+      });
+
+    } catch (error) {
+      const err = error as { message?: string };
+      console.error('Error in Copilot endpoint:', error);
+      return NextResponse.json({
+        success: true,
+        message: getNoApiKeyResponse('general-chat'),
+        error: err.message || 'Servicio no disponible',
+      });
+    }
   }
-}
+);

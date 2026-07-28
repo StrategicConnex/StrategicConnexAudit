@@ -43,17 +43,17 @@ interface AttackSurfaceGraphProps {
 }
 
 const NODE_COLORS: Record<string, { stroke: string; fill: string; glow: string; label: string }> = {
-  domain:  { stroke: '#06b6d4', fill: 'rgba(6,182,212,0.12)',   glow: 'rgba(6,182,212,0.6)',   label: 'Dominio' },
-  ip:      { stroke: '#818cf8', fill: 'rgba(129,140,248,0.12)', glow: 'rgba(129,140,248,0.6)', label: 'IP' },
-  mx:      { stroke: '#f59e0b', fill: 'rgba(245,158,11,0.12)',  glow: 'rgba(245,158,11,0.6)',  label: 'MX' },
-  ns:      { stroke: '#a855f7', fill: 'rgba(168,85,247,0.12)',  glow: 'rgba(168,85,247,0.6)',  label: 'NS' },
-  cdn:     { stroke: '#10b981', fill: 'rgba(16,185,129,0.12)',  glow: 'rgba(16,185,129,0.6)',  label: 'CDN/WAF' },
-  asn:     { stroke: '#ec4899', fill: 'rgba(236,72,153,0.12)',  glow: 'rgba(236,72,153,0.6)',  label: 'ASN' },
+  domain:  { stroke: '#6271C4', fill: 'rgba(98,113,196,0.12)',   glow: 'rgba(98,113,196,0.6)',   label: 'Dominio' },
+  ip:      { stroke: '#6271C4', fill: 'rgba(98,113,196,0.12)', glow: 'rgba(98,113,196,0.6)', label: 'IP' },
+  mx:      { stroke: '#EBA52D', fill: 'rgba(235,165,45,0.12)',  glow: 'rgba(235,165,45,0.6)',  label: 'MX' },
+  ns:      { stroke: '#6271C4', fill: 'rgba(98,113,196,0.12)',  glow: 'rgba(98,113,196,0.6)',  label: 'NS' },
+  cdn:     { stroke: '#8BC34A', fill: 'rgba(140,200,80,0.12)',  glow: 'rgba(140,200,80,0.6)',  label: 'CDN/WAF' },
+  asn:     { stroke: '#D4373C', fill: 'rgba(212,55,60,0.12)',  glow: 'rgba(212,55,60,0.6)',  label: 'ASN' },
 };
 
 const SEVERITY_OVERLAY: Record<string, string> = {
-  critical: 'rgba(239,68,68,0.3)',
-  warning: 'rgba(245,158,11,0.2)',
+  critical: 'rgba(212,55,60,0.3)',
+  warning: 'rgba(235,165,45,0.2)',
   safe: 'transparent',
 };
 
@@ -144,7 +144,6 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
   }, [target, metadata, score]);
 
   const handleMouseEnter = (node: AttackSurfaceNode, e: React.MouseEvent) => {
-    const rect = (e.currentTarget.closest('svg') as SVGElement)?.getBoundingClientRect();
     const svgEl = e.currentTarget.closest('svg') as SVGSVGElement;
     const pt = svgEl.createSVGPoint();
     pt.x = node.x;
@@ -165,7 +164,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
         {Object.entries(NODE_COLORS).map(([type, cfg]) => (
           <div key={type} className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.stroke }} />
-            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{cfg.label}</span>
+            <span className="text-[9px] font-bold text-muted-fg uppercase tracking-wider">{cfg.label}</span>
           </div>
         ))}
       </div>
@@ -206,7 +205,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
 
           {/* Subtle radial gradient center */}
           <radialGradient id="center-glow" cx="49%" cy="50%" r="40%">
-            <stop offset="0%" stopColor="rgba(6,182,212,0.05)" />
+            <stop offset="0%" stopColor="rgba(98,113,196,0.05)" />
             <stop offset="100%" stopColor="transparent" />
           </radialGradient>
           <rect width="410" height="310" fill="url(#center-glow)" />
@@ -253,7 +252,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
                   <circle
                     cx={node.x} cy={node.y} r={r + 8}
                     fill="none"
-                    stroke="rgba(239,68,68,0.3)"
+                    stroke="rgba(212,55,60,0.3)"
                     strokeWidth="1"
                     style={{ animation: 'pulse-ring 2s ease-in-out infinite' }}
                   />
@@ -262,7 +261,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
                   <circle
                     cx={node.x} cy={node.y} r={r + 6}
                     fill="none"
-                    stroke="rgba(245,158,11,0.25)"
+                    stroke="rgba(235,165,45,0.25)"
                     strokeWidth="1"
                     style={{ animation: 'pulse-ring 3s ease-in-out infinite' }}
                   />
@@ -378,18 +377,18 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
         {/* Empty state */}
         {nodes.length <= 1 && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-xs text-zinc-600 font-bold">Datos de red insuficientes para visualizar</p>
+            <p className="text-xs text-muted-fg font-bold">Datos de red insuficientes para visualizar</p>
           </div>
         )}
       </div>
 
       {/* Node count summary */}
       <div className="flex items-center gap-3 mt-2">
-        <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider">
+        <span className="text-[9px] font-bold text-muted-fg uppercase tracking-wider">
           {nodes.length} nodos · {edges.length} conexiones
         </span>
         {nodes.some(n => n.severity === 'critical') && (
-          <span className="text-[9px] font-extrabold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded uppercase tracking-wider">
+          <span className="text-[9px] font-extrabold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded uppercase tracking-wider">
             ⚠ Riesgo Crítico Detectado
           </span>
         )}

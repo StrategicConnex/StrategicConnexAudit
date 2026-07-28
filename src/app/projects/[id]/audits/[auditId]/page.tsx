@@ -1,4 +1,3 @@
-import { db } from '@/shared/db';
 import { projects, audits, crawlResults, issues } from '@/shared/db/schemas';
 import { eq, and } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
@@ -14,8 +13,7 @@ import {
   Calendar, 
   Hash, 
   Sparkles,
-  Search,
-  Check
+  Search
 } from 'lucide-react';
 import Link from 'next/link';
 import { ExportPdfButton } from '@/app/components/ExportPdfButton';
@@ -26,6 +24,15 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
   const resolvedParams = await params;
   const { id: projectId, auditId } = resolvedParams;
   
+  // ── Dev bypass: saltea auth en desarrollo ──
+  const DEV_BYPASS = process.env.NODE_ENV === 'development' &&
+    process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
+
+  if (DEV_BYPASS) {
+    // Sin sesión real — no se puede cargar auditoría específica
+    redirect('/');
+  }
+
   // 0. Autenticar usuario
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -126,20 +133,8 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (healthScore / 100) * circumference;
   
-  // Estilo de color de puntuación
-  let scoreColorClass = 'text-green-400';
-  let strokeColor = '#22c55e';
-  let glowColor = 'rgba(34,197,94,0.3)';
-  
-  if (healthScore < 50) {
-    scoreColorClass = 'text-red-400';
-    strokeColor = '#ef4444';
-    glowColor = 'rgba(239,68,68,0.3)';
-  } else if (healthScore < 85) {
-    scoreColorClass = 'text-yellow-400';
-    strokeColor = '#eab308';
-    glowColor = 'rgba(234,179,8,0.3)';
-  }
+  // Not used in JSX directly but kept for potential future use
+  void (healthScore < 50 ? null : healthScore < 85 ? null : null);
 
   let translatedStatus = "Pendiente";
   if (audit.status === 'completed') translatedStatus = "Completado";

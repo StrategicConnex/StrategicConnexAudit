@@ -168,9 +168,16 @@ export const runProjectAudit = task({
         
         console.log(`[Worker] Estado actualizado. Iniciando análisis...`);
 
-        // 2. Datos del proyecto
+        // 2. Datos del proyecto y verificación de ownership
         const [project] = await directDb.select().from(projects).where(eq(projects.id, projectId)).limit(1);
         if (!project) throw new Error(`Proyecto ${projectId} no encontrado`);
+
+        // SECURITY: Verificar que el ownerId del proyecto coincide si el payload incluye userId.
+        // Esto previene que un atacante pueda forzar escaneos sobre proyectos de otros tenants
+        // cuando usa directDb (que bypasses RLS).
+        if (payload.userId && project.ownerId !== payload.userId) {
+          throw new Error(`Acceso denegado: el proyecto ${projectId} no pertenece al usuario solicitante.`);
+        }
 
       const targetUrl = normalizeUrl(project.domain);
 

@@ -7,9 +7,7 @@ import ReactFlow, {
   Background,
   useNodesState,
   useEdgesState,
-  addEdge,
-  Node,
-  Edge
+  addEdge
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -22,42 +20,41 @@ export function AttackSurfaceGraph({ projectId }: AttackSurfaceGraphProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchGraphData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/intelligence/assets/graph?projectId=${projectId}`);
-      const json = await res.json();
-      
-      if (json.success && json.data) {
-        setNodes(json.data.nodes || []);
-        setEdges(json.data.edges || []);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/intelligence/assets/graph?projectId=${projectId}`);
+        const json = await res.json();
+        if (json.success && json.data && !cancelled) {
+          setNodes(json.data.nodes || []);
+          setEdges(json.data.edges || []);
+        }
+      } catch (error) {
+        if (!cancelled) console.error("Failed to load graph data:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to load graph data:", error);
-    } finally {
-      setLoading(false);
-    }
+    })();
+    return () => { cancelled = true; };
   }, [projectId, setNodes, setEdges]);
 
-  useEffect(() => {
-    fetchGraphData();
-  }, [fetchGraphData]);
-
   const onConnect = useCallback(
-    (params: any) => setEdges((eds) => addEdge(params, eds)),
+    (params: { source: string | null; target: string | null; sourceHandle: string | null; targetHandle: string | null }) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center w-full h-[500px] bg-gray-900 border border-gray-800 rounded text-emerald-500 font-mono">
+      <div className="flex items-center justify-center w-full h-[500px] bg-gray-900 border border-border rounded text-primary font-mono">
         <span className="animate-pulse">Loading Topology...</span>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[600px] bg-gray-950 border border-gray-800 rounded overflow-hidden">
+    <div className="w-full h-[600px] bg-card border border-border rounded overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -70,9 +67,9 @@ export function AttackSurfaceGraph({ projectId }: AttackSurfaceGraphProps) {
         <Controls className="bg-gray-800 border-gray-700 fill-gray-300" />
         <MiniMap 
           nodeColor={(node) => {
-            if (node.data?.isVulnerable) return '#ef4444';
-            if (node.data?.type === 'root') return '#8b5cf6';
-            return '#10b981';
+            if (node.data?.isVulnerable) return '#D4373C';
+            if (node.data?.type === 'root') return '#6271C4';
+            return '#8BC34A';
           }}
           className="bg-gray-900 border-gray-800"
         />

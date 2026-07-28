@@ -176,6 +176,9 @@ export const websiteTlsExecutor: ToolExecutor<{ host: string }, any> = {
     await assertPublicHostname(host);
 
     return new Promise((resolve) => {
+      // SECURITY: rejectUnauthorized: false es INTENCIONAL. Somos un escáner de certificados TLS.
+      // Necesitamos leer el certificado incluso si es autofirmado o tiene una cadena de confianza
+      // incompleta. NO usar esta conexión para comunicaciones sensibles con el host.
       const socket = tls.connect(443, host, { servername: host, rejectUnauthorized: false }, () => {
         const cert: any = socket.getPeerCertificate(true);
         const protocol = socket.getProtocol();

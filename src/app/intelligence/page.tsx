@@ -14,6 +14,15 @@ async function IntelligenceDashboardContent() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // ── Dev bypass: saltea auth en desarrollo ──
+  const DEV_BYPASS = process.env.NODE_ENV === 'development' &&
+    process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
+
+  if (DEV_BYPASS) {
+    // Sin sesión real — redirigir al dashboard
+    redirect('/');
+  }
+
   if (!user) {
     redirect('/login');
   }

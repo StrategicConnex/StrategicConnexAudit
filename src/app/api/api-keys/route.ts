@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/shared/db";
 import { withRLS } from "@/shared/db/rls";
 import { developerApiKeys } from "@/shared/db/schemas";
 import { eq, and } from "drizzle-orm";
@@ -14,7 +13,7 @@ const keyCreateSchema = z.object({
   expiresDays: z.number().int().min(1).max(365).optional() // 30, 90, 365 days
 });
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -29,18 +28,16 @@ export async function GET(req: NextRequest) {
     });
 
     // Strip sensitive fields (hashed_key) from output
-    const strippedKeys = keys.map(({ hashedKey, ...rest }) => rest);
+    const strippedKeys = keys.map(({ hashedKey: _hk, ...rest }) => { void _hk; return rest; });
 
     return NextResponse.json({
       success: true,
       apiKeys: strippedKeys
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("GET api keys route failure:", error);
     return NextResponse.json({
       success: false,
-      error: `Error interno: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }
@@ -87,19 +84,18 @@ export async function POST(req: NextRequest) {
     });
 
     // Strip hashedKey before returning metadata
-    const { hashedKey: _, ...rest } = result;
+    const { hashedKey: _unused, ...rest } = result;
+    void _unused;
 
     return NextResponse.json({
       success: true,
       apiKey: rest,
       clearKey // ONLY returned here, once
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("POST api keys route failure:", error);
     return NextResponse.json({
       success: false,
-      error: `Error interno: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }
@@ -130,13 +126,11 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({
       success: true
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("DELETE api key route failure:", error);
     return NextResponse.json({
       success: false,
-      error: `Error interno: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }

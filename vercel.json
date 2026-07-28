@@ -9,6 +9,14 @@
     {
       "path": "/api/cron/uptime",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/siem",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/ai/healthcheck",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

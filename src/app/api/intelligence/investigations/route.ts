@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, and, desc } from "drizzle-orm";
-import { z } from "zod";
+import { eq, desc } from "drizzle-orm";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
-import { db } from "@/shared/db";
 import { withRLS } from "@/shared/db/rls";
 import {
   projects,
@@ -93,15 +91,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("GET intelligence investigations failure:", error);
     return NextResponse.json({
       success: false,
-      error: error.message === "No autorizado" ? "No autorizado" : `Error al obtener las investigaciones: ${error.message || error}`
+      error: error.message === "No autorizado" ? "No autorizado" : "Error interno del servidor"
     }, { status: error.message === "No autorizado" ? 401 : 500 });
   }
 }
+
+// ─── Tools que se ejecutan en cada escaneo ─────────────────────────
+const TOOLS_TO_RUN = [
+  { id: "dns.lookup", category: "network" },
+  { id: "dns.mx", category: "network" },
+  { id: "dns.txt", category: "network" },
+  { id: "dns.ns", category: "network" },
+  { id: "email.spf", category: "security" },
+  { id: "email.dmarc", category: "security" },
+  { id: "email.dkim", category: "security" },
+  { id: "network.ping", category: "network" },
+  { id: "network.reverse_dns", category: "network" },
+  { id: "network.geoip", category: "network" },
+  { id: "network.traceroute", category: "network" },
+  { id: "network.asn", category: "network" },
+  { id: "network.cdn", category: "network" },
+  { id: "network.waf", category: "network" },
+  { id: "network.reverse_ip", category: "network" },
+  { id: "threat.ip_reputation", category: "security" },
+  { id: "website.headers", category: "security" },
+  { id: "website.security_headers", category: "security" },
+  { id: "tls.scan", category: "security" },
+  { id: "website.robots", category: "security" },
+  { id: "osint.whois", category: "network" }
+];
 
 export async function POST(req: NextRequest) {
   try {
@@ -116,7 +138,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const { projectId, target, template } = parseResult.data;
+    const { projectId, target } = parseResult.data;
 
     // Check project authorization inside RLS context
     const project = await withRLS(user.id, async (tx) => {
@@ -166,240 +188,213 @@ export async function POST(req: NextRequest) {
       return record;
     });
 
-    // Start background scan execution in a non-blocking promise thread
+    // ─── Background scan: aislamiento por fase ───────────────────
     (async () => {
-      try {
-        const toolsToRun = [
-          { id: "dns.lookup", category: "network" },
-          { id: "dns.mx", category: "network" },
-          { id: "dns.txt", category: "network" },
-          { id: "dns.ns", category: "network" },
-          { id: "email.spf", category: "security" },
-          { id: "email.dmarc", category: "security" },
-          { id: "email.dkim", category: "security" },
-          { id: "network.ping", category: "network" },
-          { id: "network.reverse_dns", category: "network" },
-          { id: "network.geoip", category: "network" },
-          { id: "network.traceroute", category: "network" },
-          { id: "network.asn", category: "network" },
-          { id: "network.cdn", category: "network" },
-          { id: "network.waf", category: "network" },
-          { id: "network.reverse_ip", category: "network" },
-          { id: "threat.ip_reputation", category: "security" },
-          { id: "website.headers", category: "security" },
-          { id: "website.security_headers", category: "security" },
-          { id: "tls.scan", category: "security" },
-          { id: "website.robots", category: "security" },
-          { id: "osint.whois", category: "network" }
-        ];
+      const errorLog: string[] = [];
+      let phase = "inicialización";
 
+      try {
+        phase = "ejecución de herramientas";
         const tStart = Date.now();
+
+        // Events acumulados en memoria
         const inMemoryEvents: Array<{ eventType: string; message: string; payload: any }> = [];
         const logEvent = (type: string, message: string, payload: any = {}) => {
           inMemoryEvents.push({ eventType: type, message, payload });
         };
 
-        logEvent("info", `Iniciando Auditoría Técnica Avanzada modular para el host: ${normalizedTarget}`);
-        logEvent("info", "Ejecutando suite de escaneos técnicos concurrentes...");
+        logEvent("info", `Iniciando auditoría para: ${normalizedTarget}`);
+        logEvent("info", `Ejecutando ${TOOLS_TO_RUN.length} herramientas...`);
 
-        // Dispatch tools execution
-        const executionPromises = toolsToRun.map(async (tool) => {
-          const toolStart = Date.now();
-          try {
-            const result = await executeTool(
-              tool.id,
-              normalizedTarget,
-              { target: normalizedTarget },
-              projectId,
-              investigation.id,
-              user.id
-            );
-            return {
-              toolId: tool.id,
-              category: tool.category,
-              success: result.success,
-              output: result.output,
-              findings: result.findings || [],
-              error: result.error || null,
-              durationMs: Date.now() - toolStart
-            };
-          } catch (err: any) {
-            return {
-              toolId: tool.id,
-              category: tool.category,
-              success: false,
-              output: {},
-              findings: [],
-              error: err.message || "Fallo inesperado de ejecución",
-              durationMs: Date.now() - toolStart
-            };
-          }
-        });
+        // ── Fase 1: Ejecutar tools (cada una con su propio try/catch) ──
+        const executionResults = await Promise.all(
+          TOOLS_TO_RUN.map(async (tool) => {
+            const toolStart = Date.now();
+            try {
+              const result = await executeTool(
+                tool.id, normalizedTarget,
+                { target: normalizedTarget },
+                projectId, investigation.id, user.id
+              );
+              return {
+                toolId: tool.id, category: tool.category,
+                success: result.success, output: result.output,
+                findings: result.findings || [],
+                error: result.error || null,
+                durationMs: Date.now() - toolStart
+              };
+            } catch (err: any) {
+              const msg = err?.message || "Fallo inesperado";
+              errorLog.push(`${tool.id}: ${msg}`);
+              return {
+                toolId: tool.id, category: tool.category,
+                success: false, output: {}, findings: [],
+                error: msg, durationMs: Date.now() - toolStart
+              };
+            }
+          })
+        );
 
-        const executionResults = await Promise.all(executionPromises);
-
+        // Acumular resultados
         const allFindings: any[] = [];
         const toolRunRecords: any[] = [];
+        let toolsOk = 0, toolsFail = 0;
 
         for (const res of executionResults) {
           if (res.success) {
-            logEvent("success", `Herramienta completada: ${res.toolId} (${res.durationMs}ms)`, { durationMs: res.durationMs });
+            toolsOk++;
+            logEvent("success", `${res.toolId} completada (${res.durationMs}ms)`, { durationMs: res.durationMs });
           } else {
-            logEvent("warning", `Error en herramienta: ${res.toolId} - ${res.error}`);
+            toolsFail++;
+            logEvent("warning", `${res.toolId} falló: ${res.error}`);
           }
-
-          if (res.findings && res.findings.length > 0) {
-            allFindings.push(...res.findings);
-          }
-
+          if (res.findings?.length) allFindings.push(...res.findings);
           toolRunRecords.push({
-            investigationId: investigation.id,
-            projectId,
-            toolId: res.toolId,
-            category: res.category,
-            status: res.success ? ("completed" as const) : ("failed" as const),
+            investigationId: investigation.id, projectId,
+            toolId: res.toolId, category: res.category,
+            status: res.success ? "completed" as const : "failed" as const,
             input: { target: normalizedTarget },
-            output: res.output,
-            error: res.error,
+            output: res.output, error: res.error,
             durationMs: res.durationMs,
-            startedAt: new Date(tStart),
-            completedAt: new Date()
+            startedAt: new Date(tStart), completedAt: new Date()
           });
         }
 
-        const { score, aggregatedFindings } = calculateRiskScore(allFindings);
+        // ── Fase 2: Calcular risk score ──────────────────────────
+        phase = "cálculo de puntuación";
+        let score = 50;
+        let aggregatedFindings: any[] = allFindings;
 
-        const emailFindings = aggregatedFindings.filter(f => (f.toolId ?? "").startsWith("email."));
-        const infraFindings = aggregatedFindings.filter(f => !(f.toolId ?? "").startsWith("email."));
+        try {
+          const riskResult = calculateRiskScore(allFindings);
+          score = riskResult.score;
+          aggregatedFindings = riskResult.aggregatedFindings;
+        } catch (riskErr: any) {
+          errorLog.push(`risk-engine: ${riskErr.message}`);
+          logEvent("warning", `Error calculando score: ${riskErr.message}`);
+        }
 
-        const mailHealthScore = Math.max(10, 100 - emailFindings.reduce((acc, curr) => acc + Math.round(Number(curr.scoreImpact || 0)), 0));
-        const infraScore = Math.max(10, 100 - infraFindings.reduce((acc, curr) => acc + Math.round(Number(curr.scoreImpact || 0)), 0));
+        const emailFindings = aggregatedFindings.filter((f: any) => (f.toolId ?? "").startsWith("email."));
+        const infraFindings = aggregatedFindings.filter((f: any) => !(f.toolId ?? "").startsWith("email."));
+        const mailHealthScore = Math.max(10, 100 - emailFindings.reduce((acc: number, curr: any) => acc + Math.round(Number(curr.scoreImpact || 0)), 0));
+        const infraScore = Math.max(10, 100 - infraFindings.reduce((acc: number, curr: any) => acc + Math.round(Number(curr.scoreImpact || 0)), 0));
 
-        logEvent("success", `Auditoría completada. Puntuación Postura Global: ${score}/100. Infraestructura: ${infraScore}/100. Correo: ${mailHealthScore}/100.`);
+        logEvent("success", `Score: ${score}/100 | Correo: ${mailHealthScore} | Servidor: ${infraScore}`);
 
-        const dnsLookupResult = executionResults.find(r => r.toolId === "dns.lookup")?.output || {};
-        const dnsMxResult = executionResults.find(r => r.toolId === "dns.mx")?.output || {};
-        const dnsTxtResult = executionResults.find(r => r.toolId === "dns.txt")?.output || {};
-        const dnsNsResult = executionResults.find(r => r.toolId === "dns.ns")?.output || {};
-        const emailSpfResult = executionResults.find(r => r.toolId === "email.spf")?.output || {};
-        const emailDmarcResult = executionResults.find(r => r.toolId === "email.dmarc")?.output || {};
-        const emailDkimResult = executionResults.find(r => r.toolId === "email.dkim")?.output || {};
-        const tlsScanResult = executionResults.find(r => r.toolId === "tls.scan")?.output || {};
-        const whoisResult = executionResults.find(r => r.toolId === "osint.whois")?.output || {};
-        const geoIpResult = executionResults.find(r => r.toolId === "network.geoip")?.output || {};
-        const pingResult = executionResults.find(r => r.toolId === "network.ping")?.output || {};
-        const reverseDnsResult = executionResults.find(r => r.toolId === "network.reverse_dns")?.output || {};
-        const tracerouteResult = executionResults.find(r => r.toolId === "network.traceroute")?.output || {};
-        const securityHeadersResult = executionResults.find(r => r.toolId === "website.security_headers")?.output || {};
-        const asnResult = executionResults.find(r => r.toolId === "network.asn")?.output || {};
-        const cdnResult = executionResults.find(r => r.toolId === "network.cdn")?.output || {};
-        const wafResult = executionResults.find(r => r.toolId === "network.waf")?.output || {};
-        const reverseIpResult = executionResults.find(r => r.toolId === "network.reverse_ip")?.output || {};
-        const reputationResult = executionResults.find(r => r.toolId === "threat.ip_reputation")?.output || {};
+        // Extraer outputs para metadata
+        const extract = (id: string) => executionResults.find(r => r.toolId === id)?.output || {};
 
-        const primaryIp = dnsLookupResult.A?.[0] || null;
+        // ── Fase 3: Persistir en DB (con su propio try/catch) ────
+        phase = "persistencia en base de datos";
 
-        await withRLS(user.id, async (tx) => {
-          const insertedRuns = await tx.insert(intelligenceToolRuns).values(toolRunRecords).returning();
-          const toolRunIdsMap = new Map<string, string>();
-          for (const run of insertedRuns) {
-            toolRunIdsMap.set(run.toolId, run.id);
-          }
-
-          if (aggregatedFindings.length > 0) {
-            const findingsToInsert = aggregatedFindings.map(f => ({
-              investigationId: investigation.id,
-              toolRunId: toolRunIdsMap.get(f.toolId ?? "") ?? null,
-              projectId,
-              severity: f.severity as "info" | "low" | "medium" | "high" | "critical",
-              confidence: String(Number(f.confidence) || 0.7),
-              title: f.title,
-              description: f.description,
-              recommendation: f.remediation || f.recommendation || null,
-              evidence: (f.evidence ?? {}) as Record<string, unknown>,
-              affectedAsset: f.affectedAsset ?? null,
-            }));
-            await tx.insert(intelligenceFindings).values(findingsToInsert);
-          }
-
-          if (primaryIp) {
-            await tx.insert(intelligenceAssets).values({
-              projectId,
-              investigationId: investigation.id,
-              assetType: "ip_v4",
-              value: primaryIp,
-              ip: primaryIp
-            }).onConflictDoUpdate({
-              target: [intelligenceAssets.projectId, intelligenceAssets.assetType, intelligenceAssets.value],
-              set: { lastSeenAt: new Date() }
-            });
-          }
-
-          if (inMemoryEvents.length > 0) {
-            await tx.insert(intelligenceRunEvents).values(
-              inMemoryEvents.map(e => ({
-                investigationId: investigation.id,
-                eventType: e.eventType,
-                message: e.message,
-                payload: e.payload
-              }))
-            );
-          }
-
-          await tx.update(intelligenceInvestigations).set({
-            status: "completed",
-            score,
-            summary: `Auditoría finalizada. Se detectaron ${aggregatedFindings.length} hallazgos. Puntuación de Postura: ${score}/100 (Correo: ${mailHealthScore}, Servidor: ${infraScore}).`,
-            metadata: {
-              mailHealthCompositeScore: mailHealthScore,
-              infrastructureScore: infraScore,
-              spfParsed: emailSpfResult.spfParsed || null,
-              dmarcParsed: emailDmarcResult.dmarcParsed || null,
-              dkimCount: emailDkimResult.count || 0,
-              bimiSuccess: false,
-              redirectsToHttps: securityHeadersResult.securityHeaders?.hsts ? true : false,
-              whois: whoisResult,
-              asnGeo: { ...geoIpResult, ...asnResult },
-              reverseDns: reverseDnsResult.ptr || [],
-              ping: pingResult,
-              cdnWaf: {
-                detected: cdnResult.detected || wafResult.detected || false,
-                cdnProvider: cdnResult.provider || null,
-                wafProvider: wafResult.wafProvider || null,
-                cdnMethod: cdnResult.method || null,
-                wafConfidence: wafResult.confidence || 0
-              },
-              reverseIp: reverseIpResult.domains || [],
-              dnsbl: reputationResult.blacklistsListed || [],
-              reputation: reputationResult,
-              traceroute: tracerouteResult.hops || []
-            },
-            completedAt: new Date(),
-            updatedAt: new Date()
-          }).where(eq(intelligenceInvestigations.id, investigation.id));
-        });
-
-      } catch (backgroundError: any) {
-        console.error("Background scanner execution failure:", backgroundError);
         try {
           await withRLS(user.id, async (tx) => {
-            await tx.update(intelligenceInvestigations).set({
-              status: "failed",
-              summary: `Auditoría fallida debido a un error interno: ${backgroundError.message || backgroundError}`,
-              updatedAt: new Date(),
-              completedAt: new Date()
-            }).where(eq(intelligenceInvestigations.id, investigation.id));
+            // Tool runs
+            const insertedRuns = await tx.insert(intelligenceToolRuns).values(toolRunRecords).returning();
+            const runIds = new Map<string, string>();
+            for (const run of insertedRuns) runIds.set(run.toolId, run.id);
 
-            await tx.insert(intelligenceRunEvents).values({
-              investigationId: investigation.id,
-              eventType: "error",
-              message: `Error crítico de ejecución: ${backgroundError.message || backgroundError}`,
-              payload: { error: backgroundError.stack || backgroundError }
-            });
+            // Findings
+            if (aggregatedFindings.length > 0) {
+              await tx.insert(intelligenceFindings).values(
+                aggregatedFindings.map((f: any) => ({
+                  investigationId: investigation.id,
+                  toolRunId: runIds.get(f.toolId ?? "") ?? null,
+                  projectId,
+                  severity: f.severity as "info" | "low" | "medium" | "high" | "critical",
+                  confidence: String(Number(f.confidence) || 0.7),
+                  title: f.title, description: f.description,
+                  recommendation: f.remediation || f.recommendation || null,
+                  evidence: (f.evidence ?? {}) as Record<string, unknown>,
+                  affectedAsset: f.affectedAsset ?? null,
+                }))
+              );
+            }
+
+            // Assets
+            const primaryIp = extract("dns.lookup").A?.[0] || null;
+            if (primaryIp) {
+              await tx.insert(intelligenceAssets).values({
+                projectId, investigationId: investigation.id,
+                assetType: "ip_v4", value: primaryIp, ip: primaryIp
+              }).onConflictDoUpdate({
+                target: [intelligenceAssets.projectId, intelligenceAssets.assetType, intelligenceAssets.value],
+                set: { lastSeenAt: new Date() }
+              });
+            }
+
+            // Events
+            if (inMemoryEvents.length > 0) {
+              await tx.insert(intelligenceRunEvents).values(
+                inMemoryEvents.map(e => ({
+                  investigationId: investigation.id,
+                  eventType: e.eventType, message: e.message, payload: e.payload
+                }))
+              );
+            }
+
+            // Actualizar investigación
+            const summaryParts = [
+              `Auditoría finalizada. ${toolsOk}/${TOOLS_TO_RUN.length} herramientas completadas.`,
+              `Score: ${score}/100. Hallazgos: ${aggregatedFindings.length}.`
+            ];
+            if (errorLog.length > 0) {
+              summaryParts.push(`Errores: ${errorLog.slice(0, 5).join("; ")}`);
+            }
+
+            await tx.update(intelligenceInvestigations).set({
+              status: "completed" as const,
+              score,
+              summary: summaryParts.join(" "),
+              metadata: {
+                mailHealthCompositeScore: mailHealthScore,
+                infrastructureScore: infraScore,
+                toolsCompleted: toolsOk,
+                toolsFailed: toolsFail,
+                spfParsed: extract("email.spf").spfParsed || null,
+                dmarcParsed: extract("email.dmarc").dmarcParsed || null,
+                dkimCount: extract("email.dkim").count || 0,
+                bimiSuccess: false,
+                redirectsToHttps: extract("website.security_headers").securityHeaders?.hsts ? true : false,
+                whois: extract("osint.whois"),
+                asnGeo: { ...extract("network.geoip"), ...extract("network.asn") },
+                reverseDns: extract("network.reverse_dns").ptr || [],
+                ping: extract("network.ping"),
+                cdnWaf: {
+                  detected: extract("network.cdn").detected || extract("network.waf").detected || false,
+                  cdnProvider: extract("network.cdn").provider || null,
+                  wafProvider: extract("network.waf").wafProvider || null,
+                  cdnMethod: extract("network.cdn").method || null,
+                  wafConfidence: extract("network.waf").confidence || 0
+                },
+                reverseIp: extract("network.reverse_ip").domains || [],
+                dnsbl: extract("threat.ip_reputation").blacklistsListed || [],
+                reputation: extract("threat.ip_reputation"),
+                traceroute: extract("network.traceroute").hops || []
+              },
+              completedAt: new Date(),
+              updatedAt: new Date()
+            }).where(eq(intelligenceInvestigations.id, investigation.id));
           });
-        } catch (dbErr) {
-          console.error("Failed to update background scan failure state in DB:", dbErr);
+        } catch (dbErr: any) {
+          errorLog.push(`db: ${dbErr.message}`);
+          console.error("DB persistence failed in background scan:", dbErr);
+          // Marcar como completado con advertencia (resultados parciales)
+          await markInvestigationResult(investigation.id, user.id, {
+            status: "failed",
+            score,
+            summary: `Finalizado con errores de persistencia: ${dbErr.message}. ${toolsOk}/${TOOLS_TO_RUN.length} herramientas ejecutadas.`,
+          }, errorLog);
         }
+
+      } catch (backgroundError: any) {
+        console.error(`Background scan failed (phase: ${phase}):`, backgroundError);
+        errorLog.push(`fase "${phase}": ${backgroundError.message || backgroundError}`);
+        await markInvestigationResult(investigation.id, user.id, {
+          status: "failed",
+          score: null,
+          summary: `Error en fase "${phase}": ${backgroundError.message || backgroundError}. ${errorLog.length > 0 ? `Detalles: ${errorLog.slice(0, 3).join("; ")}` : ""}`,
+        }, errorLog);
       }
     })();
 
@@ -413,13 +408,44 @@ export async function POST(req: NextRequest) {
         status: "running",
         score: null,
       }
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("POST intelligence investigations failure:", error);
     return NextResponse.json({
       success: false,
-      error: error.message === "No autorizado" ? "No autorizado" : `Error al crear la investigación: ${error.message || error}`
+      error: error.message === "No autorizado" ? "No autorizado" : "Error interno del servidor"
     }, { status: error.message === "No autorizado" ? 401 : 500 });
+  }
+}
+
+/**
+ * Helper para marcar el resultado de una investigación desde el background scan.
+ * Aislado en su propia función con su propio try/catch para garantizar que
+ * incluso si falla, no se pierde el estado de la investigación.
+ */
+async function markInvestigationResult(
+  investigationId: string,
+  userId: string,
+  result: { status: "completed" | "failed"; score: number | null; summary: string },
+  errorLog: string[]
+) {
+  try {
+    await withRLS(userId, async (tx) => {
+      await tx.update(intelligenceInvestigations).set({
+        status: result.status,
+        score: result.score,
+        summary: result.summary,
+        completedAt: new Date(),
+        updatedAt: new Date()
+      }).where(eq(intelligenceInvestigations.id, investigationId));
+
+      await tx.insert(intelligenceRunEvents).values({
+        investigationId,
+        eventType: "error",
+        message: result.summary,
+        payload: { errors: errorLog }
+      });
+    });
+  } catch (dbErr) {
+    console.error("CRITICAL: Cannot update investigation status even in fallback:", dbErr);
   }
 }

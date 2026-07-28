@@ -63,7 +63,7 @@ const targetTypeStyles: Record<TargetType, { bg: string; text: string; icon: Luc
   email: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", icon: Mail, label: "Correo Electrónico" },
   asn: { bg: "bg-purple-500/10 border-purple-500/20", text: "text-purple-400", icon: Cpu, label: "Sistema Autónomo (ASN)" },
   cidr: { bg: "bg-indigo-500/10 border-indigo-500/20", text: "text-indigo-400", icon: Binary, label: "Rango CIDR" },
-  unknown: { bg: "bg-[#27272a]/40 border-[#27272a]", text: "text-[#a1a1aa]", icon: Terminal, label: "Desconocido" }
+  unknown: { bg: "bg-[#27272a]/40 border-border", text: "text-muted-fg", icon: Terminal, label: "Desconocido" }
 };
 
 export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTargetCommandProps) {
@@ -118,12 +118,12 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
       <form onSubmit={handleSubmit} className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
         
-        <div className="relative flex items-center bg-[#09090b]/80 backdrop-blur-md border border-[#27272a] rounded-2xl p-1.5 focus-within:border-[#3f3f46] focus-within:ring-1 focus-within:ring-[#3f3f46] shadow-2xl transition-all duration-300">
-          <div className="flex items-center justify-center w-12 h-12 text-[#71717a]">
+        <div className="relative flex items-center bg-background/80 backdrop-blur-md border border-border rounded-2xl p-1.5 focus-within:border-border focus-within:ring-1 focus-within:ring-border shadow-2xl transition-all duration-300">
+          <div className="flex items-center justify-center w-12 h-12 text-muted-fg">
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
             ) : (
-              <Terminal className="w-5 h-5 group-focus-within:text-[#e4e4e7] transition-colors" />
+              <Terminal className="w-5 h-5 group-focus-within:text-foreground transition-colors" />
             )}
           </div>
           
@@ -132,7 +132,7 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
             value={inputVal}
             onChange={(e) => { setInputVal(e.target.value); setLocalError(null); }}
             placeholder="Ingrese un dominio, IP, ASN o Email (ej. google.com, 8.8.8.8)..."
-            className="flex-1 bg-transparent border-0 outline-none text-sm text-[#e4e4e7] placeholder-[#52525b] py-3.5 px-1 font-sans selection:bg-emerald-500/20"
+            className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder-[#52525b] py-3.5 px-1 font-sans selection:bg-emerald-500/20"
             disabled={isLoading}
             autoFocus
           />
@@ -149,7 +149,7 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
           <button
             type="submit"
             disabled={isLoading || !inputVal.trim()}
-            className="flex items-center justify-center h-11 px-4 rounded-xl bg-[#e4e4e7] text-[#09090b] hover:bg-[#ffffff] active:scale-98 disabled:opacity-50 disabled:hover:bg-[#e4e4e7] disabled:active:scale-100 font-medium text-xs tracking-wide transition-all duration-200"
+            className="flex items-center justify-center h-11 px-4 rounded-xl bg-foreground text-background hover:bg-foreground active:scale-98 disabled:opacity-50 disabled:hover:bg-foreground disabled:active:scale-100 font-medium text-xs tracking-wide transition-all duration-200"
           >
             <span>Escanear</span>
             <CornerDownLeft className="w-3.5 h-3.5 ml-1.5 opacity-60" />
@@ -159,13 +159,13 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
 
       {/* Real-time Dynamic Status and Security Guidance */}
       {inputVal.trim() && !localError && !apiError && (
-        <div className="flex flex-wrap items-center justify-between px-3 text-[11px] text-[#71717a] font-mono gap-y-2">
+        <div className="flex flex-wrap items-center justify-between px-3 text-[11px] text-muted-fg font-mono gap-y-2">
           <div className="flex items-center space-x-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Target activo: <strong className="text-[#a1a1aa] font-normal">{inputVal}</strong></span>
+            <span>Target activo: <strong className="text-muted-fg font-normal">{inputVal}</strong></span>
           </div>
           <div className="flex items-center space-x-1.5">
-            <span className="text-[#52525b]">SSRF Shield:</span>
+            <span className="text-muted-fg">SSRF Shield:</span>
             <span className="text-emerald-400 font-medium">PROTEGIDO</span>
           </div>
         </div>

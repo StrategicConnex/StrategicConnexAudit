@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, desc } from "drizzle-orm";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
-import { db } from "@/shared/db";
 import { withRLS } from "@/shared/db/rls";
 import {
   projects,
   intelligenceToolRuns,
-  intelligenceFindings,
-  intelligenceAssets
+  intelligenceFindings
 } from "@/shared/db/schemas";
 import { runToolSchema } from "@/features/intelligence/validators/intelligence.schema";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
@@ -57,7 +55,7 @@ export async function GET(req: NextRequest) {
     console.error("GET intelligence runs failure:", error);
     return NextResponse.json({
       success: false,
-      error: error.message === "No autorizado" ? "No autorizado" : `Error al obtener ejecuciones: ${error.message || error}`
+      error: error.message === "No autorizado" ? "No autorizado" : "Error interno del servidor"
     }, { status: error.message === "No autorizado" ? 401 : 500 });
   }
 }

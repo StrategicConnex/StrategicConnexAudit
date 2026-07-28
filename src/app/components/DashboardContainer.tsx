@@ -15,7 +15,7 @@ import { MonitoringTab } from './tabs/MonitoringTab';
 import { useAiReport } from './useAiReport';
 
 const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mod.NewProjectModal), {
-  loading: () => <div className="w-9 h-9 bg-white/5 rounded-lg animate-pulse" />,
+  loading: () => <div className="w-9 h-9 bg-muted/30 rounded-lg animate-pulse" />,
 });
 
 const AiCopilot = dynamic(() => import('./AiCopilot').then(mod => mod.AiCopilot), { ssr: false });
@@ -71,7 +71,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
   };
 
   return (
-    <div className="min-h-screen bg-background text-apple-ink flex">
+    <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar Component */}
       <DashboardSidebar
         activeTab={activeTab}
@@ -88,8 +88,8 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
         />
 
         {/* Dynamic Content Panel */}
-        <div className="flex-1 overflow-y-auto p-10 bg-apple-gray/30">
-          <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex-1 overflow-y-auto p-10 bg-muted/30">
+          <div key={activeTab} className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {activeTab === 'overview' && (
               <OverviewTab 

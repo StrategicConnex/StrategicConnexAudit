@@ -38,8 +38,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Para evitar posiciones superpuestas en React Flow, calculamos una grilla simple
-    let xOffset = 0;
-    let yOffset = 150;
+    const yOffset = 150;
 
     assets.forEach((asset, index) => {
       const isVulnerable = findings.some(f => f.affectedAsset === asset.value && (f.severity === "high" || f.severity === "critical"));

@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StrategicAudit Pro
+
+[![CI](https://github.com/strategicconnex/strategicaudit-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/strategicconnex/strategicaudit-pro/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/strategicconnex/strategicaudit-pro/branch/main/graph/badge.svg)](https://codecov.io/gh/strategicconnex/strategicaudit-pro)
+
+Enterprise-grade technical auditing and cybersecurity intelligence platform.
+
+---
+
+## 📊 Coverage
+
+Code coverage is tracked via [Codecov](https://codecov.io). After configuring the token (see setup below), every PR will display a coverage report comment automatically.
+
+| Status | Badge |
+|--------|-------|
+| CI     | [![CI](https://github.com/strategicconnex/strategicaudit-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/strategicconnex/strategicaudit-pro/actions/workflows/ci.yml) |
+| Coverage | [![codecov](https://codecov.io/gh/strategicconnex/strategicaudit-pro/branch/main/graph/badge.svg)](https://codecov.io/gh/strategicconnex/strategicaudit-pro) |
+
+> La badge de cobertura funciona sin token para repositorios públicos.
+
+---
+
+## 🚀 Codecov Setup
+
+### 1. Create a Codecov account
+
+1. Go to [https://codecov.io](https://codecov.io) and sign in with your GitHub account
+2. Authorize the Codecov GitHub App when prompted
+3. Codecov will automatically detect your repositories
+4. Find `strategicconnex/strategicaudit-pro` in the list and click "Add"
+
+### 2. Get the upload token
+
+Codecov proporciona **dos tokens distintos**:
+
+| Token | Dónde va | ¿Secreto? |
+|-------|----------|-----------|
+| **Upload Token** | `secrets.CODECOV_TOKEN` en GitHub | ✅ Secreto — nunca compartir |
+| **Badge Token** (opcional) | URL del badge en README | 🔓 Público — visible en el repo |
+
+Para este proyecto usamos la badge **sin token** (funciona con repos públicos). Solo necesitas el **Upload Token** para el paso 3.
+
+1. En Codecov, ve a **Settings → Repository Upload Token**
+2. Copia el token (empieza con UUID o formato similar)
+
+### 3. Add the token to GitHub Secrets
+
+1. Go to **GitHub → Settings → Secrets and variables → Actions**
+2. Click **New repository secret**
+3. **Name:** `CODECOV_TOKEN`
+4. **Value:** Paste the upload token from Codecov
+5. Click **Add secret**
+
+### 4. Verify
+
+Push a commit to any branch. The CI will:
+- Run `pnpm test:coverage`
+- Generate `lcov.info`
+- Upload to Codecov (the step is optional — won't fail if token is missing)
+- Comment a coverage summary on the PR
+
+You can view the full coverage report at:
+`https://app.codecov.io/gh/strategicconnex/strategicaudit-pro`
+
+---
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start dev server |
+| `pnpm build` | Production build |
+| `pnpm lint` | ESLint |
+| `pnpm test` | Run unit tests |
+| `pnpm test:coverage` | Run tests with coverage report |
+| `pnpm test:e2e` | Run Playwright e2e tests |

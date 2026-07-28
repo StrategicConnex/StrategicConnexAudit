@@ -66,8 +66,8 @@ export function BulkCommandDialog({ isOpen, onClose, projectId }: BulkCommandDia
         setMessage(null);
       }, 2000);
 
-    } catch (err: any) {
-      setMessage({ text: err.message, type: "error" });
+    } catch (err: unknown) {
+      setMessage({ text: err instanceof Error ? err.message : String(err), type: "error" });
     } finally {
       setLoading(false);
     }

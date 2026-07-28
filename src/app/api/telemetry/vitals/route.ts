@@ -3,7 +3,6 @@ import { db } from '@/shared/db';
 import { webVitalsLogs, projects } from '@/shared/db/schemas';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { createHash } from 'crypto';
 
 // Define the validation schema for the incoming RUM v2.0 payload
 const vitalsSchema = z.object({
@@ -55,11 +54,6 @@ const vitalsSchema = z.object({
   resources: z.array(z.any()).optional(),
   isFinal: z.boolean().optional(),
 });
-
-function hashIp(ip: string): string {
-  const salt = process.env.IP_SALT || 'default-sa-rum-salt';
-  return createHash('sha256').update(ip + salt).digest('hex');
-}
 
 // SECURITY: Simple in-memory rate limiter for telemetry endpoint (60 req/min per IP).
 // Replace with Redis-backed limiter (Upstash) for multi-instance deployments.

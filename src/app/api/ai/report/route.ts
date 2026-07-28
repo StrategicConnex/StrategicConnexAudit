@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets } from '@/shared/db/schemas';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
-import { env } from '@/shared/config/env';
-import { checkAiRateLimit } from '@/shared/lib/ratelimit';
-import { RedisCircuitBreaker } from '@/shared/lib/circuit-breaker';
+import { withRateLimit } from '@/shared/lib/ratelimit';
 import { withRLS } from '@/shared/db/rls';
+import { callAIWithFallback, AIMessage } from '@/server/ai/ai-router';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,218 +22,155 @@ interface ResilientReportData {
   isNewProject: boolean;
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { projectId } = body;
-
-    if (!projectId) {
-      return NextResponse.json({ success: false, error: 'Se requiere el ID de proyecto (projectId)' }, { status: 400 });
+export const POST = withRateLimit(
+  {
+    limit: 10,
+    window: 60,
+    prefix: "ai_report",
+    authenticate: async () => {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      return user ? { id: user.id } : null;
     }
+  },
+  async (req: NextRequest, userId: string) => {
+    try {
+      const body = await req.json();
+      const { projectId } = body;
 
-    // 1. Authenticate user via Server cookies to prevent IDOR vulnerabilities
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'No autorizado: Debes iniciar sesión para generar informes' }, { status: 401 });
-    }
-
-    // 1.5 Global Rate Limiting (Upstash Redis)
-    const { success, remaining, reset } = await checkAiRateLimit(user.id);
-    
-    if (!success) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Límite de generación de informes excedido. Por favor, espera un momento.',
-        remaining,
-        reset
-      }, { 
-        status: 429,
-        headers: {
-          'X-RateLimit-Remaining': remaining.toString(),
-          'X-RateLimit-Reset': reset.toString()
-        }
-      });
-    }
-
-    // 2. Obtain project and metrics ensuring strict ownership verification (Tenant-Isolation Guard)
-    const dbData = await withRLS(user.id, async (tx) => {
-      const projectList = await tx
-        .select()
-        .from(projects)
-        .where(and(eq(projects.id, projectId), eq(projects.ownerId, user.id)));
-
-      if (projectList.length === 0) {
-        return null;
+      if (!projectId) {
+        return NextResponse.json({ success: false, error: 'Se requiere el ID de proyecto (projectId)' }, { status: 400 });
       }
-      const project = projectList[0];
 
-      // 3. Obtain historical metrics concurrently to resolve sequential RTT blockings
-      const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
-        tx
+      // Obtain project and metrics ensuring strict ownership verification (Tenant-Isolation Guard)
+      const dbData = await withRLS(userId, async (tx) => {
+        const projectList = await tx
           .select()
-          .from(integrationDataGsc)
-          .where(eq(integrationDataGsc.projectId, project.id))
-          .orderBy(desc(integrationDataGsc.date))
-          .limit(30),
-        tx
-          .select()
-          .from(integrationDataGa4)
-          .where(eq(integrationDataGa4.projectId, project.id))
-          .orderBy(desc(integrationDataGa4.date))
-          .limit(30),
-        tx
-          .select()
-          .from(audits)
-          .where(eq(audits.projectId, project.id))
-          .orderBy(desc(audits.createdAt))
-          .limit(1),
-        tx
-          .select({ count: sql<number>`count(*)` })
-          .from(keywordTargets)
-          .where(eq(keywordTargets.projectId, project.id))
-      ]);
+          .from(projects)
+          .where(and(eq(projects.id, projectId), eq(projects.ownerId, userId)));
 
-      return {
-        project,
-        gscRecords,
-        ga4Records,
-        latestAudits,
-        keywordsCount: Number(keywordsCountResult[0]?.count || 0)
+        if (projectList.length === 0) {
+          return null;
+        }
+        const project = projectList[0];
+
+        // Obtain historical metrics concurrently
+        const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
+          tx
+            .select()
+            .from(integrationDataGsc)
+            .where(eq(integrationDataGsc.projectId, project.id))
+            .orderBy(desc(integrationDataGsc.date))
+            .limit(30),
+          tx
+            .select()
+            .from(integrationDataGa4)
+            .where(eq(integrationDataGa4.projectId, project.id))
+            .orderBy(desc(integrationDataGa4.date))
+            .limit(30),
+          tx
+            .select()
+            .from(audits)
+            .where(eq(audits.projectId, project.id))
+            .orderBy(desc(audits.createdAt))
+            .limit(1),
+          tx
+            .select({ count: sql<number>`count(*)` })
+            .from(keywordTargets)
+            .where(eq(keywordTargets.projectId, project.id))
+        ]);
+
+        return {
+          project,
+          gscRecords,
+          ga4Records,
+          latestAudits,
+          keywordsCount: Number(keywordsCountResult[0]?.count || 0)
+        };
+      });
+
+      if (!dbData) {
+        return NextResponse.json({ success: false, error: 'Proyecto no encontrado o acceso denegado' }, { status: 404 });
+      }
+
+      const { project, gscRecords, ga4Records, latestAudits, keywordsCount } = dbData;
+
+      // Calculate stats — no synthetic fallbacks
+      const hasGscData = gscRecords.length > 0;
+      const hasGa4Data = ga4Records.length > 0;
+
+      const totalClicks = gscRecords.reduce((sum, r) => sum + (r.clicks || 0), 0);
+      const totalImpressions = gscRecords.reduce((sum, r) => sum + (r.impressions || 0), 0);
+      const avgCtr = hasGscData
+        ? (gscRecords.reduce((sum, r) => sum + Number(r.ctr || 0), 0) / gscRecords.length) * 100
+        : null;
+      const avgPosition = hasGscData
+        ? gscRecords.reduce((sum, r) => sum + Number(r.position || 0), 0) / gscRecords.length
+        : null;
+
+      const totalActiveUsers = ga4Records.reduce((sum, r) => sum + (r.activeUsers || 0), 0);
+      const totalConversions = ga4Records.reduce((sum, r) => sum + (r.conversions || 0), 0);
+      const avgEngagementRate = hasGa4Data
+        ? (ga4Records.reduce((sum, r) => sum + Number(r.engagementRate || 0), 0) / ga4Records.length) * 100
+        : null;
+
+      const latestAudit = latestAudits[0];
+      const healthScore = latestAudit?.status === 'completed' ? 85 : (latestAudit ? 45 : null);
+      const crawledCount = latestAudit?.status === 'completed' ? 142 : 0;
+      const isNewProject = latestAudits.length === 0;
+
+      // Try AI with free model pool; fallback to resilient report on failure
+      const dataAvailabilityNote = !hasGscData && !hasGa4Data
+        ? 'IMPORTANTE: No hay datos de GSC ni GA4 integrados todavia. Indica esto claramente en el reporte y recomienda conectar las integraciones.'
+        : (!hasGscData ? 'Sin datos de Google Search Console aun.' : '') + (!hasGa4Data ? ' Sin datos de Google Analytics 4 aun.' : '');
+
+      const systemMsg: AIMessage = {
+        role: "system",
+        content: "Eres un experto en SEO y marketing digital de alto nivel. Responde siempre en ESPANOL."
       };
-    });
 
-    if (!dbData) {
-      // Return 404 (or 403) to prevent enumerating projects that do not belong to the user
-      return NextResponse.json({ success: false, error: 'Proyecto no encontrado o acceso denegado' }, { status: 404 });
-    }
+      const userMsg: AIMessage = {
+        role: "user",
+        content: `Actua como el Consultor SEO Principal de una de las agencias de marketing digital organico mas prestigiosas del mundo. Tu trabajo es redactar un Reporte Ejecutivo Mensual de Posicionamiento y Salud Tecnica SEO de alta gama para el proyecto "${project.name}" (dominio: ${project.domain}).\n\n${dataAvailabilityNote}\n\nDatos disponibles:\n- Clicks organicos (30d): ${hasGscData ? totalClicks : 'Sin datos - GSC no conectado'}\n- Impresiones (30d): ${hasGscData ? totalImpressions : 'Sin datos - GSC no conectado'}\n- CTR promedio: ${avgCtr !== null ? avgCtr.toFixed(2) + '%' : 'Sin datos'}\n- Posicion promedio: ${avgPosition !== null ? '#' + avgPosition.toFixed(1) : 'Sin datos'}\n- Usuarios activos (GA4, 30d): ${hasGa4Data ? totalActiveUsers : 'Sin datos - GA4 no conectado'}\n- Conversiones: ${hasGa4Data ? totalConversions : 'Sin datos'}\n- Salud Tecnica: ${healthScore !== null ? healthScore + '/100' : 'Auditoria no ejecutada aun'}\n\nInstrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconnex.com.ar)". Usa Markdown elegante. Se honesto sobre la disponibilidad de datos. Estructura: Resumen Ejecutivo, Analisis de Rendimiento (tabla), Diagnostico Tecnico y Plan de Accion (3-4 tareas).`
+      };
 
-    const { project, gscRecords, ga4Records, latestAudits, keywordsCount } = dbData;
+      const aiResult = await callAIWithFallback({
+        taskType: "seo-report",
+        messages: [systemMsg, userMsg],
+        temperature: 0.3,
+        maxTokens: 4096,
+      });
 
-    // 4. Calculate stats — no synthetic fallbacks; use 0 if no real data
-    const hasGscData = gscRecords.length > 0;
-    const hasGa4Data = ga4Records.length > 0;
+      if (aiResult.success) {
+        return NextResponse.json({
+          success: true,
+          report: aiResult.content,
+          isFallback: false,
+          modelUsed: aiResult.modelUsed,
+          fromCache: aiResult.fromCache,
+        });
+      }
 
-    const totalClicks = gscRecords.reduce((sum, r) => sum + (r.clicks || 0), 0);
-    const totalImpressions = gscRecords.reduce((sum, r) => sum + (r.impressions || 0), 0);
-    const avgCtr = hasGscData
-      ? (gscRecords.reduce((sum, r) => sum + Number(r.ctr || 0), 0) / gscRecords.length) * 100
-      : null;
-    const avgPosition = hasGscData
-      ? gscRecords.reduce((sum, r) => sum + Number(r.position || 0), 0) / gscRecords.length
-      : null;
-
-    const totalActiveUsers = ga4Records.reduce((sum, r) => sum + (r.activeUsers || 0), 0);
-    const totalConversions = ga4Records.reduce((sum, r) => sum + (r.conversions || 0), 0);
-    const avgEngagementRate = hasGa4Data
-      ? (ga4Records.reduce((sum, r) => sum + Number(r.engagementRate || 0), 0) / ga4Records.length) * 100
-      : null;
-
-    // Health score from actual audit data — placeholder only if no audit exists
-    const latestAudit = latestAudits[0];
-    const healthScore = latestAudit?.status === 'completed' ? 85 : (latestAudit ? 45 : null);
-    const crawledCount = latestAudit?.status === 'completed' ? 142 : 0;
-    const isNewProject = latestAudits.length === 0;
-
-    const apiKey = env.openRouterApiKey || env.bearerApiKey || '';
-    const aiUrl = env.openRouterBaseUrl ? `${env.openRouterBaseUrl}/chat/completions` : (env.aiBaseUrl || 'https://api.openai.com/v1/chat/completions');
-    const aiModel = env.openRouterApiKey ? "openai/gpt-3.5-turbo" : "gpt-3.5-turbo";
-
-    // 5. Securely return premium pre-compiled fallback report if API key is missing
-    if (!apiKey) {
-      console.warn('API Key de IA no configurada. Generando reporte de respaldo premium.');
+      // Fallback to resilient pre-compiled report when AI is unavailable
+      console.warn('AI Router fallback: generando reporte resiliente.');
       const fallbackReport = generateResilientReport(project, {
-        totalClicks,
-        totalImpressions,
-        avgCtr,
-        avgPosition,
-        totalActiveUsers,
-        totalConversions,
-        avgEngagementRate,
-        healthScore,
-        crawledCount,
-        keywordsCount,
-        isNewProject
+        totalClicks, totalImpressions, avgCtr, avgPosition,
+        totalActiveUsers, totalConversions, avgEngagementRate,
+        healthScore, crawledCount, keywordsCount, isNewProject
       });
       return NextResponse.json({ success: true, report: fallbackReport, isFallback: true });
-    }
 
-    // 6. Construct premium strategic prompt — explicitly flags missing data
-    const dataAvailabilityNote = !hasGscData && !hasGa4Data
-      ? '⚠️ IMPORTANTE: No hay datos de GSC ni GA4 integrados todavía. Indica esto claramente en el reporte y recomienda conectar las integraciones.'
-      : (!hasGscData ? '⚠️ Sin datos de Google Search Console aún.' : '') + (!hasGa4Data ? ' ⚠️ Sin datos de Google Analytics 4 aún.' : '');
+    } catch (error) {
+      console.error('Error en el endpoint de reportes por IA:', error);
 
-    const prompt = `Actúa como el Consultor SEO Principal de una de las agencias de marketing digital orgánico más prestigiosas del mundo. Tu trabajo es redactar un Reporte Ejecutivo Mensual de Posicionamiento y Salud Técnica SEO de alta gama para el proyecto "${project.name}" (dominio: ${project.domain}).
- 
-${dataAvailabilityNote}
- 
-Datos disponibles:
-- Clicks orgánicos (30d): ${hasGscData ? totalClicks : 'Sin datos — GSC no conectado'}
-- Impresiones (30d): ${hasGscData ? totalImpressions : 'Sin datos — GSC no conectado'}
-- CTR promedio: ${avgCtr !== null ? avgCtr.toFixed(2) + '%' : 'Sin datos'}
-- Posición promedio: ${avgPosition !== null ? '#' + avgPosition.toFixed(1) : 'Sin datos'}
-- Usuarios activos (GA4, 30d): ${hasGa4Data ? totalActiveUsers : 'Sin datos — GA4 no conectado'}
-- Conversiones: ${hasGa4Data ? totalConversions : 'Sin datos'}
-- Salud Técnica: ${healthScore !== null ? healthScore + '/100' : 'Auditoría no ejecutada aún'}
- 
-Instrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconnex.com.ar)". Usa Markdown elegante. Sé honesto sobre la disponibilidad de datos. Estructura: Resumen Ejecutivo, Análisis de Rendimiento (tabla), Diagnóstico Técnico y Plan de Acción (3-4 tareas).`;
-
-    const aiCircuitBreaker = new RedisCircuitBreaker('ai_report_api', {
-      failureThreshold: 3,
-      recoveryTimeout: 60000, // 1 minute
-    });
-
-    const resData = await aiCircuitBreaker.execute(async () => {
-      const res = await fetch(aiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: aiModel,
-          messages: [
-            { role: "system", content: "Eres un experto en SEO y marketing digital de alto nivel." },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.3
-        })
+      return NextResponse.json({
+        success: true,
+        report: `Desde Strategic Connex (strategicconnex.com.ar)\n\n## Reporte de Contingencia Tecnica - ${new Date().toLocaleDateString('es-ES')}\n\nLa API de inteligencia artificial no se encuentra disponible.\n\n*StrategicAudit Pro - Inteligencia y Resiliencia de Negocios.*`,
+        isFallback: true
       });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`AI API error: ${res.status} - ${errText}`);
-      }
-
-      return res.json();
-    });
-    
-    // Extraer texto según formato estándar de Chat Completions
-    const generatedReport = resData.choices?.[0]?.message?.content || resData.content?.[0]?.text || resData.generated_text;
-
-    if (!generatedReport) {
-      throw new Error('La respuesta de la IA no contiene texto generado válido.');
     }
-
-    return NextResponse.json({
-      success: true,
-      report: generatedReport,
-      isFallback: false
-    });
-
-  } catch (error) {
-    const err = error as { message?: string };
-    console.error('Error en el endpoint de reportes por IA:', error);
-    
-    // Global secondary highly resilient fallback in case of connection failure
-    return NextResponse.json({
-      success: true,
-      report: `Desde Strategic Connex (strategicconnex.com.ar)\n\n## ⚠️ Reporte de Contingencia Técnica - ${new Date().toLocaleDateString('es-ES')}\n\nLamentamos las molestias. La API de inteligencia artificial no se encuentra disponible temporalmente debido a límites de cuota de red de Google o una interrupción técnica de conexión externa.\n\nSin embargo, nuestro sistema ha procesado tus métricas locales de manera resiliente para que no te quedes sin información:\n\n*   **Salud Técnica SEO:** 85/100 (Estable)\n*   **Tráfico Registrado:** Visualiza tus gráficos históricos reales de GSC e impresiones directamente en el panel principal o vuelve a intentar la generación en unos instantes.\n\n*StrategicAudit Pro - Inteligencia y Resiliencia de Negocios.*`,
-      isFallback: true
-    });
   }
-}
+);
 
 // Function to generate high-fidelity, beautifully presented report on fallback
 function generateResilientReport(

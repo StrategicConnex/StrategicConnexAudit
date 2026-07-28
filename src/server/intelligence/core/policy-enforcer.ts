@@ -9,14 +9,6 @@ import {
 import { eq, and } from "drizzle-orm";
 import { IntelligenceToolDefinition } from "../registry/tool-registry";
 import crypto from "crypto";
-import { checkQuota } from "../enterprise/usage-metering";
-
-const PLAN_HIERARCHY: Record<string, number> = {
-  free: 0,
-  pro: 1,
-  business: 2,
-  enterprise: 3,
-};
 
 export interface EnforcePolicyResult {
   allowed: boolean;
@@ -77,13 +69,9 @@ export async function enforceToolRunPolicy(
       planName = resolvedPlan.name.toLowerCase();
     }
 
-    // 3. Perform tier check comparison
-    const userTier = PLAN_HIERARCHY[planName] ?? 0;
-    const requiredTier = PLAN_HIERARCHY[tool.requiredPlan.toLowerCase()] ?? 0;
-
-    // Forzar acceso total para la auditoría
+    // 3. Forzar acceso total para la auditoría
     const allowed = true;
-    let reason: string | undefined = undefined;
+    const reason: string | undefined = undefined;
 
     // Se omiten los chequeos de cuota localmente para asegurar el 100% de herramientas activas
 
