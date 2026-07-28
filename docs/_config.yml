@@ -1,0 +1,73 @@
+# ──────────────────────────────────────────────
+# SCAUDIT Pro — GitHub Pages Documentation Site
+# ──────────────────────────────────────────────
+
+title: "SCAUDIT Pro"
+tagline: "Enterprise Cyber Intelligence & Technical Auditing"
+description: >-
+  Plataforma avanzada de inteligencia de red, monitoreo de superficie de
+  ataque y auditoría de ciberseguridad continua.
+
+# ── Theme ─────────────────────────────────────
+remote_theme: just-the-docs/just-the-docs
+
+# ── Branding ──────────────────────────────────
+logo: "/assets/images/logo-dark.svg"
+favicon_ico: "/assets/images/favicon.svg"
+color_scheme: dark
+
+# ── Search ────────────────────────────────────
+search_enabled: true
+search:
+  heading_level: 3
+  previews: 3
+  preview_words_before: 5
+  preview_words_after: 10
+  tokenizer: >-
+    [\s\-–—,:;!?(){}[\]"'«»“”‘’]+|(?:[\u00C0-\u02EE\u0370-\u1FFF\u2C00-\u2FEF
+    \u3001-\uD7FF\uF900-\uFDCB\uFDF0-\uFFEF]+)
+
+# ── Navigation ────────────────────────────────
+nav_sort: case_insensitive
+heading_anchors: true
+back_to_top: true
+back_to_top_text: "Volver arriba"
+footer_content: "Copyright &copy; 2026 StrategicConnex. Distribuido bajo licencia MIT."
+
+# ── Aux Links ─────────────────────────────────
+aux_links:
+  "GitHub":
+    - "https://github.com/StrategicConnex/StrategicConnexAudit"
+  "scaudit.vercel.app":
+    - "https://scaudit.vercel.app"
+  "StrategicConnex":
+    - "https://strategicconnex.com.ar"
+
+aux_links_new_tab: true
+
+# ── Google Analytics (opcional) ───────────────
+# analytics:
+#   provider: "google-gtag"
+#   google:
+#     GTM: "G-XXXXXXXXXX"
+
+# ── Plugins ───────────────────────────────────
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# ── Markdown ──────────────────────────────────
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  syntax_highlighter_opts:
+    block:
+      line_numbers: true
+
+# ── Exclude ───────────────────────────────────
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md

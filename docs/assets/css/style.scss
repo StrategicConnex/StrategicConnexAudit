@@ -1,0 +1,128 @@
+---
+---
+
+// ──────────────────────────────────────────────
+// SCAUDIT Pro — Just the Docs custom overrides
+// ──────────────────────────────────────────────
+
+// ── Brand colors (match SCAUDIT design system) ─
+$scaudit-indigo: #818cf8;
+$scaudit-chartreuse: #a3e635;
+$scaudit-bg: #07080c;
+$scaudit-card: #0a0b12;
+$scaudit-border: #1c1d2e;
+
+// ── Just the Docs variable overrides ──────────
+$link-color: $scaudit-indigo;
+$btn-primary-color: $scaudit-indigo;
+$body-background-color: $scaudit-bg;
+$sidebar-color: $scaudit-card;
+$border-color: $scaudit-border;
+$body-text-color: #e2e8f0;
+$body-heading-color: #f1f5f9;
+$nav-child-link-color: #a1a1aa;
+$search-result-preview-color: #a1a1aa;
+$base-button-color: #14152a;
+$table-background-color: $scaudit-card;
+$code-background-color: #0d0e18;
+$feedback-color: #14152a;
+
+// ── Import base theme ─────────────────────────
+@import "../../../../_sass/color_schemes/dark";
+
+// ── Custom overrides ─────────────────────────
+.site-title {
+  font-family: "DM Sans", "Inter", sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 18px !important;
+  color: #f1f5f9 !important;
+}
+
+.site-title:hover {
+  color: $scaudit-indigo !important;
+}
+
+.main-content {
+  h1, h2, h3, h4 {
+    font-family: "DM Sans", "Inter", sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  h1 { color: #f1f5f9; border-bottom: 1px solid $scaudit-border; padding-bottom: 0.5rem; }
+  h2 { color: $scaudit-indigo; }
+  h3 { color: #e2e8f0; }
+
+  code {
+    background-color: $code-background-color;
+    border: 1px solid $scaudit-border;
+    color: $scaudit-chartreuse;
+    font-size: 0.85em;
+    padding: 0.1em 0.3em;
+    border-radius: 4px;
+  }
+
+  pre {
+    background-color: $code-background-color !important;
+    border: 1px solid $scaudit-border;
+    border-radius: 8px;
+  }
+
+  hr {
+    border-color: $scaudit-border;
+  }
+
+  table {
+    border: 1px solid $scaudit-border;
+    thead {
+      background-color: #0d0e18;
+      th {
+        border-bottom: 2px solid $scaudit-border;
+        color: $scaudit-indigo;
+        font-weight: 600;
+      }
+    }
+    td, th {
+      border: 1px solid $scaudit-border;
+    }
+  }
+
+  blockquote {
+    border-left: 3px solid $scaudit-indigo;
+    background-color: rgba(129, 140, 248, 0.05);
+    padding: 0.5rem 1rem;
+    border-radius: 0 8px 8px 0;
+  }
+
+  img {
+    border-radius: 8px;
+  }
+}
+
+// ── Badge-like labels ────────────────────────
+.label {
+  &.label-green { background-color: $scaudit-chartreuse; color: #000; }
+  &.label-blue { background-color: $scaudit-indigo; color: #fff; }
+}
+
+// ── Footer ──────────────────────────────────
+.site-footer {
+  border-top: 1px solid $scaudit-border;
+  color: #52525b;
+  font-size: 12px;
+}
+
+// ── Table of contents ────────────────────────
+#toc ul {
+  list-style: none;
+  padding-left: 0;
+  li {
+    padding: 0.2rem 0;
+    a {
+      color: #a1a1aa;
+      &:hover { color: $scaudit-indigo; }
+    }
+  }
+}
