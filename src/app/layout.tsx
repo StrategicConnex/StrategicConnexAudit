@@ -24,6 +24,13 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "SCAUDIT | Enterprise Network Intelligence & Security",
   description: "Plataforma avanzada de inteligencia de red, monitoreo de superficie de ataque y auditoría de ciberseguridad continua.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/logo-dark.svg",
+  },
   robots: { index: true, follow: true },
   openGraph: {
     title: "SCAUDIT | Enterprise Network Intelligence",
