@@ -34,8 +34,8 @@ export function ExportPdfButton({ targetElementId }: { targetElementId: string }
     <button 
       onClick={handleExport}
       disabled={isExporting}
-      className="h-10 px-6 rounded-apple-pill text-[10px] font-bold uppercase tracking-[0.1em] transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed no-print
-        bg-apple-ink/5 text-apple-ink hover:bg-apple-blue hover:text-white border border-apple-ink/5 hover:border-apple-blue shadow-sm hover:shadow-md"
+      className="h-10 px-6 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed no-print
+        bg-muted/30 text-foreground hover:bg-primary/20 hover:text-white border border-border/30 hover:border-primary/40 shadow-sm hover:shadow-md"
     >
       {isExporting ? (
         <Loader2 className="w-3.5 h-3.5 animate-spin" />

@@ -23,25 +23,31 @@ export const createProject = authenticatedAction(
 
     try {
       // 1. Auto-sincronizacin del usuario con Plan por Defecto (Self-Healing)
-      // Buscamos el ID del plan gratuito (el primero creado)
-      const defaultPlan = await tx.query.subscriptionPlans.findFirst({
-        orderBy: (plans, { asc }) => [asc(plans.createdAt)],
-      });
-
-      await tx.insert(users)
-        .values({
-          id: user.id,
-          email: user.email || '',
-          fullName: user.user_metadata?.full_name || 'Usuario Nuevo',
-          planId: defaultPlan?.id, // Asignamos el plan base si es un usuario nuevo
-        })
-        .onConflictDoUpdate({
-          target: users.id,
-          set: { 
-            email: user.email || '',
-            updatedAt: new Date()
-          }
+      // Solo intentamos sincronizar si hay subscriptionPlans disponibles
+      try {
+        const defaultPlan = await tx.query.subscriptionPlans.findFirst({
+          orderBy: (plans, { asc }) => [asc(plans.createdAt)],
         });
+
+        await tx.insert(users)
+          .values({
+            id: user.id,
+            email: user.email || '',
+            fullName: user.user_metadata?.full_name || 'Usuario Nuevo',
+            planId: defaultPlan?.id,
+          })
+          .onConflictDoUpdate({
+            target: users.id,
+            set: { 
+              email: user.email || '',
+              updatedAt: new Date()
+            }
+          });
+      } catch (userSyncError) {
+        // Fallo en sincronizacin de usuario (ej: tabla subscriptionPlans no existe en dev)
+        // No bloquea la creacin del proyecto
+        console.warn("User sync fall (no bloquea):", userSyncError);
+      }
 
       // 2. Creacin del proyecto (Dispara el TRIGGER de cuotas en Postgres)
       await tx.insert(projects).values({

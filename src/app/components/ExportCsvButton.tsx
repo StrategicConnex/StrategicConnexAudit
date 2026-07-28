@@ -37,8 +37,8 @@ export function ExportCsvButton({ projectId }: ExportCsvButtonProps) {
     <button 
       onClick={handleExport}
       disabled={isExporting}
-      className="w-full sm:w-auto h-10 px-6 rounded-apple-pill text-[10px] font-bold uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed
-        bg-apple-ink/5 text-apple-ink hover:bg-apple-ink hover:text-white border border-apple-ink/5 shadow-sm hover:shadow-md"
+      className="w-full sm:w-auto h-10 px-6 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed
+        bg-muted/30 text-foreground hover:bg-muted/60 hover:text-white border border-border/30 shadow-sm hover:shadow-md"
     >
       {isExporting ? (
         <Loader2 className="w-3.5 h-3.5 animate-spin" />

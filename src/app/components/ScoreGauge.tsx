@@ -10,11 +10,11 @@ interface ScoreGaugeProps {
 }
 
 function getScoreConfig(score: number) {
-  if (score >= 85) return { label: 'Excelente', color: '#10b981', glow: 'rgba(16,185,129,0.5)', textColor: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' };
-  if (score >= 70) return { label: 'Bueno', color: '#06b6d4', glow: 'rgba(6,182,212,0.5)', textColor: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' };
-  if (score >= 50) return { label: 'Advertencia', color: '#f59e0b', glow: 'rgba(245,158,11,0.5)', textColor: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' };
-  if (score >= 30) return { label: 'Crítico', color: '#f97316', glow: 'rgba(249,115,22,0.5)', textColor: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' };
-  return { label: 'Peligro', color: '#ef4444', glow: 'rgba(239,68,68,0.5)', textColor: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20' };
+  if (score >= 85) return { label: 'Excelente', color: '#8BC34A', glow: 'rgba(140,200,80,0.5)', textColor: 'text-chartreuse', bg: 'bg-chartreuse/10 border-chartreuse/20' };
+  if (score >= 70) return { label: 'Bueno', color: '#6271C4', glow: 'rgba(98,113,196,0.5)', textColor: 'text-primary', bg: 'bg-primary/10 border-primary/20' };
+  if (score >= 50) return { label: 'Advertencia', color: '#EBA52D', glow: 'rgba(235,165,45,0.5)', textColor: 'text-[oklch(75% 0.13 80)]', bg: 'bg-[oklch(75% 0.13 80)]/10 border-[oklch(75% 0.13 80)]/20' };
+  if (score >= 30) return { label: 'Crítico', color: '#D4373C', glow: 'rgba(212,55,60,0.5)', textColor: 'text-destructive/80', bg: 'bg-destructive/10 border-destructive/20' };
+  return { label: 'Peligro', color: '#D4373C', glow: 'rgba(212,55,60,0.5)', textColor: 'text-destructive', bg: 'bg-destructive/10 border-destructive/20' };
 }
 
 export function ScoreGauge({ score, previousScore, size = 'md' }: ScoreGaugeProps) {
@@ -66,7 +66,7 @@ export function ScoreGauge({ score, previousScore, size = 'md' }: ScoreGaugeProp
         >
           <defs>
             <linearGradient id={`gauge-grad-${score}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={score < 50 ? '#ef4444' : score < 70 ? '#f59e0b' : '#10b981'} />
+              <stop offset="0%" stopColor={score < 50 ? '#D4373C' : score < 70 ? '#EBA52D' : '#8BC34A'} />
               <stop offset="100%" stopColor={config.color} />
             </linearGradient>
             <filter id="gauge-glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -130,12 +130,12 @@ export function ScoreGauge({ score, previousScore, size = 'md' }: ScoreGaugeProp
         {/* Center text overlay — NOT rotated */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
-            className={`${textSize} font-black text-white leading-none tracking-tighter`}
+            className={`${textSize} font-black text-foreground leading-none tracking-tighter`}
             style={{ textShadow: `0 0 20px ${config.glow}` }}
           >
             {animatedScore}
           </span>
-          <span className="text-[9px] font-extrabold text-zinc-500 uppercase tracking-widest mt-0.5">/100</span>
+          <span className="text-[9px] font-extrabold text-muted-fg uppercase tracking-widest mt-0.5">/100</span>
         </div>
 
         {/* Outer glow ring */}
@@ -156,10 +156,10 @@ export function ScoreGauge({ score, previousScore, size = 'md' }: ScoreGaugeProp
         {delta !== null && (
           <span className={`text-[10px] font-extrabold flex items-center gap-0.5 px-2 py-0.5 rounded-full border ${
             delta > 0
-              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+              ? 'text-chartreuse bg-chartreuse/10 border-chartreuse/20'
               : delta < 0
-              ? 'text-rose-400 bg-rose-500/10 border-rose-500/20'
-              : 'text-zinc-400 bg-white/[0.04] border-white/[0.06]'
+              ? 'text-destructive bg-destructive/10 border-destructive/20'
+              : 'text-muted-fg bg-muted/30 border-border'
           }`}>
             {delta > 0 ? (
               <TrendingUp className="w-3 h-3" />

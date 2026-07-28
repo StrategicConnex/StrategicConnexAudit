@@ -36,9 +36,6 @@ export const exportKeywordsCSV = authenticatedAction(
     }
 
     // 3. Obtener el historial más reciente para cada keyword
-    // Hacemos las consultas por separado o usando joins. Para simplicidad con query builder:
-    const keywordIds = keywords.map(k => k.id);
-    
     // Obtenemos todos los historiales de estas keywords (en una base real gigante habría que limitar,
     // pero para exportar reporte completo sirve).
     // Alternativamente, un left join manual con drizzle:
@@ -68,7 +65,7 @@ export const exportKeywordsCSV = authenticatedAction(
     const latestData = Array.from(latestDataMap.values());
 
     // 4. Formatear como CSV
-    const escapeCsv = (str: any) => {
+    const escapeCsv = (str: unknown) => {
       if (str === null || str === undefined) return '""';
       const s = String(str).replace(/"/g, '""');
       return `"${s}"`;

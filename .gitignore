@@ -36,6 +36,25 @@ yarn-error.log*
 # vercel
 .vercel
 
+# dev logs & temp files
+next-dev.log
+*.bak
+design-report.html
+
+# test artifacts
+test-results/
+playwright-report/
+screenshot-*.png
+e2e/test.txt
+
+# linter outputs
+eslint_*.txt
+eslint_*.json
+
+# local tooling
+.freebuff/
+.tokensave/
+
 # backups
 /backups/
 /.trigger/

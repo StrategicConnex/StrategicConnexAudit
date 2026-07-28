@@ -3,11 +3,12 @@ import { db } from "@/shared/db";
 import { webhookConfigs } from "@/shared/db/schemas";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
+import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 
 export interface WebhookPayload {
   projectId: string;
   event: string;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 // Tarea asíncrona para despachar webhooks a clientes (con reintentos automáticos)
@@ -53,6 +54,10 @@ export const dispatchWebhookTask = task({
           .update(body)
           .digest("hex");
 
+        // SECURITY: Validar que la URL del webhook no apunte a IPs privadas/internas (SSRF)
+        const parsedUrl = new URL(config.url);
+        await assertPublicHostname(parsedUrl.hostname);
+
         logger.info(`Haciendo POST a ${config.url}`);
         
         const response = await fetch(config.url, {
@@ -73,8 +78,9 @@ export const dispatchWebhookTask = task({
         deliveredCount++;
         logger.info(`Webhook enviado exitosamente a ${config.url}`);
 
-      } catch (err: any) {
-        logger.error(`Fallo al enviar webhook a ${config.url}: ${err.message}`);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        logger.error(`Fallo al enviar webhook a ${config.url}: ${errorMessage}`);
         // Lanzamos el error para que Trigger.dev capture el fallo y reintente este run
         throw err; 
       }

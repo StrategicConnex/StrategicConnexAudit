@@ -10,6 +10,19 @@ import { DashboardSkeleton } from './components/DashboardSkeleton';
 export const dynamic = 'force-dynamic';
 
 async function DashboardContent() {
+  // ── Dev bypass: saltea auth y DB queries en desarrollo ──
+  const DEV_BYPASS = process.env.NODE_ENV === 'development' &&
+    process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
+
+  if (DEV_BYPASS) {
+    return (
+      <DashboardContainer 
+        initialProjects={[]} 
+        dashboardData={[]} 
+      />
+    );
+  }
+
   // 1. Authenticate user
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -33,8 +46,8 @@ async function DashboardContent() {
 
     // 3. Optimize fetching by doing inArray queries instead of sequential queries (fixes N+1)
     const projectIds = projectsList.map(p => p.id);
-    let allIntegrations: any[] = [];
-    let allAudits: any[] = [];
+    let allIntegrations: { projectId: string; [key: string]: unknown }[] = [];
+    let allAudits: { id: string; projectId: string; status: string; createdAt: Date | null; [key: string]: unknown }[] = [];
 
     if (projectIds.length > 0) {
       allIntegrations = await tx
@@ -53,11 +66,15 @@ async function DashboardContent() {
     const dashboardData = projectsList.map(project => {
       const projectIntegrations = allIntegrations.filter(i => i.projectId === project.id);
       const projectAudits = allAudits.filter(a => a.projectId === project.id);
+      const latestAudit = projectAudits.length > 0 ? projectAudits[0] : null;
       
       return {
         ...project,
         integrations: projectIntegrations,
-        latestAudit: projectAudits.length > 0 ? projectAudits[0] : null,
+        latestAudit: latestAudit ? {
+          id: latestAudit.id,
+          status: latestAudit.status
+        } : null,
       };
     });
 

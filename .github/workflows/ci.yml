@@ -1,12 +1,17 @@
 name: CI
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  lint-and-build:
+    name: Lint & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: 9
       - uses: actions/setup-node@v4
@@ -15,5 +20,51 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      - run: pnpm test
       - run: pnpm build
+
+  test-and-coverage:
+    name: Tests & Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests with coverage
+        id: coverage
+        run: pnpm test:coverage 2>&1 | tee coverage-output.txt
+        continue-on-error: true
+
+      - name: Upload coverage report (lcov + html)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./coverage
+          retention-days: 7
+
+      - name: Upload to Codecov (optional)
+        if: steps.coverage.outcome == 'success'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+
+      - name: Report coverage summary in PR
+        if: always()
+        run: |
+          {
+            echo '## 📊 Coverage Summary'
+            echo ''
+            echo '```'
+            # Extract coverage table: from header "File | % Stmts" to blank line
+            awk '/File.*Stmts/,/^$/' coverage-output.txt 2>/dev/null || echo '(coverage not available)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

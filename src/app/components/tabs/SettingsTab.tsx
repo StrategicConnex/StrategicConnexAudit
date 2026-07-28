@@ -57,7 +57,7 @@ export function SettingsTab({
 }: SettingsTabProps) {
   // Global agency branding settings (localStorage)
   const [agencyName, setAgencyName] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#06b6d4');
+  const [primaryColor, setPrimaryColor] = useState('oklch(68% 0.14 230)');
   const [logoUrl, setLogoUrl] = useState('');
 
   // Clipboard copied tracker
@@ -104,7 +104,7 @@ export function SettingsTab({
         try {
           const parsed = JSON.parse(stored);
           setAgencyName(parsed.name || '');
-          setPrimaryColor(parsed.color || '#06b6d4');
+          setPrimaryColor(parsed.color || 'oklch(68% 0.14 230)');
           setLogoUrl(parsed.logoUrl || '');
         } catch (e) {
           console.error("Failed to parse branding config", e);
@@ -290,54 +290,54 @@ export function SettingsTab({
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl font-sans text-zinc-100 relative z-10 space-y-10">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl font-sans text-foreground relative z-10 space-y-10">
       
       {/* 1. Main System Settings Card */}
-      <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-10 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 relative overflow-hidden ">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="mb-12 relative z-10">
           <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
-            <Settings className="w-6 h-6 text-cyan-400" />
+            <Settings className="w-6 h-6 text-primary" />
             Configuración del Sistema
           </h2>
-          <p className="text-sm text-zinc-500 mt-2">Administre las credenciales de API, llaves de análisis y preferencias de personalización de su marca.</p>
+          <p className="text-sm text-muted-fg mt-2">Administre las credenciales de API, llaves de análisis y preferencias de personalización de su marca.</p>
         </div>
 
         <div className="space-y-12 relative z-10">
           {/* IA integrations */}
           <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-white/[0.06] pb-3">Integraciones de Inteligencia Artificial</h3>
-            <div className="bg-white/[0.005] border border-white/[0.06] rounded-2xl p-8 hover:bg-white/[0.01] transition-all">
+            <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">Integraciones de Inteligencia Artificial</h3>
+            <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-all">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-[15px] font-bold text-white tracking-tight">OpenRouter / LLM API Gateway</span>
-                <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 uppercase tracking-wider">Activo</span>
+                <span className="text-[9px] font-bold bg-chartreuse/10 text-chartreuse px-3 py-1 rounded-full border border-chartreuse/20 uppercase tracking-wider">Activo</span>
               </div>
-              <p className="text-xs text-zinc-500 mb-6 leading-relaxed">El aprovisionamiento de modelos generativos se gestiona de forma segura a través de variables de entorno del servidor.</p>
+              <p className="text-xs text-muted-fg mb-6 leading-relaxed">El aprovisionamiento de modelos generativos se gestiona de forma segura a través de variables de entorno del servidor.</p>
               <input 
                 type="password" 
                 value="************************************************" 
                 readOnly 
-                className="w-full bg-black/40 border border-white/[0.08] rounded-xl px-6 py-3.5 text-xs text-zinc-500 focus:outline-none font-mono tracking-wider" 
+                className="w-full bg-card border border-border rounded-xl px-6 py-3.5 text-xs text-muted-fg focus:outline-none font-mono tracking-wider" 
               />
             </div>
           </div>
 
           {/* White label settings */}
           <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-white/[0.06] pb-3 flex items-center gap-2">
-              <Palette className="w-4 h-4 text-cyan-400" /> Marca Blanca (White Label)
+            <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3 flex items-center gap-2">
+              <Palette className="w-4 h-4 text-primary" /> Marca Blanca (White Label)
             </h3>
-            <div className="bg-white/[0.005] border border-white/[0.06] rounded-2xl p-8 hover:bg-white/[0.01] transition-all">
-              <p className="text-xs text-zinc-500 mb-10 leading-relaxed">Personalice los informes y las plantillas ejecutivas PDF con la identidad y el logotipo de su agencia o cliente corporativo.</p>
+            <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-all">
+              <p className="text-xs text-muted-fg mb-10 leading-relaxed">Personalice los informes y las plantillas ejecutivas PDF con la identidad y el logotipo de su agencia o cliente corporativo.</p>
               
               <div className="grid gap-8">
                 <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Nombre de la Agencia</label>
+                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Nombre de la Agencia</label>
                   <input 
                     type="text" 
                     placeholder="Ej: Strategic SEO Agency" 
-                    className="w-full bg-black/60 border border-white/[0.08] focus:border-cyan-500 rounded-xl px-6 py-3.5 text-sm text-zinc-200 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                     id="branding-name-input"
                     value={agencyName}
                     onChange={(e) => setAgencyName(e.target.value)}
@@ -346,11 +346,11 @@ export function SettingsTab({
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Color Principal</label>
+                    <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Color Principal</label>
                     <div className="flex gap-4 items-center">
                       <input 
                         type="color" 
-                        className="w-12 h-12 rounded-full border-2 border-white/[0.1] bg-transparent p-0 cursor-pointer overflow-hidden"
+                        className="w-12 h-12 rounded-full border-2 border-border bg-transparent p-0 cursor-pointer overflow-hidden"
                         id="branding-color-picker"
                         value={primaryColor}
                         onChange={(e) => setPrimaryColor(e.target.value)}
@@ -358,8 +358,8 @@ export function SettingsTab({
                       <input 
                         type="text" 
                         id="branding-color-text"
-                        placeholder="#06b6d4" 
-                        className="flex-1 bg-black/60 border border-white/[0.08] focus:border-cyan-500 rounded-xl px-6 py-3.5 text-sm font-bold text-zinc-200 focus:outline-none transition-all uppercase placeholder-zinc-700"
+                        placeholder="oklch(68% 0.14 230)" 
+                        className="flex-1 bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm font-bold text-foreground/80 focus:outline-none transition-all uppercase placeholder-zinc-700"
                         value={primaryColor}
                         onChange={(e) => setPrimaryColor(e.target.value)}
                       />
@@ -367,11 +367,11 @@ export function SettingsTab({
                   </div>
                   
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Logo URL (PNG/SVG)</label>
+                    <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Logo URL (PNG/SVG)</label>
                     <input 
                       type="text" 
                       placeholder="https://tudominio.com/logo.png" 
-                      className="w-full bg-black/60 border border-white/[0.08] focus:border-cyan-500 rounded-xl px-6 py-3.5 text-sm text-zinc-200 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+                      className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                       value={logoUrl}
                       onChange={(e) => setLogoUrl(e.target.value)}
                     />
@@ -382,7 +382,7 @@ export function SettingsTab({
               <div className="mt-12 flex justify-end">
                 <button 
                   onClick={handleSaveBranding}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black px-10 py-3.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.45)] transition-all flex items-center gap-3 group cursor-pointer"
+                  className="bg-cyan-500 hover:bg-cyan-400 text-black px-10 py-3.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-all flex items-center gap-3 group cursor-pointer"
                 >
                   <Save className="w-4 h-4 group-hover:scale-110 transition-transform text-black" /> Guardar Preferencias
                 </button>
@@ -393,45 +393,45 @@ export function SettingsTab({
       </div>
 
       {/* 2. Developer Integrations - API Keys */}
-      <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-10 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 relative overflow-hidden ">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="mb-12 relative z-10">
           <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
-            <Key className="w-6 h-6 text-cyan-400" />
+            <Key className="w-6 h-6 text-primary" />
             Llaves de API para Desarrolladores
           </h2>
-          <p className="text-sm text-zinc-500 mt-2">
+          <p className="text-sm text-muted-fg mt-2">
             Cree credenciales para autenticar llamadas directas de la API de StrategicAudit y automatizar sus flujos de auditoría externa.
           </p>
         </div>
 
         <div className="space-y-8 relative z-10">
           {/* Create Key Form */}
-          <form onSubmit={handleCreateApiKey} className="bg-white/[0.005] border border-white/[0.06] rounded-2xl p-8 space-y-6">
-            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-              <Plus className="w-4 h-4 text-cyan-400" /> Crear Nueva Llave de Acceso
+          <form onSubmit={handleCreateApiKey} className="bg-muted/1 border border-border rounded-2xl p-8 space-y-6">
+            <h4 className="text-xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-2">
+              <Plus className="w-4 h-4 text-primary" /> Crear Nueva Llave de Acceso
             </h4>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Nombre Descriptivo</label>
+                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Nombre Descriptivo</label>
                 <input 
                   type="text" 
                   required
                   placeholder="Ej: Servidor de Monitoreo Staging" 
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
-                  className="w-full bg-black/60 border border-white/[0.08] focus:border-cyan-500 rounded-xl px-5 py-3 text-sm text-zinc-200 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Periodo de Expiración</label>
+                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Periodo de Expiración</label>
                 <select
                   value={expiresDays}
                   onChange={(e) => setExpiresDays(Number(e.target.value))}
-                  className="w-full bg-black/60 border border-white/[0.08] focus:border-cyan-500 rounded-xl px-5 py-3 text-sm text-zinc-400 font-bold focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-muted-fg font-bold focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                 >
                   <option value={0}>Sin expiración</option>
                   <option value={30}>30 Días</option>
@@ -442,7 +442,7 @@ export function SettingsTab({
             </div>
 
             {keysError && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                 <span>{keysError}</span>
               </div>
@@ -452,7 +452,7 @@ export function SettingsTab({
               <button
                 type="submit"
                 disabled={creatingKey || !newKeyName.trim()}
-                className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all flex items-center gap-2 cursor-pointer"
+                className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-all flex items-center gap-2 cursor-pointer"
               >
                 {creatingKey ? (
                   <>
@@ -469,24 +469,24 @@ export function SettingsTab({
 
           {/* Active Keys List */}
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest border-b border-white/[0.06] pb-3">
+            <h4 className="text-xs font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">
               Llaves Activas ({apiKeys.length})
             </h4>
 
             {loadingKeys ? (
               <div className="flex items-center justify-center py-10">
-                <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : apiKeys.length === 0 ? (
-              <div className="text-center py-10 bg-white/[0.003] border border-dashed border-white/[0.06] rounded-2xl">
-                <Key className="w-8 h-8 text-zinc-600 mx-auto mb-3" />
-                <p className="text-xs text-zinc-500">No hay llaves de API activas. Genere una llave de acceso para comenzar.</p>
+              <div className="text-center py-10 bg-muted/1 border border-dashed border-border rounded-2xl">
+                <Key className="w-8 h-8 text-muted-fg mx-auto mb-3" />
+                <p className="text-xs text-muted-fg">No hay llaves de API activas. Genere una llave de acceso para comenzar.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto border border-white/[0.06] rounded-2xl bg-white/[0.002]">
+              <div className="overflow-x-auto border border-border rounded-2xl bg-muted/1">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-white/[0.06] bg-white/[0.01] text-zinc-500 font-bold">
+                    <tr className="border-b border-border bg-muted/5 text-muted-fg font-bold">
                       <th className="p-4 uppercase tracking-wider text-[9px]">Nombre</th>
                       <th className="p-4 uppercase tracking-wider text-[9px]">Prefijo de Acceso</th>
                       <th className="p-4 uppercase tracking-wider text-[9px]">Ámbito</th>
@@ -497,28 +497,28 @@ export function SettingsTab({
                   </thead>
                   <tbody className="divide-y divide-white/[0.04]">
                     {apiKeys.map((key) => (
-                      <tr key={key.id} className="hover:bg-white/[0.005] transition-colors text-zinc-300 font-medium">
+                      <tr key={key.id} className="hover:bg-muted/1 transition-colors text-foreground/80 font-medium">
                         <td className="p-4 text-white font-bold">{key.name}</td>
-                        <td className="p-4 font-mono tracking-wider text-cyan-400">{key.keyPrefix}</td>
+                        <td className="p-4 font-mono tracking-wider text-primary">{key.keyPrefix}</td>
                         <td className="p-4">
-                          <span className="bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/20 font-mono text-[9px]">
+                          <span className="bg-primary/10 text-primary px-2 py-0.5 rounded border border-primary/20 font-mono text-[9px]">
                             {key.scope?.join(', ') || 'read, write'}
                           </span>
                         </td>
-                        <td className="p-4 text-zinc-500">{new Date(key.createdAt).toLocaleDateString()}</td>
+                        <td className="p-4 text-muted-fg">{new Date(key.createdAt).toLocaleDateString()}</td>
                         <td className="p-4">
                           {key.expiresAt ? (
-                            <span className={new Date(key.expiresAt) < new Date() ? 'text-red-400' : 'text-zinc-400'}>
+                            <span className={new Date(key.expiresAt) < new Date() ? 'text-destructive' : 'text-muted-fg'}>
                               {new Date(key.expiresAt).toLocaleDateString()}
                             </span>
                           ) : (
-                            <span className="text-zinc-600 italic">Nunca expira</span>
+                            <span className="text-muted-fg italic">Nunca expira</span>
                           )}
                         </td>
                         <td className="p-4 text-right">
                           <button
                             onClick={() => handleRevokeApiKey(key.id)}
-                            className="text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 p-2 rounded-lg border border-red-500/20 transition-all cursor-pointer"
+                            className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-lg border border-destructive/20 transition-all cursor-pointer"
                             title="Revocar esta API Key"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -535,17 +535,17 @@ export function SettingsTab({
       </div>
 
       {/* 3. Developer Integrations - Webhooks */}
-      <div className="backdrop-blur-xl border border-white/[0.06] bg-white/[0.01] rounded-2xl p-10 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 relative overflow-hidden ">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="mb-12 relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
-                <Globe className="w-6 h-6 text-cyan-400" />
+                <Globe className="w-6 h-6 text-primary" />
                 Configuración de Webhooks
               </h2>
-              <p className="text-sm text-zinc-500 mt-2">
+              <p className="text-sm text-muted-fg mt-2">
                 Reciba notificaciones HTTP en tiempo real directamente en su servidor cuando ocurran eventos en sus auditorías de red.
               </p>
             </div>
@@ -553,11 +553,11 @@ export function SettingsTab({
             {/* Active Project Selector */}
             {initialProjects.length > 0 && (
               <div className="flex flex-col gap-1.5 min-w-[220px]">
-                <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Dominio de Auditoría</label>
+                <label className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Dominio de Auditoría</label>
                 <select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId && setSelectedProjectId(e.target.value)}
-                  className="bg-black/60 border border-white/[0.08] focus:border-cyan-500 rounded-xl px-4 py-2.5 text-xs text-white font-bold focus:outline-none transition-all cursor-pointer"
+                  className="bg-card border border-border focus:border-primary rounded-xl px-4 py-2.5 text-xs text-white font-bold focus:outline-none transition-all cursor-pointer"
                 >
                   {initialProjects.map(proj => (
                     <option key={proj.id} value={proj.id}>{proj.name} ({proj.domain})</option>
@@ -571,71 +571,71 @@ export function SettingsTab({
         <div className="space-y-8 relative z-10">
           {/* Create Webhook Form */}
           {selectedProjectId ? (
-            <form onSubmit={handleCreateWebhook} className="bg-white/[0.005] border border-white/[0.06] rounded-2xl p-8 space-y-6">
-              <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                <Plus className="w-4 h-4 text-cyan-400" /> Registrar Nuevo Destino de Eventos
+            <form onSubmit={handleCreateWebhook} className="bg-muted/1 border border-border rounded-2xl p-8 space-y-6">
+              <h4 className="text-xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-2">
+                <Plus className="w-4 h-4 text-primary" /> Registrar Nuevo Destino de Eventos
               </h4>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Nombre del Destino</label>
+                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Nombre del Destino</label>
                   <input 
                     type="text" 
                     required
                     placeholder="Ej: Slack Alert Endpoint" 
                     value={newWebhookName}
                     onChange={(e) => setNewWebhookName(e.target.value)}
-                    className="w-full bg-black/60 border border-white/[0.08] focus:border-cyan-500 rounded-xl px-5 py-3 text-sm text-zinc-200 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">URL de Endpoint (Debe ser HTTPS)</label>
+                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">URL de Endpoint (Debe ser HTTPS)</label>
                   <input 
                     type="url" 
                     required
                     placeholder="https://api.tuempresa.com/webhooks/alerts" 
                     value={newWebhookUrl}
                     onChange={(e) => setNewWebhookUrl(e.target.value)}
-                    className="w-full bg-black/60 border border-white/[0.08] focus:border-cyan-500 rounded-xl px-5 py-3 text-sm text-zinc-200 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(6,182,212,0.1)] font-mono"
+                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)] font-mono"
                   />
                 </div>
               </div>
 
               {/* Event Suscription */}
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Suscripción a Eventos</label>
+                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest block">Suscripción a Eventos</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="flex items-start gap-3 p-4 bg-black/40 border border-white/[0.06] rounded-xl hover:bg-black/60 transition-all cursor-pointer">
+                  <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-all cursor-pointer">
                     <input
                       type="checkbox"
                       checked={webhookEvents.includes('audit.completed')}
                       onChange={() => handleToggleEvent('audit.completed')}
-                      className="mt-0.5 rounded border-zinc-700 text-cyan-500 focus:ring-cyan-500/20 bg-black"
+                      className="mt-0.5 rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
                     />
                     <div>
                       <span className="text-xs font-bold text-white block font-mono">audit.completed</span>
-                      <span className="text-[10px] text-zinc-500">Se dispara cada vez que se finaliza un escaneo o auditoría completa en el dominio.</span>
+                      <span className="text-[10px] text-muted-fg">Se dispara cada vez que se finaliza un escaneo o auditoría completa en el dominio.</span>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-4 bg-black/40 border border-white/[0.06] rounded-xl hover:bg-black/60 transition-all cursor-pointer">
+                  <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-all cursor-pointer">
                     <input
                       type="checkbox"
                       checked={webhookEvents.includes('alert.triggered')}
                       onChange={() => handleToggleEvent('alert.triggered')}
-                      className="mt-0.5 rounded border-zinc-700 text-cyan-500 focus:ring-cyan-500/20 bg-black"
+                      className="mt-0.5 rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
                     />
                     <div>
                       <span className="text-xs font-bold text-white block font-mono">alert.triggered</span>
-                      <span className="text-[10px] text-zinc-500">Se dispara cuando ocurre una degradación de latencia o cookies críticas expiran.</span>
+                      <span className="text-[10px] text-muted-fg">Se dispara cuando ocurre una degradación de latencia o cookies críticas expiran.</span>
                     </div>
                   </label>
                 </div>
               </div>
 
               {webhooksError && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                   <span>{webhooksError}</span>
                 </div>
@@ -647,15 +647,15 @@ export function SettingsTab({
                     type="checkbox"
                     checked={webhookActive}
                     onChange={(e) => setWebhookActive(e.target.checked)}
-                    className="rounded border-zinc-700 text-cyan-500 focus:ring-cyan-500/20 bg-black"
+                    className="rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
                   />
-                  <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Activo de Inmediato</span>
+                  <span className="text-xs text-muted-fg font-bold uppercase tracking-wider">Activo de Inmediato</span>
                 </label>
 
                 <button
                   type="submit"
                   disabled={creatingWebhook || !newWebhookName.trim() || !newWebhookUrl.trim() || webhookEvents.length === 0}
-                  className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all flex items-center gap-2 cursor-pointer"
+                  className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-all flex items-center gap-2 cursor-pointer"
                 >
                   {creatingWebhook ? (
                     <>
@@ -670,55 +670,55 @@ export function SettingsTab({
               </div>
             </form>
           ) : (
-            <div className="text-center py-10 bg-white/[0.003] border border-dashed border-white/[0.06] rounded-2xl">
-              <Info className="w-8 h-8 text-cyan-400 mx-auto mb-3" />
-              <p className="text-xs text-zinc-500">Cree y configure un proyecto primero para poder asociar endpoints de webhooks.</p>
+            <div className="text-center py-10 bg-muted/1 border border-dashed border-border rounded-2xl">
+              <Info className="w-8 h-8 text-primary mx-auto mb-3" />
+              <p className="text-xs text-muted-fg">Cree y configure un proyecto primero para poder asociar endpoints de webhooks.</p>
             </div>
           )}
 
           {/* Webhooks Active Targets List */}
           {selectedProjectId && (
             <div className="space-y-4">
-              <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest border-b border-white/[0.06] pb-3">
+              <h4 className="text-xs font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">
                 Destinos Registrados del Proyecto ({webhooks.length})
               </h4>
 
               {loadingWebhooks ? (
                 <div className="flex items-center justify-center py-10">
-                  <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
               ) : webhooks.length === 0 ? (
-                <div className="text-center py-10 bg-white/[0.003] border border-dashed border-white/[0.06] rounded-2xl">
-                  <Globe className="w-8 h-8 text-zinc-600 mx-auto mb-3" />
-                  <p className="text-xs text-zinc-500">No hay destinos de webhook registrados para este proyecto.</p>
+                <div className="text-center py-10 bg-muted/1 border border-dashed border-border rounded-2xl">
+                  <Globe className="w-8 h-8 text-muted-fg mx-auto mb-3" />
+                  <p className="text-xs text-muted-fg">No hay destinos de webhook registrados para este proyecto.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {webhooks.map((wh) => (
                     <div 
                       key={wh.id} 
-                      className="bg-white/[0.002] border border-white/[0.06] rounded-2xl p-6 hover:bg-white/[0.008] transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+                      className="bg-muted/1 border border-border rounded-2xl p-6 hover:bg-muted/1 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
                     >
                       <div className="space-y-3 flex-1 min-w-0">
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-bold text-white truncate">{wh.name}</span>
                           <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
                             wh.active 
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                              : 'bg-zinc-500/10 text-zinc-500 border-white/[0.04]'
+                              ? 'bg-chartreuse/10 text-chartreuse border-chartreuse/20' 
+                              : 'bg-zinc-500/10 text-muted-fg border-border/50'
                           }`}>
                             {wh.active ? 'Activo' : 'Pausado'}
                           </span>
                         </div>
 
-                        <div className="font-mono text-xs text-zinc-400 truncate bg-black/30 border border-white/[0.04] px-4 py-2 rounded-xl">
+                        <div className="font-mono text-xs text-muted-fg truncate bg-card border border-border/50 px-4 py-2 rounded-xl">
                           {wh.url}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 pt-1 text-[9px] font-mono">
-                          <span className="text-zinc-500 uppercase font-bold tracking-wider mr-2">Suscrito a:</span>
+                          <span className="text-muted-fg uppercase font-bold tracking-wider mr-2">Suscrito a:</span>
                           {wh.events.map(ev => (
-                            <span key={ev} className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded">
+                            <span key={ev} className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded">
                               {ev}
                             </span>
                           ))}
@@ -728,12 +728,12 @@ export function SettingsTab({
                       <div className="flex items-center gap-3 justify-end flex-shrink-0">
                         <button
                           onClick={() => handleCopy(wh.secretToken, wh.id)}
-                          className="bg-zinc-500/10 hover:bg-zinc-500/20 border border-white/[0.08] hover:border-cyan-500/30 text-zinc-400 hover:text-cyan-400 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                          className="bg-zinc-500/10 hover:bg-zinc-500/20 border border-border hover:border-primary/30 text-muted-fg hover:text-primary px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
                           title="Copiar Secreto de Firma"
                         >
                           {copiedId === wh.id ? (
                             <>
-                              <Check className="w-3.5 h-3.5 text-emerald-400" /> Copiado
+                              <Check className="w-3.5 h-3.5 text-chartreuse" /> Copiado
                             </>
                           ) : (
                             <>
@@ -744,7 +744,7 @@ export function SettingsTab({
 
                         <button
                           onClick={() => handleDeleteWebhook(wh.id)}
-                          className="text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 p-2 rounded-xl border border-red-500/20 transition-all cursor-pointer"
+                          className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-xl border border-destructive/20 transition-all cursor-pointer"
                           title="Eliminar Webhook"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -762,27 +762,27 @@ export function SettingsTab({
       {/* 4. MODAL: API Key Plaintext Secret Revealed (Once) */}
       {showKeyModal && revealedClearKey && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="bg-zinc-950 border border-white/[0.08] w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl p-8 relative space-y-6">
+          <div className="bg-card border border-border w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl p-8 relative space-y-6">
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-cyan-500/15 border border-cyan-500/30 rounded-full flex items-center justify-center mx-auto text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+              <div className="w-12 h-12 bg-primary/15 border border-primary/30 rounded-full flex items-center justify-center mx-auto text-primary shadow-[0_0_15px_rgba(98,113,196,0.1)]">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-white">¡Llave de API Creada con Éxito!</h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
+              <p className="text-xs text-muted-fg leading-relaxed">
                 Por razones de seguridad, esta credencial solo se mostrará **una vez**. Asegúrese de guardarla de forma segura antes de cerrar esta ventana.
               </p>
             </div>
 
-            <div className="bg-black border border-white/[0.08] rounded-xl p-5 space-y-4">
+            <div className="bg-black border border-border rounded-xl p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Firma Secreta de Acceso</span>
+                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Firma Secreta de Acceso</span>
                 <button
                   onClick={() => handleCopy(revealedClearKey, 'modal-key')}
-                  className="text-cyan-400 hover:text-cyan-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                  className="text-primary hover:text-primary/80 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
                 >
                   {copiedId === 'modal-key' ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" /> ¡Copiada!
+                      <Check className="w-3.5 h-3.5 text-chartreuse" /> ¡Copiada!
                     </>
                   ) : (
                     <>
@@ -792,7 +792,7 @@ export function SettingsTab({
                 </button>
               </div>
 
-              <div className="font-mono text-sm text-cyan-400 break-all select-all font-semibold select-none bg-zinc-950 p-4 border border-white/[0.04] rounded-lg text-center tracking-wide">
+              <div className="font-mono text-sm text-primary break-all select-all font-semibold select-none bg-card p-4 border border-border/50 rounded-lg text-center tracking-wide">
                 {revealedClearKey}
               </div>
             </div>
@@ -815,27 +815,27 @@ export function SettingsTab({
       {/* 5. MODAL: Webhook Signing Secret Revealed (Once) */}
       {showWebhookModal && revealedWebhookSecret && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="bg-zinc-950 border border-white/[0.08] w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl p-8 relative space-y-6">
+          <div className="bg-card border border-border w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl p-8 relative space-y-6">
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-cyan-500/15 border border-cyan-500/30 rounded-full flex items-center justify-center mx-auto text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
+              <div className="w-12 h-12 bg-primary/15 border border-primary/30 rounded-full flex items-center justify-center mx-auto text-primary shadow-[0_0_15px_rgba(98,113,196,0.1)]">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-white">¡Webhook Registrado con Éxito!</h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
+              <p className="text-xs text-muted-fg leading-relaxed">
                 Utilice este secreto de firma para validar de forma criptográfica la autenticidad e integridad de los payloads de eventos entrantes (`alert.triggered`, `audit.completed`).
               </p>
             </div>
 
-            <div className="bg-black border border-white/[0.08] rounded-xl p-5 space-y-4">
+            <div className="bg-black border border-border rounded-xl p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Secret Token de Firma (signing secret)</span>
+                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Secret Token de Firma (signing secret)</span>
                 <button
                   onClick={() => handleCopy(revealedWebhookSecret, 'modal-webhook')}
-                  className="text-cyan-400 hover:text-cyan-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                  className="text-primary hover:text-primary/80 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
                 >
                   {copiedId === 'modal-webhook' ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" /> ¡Copiado!
+                      <Check className="w-3.5 h-3.5 text-chartreuse" /> ¡Copiado!
                     </>
                   ) : (
                     <>
@@ -845,7 +845,7 @@ export function SettingsTab({
                 </button>
               </div>
 
-              <div className="font-mono text-sm text-cyan-400 break-all select-all font-semibold select-none bg-zinc-950 p-4 border border-white/[0.04] rounded-lg text-center tracking-wide">
+              <div className="font-mono text-sm text-primary break-all select-all font-semibold select-none bg-card p-4 border border-border/50 rounded-lg text-center tracking-wide">
                 {revealedWebhookSecret}
               </div>
             </div>

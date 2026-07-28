@@ -1,5 +1,11 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { NextResponse } from "next/server";
+import { logSecurityEvent } from "./audit-log";
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Redis Client (lazy, proxied para evitar eager instantiation en build)
+// ═════════════════════════════════════════════════════════════════════════════
 
 let _redisInstance: Redis | null = null;
 
@@ -13,7 +19,6 @@ function getRedisInstance(): Redis {
   return _redisInstance;
 }
 
-// Proxied redis client to prevent eager instantiation during build phase
 export const redis = new Proxy({} as Redis, {
   get(_, prop) {
     const instance = getRedisInstance();
@@ -25,32 +30,297 @@ export const redis = new Proxy({} as Redis, {
   }
 });
 
-let _aiRateLimitInstance: Ratelimit | null = null;
+// ═════════════════════════════════════════════════════════════════════════════
+// IP Extraction
+// ═════════════════════════════════════════════════════════════════════════════
 
-function getAiRateLimitInstance(): Ratelimit {
-  if (!_aiRateLimitInstance) {
-    _aiRateLimitInstance = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(5, "60 s"),
-      analytics: true,
-      prefix: "strat_audit_ai_limit",
-    });
+const IP_BLOCKLIST = new Set([
+  "127.0.0.1", "::1", "::ffff:127.0.0.1", "0.0.0.0", "::", "localhost",
+]);
+
+/**
+ * Extrae la IP real del cliente desde headers con prioridad de confianza.
+ *
+ * Orden de precedencia (del más confiable al menos confiable):
+ * 1. x-vercel-forwarded-for — Seteado por Vercel. El cliente NO puede falsificarlo.
+ * 2. x-real-ip — Seteado por proxies reversos (Nginx, Cloudflare, AWS ELB).
+ *    Relativamente confiable si el proxy lo protege.
+ * 3. x-forwarded-for — El header estándar. En Vercel/Cloudflare, el proxy
+ *    AGREGA al valor existente, por lo que el primer valor PUEDE ser del
+ *    atacante. Se usa como último recurso.
+ * 4. Fallback hash de User-Agent + Accept-Language — Útil en entornos
+ *    sin headers de IP (ej: tests, desarrollo local sin proxy).
+ */
+export function extractClientIp(request: Request | { headers: Headers }): string {
+  // 1. Header Vercel (autoritativo, no falsificable por el cliente)
+  const vercelIp = request.headers.get("x-vercel-forwarded-for");
+  if (vercelIp && !IP_BLOCKLIST.has(vercelIp)) return vercelIp;
+
+  // 2. x-real-ip (proxy confiable: Nginx, Cloudflare, AWS)
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp && !IP_BLOCKLIST.has(realIp)) return realIp;
+
+  // 3. x-forwarded-for (puede contener IP falsificada por el cliente como
+  //    primer valor — usado solo cuando no hay headers más confiables)
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const ip = forwarded.split(",")[0]?.trim();
+    if (ip && !IP_BLOCKLIST.has(ip)) return ip;
   }
-  return _aiRateLimitInstance;
+
+  // Fallback: hash simple de headers compatible con Edge Runtime (sin Buffer)
+  const userAgent = (request.headers.get("user-agent") || "unknown").slice(0, 32);
+  const acceptLang = (request.headers.get("accept-language") || "unknown").slice(0, 8);
+  let hash = 0;
+  const str = `${userAgent}${acceptLang}`;
+  for (let i = 0; i < str.length; i++) {
+    const chr = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  return `anon-${Math.abs(hash).toString(36).padStart(6, "0")}`;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Rate Limit Result type
+// ═════════════════════════════════════════════════════════════════════════════
+
+export interface RateLimitResult {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  reset: number;
+  retryAfter: number;
 }
 
 /**
- * Verifica si un usuario ha excedido el límite.
- * @param userId ID del usuario para aplicar el límite.
- * @returns Un objeto con { success, limit, remaining, reset }
+ * Construye headers HTTP estándar de rate limiting.
  */
-export async function checkAiRateLimit(userId: string) {
-  // Si no hay URL de Redis configurada, permitimos la ejecución (fail-open)
-  // para evitar bloquear la app si el servicio no está configurado.
-  if (!process.env.UPSTASH_REDIS_REST_URL) {
-    return { success: true, limit: 0, remaining: 0, reset: 0 };
+export function buildRateLimitHeaders(result: RateLimitResult): Headers {
+  const headers = new Headers();
+  headers.set("X-RateLimit-Limit", String(result.limit));
+  headers.set("X-RateLimit-Remaining", String(result.remaining));
+  headers.set("X-RateLimit-Reset", String(result.reset));
+  if (!result.success) {
+    headers.set("Retry-After", String(result.retryAfter));
   }
-
-  return await getAiRateLimitInstance().limit(userId);
+  return headers;
 }
 
+/**
+ * Crea una respuesta 429 (Too Many Requests) con headers estándar.
+ */
+export function rateLimitResponse(result: RateLimitResult, extraBody: Record<string, unknown> = {}): NextResponse {
+  return NextResponse.json(
+    {
+      error: `Demasiadas solicitudes. Intenta de nuevo en ${result.retryAfter} segundos.`,
+      retryAfter: result.retryAfter,
+      ...extraBody,
+    },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(result.retryAfter),
+        "X-RateLimit-Limit": String(result.limit),
+        "X-RateLimit-Remaining": String(result.remaining),
+        "X-RateLimit-Reset": String(result.reset),
+      },
+    }
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Generic Rate Limiter (cached per prefix)
+// ═════════════════════════════════════════════════════════════════════════════
+
+const _rateLimiterCache = new Map<string, Ratelimit>();
+
+export interface RateLimitConfig {
+  /** Máximo de requests permitidos en la ventana */
+  limit: number;
+  /** Ventana de tiempo en segundos */
+  window: number;
+  /** Prefijo único para el limiter en Redis (ej: "validate_email") */
+  prefix: string;
+  /** Opcional: función para extraer el identificador (default: extractClientIp) */
+  identifier?: (req: Request) => string;
+  /**
+   * Opcional: autenticación async antes del rate limiting.
+   * Si se provee, el rate limit identifica por user.id en lugar de IP.
+   * Retorna null → 401 Unauthorized.
+   */
+  authenticate?: (req: Request) => Promise<{ id: string } | null>;
+}
+
+/**
+ * Cachea y retorna una instancia de Ratelimit para un prefix dado.
+ */
+function getOrCreateLimiter(config: RateLimitConfig): Ratelimit {
+  const key = config.prefix;
+  let instance = _rateLimiterCache.get(key);
+  if (!instance) {
+    instance = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(config.limit, `${config.window} s`),
+      analytics: true,
+      prefix: `strat_audit_${config.prefix}`,
+    });
+    _rateLimiterCache.set(key, instance);
+  }
+  return instance;
+}
+
+/**
+ * Verifica rate limit para un identificador con la configuración dada.
+ * Fail-closed en producción si no hay Redis configurado.
+ */
+async function checkRateLimitInternal(identifier: string, config: RateLimitConfig): Promise<RateLimitResult> {
+  if (!process.env.UPSTASH_REDIS_REST_URL) {
+    if (process.env.NODE_ENV === "production") {
+      console.error(`[RateLimit] UPSTASH_REDIS_REST_URL no configurado. Denegando ${config.prefix} en producción.`);
+      return { success: false, limit: config.limit, remaining: 0, reset: Date.now() + 60000, retryAfter: 60 };
+    }
+    console.warn(`[RateLimit] UPSTASH_REDIS_REST_URL no configurado. Rate limit ${config.prefix} desactivado en desarrollo.`);
+    return { success: true, limit: config.limit, remaining: config.limit, reset: 0, retryAfter: 0 };
+  }
+
+  try {
+    const limiter = getOrCreateLimiter(config);
+    const result = await limiter.limit(identifier);
+    const retryAfter = result.reset ? Math.max(1, Math.ceil((result.reset - Date.now()) / 1000)) : 60;
+    return { ...result, retryAfter };
+  } catch (err) {
+    // Redis unreachable — fail open en desarrollo, fail closed en producción
+    console.error(`[RateLimit] Redis unreachable for ${config.prefix}:`, err);
+    if (process.env.NODE_ENV === "production") {
+      return { success: false, limit: config.limit, remaining: 0, reset: Date.now() + 60000, retryAfter: 60 };
+    }
+    return { success: true, limit: config.limit, remaining: config.limit, reset: 0, retryAfter: 0 };
+  }
+}
+
+/**
+ * withRateLimit — Middleware/decorador genérico para envolver cualquier route handler
+ * con rate limiting configurable.
+ *
+ * El handler recibe como segundo argumento el identificador usado para rate limit
+ * (IP o user.id cuando se usa `authenticate`).
+ *
+ * Ejemplo (IP-based, sin autenticación):
+ *
+ *   export const POST = withRateLimit(
+ *     { limit: 20, window: 60, prefix: "validate_email" },
+ *     async (req, _identifier) => {
+ *       return NextResponse.json({ success: true });
+ *     }
+ *   );
+ *
+ * Ejemplo (user-based, con autenticación):
+ *
+ *   export const POST = withRateLimit(
+ *     {
+ *       limit: 5, window: 60, prefix: "ai_copilot",
+ *       authenticate: async (req) => {
+ *         const supabase = await createClient();
+ *         const { data: { user } } = await supabase.auth.getUser();
+ *         return user ? { id: user.id } : null;
+ *       }
+ *     },
+ *     async (req, userId) => {
+ *       // userId === user.id del usuario autenticado
+ *       return NextResponse.json({ success: true });
+ *     }
+ *   );
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any -- handler args are forwarded dynamically */
+export function withRateLimit<T extends Request = Request>(
+  config: RateLimitConfig,
+  handler: (req: T, identifier: string, ...args: any[]) => Promise<Response>
+): (req: T, ...args: any[]) => Promise<Response> {
+  return async (req: T, ...args: any[]): Promise<Response> => {
+    try {
+/* eslint-enable @typescript-eslint/no-explicit-any */
+      let identifier: string;
+      // Extraer IP siempre (antes de auth para rate_limit_hit log)
+      const requestIp = extractClientIp(req);
+
+      // Autenticación opcional antes del rate limiting
+      if (config.authenticate) {
+        const user = await config.authenticate(req);
+        if (!user) {
+          return NextResponse.json(
+            { success: false, error: "No autorizado" },
+            { status: 401 }
+          );
+        }
+        identifier = user.id;
+      } else {
+        identifier = config.identifier?.(req) ?? requestIp;
+      }
+
+      const result = await checkRateLimitInternal(identifier, config);
+
+      if (!result.success) {
+        // Auditar evento de rate limit excedido (siempre incluye IP y userId)
+        logSecurityEvent("rate_limit_hit", {
+          ip: requestIp,
+          userId: config.authenticate ? identifier : undefined,
+          path: req.url || "/",
+          method: req.method || "UNKNOWN",
+          userAgent: req.headers?.get("user-agent") || undefined,
+          metadata: {
+            prefix: config.prefix,
+            limit: config.limit,
+            window: config.window,
+            remaining: result.remaining,
+            reset: result.reset,
+            retryAfter: result.retryAfter,
+          },
+        });
+        return rateLimitResponse(result);
+      }
+
+      const response = await handler(req, identifier, ...args);
+
+      // Adjuntar headers de rate limit a la respuesta
+      // Usamos un nuevo Response para evitar mutar headers read-only
+      const newHeaders = new Headers(response.headers);
+      newHeaders.set("X-RateLimit-Limit", String(result.limit));
+      newHeaders.set("X-RateLimit-Remaining", String(result.remaining));
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
+      });
+    } catch (error) {
+      console.error(`[withRateLimit:${config.prefix}] Error:`, error);
+      return NextResponse.json(
+        { error: "Error interno del servidor" },
+        { status: 500 }
+      );
+    }
+  };
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Rate Limiters específicos (legacy, mantienen compatibilidad)
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ─── AI Copilot (5 req / 60s) ────────────────────────────────────────
+
+export async function checkAiRateLimit(userId: string) {
+  return checkRateLimitInternal(userId, { limit: 5, window: 60, prefix: "ai_limit" });
+}
+
+// ─── Email Validation (20 req / 60s por IP) ─────────────────────────
+
+export async function checkEmailRateLimit(ip: string) {
+  return checkRateLimitInternal(ip, { limit: 20, window: 60, prefix: "email_limit" });
+}
+
+// ─── Auth Callback (10 req / 60s por IP) ────────────────────────────
+
+export async function checkCallbackRateLimit(ip: string) {
+  return checkRateLimitInternal(ip, { limit: 10, window: 60, prefix: "callback_limit" });
+}

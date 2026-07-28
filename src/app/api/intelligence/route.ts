@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/shared/db";
 import { withRLS } from "@/shared/db/rls";
 import {
   projects,
@@ -10,7 +9,7 @@ import {
   intelligenceAssets,
   intelligenceRunEvents
 } from "@/shared/db/schemas";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { checkAiRateLimit } from "@/shared/lib/ratelimit";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
@@ -105,13 +104,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });
-
-  } catch (error: any) {
+    });    } catch (error: any) {
     console.error("GET intelligence failure:", error);
     return NextResponse.json({
       success: false,
-      error: `Error al obtener las investigaciones: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }
@@ -299,7 +296,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 8. Calcular el Puntuación global y por componente utilizando el Risk Engine
-    const { score, deductions, aggregatedFindings } = calculateRiskScore(allFindings);
+    const { score, aggregatedFindings } = calculateRiskScore(allFindings);
 
     // Mapear los sub-scores por categoría para mantener compatibilidad
     // infraScore: basado en red y website; mailHealthScore: basado en email
@@ -495,7 +492,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: false,
-      error: `Error interno de ejecución diagnóstica: ${error.message || error}`
+      error: "Error interno del servidor"
     }, { status: 500 });
   }
 }

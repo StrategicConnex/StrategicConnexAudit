@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, DM_Sans } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -12,6 +12,13 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-display",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800", "1000"],
 });
 
 export const metadata: Metadata = {
@@ -39,8 +46,22 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} ${dmSans.variable} h-full antialiased`}
     >
+      <head>
+        {/**
+         * CSP via <meta> tag — defense-in-depth for prerendered/static pages.
+         * The proxy.ts also sets CSP via HTTP header, but on some Next.js 16
+         * prerendered pages (marked ○), the base-uri and form-action directives
+         * from the header are stripped. This meta tag ensures they are always
+         * enforced even when the proxy header is incomplete.
+         * See also: src/proxy.ts (buildCsp)
+         */}
+        <meta
+          httpEquiv="Content-Security-Policy"
+          content={`default-src 'self'; script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://apifreellm.com https://*.vercel.app; base-uri 'self'; form-action 'self'`}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

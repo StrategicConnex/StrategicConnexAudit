@@ -481,4 +481,7 @@ export const webVitalsLogs = pgTable("web_vitals_logs", {
 
 export * from "./intelligence";
 export * from "./monitoring";
+export * from "./security-audit";
+export * from "./health";
+export * from "./push-subscriptions";
 

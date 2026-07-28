@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/shared/db';
 import { keywordTargets, rankHistory } from '@/shared/db/schemas';
 import { eq, desc } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';

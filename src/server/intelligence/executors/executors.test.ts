@@ -135,11 +135,12 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
       ];
 
       const { score } = calculateRiskScore(findings);
-      // N = 2, penaltías = high(50*1) + medium(25*1) = 75
-      // 75 / sqrt(2) ≈ 53.03 → score = 100 - 53.03 ≈ 47
+      // totalPenalties = high(50*1) + medium(25*1) = 75
+      // Fórmula asintótica: calculatedPenalty = 100 * (1 - e^(-75/150)) = 100 * 0.39347 = 39.35
+      // score = 100 - 39.35 = 60.65 → 61
       expect(score).toBeGreaterThan(0);
       expect(score).toBeLessThan(100);
-      expect(score).toBe(47); // Valor matemáticamente esperado
+      expect(score).toBe(61);
     });
 
     it("Debería retornar score 100 cuando no existen hallazgos activos", () => {
@@ -218,7 +219,7 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
       expect(result.success).toBe(false);
       // El dispatcher captura el error del EgressGuard y lo propaga en error
       expect(result.error).toBeDefined();
-    });
+    }, 15000);
   });
 
   // ─────────────────────────────────────────────

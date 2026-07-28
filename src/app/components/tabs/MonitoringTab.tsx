@@ -346,24 +346,24 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Tab Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/[0.04] pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border/50 pb-6">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <Sliders className="w-6 h-6 text-[#06b6d4]" />
+            <Sliders className="w-6 h-6 text-[oklch(68% 0.14 230)]" />
             Controles de Monitoreo y APIs Activas
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-muted-fg mt-1">
             Gestión de tareas de indexación programadas, endpoints webhook, tokens de desarrollo e incidentes de drift.
           </p>
         </div>
 
         {/* Project Selector */}
         <div className="flex items-center gap-3 shrink-0">
-          <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Proyecto Activo:</label>
+          <label className="text-[11px] font-bold uppercase tracking-widest text-muted-fg">Proyecto Activo:</label>
           <select
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="bg-[#0c0c0e]/80 border border-white/[0.08] text-slate-200 text-xs rounded-lg px-3 py-2 outline-none focus:border-cyan-500/40 cursor-pointer"
+            className="bg-[#0c0c0e]/80 border border-border text-foreground/80 text-xs rounded-lg px-3 py-2 outline-none focus:border-primary/40 cursor-pointer"
           >
             {initialProjects.map((p) => (
               <option key={p.id} value={p.id}>
@@ -378,22 +378,22 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Card 1: Active Audit Schedule Controls */}
-        <div className="glass-card rounded-xl p-6 relative overflow-hidden flex flex-col justify-between border border-white/[0.04]">
+        <div className="glass-card rounded-xl p-6 relative overflow-hidden flex flex-col justify-between border border-border/50">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <span className="p-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
                 <Cpu className="w-4 h-4" />
               </span>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">Programación de Sweeps</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">Programación de Sweeps</h3>
             </div>
             
-            <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+            <p className="text-xs text-muted-fg mb-5 leading-relaxed">
               Define la frecuencia de los análisis completos sobre el dominio para detectar variaciones involuntarias en registros SSL o DNS.
             </p>
 
             <form onSubmit={saveScheduleSettings} className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.01] border border-white/[0.03]">
-                <span className="text-xs font-medium text-slate-300">Auditoría Automática</span>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/5 border border-border/30">
+                <span className="text-xs font-medium text-foreground/80">Auditoría Automática</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -401,17 +401,17 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     onChange={(e) => setSchedule(prev => ({ ...prev, enabled: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-9 h-5 bg-white/[0.08] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 peer-checked:after:bg-cyan-400 after:border-none after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500/20" />
+                  <div className="w-9 h-5 bg-muted/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-foreground after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-muted-fg peer-checked:after:bg-primary after:border-none after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary/20" />
                 </label>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Intervalo Técnico</label>
+                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">Intervalo Técnico</label>
                 <select
                   disabled={!schedule.enabled}
                   value={schedule.interval}
                   onChange={(e) => setSchedule(prev => ({ ...prev, interval: e.target.value as any }))}
-                  className="w-full bg-[#0c0c0e]/80 border border-white/[0.08] disabled:opacity-40 text-slate-200 text-xs rounded-lg px-3 py-2.5 outline-none focus:border-cyan-500/40"
+                  className="w-full bg-[#0c0c0e]/80 border border-border disabled:opacity-40 text-foreground/80 text-xs rounded-lg px-3 py-2.5 outline-none focus:border-primary/40"
                 >
                   <option value="daily">Diario (Alta frecuencia)</option>
                   <option value="weekly">Semanal (Estándar recomendado)</option>
@@ -420,8 +420,8 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               </div>
 
               {schedule.enabled && schedule.nextRunAt && (
-                <div className="text-[10px] text-slate-500 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-cyan-400 animate-pulse" />
+                <div className="text-[10px] text-muted-fg flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-primary animate-pulse" />
                   Próxima auditoría programada: {new Date(schedule.nextRunAt).toLocaleDateString()}
                 </div>
               )}
@@ -429,7 +429,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <button
                 type="submit"
                 disabled={isSavingSchedule}
-                className="w-full flex items-center justify-center gap-2 bg-white/[0.02] border border-white/[0.05] hover:bg-cyan-500/10 hover:border-cyan-500/20 text-xs font-bold text-slate-200 px-4 py-2.5 rounded-lg transition-all duration-300 active:scale-[0.98] cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-muted/10 border border-border/40 hover:bg-primary/10 hover:border-primary/20 text-xs font-bold text-foreground/80 px-4 py-2.5 rounded-lg transition-all duration-300 active:scale-[0.98] cursor-pointer"
               >
                 {isSavingSchedule ? 'Guardando...' : 'Actualizar Programación'}
               </button>
@@ -438,16 +438,16 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         </div>
 
         {/* Card 2: Billing & Scans Quota (circular dial metrics) */}
-        <div className="glass-card rounded-xl p-6 relative overflow-hidden flex flex-col justify-between border border-white/[0.04]">
+        <div className="glass-card rounded-xl p-6 relative overflow-hidden flex flex-col justify-between border border-border/50">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <span className="p-1.5 rounded-lg bg-primary/10 text-indigo-400 border border-primary/20">
                   <Zap className="w-4 h-4" />
                 </span>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">Cupos y Limites de Plan</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">Cupos y Limites de Plan</h3>
               </div>
-              <span className="text-[9px] font-black uppercase text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 px-2 py-0.5 rounded">
+              <span className="text-[9px] font-black uppercase text-primary bg-cyan-400/10 border border-cyan-400/20 px-2 py-0.5 rounded">
                 Plan {currentPlan}
               </span>
             </div>
@@ -455,19 +455,19 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
             {/* Simulated interactive circles for resource limits */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               {/* Dial 1: Projects */}
-              <div className="flex flex-col items-center p-3 rounded-lg bg-white/[0.005] border border-white/[0.02] text-center">
+              <div className="flex flex-col items-center p-3 rounded-lg bg-muted/1 border border-border/30 text-center">
                 <div className="relative w-16 h-16 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <path className="text-white/[0.03]" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path className="text-cyan-400 transition-all duration-1000" strokeDasharray={`${projectsPercentage}, 100`} strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path className="text-primary transition-all duration-1000" strokeDasharray={`${projectsPercentage}, 100`} strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                   </svg>
                   <span className="absolute text-xs font-bold text-white">{initialProjects.length} / {planInfo.projects === 999 ? '∞' : planInfo.projects}</span>
                 </div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-2">Recursos Activos</span>
+                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider mt-2">Recursos Activos</span>
               </div>
 
               {/* Dial 2: Scans */}
-              <div className="flex flex-col items-center p-3 rounded-lg bg-white/[0.005] border border-white/[0.02] text-center">
+              <div className="flex flex-col items-center p-3 rounded-lg bg-muted/1 border border-border/30 text-center">
                 <div className="relative w-16 h-16 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <path className="text-white/[0.03]" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -475,62 +475,62 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   </svg>
                   <span className="absolute text-xs font-bold text-white">{activeScansSimulated} / {planInfo.scans === 9999 ? '∞' : planInfo.scans}</span>
                 </div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-2">Escaneos / mes</span>
+                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider mt-2">Escaneos / mes</span>
               </div>
             </div>
             
-            <p className="text-[11px] text-slate-500 mb-3 text-center">
+            <p className="text-[11px] text-muted-fg mb-3 text-center">
               Fórmula de facturación recurrente. Próximo cobro: {planInfo.price} el 01/06/2026.
             </p>
           </div>
 
           <button
             onClick={() => setShowPlanModal(true)}
-            className="w-full bg-[#06b6d4]/10 hover:bg-[#06b6d4]/20 border border-[#06b6d4]/20 text-cyan-400 text-xs font-bold px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
+            className="w-full bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
           >
             Actualizar Suscripción
           </button>
         </div>
 
         {/* Card 3: Slack Rich Alerts Settings */}
-        <div className="glass-card rounded-xl p-6 relative overflow-hidden flex flex-col justify-between border border-white/[0.04]">
+        <div className="glass-card rounded-xl p-6 relative overflow-hidden flex flex-col justify-between border border-border/50">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+              <span className="p-1.5 rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
                 <Bell className="w-4 h-4" />
               </span>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">Alertas en Slack</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">Alertas en Slack</h3>
             </div>
 
-            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+            <p className="text-xs text-muted-fg mb-4 leading-relaxed">
               Recibe notificaciones en Slack en tiempo real cuando cambie la firma TLS o se identifique SPF roto.
             </p>
 
             <div className="space-y-2 mb-4">
-              <div className="flex items-center justify-between text-xs p-2 rounded bg-red-500/5 border border-red-500/10">
-                <span className="text-slate-400 flex items-center gap-1.5">
+              <div className="flex items-center justify-between text-xs p-2 rounded bg-destructive/5 border border-destructive/10">
+                <span className="text-muted-fg flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Critico
                 </span>
-                <span className="font-mono text-slate-300 text-[10px]">#security-incidents</span>
+                <span className="font-mono text-foreground/80 text-[10px]">#security-incidents</span>
               </div>
-              <div className="flex items-center justify-between text-xs p-2 rounded bg-amber-500/5 border border-amber-500/10">
-                <span className="text-slate-400 flex items-center gap-1.5">
+              <div className="flex items-center justify-between text-xs p-2 rounded bg-[oklch(75% 0.13 80)]/5 border border-[oklch(75% 0.13 80)]/10">
+                <span className="text-muted-fg flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Advertencia
                 </span>
-                <span className="font-mono text-slate-300 text-[10px]">#seo-drift</span>
+                <span className="font-mono text-foreground/80 text-[10px]">#seo-drift</span>
               </div>
-              <div className="flex items-center justify-between text-xs p-2 rounded bg-cyan-500/5 border border-cyan-500/10">
-                <span className="text-slate-400 flex items-center gap-1.5">
+              <div className="flex items-center justify-between text-xs p-2 rounded bg-primary/5 border border-primary/10">
+                <span className="text-muted-fg flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" /> Informativo
                 </span>
-                <span className="font-mono text-slate-300 text-[10px]">#deploy-logs</span>
+                <span className="font-mono text-foreground/80 text-[10px]">#deploy-logs</span>
               </div>
             </div>
           </div>
 
           <button
             onClick={triggerSlackTest}
-            className="w-full flex items-center justify-center gap-2 bg-white/[0.02] border border-white/[0.05] hover:bg-rose-500/10 hover:border-rose-500/20 text-xs font-bold text-rose-400 px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 bg-muted/10 border border-border/40 hover:bg-destructive/10 hover:border-destructive/20 text-xs font-bold text-destructive px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" /> Enviar Canal de Test (Webhook Slack)
           </button>
@@ -542,23 +542,23 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Log of Drift Incident Alerts (Left) */}
-        <div className="lg:col-span-2 glass-card rounded-xl p-6 border border-white/[0.04] space-y-4">
-          <div className="flex items-center justify-between border-b border-white/[0.04] pb-4">
+        <div className="lg:col-span-2 glass-card rounded-xl p-6 border border-border/50 space-y-4">
+          <div className="flex items-center justify-between border-b border-border/50 pb-4">
             <div>
               <h3 className="text-sm font-bold text-white tracking-tight">Historial de Incidentes & Drift</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Logs de cambios no autorizados detectados en DNS o firmas SSL.</p>
+              <p className="text-[11px] text-muted-fg mt-0.5">Logs de cambios no autorizados detectados en DNS o firmas SSL.</p>
             </div>
-            <span className="text-[10px] font-bold text-slate-400 bg-white/[0.03] border border-white/[0.05] px-2 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-muted-fg bg-muted/20 border border-border/40 px-2 py-0.5 rounded">
               {alerts.length} eventos
             </span>
           </div>
 
           {isLoadingSchedule ? (
-            <div className="py-12 text-center text-xs text-slate-500">Cargando alertas de seguridad...</div>
+            <div className="py-12 text-center text-xs text-muted-fg">Cargando alertas de seguridad...</div>
           ) : alerts.length === 0 ? (
             <div className="py-16 text-center space-y-3">
-              <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-              <p className="text-xs text-slate-400">Excelente! Sin discrepancias ni drifts detectados en las últimas comprobaciones.</p>
+              <CheckCircle2 className="w-8 h-8 text-chartreuse mx-auto" />
+              <p className="text-xs text-muted-fg">Excelente! Sin discrepancias ni drifts detectados en las últimas comprobaciones.</p>
             </div>
           ) : (
             <div className="space-y-3 max-h-[360px] overflow-y-auto pr-2">
@@ -570,25 +570,25 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   : 'border-l-cyan-500/80 bg-cyan-500/[0.01]';
                 
                 const badgeStyle = alert.severity === 'critical'
-                  ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                  ? 'bg-destructive/10 text-destructive border-destructive/20'
                   : alert.severity === 'warning'
-                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                  : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
+                  ? 'bg-[oklch(75% 0.13 80)]/10 text-[oklch(75% 0.13 80)] border-[oklch(75% 0.13 80)]/20'
+                  : 'bg-primary/10 text-primary border-primary/20';
 
                 return (
                   <div
                     key={alert.id}
-                    className={`p-4 rounded-lg border border-white/[0.03] border-l-2 ${borderColors} transition-all duration-300 flex items-start justify-between gap-4`}
+                    className={`p-4 rounded-lg border border-border/30 border-l-2 ${borderColors} transition-all duration-300 flex items-start justify-between gap-4`}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-slate-200">{alert.title}</span>
+                        <span className="text-xs font-bold text-foreground/80">{alert.title}</span>
                         <span className={`text-[9px] font-black uppercase border px-1.5 py-0.5 rounded ${badgeStyle}`}>
                           {alert.severity}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 leading-relaxed">{alert.message}</p>
-                      <div className="text-[10px] text-slate-500">
+                      <p className="text-xs text-muted-fg leading-relaxed">{alert.message}</p>
+                      <div className="text-[10px] text-muted-fg">
                         {new Date(alert.createdAt).toLocaleString()}
                       </div>
                     </div>
@@ -598,7 +598,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                         onClick={() => {
                           setAlerts(prev => prev.map(a => a.id === alert.id ? { ...a, resolved: true } : a));
                         }}
-                        className="text-[10px] font-bold text-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/10 px-2.5 py-1 rounded transition-colors shrink-0 cursor-pointer"
+                        className="text-[10px] font-bold text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 px-2.5 py-1 rounded transition-colors shrink-0 cursor-pointer"
                       >
                         Resolver
                       </button>
@@ -611,31 +611,31 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         </div>
 
         {/* Webhooks Config Integrations (Right) */}
-        <div className="glass-card rounded-xl p-6 border border-white/[0.04] flex flex-col justify-between">
+        <div className="glass-card rounded-xl p-6 border border-border/50 flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="border-b border-white/[0.04] pb-4">
+            <div className="border-b border-border/50 pb-4">
               <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-cyan-400" />
+                <Link2 className="w-4 h-4 text-primary" />
                 Webhook Integraciones
               </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Notifica a tus servidores cuando finalicen los análisis.</p>
+              <p className="text-[11px] text-muted-fg mt-0.5">Notifica a tus servidores cuando finalicen los análisis.</p>
             </div>
 
             {isLoadingWebhooks ? (
-              <div className="py-8 text-center text-xs text-slate-500">Cargando endpoints...</div>
+              <div className="py-8 text-center text-xs text-muted-fg">Cargando endpoints...</div>
             ) : webhooks.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-6">No hay webhooks registrados.</p>
+              <p className="text-xs text-muted-fg text-center py-6">No hay webhooks registrados.</p>
             ) : (
               <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2">
                 {webhooks.map((w) => (
-                  <div key={w.id} className="p-3 rounded-lg bg-white/[0.01] border border-white/[0.03] flex items-center justify-between gap-3 group">
+                  <div key={w.id} className="p-3 rounded-lg bg-muted/5 border border-border/30 flex items-center justify-between gap-3 group">
                     <div className="overflow-hidden">
-                      <p className="text-xs font-bold text-slate-300 truncate">{w.name}</p>
-                      <p className="text-[10px] text-slate-500 truncate font-mono">{w.url}</p>
+                      <p className="text-xs font-bold text-foreground/80 truncate">{w.name}</p>
+                      <p className="text-[10px] text-muted-fg truncate font-mono">{w.url}</p>
                     </div>
                     <button
                       onClick={() => handleDeleteWebhook(w.id)}
-                      className="text-slate-500 hover:text-red-400 hover:bg-red-500/10 p-1.5 rounded transition-all shrink-0 cursor-pointer"
+                      className="text-muted-fg hover:text-destructive hover:bg-destructive/10 p-1.5 rounded transition-all shrink-0 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -645,14 +645,14 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
             )}
           </div>
 
-          <form onSubmit={handleCreateWebhook} className="space-y-3 mt-4 pt-4 border-t border-white/[0.04]">
+          <form onSubmit={handleCreateWebhook} className="space-y-3 mt-4 pt-4 border-t border-border/50">
             <input
               type="text"
               required
               placeholder="Nombre (ej. Vercel Audit Hook)"
               value={newWebhookName}
               onChange={(e) => setNewWebhookName(e.target.value)}
-              className="w-full bg-[#0c0c0e]/80 border border-white/[0.08] text-slate-200 text-xs rounded-lg px-3 py-2 outline-none focus:border-cyan-500/40"
+              className="w-full bg-[#0c0c0e]/80 border border-border text-foreground/80 text-xs rounded-lg px-3 py-2 outline-none focus:border-primary/40"
             />
             
             <div className="flex gap-2">
@@ -662,12 +662,12 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 placeholder="https://api.tuempresa.com/hook"
                 value={newWebhookUrl}
                 onChange={(e) => setNewWebhookUrl(e.target.value)}
-                className="flex-1 bg-[#0c0c0e]/80 border border-white/[0.08] text-slate-200 text-xs rounded-lg px-3 py-2 outline-none focus:border-cyan-500/40"
+                className="flex-1 bg-[#0c0c0e]/80 border border-border text-foreground/80 text-xs rounded-lg px-3 py-2 outline-none focus:border-primary/40"
               />
               <button
                 type="submit"
                 disabled={isCreatingWebhook}
-                className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 p-2 rounded-lg transition-colors cursor-pointer"
+                className="bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary p-2 rounded-lg transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -681,41 +681,41 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Developer API Key Generator Panel */}
-        <div className="glass-card rounded-xl p-6 border border-white/[0.04] flex flex-col justify-between">
+        <div className="glass-card rounded-xl p-6 border border-border/50 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-white/[0.04] pb-4 mb-4">
+            <div className="flex items-center justify-between border-b border-border/50 pb-4 mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                  <Key className="w-4 h-4 text-cyan-400" />
+                  <Key className="w-4 h-4 text-primary" />
                   API Keys de Desarrollador
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">Accede de manera programática a los resultados de auditorías.</p>
+                <p className="text-[11px] text-muted-fg mt-0.5">Accede de manera programática a los resultados de auditorías.</p>
               </div>
-              <span className="text-[10px] font-mono text-slate-500">Prefijo: sa_live_</span>
+              <span className="text-[10px] font-mono text-muted-fg">Prefijo: sa_live_</span>
             </div>
 
             {isLoadingKeys ? (
-              <div className="py-8 text-center text-xs text-slate-500">Cargando tokens de acceso...</div>
+              <div className="py-8 text-center text-xs text-muted-fg">Cargando tokens de acceso...</div>
             ) : apiKeys.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-6">No has generado credenciales aún.</p>
+              <p className="text-xs text-muted-fg text-center py-6">No has generado credenciales aún.</p>
             ) : (
               <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2 mb-4">
                 {apiKeys.map((key) => (
-                  <div key={key.id} className="p-3 rounded-lg bg-white/[0.01] border border-white/[0.03] flex items-center justify-between gap-3">
+                  <div key={key.id} className="p-3 rounded-lg bg-muted/5 border border-border/30 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-bold text-slate-300">{key.name}</p>
-                      <p className="text-[10px] text-slate-500 font-mono mt-0.5">Prefix ID: {key.keyPrefix}</p>
+                      <p className="text-xs font-bold text-foreground/80">{key.name}</p>
+                      <p className="text-[10px] text-muted-fg font-mono mt-0.5">Prefix ID: {key.keyPrefix}</p>
                     </div>
 
                     <div className="flex items-center gap-1.5">
                       {key.expiresAt && (
-                        <span className="text-[9px] text-slate-500 bg-white/[0.02] border border-white/[0.05] px-1.5 py-0.5 rounded">
+                        <span className="text-[9px] text-muted-fg bg-muted/10 border border-border/40 px-1.5 py-0.5 rounded">
                           Expira: {new Date(key.expiresAt).toLocaleDateString()}
                         </span>
                       )}
                       <button
                         onClick={() => handleDeleteApiKey(key.id)}
-                        className="text-slate-500 hover:text-red-400 hover:bg-red-500/10 p-1.5 rounded transition-all cursor-pointer"
+                        className="text-muted-fg hover:text-destructive hover:bg-destructive/10 p-1.5 rounded transition-all cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -727,39 +727,39 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
 
             {/* Displaying generated key ONCE inside copy panel */}
             {createdClearKey && (
-              <div className="p-4 mb-4 rounded-lg bg-cyan-950/20 border border-cyan-500/20 space-y-2 animate-in slide-in-from-top-2 duration-300">
+              <div className="p-4 mb-4 rounded-lg bg-cyan-950/20 border border-primary/20 space-y-2 animate-in slide-in-from-top-2 duration-300">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5" /> Token Generado Exitosamente
                   </span>
-                  <span className="text-[9px] text-slate-500">Copia esta clave, no se volverá a mostrar.</span>
+                  <span className="text-[9px] text-muted-fg">Copia esta clave, no se volverá a mostrar.</span>
                 </div>
-                <div className="flex items-center justify-between gap-3 bg-black/40 border border-white/[0.05] p-2.5 rounded font-mono text-xs text-slate-200 overflow-x-auto select-all">
+                <div className="flex items-center justify-between gap-3 bg-card border border-border/40 p-2.5 rounded font-mono text-xs text-foreground/80 overflow-x-auto select-all">
                   <span className="break-all">{createdClearKey}</span>
                   <button
                     onClick={() => copyToClipboard(createdClearKey, 'new-key')}
-                    className="text-slate-400 hover:text-cyan-400 transition-colors p-1 shrink-0 cursor-pointer"
+                    className="text-muted-fg hover:text-primary transition-colors p-1 shrink-0 cursor-pointer"
                   >
-                    {copiedKeyId === 'new-key' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    {copiedKeyId === 'new-key' ? <Check className="w-4 h-4 text-chartreuse" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
             )}
           </div>
 
-          <form onSubmit={handleCreateApiKey} className="flex gap-2 border-t border-white/[0.04] pt-4 mt-4">
+          <form onSubmit={handleCreateApiKey} className="flex gap-2 border-t border-border/50 pt-4 mt-4">
             <input
               type="text"
               required
               placeholder="Nombre del Token (ej. CI/CD Pipeline Key)"
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
-              className="flex-1 bg-[#0c0c0e]/80 border border-white/[0.08] text-slate-200 text-xs rounded-lg px-3 py-2.5 outline-none focus:border-cyan-500/40"
+              className="flex-1 bg-[#0c0c0e]/80 border border-border text-foreground/80 text-xs rounded-lg px-3 py-2.5 outline-none focus:border-primary/40"
             />
             <button
               type="submit"
               disabled={isCreatingKey}
-              className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 px-4 py-2.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shrink-0"
+              className="bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary px-4 py-2.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shrink-0"
             >
               {isCreatingKey ? 'Creando...' : 'Generar API Key'}
             </button>
@@ -767,19 +767,19 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         </div>
 
         {/* Bulk Scanner Queue Input Box */}
-        <div className="glass-card rounded-xl p-6 border border-white/[0.04] flex flex-col justify-between">
+        <div className="glass-card rounded-xl p-6 border border-border/50 flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-4 border-b border-white/[0.04] pb-4">
-              <span className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            <div className="flex items-center gap-2 mb-4 border-b border-border/50 pb-4">
+              <span className="p-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
                 <Play className="w-4 h-4" />
               </span>
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">Escáner Masivo de Dominios</h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">Encola múltiples auditorías simultáneas en paralelo.</p>
+                <p className="text-[11px] text-muted-fg mt-0.5">Encola múltiples auditorías simultáneas en paralelo.</p>
               </div>
             </div>
 
-            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+            <p className="text-xs text-muted-fg mb-4 leading-relaxed">
               Introduce una lista de dominios separados por comas o saltos de línea. El sistema los auditará de manera asíncrona.
             </p>
 
@@ -790,19 +790,19 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 rows={4}
                 value={bulkInput}
                 onChange={(e) => setBulkInput(e.target.value)}
-                className="w-full bg-[#0c0c0e]/80 border border-white/[0.08] text-slate-200 text-xs rounded-lg p-3 outline-none focus:border-cyan-500/40 font-mono resize-none"
+                className="w-full bg-[#0c0c0e]/80 border border-border text-foreground/80 text-xs rounded-lg p-3 outline-none focus:border-primary/40 font-mono resize-none"
               />
 
               {bulkMessage && (
-                <div className="p-3 text-xs text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 rounded-lg flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div className="p-3 text-xs text-chartreuse bg-chartreuse/5 border border-chartreuse/10 rounded-lg flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-chartreuse shrink-0" />
                   <span>{bulkMessage}</span>
                 </div>
               )}
 
               {bulkError && (
-                <div className="p-3 text-xs text-red-400 bg-red-500/5 border border-red-500/10 rounded-lg flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <div className="p-3 text-xs text-destructive bg-destructive/5 border border-destructive/10 rounded-lg flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
                   <span>{bulkError}</span>
                 </div>
               )}
@@ -810,7 +810,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <button
                 type="submit"
                 disabled={isQueuingBulk}
-                className="w-full flex items-center justify-center gap-2 bg-[#06b6d4]/10 hover:bg-[#06b6d4]/20 border border-[#06b6d4]/20 text-cyan-400 text-xs font-bold px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
               >
                 {isQueuingBulk ? 'Encolando Dominios...' : 'Procesar Cola Masiva'}
               </button>
@@ -823,18 +823,18 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
       {/* ────────────────── Pricing Sheet Upgrade Modal ────────────────── */}
       {showPlanModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-all duration-300 animate-in fade-in">
-          <div className="glass-card max-w-4xl w-full rounded-2xl border border-white/[0.08] bg-[#040406]/90 p-8 relative space-y-6">
+          <div className="glass-card max-w-4xl w-full rounded-2xl border border-border bg-[#040406]/90 p-8 relative space-y-6">
             <button
               onClick={() => setShowPlanModal(false)}
-              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors cursor-pointer text-xl p-1.5"
+              className="absolute top-4 right-4 text-muted-fg hover:text-white transition-colors cursor-pointer text-xl p-1.5"
             >
               ✕
             </button>
 
             <div className="text-center space-y-1">
-              <span className="text-[10px] font-extrabold tracking-widest text-[#06b6d4] bg-cyan-500/10 px-3 py-1 rounded-full uppercase">Suscripciones Flexibles</span>
+              <span className="text-[10px] font-extrabold tracking-widest text-[oklch(68% 0.14 230)] bg-primary/10 px-3 py-1 rounded-full uppercase">Suscripciones Flexibles</span>
               <h2 className="text-2xl font-black text-white tracking-tight mt-3">Eleva tu Postura de Seguridad Técnica</h2>
-              <p className="text-xs text-slate-400 max-w-lg mx-auto">
+              <p className="text-xs text-muted-fg max-w-lg mx-auto">
                 Selecciona la capacidad de procesamiento continuo que mejor se adapte al tamaño de tu infraestructura web.
               </p>
             </div>
@@ -845,20 +845,20 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               {/* Starter Tier */}
               <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-all duration-300 ${
                 currentPlan === 'starter'
-                  ? 'border-[#06b6d4] bg-[#06b6d4]/[0.02]'
-                  : 'border-white/[0.04] bg-white/[0.005] hover:border-white/[0.08]'
+                  ? 'border-[oklch(68% 0.14 230)] bg-[oklch(68% 0.14 230)]/[0.02]'
+                  : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Starter</p>
+                  <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">Starter</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$49</span>
-                    <span className="text-[11px] font-bold text-slate-500">/ mes</span>
+                    <span className="text-[11px] font-bold text-muted-fg">/ mes</span>
                   </div>
-                  <ul className="text-xs text-slate-400 space-y-2.5 pt-2">
+                  <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
                     <li className="flex items-center gap-2">✓ 10 Recursos Activos</li>
                     <li className="flex items-center gap-2">✓ 100 scans mensuales</li>
                     <li className="flex items-center gap-2">✓ Alertas básicas</li>
-                    <li className="text-slate-600 flex items-center gap-2">✗ Integración Slack</li>
+                    <li className="text-muted-fg flex items-center gap-2">✗ Integración Slack</li>
                   </ul>
                 </div>
                 <button
@@ -866,7 +866,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     setCurrentPlan('starter');
                     setShowPlanModal(false);
                   }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-white/[0.1] text-white hover:bg-white/[0.05] transition-all cursor-pointer"
+                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-all cursor-pointer"
                 >
                   {currentPlan === 'starter' ? 'Plan Activo' : 'Seleccionar Starter'}
                 </button>
@@ -875,23 +875,23 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               {/* Business Tier */}
               <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-all duration-300 relative ${
                 currentPlan === 'business'
-                  ? 'border-[#06b6d4] bg-[#06b6d4]/[0.03] shadow-[0_4px_30px_rgba(6,182,212,0.15)]'
-                  : 'border-white/[0.04] bg-white/[0.005] hover:border-white/[0.08]'
+                  ? 'border-[oklch(68% 0.14 230)] bg-[oklch(68% 0.14 230)]/[0.03] shadow-[0_4px_30px_rgba(6,182,212,0.15)]'
+                  : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black tracking-widest text-[#06b6d4] bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-full uppercase">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black tracking-widest text-[oklch(68% 0.14 230)] bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-full uppercase">
                   Recomendado
                 </span>
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-[#06b6d4] uppercase tracking-widest">Business</p>
+                  <p className="text-xs font-bold text-[oklch(68% 0.14 230)] uppercase tracking-widest">Business</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$149</span>
-                    <span className="text-[11px] font-bold text-slate-500">/ mes</span>
+                    <span className="text-[11px] font-bold text-muted-fg">/ mes</span>
                   </div>
-                  <ul className="text-xs text-slate-300 space-y-2.5 pt-2">
+                  <ul className="text-xs text-foreground/80 space-y-2.5 pt-2">
                     <li className="flex items-center gap-2">✓ 50 Recursos Activos</li>
                     <li className="flex items-center gap-2">✓ 1,000 scans mensuales</li>
-                    <li className="flex items-center gap-2 text-cyan-400">✓ Webhook Alertas Slack</li>
-                    <li className="flex items-center gap-2 text-cyan-400">✓ Developer API Keys</li>
+                    <li className="flex items-center gap-2 text-primary">✓ Webhook Alertas Slack</li>
+                    <li className="flex items-center gap-2 text-primary">✓ Developer API Keys</li>
                   </ul>
                 </div>
                 <button
@@ -899,7 +899,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     setCurrentPlan('business');
                     setShowPlanModal(false);
                   }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg bg-[#06b6d4] hover:bg-[#06b6d4]/80 text-black transition-all cursor-pointer"
+                  className="w-full text-xs font-bold py-2.5 rounded-lg bg-[oklch(68% 0.14 230)] hover:bg-[oklch(68% 0.14 230)]/80 text-black transition-all cursor-pointer"
                 >
                   {currentPlan === 'business' ? 'Plan Activo' : 'Seleccionar Business'}
                 </button>
@@ -908,20 +908,20 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               {/* Enterprise Tier */}
               <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-all duration-300 ${
                 currentPlan === 'enterprise'
-                  ? 'border-[#06b6d4] bg-[#06b6d4]/[0.02]'
-                  : 'border-white/[0.04] bg-white/[0.005] hover:border-white/[0.08]'
+                  ? 'border-[oklch(68% 0.14 230)] bg-[oklch(68% 0.14 230)]/[0.02]'
+                  : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Enterprise</p>
+                  <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">Enterprise</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$499</span>
-                    <span className="text-[11px] font-bold text-slate-500">/ mes</span>
+                    <span className="text-[11px] font-bold text-muted-fg">/ mes</span>
                   </div>
-                  <ul className="text-xs text-slate-400 space-y-2.5 pt-2">
+                  <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
                     <li className="flex items-center gap-2">✓ Recursos Ilimitados</li>
                     <li className="flex items-center gap-2">✓ Escaneos Ilimitados</li>
-                    <li className="flex items-center gap-2 text-cyan-400">✓ Soporte VIP Prioritario</li>
-                    <li className="flex items-center gap-2 text-cyan-400">✓ SLA de Uptime 99.9%</li>
+                    <li className="flex items-center gap-2 text-primary">✓ Soporte VIP Prioritario</li>
+                    <li className="flex items-center gap-2 text-primary">✓ SLA de Uptime 99.9%</li>
                   </ul>
                 </div>
                 <button
@@ -929,7 +929,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     setCurrentPlan('enterprise');
                     setShowPlanModal(false);
                   }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-white/[0.1] text-white hover:bg-white/[0.05] transition-all cursor-pointer"
+                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-all cursor-pointer"
                 >
                   {currentPlan === 'enterprise' ? 'Plan Activo' : 'Seleccionar Enterprise'}
                 </button>

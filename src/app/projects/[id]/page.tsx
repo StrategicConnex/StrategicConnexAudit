@@ -22,6 +22,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const protocol = headersList.get('x-forwarded-proto') || 'https';
   const appUrl = `${protocol}://${host}`;
   
+  // ── Dev bypass: saltea auth en desarrollo ──
+  const DEV_BYPASS = process.env.NODE_ENV === 'development' &&
+    process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
+
+  if (DEV_BYPASS) {
+    // Sin sesión real — no se puede cargar proyecto específico
+    redirect('/');
+  }
+
   // 0. Autenticar usuario
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

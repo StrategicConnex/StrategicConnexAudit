@@ -41,9 +41,7 @@
   let pageViews = 0;
   let currentUrl = location.href;
   let currentPath = location.pathname + location.search;
-  let lastSent = Date.now();
   let buffer = []; // Cola de eventos antes de enviar
-  let isUnloading = false;
   let vitals = {}; // Web Vitals acumulados
   let errors = []; // Errores JS capturados
   let interactions = []; // Interacciones para INP/contexto
@@ -54,7 +52,7 @@
     try {
       const u = new URL(script.src, location.href);
       return u.origin + '/api/telemetry/vitals';
-    } catch (e) {
+    } catch {
       return '/api/telemetry/vitals';
     }
   }
@@ -73,7 +71,7 @@
       const id = generateId();
       sessionStorage.setItem('sa_session_id', id);
       return id;
-    } catch (e) {
+    } catch {
       return generateId();
     }
   }
@@ -161,10 +159,6 @@
     return critical;
   }
 
-  function now() {
-    return Math.round(performance.now());
-  }
-
   /* ===================== BUFFER / QUEUE ===================== */
   function enqueue(type, data) {
     buffer.push({
@@ -237,7 +231,7 @@
       queue.push({ payload, ts: Date.now() });
       if (queue.length > 20) queue.shift(); // Evitar crecimiento infinito
       localStorage.setItem('sa_rum_retry', JSON.stringify(queue));
-    } catch (e) {}
+    } catch {}
   }
 
   function sendRetryQueue() {
@@ -254,7 +248,7 @@
           keepalive: true,
         }).catch(() => {});
       });
-    } catch (e) {}
+    } catch {}
   }
 
   /* ===================== WEB VITALS ===================== */
@@ -371,7 +365,6 @@
 
     // Enviar al cerrar/navegar
     window.addEventListener('pagehide', function () {
-      isUnloading = true;
       flush(true);
       clearInterval(interval);
     });
