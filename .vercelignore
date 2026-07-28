@@ -1,13 +1,17 @@
-# Ignore local development and build outputs
+# ─── Local development & build outputs ──────────────────────────
 .next/
 node_modules/
 out/
 dist/
-.env
-.env*.local
 .pnpm-store/
 
-# Ignore tests and tool configs not required in production
+# ─── Environment files (do NOT upload secrets) ──────────────────
+.env
+.env.local
+.env*.local
+.env.development
+
+# ─── Tests (not needed in production) ───────────────────────────
 e2e/
 tests/
 __tests__/
@@ -16,14 +20,25 @@ __tests__/
 playwright.config.ts
 vitest.config.ts
 
-# Ignore documentation, assets and config files not needed on Vercel
+# ─── Documentation & assets ─────────────────────────────────────
 docs/
 README.md
 *.png
 *.jpg
 *.jpeg
-*.svg
 *.webp
+*.svg
 *.md
 .github/
 drizzle/
+
+# ─── Scratch / temp / legacy ────────────────────────────────────
+scratch/
+backups/
+.freebuff/
+*.exe
+tmp/
+temp/
+
+# ─── Coverage reports ───────────────────────────────────────────
+coverage/
