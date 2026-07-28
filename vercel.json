@@ -1,5 +1,8 @@
 {
   "framework": "nextjs",
+  "buildCommand": "pnpm build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "outputDirectory": ".next",
   "images": {
     "sizes": [256, 384, 640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     "domains": [],
@@ -10,5 +13,12 @@
       "path": "/api/cron/uptime",
       "schedule": "0 0 * * *"
     }
-  ]
+  ],
+  "nodeVersion": "24.x",
+  "regions": ["iad1"],
+  "public": true,
+  "github": {
+    "silent": true,
+    "autoJobCancelation": true
+  }
 }
