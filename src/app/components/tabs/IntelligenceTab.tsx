@@ -11,6 +11,7 @@ import {
 import { ScoreGauge } from '@/app/components/ScoreGauge';
 import { AttackSurfaceGraph } from '@/app/components/AttackSurfaceGraph';
 import { IncidentBriefModal } from '@/app/components/IncidentBriefModal';
+import { AutoMitreBadge } from '@/app/components/MitreBadge';
 
 interface Project {
   id: string;
@@ -114,6 +115,7 @@ interface Finding {
   recommendation: string | null;
   evidence: any;
   affectedAsset: string | null;
+  toolId?: string;
 }
 
 interface RunEvent {
@@ -2227,6 +2229,7 @@ export function IntelligenceTab({
                             <div>
                               <h4 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
                                 {finding.title}
+                                <span className="inline-flex items-center gap-1.5 ml-2"><AutoMitreBadge findingTitle={finding.title} toolId={finding.toolId} size="sm" /></span>
                                 <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${getSeverityBadge(finding.severity)}`}>
                                   {finding.severity}
                                 </span>
