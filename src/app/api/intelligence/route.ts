@@ -11,7 +11,7 @@ import {
 } from "@/shared/db/schemas";
 import { eq, desc } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
-import { checkAiRateLimit } from "@/shared/lib/ratelimit";
+import { checkIntelScanRateLimit } from "@/shared/lib/ratelimit";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
 import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
@@ -61,9 +61,15 @@ export async function GET(req: NextRequest) {
           return { success: false, status: 404, error: "Investigación no encontrada" };
         }
 
-        const findings = await tx.query.intelligenceFindings.findMany({
+        const rawFindings = await tx.query.intelligenceFindings.findMany({
           where: eq(intelligenceFindings.investigationId, investigationId)
         });
+
+        // Extract toolId from evidence._toolId stored during POST
+        const findings = rawFindings.map((f) => ({
+          ...f,
+          toolId: (f.evidence as Record<string, unknown> | null)?.["_toolId"] as string | undefined,
+        }));
 
         const events = await tx.query.intelligenceRunEvents.findMany({
           where: eq(intelligenceRunEvents.investigationId, investigationId),
@@ -146,10 +152,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Proyecto no encontrado o acceso denegado" }, { status: 404 });
     }
 
-    // Rate Limiting
-    const rateLimit = await checkAiRateLimit(user.id);
+    // Rate Limiting específico para escaneos de infraestructura
+    // 30 escaneos por minuto por usuario — NO confundir con AI rate limit
+    const rateLimit = await checkIntelScanRateLimit(user.id);
     if (!rateLimit.success) {
-      return NextResponse.json({ success: false, error: "Límite de solicitudes de IA excedido" }, { status: 429 });
+      return NextResponse.json({ success: false, error: "Límite de escaneos de infraestructura excedido. Espera unos segundos e intenta de nuevo." }, { status: 429 });
     }
 
     // 4. Normalizar host y prevenir SSRF
@@ -352,7 +359,10 @@ export async function POST(req: NextRequest) {
           title: f.title,
           description: f.description,
           recommendation: f.remediation || f.recommendation || null,
-          evidence: (f.evidence ?? {}) as Record<string, unknown>,
+          evidence: {
+            ...((f.evidence ?? {}) as Record<string, unknown>),
+            _toolId: f.toolId ?? null,
+          },
           affectedAsset: f.affectedAsset ?? null,
         }));
         await tx.insert(intelligenceFindings).values(findingsToInsert);
