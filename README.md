@@ -147,15 +147,15 @@ Basado en análisis competitivo de 10 herramientas (Shodan, Censys, SecurityTrai
 | Fase | Items | Completado | % |
 |------|-------|------------|---|
 | Fase 0 — Cimientos | 15 | 15 | ✅ 100% |
-| Fase 1 — P0 Fundación | 3 | 2 | 🟡 67% |
+| Fase 1 — P0 Fundación | 3 | 3 | ✅ **100%** |
 | Fase 2 — P1 Core Features | 6 | 3 | 🟡 50% |
 | Fase 3 — P2 UX/Dashboard | 6 | 1 | 🟢 17% |
 | Fase 4 — P3 Deseable | 4 | 0 | ⬜ 0% |
-| **Total** | **34** | **21** | **62%** |
+| **Total** | **34** | **22** | **65%** |
 
-**Próximo:** P0.2 Historical DNS/WHOIS Tracking · P1.3 Team RBAC · P2.2 Custom Dashboards
+**Próximo:** P1.4 Webhooks por proyecto · P1.5 Scheduled Scanning · P2.2 Custom Dashboards
 
-> 📖 Ver plan completo: [`docs/improvements/ROADMAP.md`](./docs/improvements/ROADMAP.md) · Análisis competitivo: [`docs/improvements/COMPETITIVE-ANALYSIS.md`](./docs/improvements/COMPETITIVE-ANALYSIS.md)
+> 📖 Ver plan completo: [`docs/improvements/ROADMAP.md`](./docs/improvements/ROADMAP.md) · Análisis competitivo: [`docs/improvements/COMPETITIVE-ANALYSIS.md`](./docs/improvements/COMPETITIVE-ANALYSIS.md) · Changelog: [`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
 
 ---
 
