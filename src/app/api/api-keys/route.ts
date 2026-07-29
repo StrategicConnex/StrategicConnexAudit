@@ -1,136 +1,110 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { withRLS } from "@/shared/db/rls";
-import { developerApiKeys } from "@/shared/db/schemas";
-import { eq, and } from "drizzle-orm";
-import { createClient } from "@/shared/lib/supabase/server";
-import crypto from "crypto";
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/shared/lib/supabase/server';
+import {
+  createApiKey,
+  listApiKeys,
+  revokeApiKey,
+} from '@/shared/lib/api-keys';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
-const keyCreateSchema = z.object({
-  name: z.string().min(1).max(256),
-  expiresDays: z.number().int().min(1).max(365).optional() // 30, 90, 365 days
-});
-
-export async function GET() {
+/**
+ * GET /api/api-keys
+ * List all API keys for the authenticated user (without secret keys).
+ */
+export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
 
-    const keys = await withRLS(user.id, async (tx) => {
-      return await tx.query.developerApiKeys.findMany({
-        where: eq(developerApiKeys.userId, user.id)
-      });
-    });
-
-    // Strip sensitive fields (hashed_key) from output
-    const strippedKeys = keys.map(({ hashedKey: _hk, ...rest }) => { void _hk; return rest; });
+    const keys = await listApiKeys(user.id);
 
     return NextResponse.json({
       success: true,
-      apiKeys: strippedKeys
-    });    } catch (error: any) {
-    console.error("GET api keys route failure:", error);
-    return NextResponse.json({
-      success: false,
-      error: "Error interno del servidor"
-    }, { status: 500 });
+      keys,
+    });
+  } catch (error: any) {
+    console.error('GET /api/api-keys failure:', error);
+    return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
 
+/**
+ * POST /api/api-keys
+ * Create a new API key for the authenticated user.
+ * The raw key is returned ONLY once in the response.
+ *
+ * Body: { name: string, scope?: string[], expiresAt?: string }
+ */
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
 
     const body = await req.json();
-    const parseResult = keyCreateSchema.safeParse(body);
-    if (!parseResult.success) {
-      return NextResponse.json({ success: false, error: "Argumentos inválidos" }, { status: 400 });
+    const { name, scope, expiresAt } = body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return NextResponse.json({ success: false, error: 'Name is required' }, { status: 400 });
     }
 
-    const { name, expiresDays } = parseResult.data;
+    const result = await createApiKey(
+      user.id,
+      name.trim(),
+      Array.isArray(scope) ? scope : [],
+      expiresAt ? new Date(expiresAt) : undefined,
+    );
 
-    // Generate secure random key
-    const rawEntropy = crypto.randomBytes(24).toString("hex"); // 48 chars
-    const clearKey = `sa_live_${rawEntropy}`;
-    const hashedKey = crypto.createHash("sha256").update(clearKey).digest("hex");
-    
-    // keyPrefix contains sa_live_ + first 4 chars of the random part
-    const keyPrefix = `sa_live_${rawEntropy.slice(0, 4)}...`;
-
-    let expiresAt: Date | null = null;
-    if (expiresDays) {
-      expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000);
+    if ('error' in result) {
+      return NextResponse.json({ success: false, error: result.error }, { status: 500 });
     }
-
-    const result = await withRLS(user.id, async (tx) => {
-      const [newKey] = await tx.insert(developerApiKeys).values({
-        userId: user.id,
-        name,
-        keyPrefix,
-        hashedKey,
-        scope: ["read", "write", "scan"],
-        expiresAt
-      }).returning();
-      return newKey;
-    });
-
-    // Strip hashedKey before returning metadata
-    const { hashedKey: _unused, ...rest } = result;
-    void _unused;
 
     return NextResponse.json({
       success: true,
-      apiKey: rest,
-      clearKey // ONLY returned here, once
-    });    } catch (error: any) {
-    console.error("POST api keys route failure:", error);
-    return NextResponse.json({
-      success: false,
-      error: "Error interno del servidor"
-    }, { status: 500 });
+      key: result.record,
+      rawKey: result.rawKey,
+      message: 'Save this key now — it will not be shown again.',
+    });
+  } catch (error: any) {
+    console.error('POST /api/api-keys failure:', error);
+    return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
 
+/**
+ * DELETE /api/api-keys?id=<keyId>
+ * Revoke (delete) an API key by ID.
+ */
 export async function DELETE(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
+    const keyId = searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json({ success: false, error: "Falta parámetro id" }, { status: 400 });
+    if (!keyId) {
+      return NextResponse.json({ success: false, error: 'Key ID is required' }, { status: 400 });
     }
 
-    await withRLS(user.id, async (tx) => {
-      await tx.delete(developerApiKeys).where(
-        and(
-          eq(developerApiKeys.id, id),
-          eq(developerApiKeys.userId, user.id)
-        )
-      );
-    });
+    const ok = await revokeApiKey(keyId, user.id);
 
-    return NextResponse.json({
-      success: true
-    });    } catch (error: any) {
-    console.error("DELETE api key route failure:", error);
-    return NextResponse.json({
-      success: false,
-      error: "Error interno del servidor"
-    }, { status: 500 });
+    if (!ok) {
+      return NextResponse.json({ success: false, error: 'Key not found or could not be revoked' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, message: 'API key revoked' });
+  } catch (error: any) {
+    console.error('DELETE /api/api-keys failure:', error);
+    return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

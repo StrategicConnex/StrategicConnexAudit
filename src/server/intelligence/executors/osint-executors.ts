@@ -4,6 +4,8 @@ import { assertPublicHostname, safeFetch } from "../security/egress-guard";
 import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
 import { whoisCircuit, CircuitOpenError } from "../core/circuit-breaker";
 import { geoipCache, IntelligenceCache } from "../core/cache";
+import { persistWhoisSnapshot } from "../history/whois-history";
+import type { WhoisSnapshot } from "../history/types";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 
@@ -64,7 +66,7 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, any> = {
       } catch {}
 
       const output = {
-        success: true, // Crucial para la UI
+        success: true,
         domain,
         registrar: "ICANN Registrar Corp",
         createdDate: creationDate.toISOString(),
@@ -74,6 +76,27 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, any> = {
         status: ["active"],
         nameservers: nsList,
       };
+
+      // Persistir snapshot histórico (fire-and-forget)
+      const fallbackSnapshot: WhoisSnapshot = {
+        domain,
+        registrar: "ICANN Registrar Corp",
+        createdDate: creationDate,
+        expiresDate: expirationDate,
+        updatedDate: creationDate,
+        status: ["active"],
+        nameservers: nsList,
+        abuseContact: null,
+        registrantOrg: null,
+        originalData: { fallback: true, note: "RDAP no disponible, datos estimados vía DNS" },
+      };
+      persistWhoisSnapshot(ctx.projectId, ctx.investigationId, fallbackSnapshot)
+        .then((result) => {
+          if (result.changes.length > 0) {
+            ctx.log(`[OSINT WHOIS] Cambios detectados en ${domain}: ${result.changes.map(c => `${c.label} (${c.severity})`).join(', ')}`);
+          }
+        })
+        .catch((err) => console.error(`[OSINT WHOIS] Error history para ${domain}:`, err));
 
       return { success: true, output, findings };
     }
@@ -157,6 +180,28 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, any> = {
     }
 
     ctx.log(`Consulta OSINT RDAP completada. Registrador: ${registrar}, Expiración: ${expiresAt}`);
+
+    // Persistir snapshot histórico (fire-and-forget)
+    const historySnapshot: WhoisSnapshot = {
+      domain,
+      registrar,
+      createdDate: new Date(createdAt!),
+      expiresDate: new Date(expiresAt!),
+      updatedDate: updatedAt ? new Date(updatedAt) : new Date(createdAt!),
+      status: rdapData.status || [],
+      nameservers,
+      abuseContact: null,
+      registrantOrg: null,
+      originalData: rdapData as Record<string, unknown>,
+    };
+    persistWhoisSnapshot(ctx.projectId, ctx.investigationId, historySnapshot)
+      .then((result) => {
+        if (result.changes.length > 0) {
+          ctx.log(`[OSINT WHOIS] Cambios detectados en ${domain}: ${result.changes.map(c => `${c.label} (${c.severity})`).join(', ')}`);
+        }
+      })
+      .catch((err) => console.error(`[OSINT WHOIS] Error history para ${domain}:`, err));
+
     return { success: true, output, findings };
   },
 };

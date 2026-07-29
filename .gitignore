@@ -48,6 +48,9 @@ playwright-report/
 screenshot-*.png
 e2e/test.txt
 
+# generated Postman collection (regenerated from openapi.json in CI)
+/tests/api-contract/scaudit-api-collection.json
+
 # linter outputs
 eslint_*.txt
 eslint_*.json

@@ -5,13 +5,16 @@ import {
   ShieldCheck, AlertCircle, Terminal, ArrowRight, Loader2, 
   ShieldAlert, Server, History, Sparkles, CheckCircle2, 
   Lock, Cpu, Copy, Check, Info, Globe, AlertTriangle,
-  Mail, Shield, Activity, MapPin, Layers, Compass,
+  Mail, Shield, Activity, MapPin, Layers, Compass, BookMarked,
   ChevronDown, FileText, TrendingDown, Network
 } from 'lucide-react';
 import { ScoreGauge } from '@/app/components/ScoreGauge';
 import { AttackSurfaceGraph } from '@/app/components/AttackSurfaceGraph';
 import { IncidentBriefModal } from '@/app/components/IncidentBriefModal';
 import { AutoMitreBadge } from '@/app/components/MitreBadge';
+import { GeoMap } from '@/app/components/GeoMap';
+import { DownloadPdfButton } from '@/app/components/DownloadPdfButton';
+import { HistoryPanel } from '@/app/components/HistoryPanel';
 
 interface Project {
   id: string;
@@ -186,6 +189,9 @@ export function IntelligenceTab({
     previousScore: number | null;
   } | null>(null);
   const [showAttackSurface, setShowAttackSurface] = useState(false);
+  const [showGeoMap, setShowGeoMap] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyDefaultTab, setHistoryDefaultTab] = useState<'dns' | 'whois'>('dns');
 
   const toggleAccordion = (id: string) => {
     setExpandedAccordions(prev => ({
@@ -914,6 +920,51 @@ export function IntelligenceTab({
                         <Network className="w-3 h-3" />
                         Superficie
                       </button>
+                      {/* Geo Map toggle */}
+                      <button
+                        onClick={() => setShowGeoMap(prev => !prev)}
+                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all duration-200 cursor-pointer ${
+                          showGeoMap
+                            ? 'bg-primary/15 border-primary/30 text-primary'
+                            : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
+                        }`}
+                      >
+                        <MapPin className="w-3 h-3" />
+                        Mapa
+                      </button>
+                      {/* History toggle */}
+                      <button
+                        onClick={() => { setHistoryDefaultTab('dns'); setShowHistory(prev => !prev); }}
+                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all duration-200 cursor-pointer ${
+                          showHistory && historyDefaultTab === 'dns'
+                            ? 'bg-primary/15 border-primary/30 text-primary'
+                            : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
+                        }`}
+                      >
+                        <History className="w-3 h-3" />
+                        DNS
+                      </button>
+                      {/* WHOIS History toggle */}
+                      <button
+                        onClick={() => { setHistoryDefaultTab('whois'); setShowHistory(prev => !prev); }}
+                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all duration-200 cursor-pointer ${
+                          showHistory && historyDefaultTab === 'whois'
+                            ? 'bg-primary/15 border-primary/30 text-primary'
+                            : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
+                        }`}
+                        title="Ver historial WHOIS del dominio"
+                      >
+                        <BookMarked className="w-3 h-3" />
+                        WHOIS
+                      </button>
+                      {/* Download PDF */}
+                      <DownloadPdfButton
+                        projectId={selectedProjectId}
+                        investigationId={selectedId ?? undefined}
+                        label="PDF"
+                        variant="ghost"
+                        size="sm"
+                      />
                     </div>
                   </div>
                   <div>
@@ -984,6 +1035,43 @@ export function IntelligenceTab({
                   score={selectedDetails.investigation.score}
                 />
               </div>
+            )}
+
+            {/* Geo Map — toggleable panel */}
+            {showGeoMap && (
+              <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 animate-in slide-in-from-top-4 fade-in duration-400">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-foreground tracking-tight flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      Geolocalización de Infraestructura
+                    </h3>
+                    <p className="text-[10px] text-muted-fg mt-0.5">
+                      Ubicación geográfica de activos de red, ASN y traceroute hops
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowGeoMap(false)}
+                    className="text-muted-fg hover:text-foreground/80 transition-colors text-xs font-bold cursor-pointer"
+                  >
+                    Cerrar ×
+                  </button>
+                </div>
+                <GeoMap
+                  metadata={selectedDetails.investigation.metadata as any}
+                  target={selectedDetails.investigation.target}
+                />
+              </div>
+            )}
+
+            {/* History Panel — toggleable */}
+            {showHistory && (
+              <HistoryPanel
+                projectId={selectedProjectId}
+                defaultQuery={selectedDetails.investigation.target}
+                defaultTab={historyDefaultTab}
+                onClose={() => setShowHistory(false)}
+              />
             )}
 
             {/* Bento-Row 1.5: Mail Health & Web Security Audit Panel */}

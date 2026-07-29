@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, DM_Sans } from "next/font/google";
 import "./globals.css";
+import { ToasterProvider } from "@/app/components/ToasterProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -69,7 +70,9 @@ export default function RootLayout({
           content={`default-src 'self'; script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://apifreellm.com https://*.vercel.app; base-uri 'self'; form-action 'self'`}
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">{children}
+        <ToasterProvider />
+      </body>
     </html>
   );
 }

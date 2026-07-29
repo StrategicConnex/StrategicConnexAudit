@@ -68,3 +68,65 @@ jobs:
             awk '/File.*Stmts/,/^$/' coverage-output.txt 2>/dev/null || echo '(coverage not available)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  api-contract-test:
+    name: API Contract Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Validate OpenAPI spec
+        run: pnpm test:contract
+
+      - name: Generate Postman collection from OpenAPI
+        run: pnpm generate:collection
+
+      - name: Run Newman API contract tests (skip if no API key)
+        id: newman
+        continue-on-error: true
+        run: |
+          if [ -n "${{ secrets.SCAUDIT_API_KEY }}" ]; then
+            npx newman run tests/api-contract/scaudit-api-collection.json \
+              --env-var "apiKey=${{ secrets.SCAUDIT_API_KEY }}" \
+              --reporters cli,junit \
+              --reporter-junit-export results/api-contract.xml \
+              --bail \
+              --timeout-request 15000 \
+              --delay-request 1000 && \
+            echo "newman_status=passed" >> "$GITHUB_OUTPUT" || \
+            echo "newman_status=failed" >> "$GITHUB_OUTPUT"
+          else
+            echo "🔑 No SCAUDIT_API_KEY secret — skipping live endpoint tests"
+            echo "newman_status=skipped" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Newman results
+        if: steps.newman.outputs.newman_status == 'passed'
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-results
+          path: results/api-contract.xml
+          retention-days: 7
+
+      - name: Report API contract status in PR
+        if: always()
+        run: |
+          {
+            echo '## 📋 API Contract Test'
+            echo ''
+            if [ "${{ steps.newman.outputs.newman_status }}" = "passed" ]; then
+              echo '✅ **OpenAPI spec valid** — Newman tests passed against production'
+            elif [ "${{ steps.newman.outputs.newman_status }}" = "skipped" ]; then
+              echo '✅ **OpenAPI spec valid** — Newman skipped (set `SCAUDIT_API_KEY` secret to enable live endpoint testing)'
+            else
+              echo '❌ **Newman tests failed** — check artifacts for details'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

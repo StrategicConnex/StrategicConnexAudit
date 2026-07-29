@@ -94,16 +94,31 @@ export interface RateLimitResult {
 }
 
 /**
+ * Setea headers de rate limiting estándar (IETF) y legacy (X- prefixed)
+ * en un objeto Headers para mantener compatibilidad con clientes antiguos.
+ */
+function setRateLimitHeaders(headers: Headers, result: RateLimitResult): void {
+  // Headers estándar IETF (RFC 6648 recomienda no usar X- prefix)
+  headers.set("RateLimit-Limit", String(result.limit));
+  headers.set("RateLimit-Remaining", String(result.remaining));
+  headers.set("RateLimit-Reset", String(result.reset));
+
+  // Headers legacy con X- prefix para compatibilidad descendente
+  headers.set("X-RateLimit-Limit", String(result.limit));
+  headers.set("X-RateLimit-Remaining", String(result.remaining));
+  headers.set("X-RateLimit-Reset", String(result.reset));
+
+  if (!result.success) {
+    headers.set("Retry-After", String(result.retryAfter));
+  }
+}
+
+/**
  * Construye headers HTTP estándar de rate limiting.
  */
 export function buildRateLimitHeaders(result: RateLimitResult): Headers {
   const headers = new Headers();
-  headers.set("X-RateLimit-Limit", String(result.limit));
-  headers.set("X-RateLimit-Remaining", String(result.remaining));
-  headers.set("X-RateLimit-Reset", String(result.reset));
-  if (!result.success) {
-    headers.set("Retry-After", String(result.retryAfter));
-  }
+  setRateLimitHeaders(headers, result);
   return headers;
 }
 
@@ -111,6 +126,16 @@ export function buildRateLimitHeaders(result: RateLimitResult): Headers {
  * Crea una respuesta 429 (Too Many Requests) con headers estándar.
  */
 export function rateLimitResponse(result: RateLimitResult, extraBody: Record<string, unknown> = {}): NextResponse {
+  const headers: Record<string, string> = {
+    "Retry-After": String(result.retryAfter),
+    "RateLimit-Limit": String(result.limit),
+    "RateLimit-Remaining": String(result.remaining),
+    "RateLimit-Reset": String(result.reset),
+    "X-RateLimit-Limit": String(result.limit),
+    "X-RateLimit-Remaining": String(result.remaining),
+    "X-RateLimit-Reset": String(result.reset),
+  };
+
   return NextResponse.json(
     {
       error: `Demasiadas solicitudes. Intenta de nuevo en ${result.retryAfter} segundos.`,
@@ -119,12 +144,7 @@ export function rateLimitResponse(result: RateLimitResult, extraBody: Record<str
     },
     {
       status: 429,
-      headers: {
-        "Retry-After": String(result.retryAfter),
-        "X-RateLimit-Limit": String(result.limit),
-        "X-RateLimit-Remaining": String(result.remaining),
-        "X-RateLimit-Reset": String(result.reset),
-      },
+      headers,
     }
   );
 }
@@ -282,11 +302,14 @@ export function withRateLimit<T extends Request = Request>(
 
       const response = await handler(req, identifier, ...args);
 
-      // Adjuntar headers de rate limit a la respuesta
-      // Usamos un nuevo Response para evitar mutar headers read-only
+      // Adjuntar headers de rate limit a la respuesta (estándar + legacy)
       const newHeaders = new Headers(response.headers);
+      newHeaders.set("RateLimit-Limit", String(result.limit));
+      newHeaders.set("RateLimit-Remaining", String(result.remaining));
+      newHeaders.set("RateLimit-Reset", String(result.reset));
       newHeaders.set("X-RateLimit-Limit", String(result.limit));
       newHeaders.set("X-RateLimit-Remaining", String(result.remaining));
+      newHeaders.set("X-RateLimit-Reset", String(result.reset));
 
       return new Response(response.body, {
         status: response.status,
@@ -323,4 +346,13 @@ export async function checkEmailRateLimit(ip: string) {
 
 export async function checkCallbackRateLimit(ip: string) {
   return checkRateLimitInternal(ip, { limit: 10, window: 60, prefix: "callback_limit" });
+}
+
+// ─── Intelligence Scan (30 req / 60s por usuario) ─────────────────
+// Los escaneos de infraestructura ejecutan 21 herramientas en paralelo
+// y NO consumen modelos de IA/LLM. El límite es más alto que AI Copilot
+// porque el usuario necesita escanear múltiples objetivos.
+
+export async function checkIntelScanRateLimit(userId: string) {
+  return checkRateLimitInternal(userId, { limit: 30, window: 60, prefix: "intel_scan" });
 }

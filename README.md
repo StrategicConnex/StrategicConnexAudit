@@ -20,20 +20,33 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
 </p>
 
+> **Sitio en vivo:** [scaudit.vercel.app](https://scaudit.vercel.app) · **Swagger UI:** [/swagger](https://scaudit.vercel.app/swagger) · **API Docs:** [/docs/api](https://scaudit.vercel.app/docs/api) · **MITRE Coverage:** [/mitre-coverage](https://scaudit.vercel.app/mitre-coverage)
+
 ---
 
 StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligencia de red, monitoreo de superficie de ataque, auditoría técnica SEO y ciberseguridad continua. Diseñada para equipos de seguridad, analistas de threat intelligence y consultores técnicos que necesitan visibilidad profunda de su infraestructura digital.
-
-> **Sitio en vivo:** [scaudit.vercel.app](https://scaudit.vercel.app)
 
 ---
 
 ## Tabla de contenidos
 
 - [Capacidades clave](#-capacidades-clave)
-- [Arquitectura](#️-arquitectura)
+- [Roadmap de mejoras](#-roadmap-de-mejoras)
+- [Arquitectura](#%EF%B8%8F-arquitectura)
 - [Stack tecnológico](#-stack-tecnológico)
 - [Estructura del proyecto](#-estructura-del-proyecto)
+- [Módulos destacados](#-módulos-destacados)
+  - [Descubrimiento Continuo de Activos](#-descubrimiento-continuo-de-activos-p01)
+  - [MITRE ATT&CK Mapping](#-mitre-attck-mapping-p16)
+  - [API Pública REST](#-api-pública-rest-p11)
+  - [Reportes PDF White-Label](#-reportes-pdf-white-label-p12)
+  - [Mapa Geo Interactivo](#-mapa-geo-interactivo-p21)
+  - [Alertas Multi-Canal + SIEM](#-alertas-multi-canal--siem-p03)
+  - [API Keys Dashboard](#-api-keys-dashboard)
+  - [Swagger UI + Documentación API](#-swagger-ui--documentación-api)
+  - [Security Audit Dashboard](#-security-audit-dashboard)
+  - [AI Health Dashboard](#-ai-health-dashboard)
+  - [Push Notifications](#-push-notifications)
 - [Instalación](#-instalación)
 - [Configuración](#-configuración)
 - [Scripts](#-scripts)
@@ -56,7 +69,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Integraciones**: Google Search Console (GSC), Google Analytics 4 (GA4), Bing Webmaster Tools
 - **Métricas de rendimiento**: Core Web Vitals (LCP, INP, CLS, TTFB, FCP), Lighthouse scores
 - **Keywords**: seguimiento de posiciones, volumen de búsqueda, CPC, competencia
-- **Exportación**: Reportes PDF y CSV
+- **Exportación**: Reportes PDF white-label y CSV
 
 ### 🔍 Inteligencia Cibernética
 - **Escaneo de infraestructura**: DNS (lookup, MX, TXT, NS, SOA, CNAME, DMARC, SPF), WHOIS, GeoIP
@@ -67,6 +80,20 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Risk Engine**: scoring de vulnerabilidades con severidad y confianza
 - **Tool Registry**: 25+ herramientas de inteligencia disponibles con rate limiting y caching
 - **Protección SSRF**: `egress-guard` con validación CIDR matemática IPv4/IPv6
+- **Mapa Geo interactivo**: visualización GeoIP de activos con Leaflet.js
+
+### 🌐 Descubrimiento Continuo de Activos (NUEVO)
+- **DNS Brute Force**: descubrimiento de subdominios por diccionario
+- **Certificate Transparency Logs**: monitoreo de logs CT para nuevos certificados
+- **Shadow Asset Detection**: detección de activos olvidados o no autorizados
+- **Orquestador automatizado**: ejecución cada 6h via Trigger.dev
+- **Persistencia**: assets en `intelligence_assets`, cambios en `asset_changes`, hallazgos de seguridad
+
+### 🎯 MITRE ATT&CK Mapping (NUEVO)
+- **25+ técnicas** MITRE mapeadas por toolId exacto
+- **Badges visuales** en cada hallazgo con tooltip de técnica
+- **Dashboard de cobertura** en `/mitre-coverage` con gráficos
+- **Cobertura**: Reconnaissance, Resource Development, Initial Access, Discovery, C2, Defense Evasion
 
 ### 🤖 AI Copilot & Reportes
 - **Copilot de Infraestructura**: asistente IA para planes de remediación técnica
@@ -79,14 +106,25 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 ### 🛡️ Seguridad & SIEM
 - **CSP dinámico**: Content-Security-Policy con nonce por request (Next.js 16 proxy)
 - **Rate limiting**: `withRateLimit` decorator genérico con Upstash Redis (por IP o user)
+- **Headers estándar**: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` en todas las respuestas
 - **Audit logging**: eventos estructurados en `security_audit_logs` con persistencia en Supabase
 - **SIEM Exporter**: detección de patrones sospechosos (open redirect attacks, rate limit bypass, CSP spikes)
-  - Alertas a Slack, PagerDuty y Splunk
+  - Alertas a **Slack**, **PagerDuty**, **Splunk** y **Email** (Resend)
   - Heartbeat cada 30 min para verificar pipeline
   - Push notifications al navegador
 - **Egress Guard**: protección SSRF con validación CIDR matemática
-- **Validación de email**: anti-spam, anti-desechables, anti-typosquatting
+- **Validación de email**: anti-spam, anti-desechables, anti-typosquatting (400+ dominios bloqueados)
 - **Middleware de seguridad**: HSTS, X-Frame-Options, X-Content-Type-Options, Permissions-Policy
+- **Security Audit Dashboard** en `/security/audit` con filtros por tipo, IP y fecha
+
+### 🔐 API Pública REST (NUEVO)
+- **Endpoints públicos** con autenticación via API Key
+- **Rate limiting dedicado** por key
+- **Documentación OpenAPI 3.0** en `/openapi.json`
+- **Swagger UI interactiva** en `/swagger` (lazy-loaded)
+- **API Playground** en `/docs/api/playground`
+- **Health check público** en `GET /api/public/v1/health`
+- **Documentación completa** en `/docs/api` con ejemplos curl
 
 ### 📊 Monitoreo & Telemetría
 - **Real User Monitoring (RUM)**: Web Vitals desde el navegador del usuario
@@ -99,6 +137,25 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Validación de email en tiempo real**: detecta correos desechables, temporales, typosquatting
 - **Rate limiting por IP**: 20 intentos/min en validate-email, 10 intentos/min en callback
 - **Protección anti-open-redirect**: validación estricta del parámetro `next`
+
+---
+
+## 🗺️ Roadmap de mejoras
+
+Basado en análisis competitivo de 10 herramientas (Shodan, Censys, SecurityTrails, GreyNoise, AttackIQ, Detectify, Moz Pro, SEMrush, Datadog, Grafana).
+
+| Fase | Items | Completado | % |
+|------|-------|------------|---|
+| Fase 0 — Cimientos | 15 | 15 | ✅ 100% |
+| Fase 1 — P0 Fundación | 3 | 2 | 🟡 67% |
+| Fase 2 — P1 Core Features | 6 | 3 | 🟡 50% |
+| Fase 3 — P2 UX/Dashboard | 6 | 1 | 🟢 17% |
+| Fase 4 — P3 Deseable | 4 | 0 | ⬜ 0% |
+| **Total** | **34** | **21** | **62%** |
+
+**Próximo:** P0.2 Historical DNS/WHOIS Tracking · P1.3 Team RBAC · P2.2 Custom Dashboards
+
+> 📖 Ver plan completo: [`docs/improvements/ROADMAP.md`](./docs/improvements/ROADMAP.md) · Análisis competitivo: [`docs/improvements/COMPETITIVE-ANALYSIS.md`](./docs/improvements/COMPETITIVE-ANALYSIS.md)
 
 ---
 
@@ -115,7 +172,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
                     │                │                │
               ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
               │ Next.js    │   │ API Routes │   │ Server    │
-              │ App Router │   │  (40+      │   │ Actions   │
+              │ App Router │   │  (50+      │   │ Actions   │
               │ (pages)    │   │  endpoints)│   │ (auth'd)  │
               └─────┬─────┘   └─────┬─────┘   └─────┬─────┘
                     │                │                │
@@ -123,8 +180,9 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
               │              Supabase (Postgres)            │
               │     · RLS (Row Level Security)              │
               │     · Auth (Magic Link)                     │
-              │     · 30+ tablas (proyectos, auditorías,    │
-              │       inteligencia, monitoreo, seguridad)   │
+              │     · 35+ tablas (proyectos, auditorías,    │
+              │       inteligencia, monitoreo, seguridad,   │
+              │       api_keys, audit_logs, health, etc.)   │
               └──────────────────┬─────────────────────────┘
                                  │
                     ┌────────────┴────────────┐
@@ -132,9 +190,9 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
               ┌─────▼─────┐           ┌───────▼──────┐
               │  Upstash   │           │   Trigger.dev │
               │  Redis     │           │  (background  │
-              │  (ratelimit│           │   jobs)       │
+              │  (ratelimit│           │   jobs + cron)│
               │   + cache) │           │               │
-              └───────────┘           └───────────────┘
+              └───────────┘           └───────┬───────┘
                     │                         │
               ┌─────▼─────────────────────────▼──────┐
               │         OpenRouter AI (free pool)     │
@@ -143,16 +201,35 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
               └──────────────────────────────────────┘
 ```
 
-### Decisiones arquitectónicas clave
+### Módulos server
 
-| Decisión | Justificación |
-|----------|---------------|
-| **Next.js 16 App Router** | Server Components, streaming, React 19, Turbopack |
-| **Proxy en vez de Middleware** | Next.js 16 deprecó `middleware.ts` — `proxy.ts` es el nuevo estándar |
-| **Supabase + Drizzle ORM** | RLS nativo + type safety + migraciones SQL |
-| **Upstash Redis** | Rate limiting serverless (no requiere conexión persistente) |
-| **Trigger.dev** | Background jobs con retry automático (auditorías, SIEM, uptime) |
-| **OpenRouter free pool** | Sin costo — 50 req/día gratis, 1000 req/día con $10+ de por vida |
+```
+src/server/
+├── ai/                           # AI Router (model pool + fallback)
+│   └── ai-router.ts              #   callAIWithFallback con 5 modelos
+├── api/
+│   └── public-router.ts          #   withPublicApi middleware (API Key auth)
+├── intelligence/
+│   ├── core/                     #   Dispatcher, cache, circuit-breaker, rate-limiter
+│   ├── discovery/                #   🆕 DNS brute force, CT monitor, shadow detection
+│   ├── executors/                #   DNS, network, email, OSINT, website (25+ tools)
+│   ├── mitre/                    #   🆕 MITRE ATT&CK mapping + coverage
+│   ├── registry/                 #   Tool registry + policies
+│   └── security/                 #   Egress guard (SSRF protection)
+├── notifications/                #   Push notification service (VAPID)
+└── security/                     #   SIEM exporter, audit, API key expiry alerts
+```
+
+### Background jobs (Trigger.dev)
+
+| Task | Schedule | Descripción |
+|------|----------|-------------|
+| `siem.trigger.ts` | Cada 5 min | SIEM exporter + heartbeat |
+| `discovery.trigger.ts` | 🆕 Cada 6h | Descubrimiento continuo de activos |
+| `api-key-expiry.trigger.ts` | 🆕 Diario 09:00 UTC | Alertas de expiración de API Keys |
+| `audit.trigger.ts` | Bajo demanda | Auditorías programadas |
+| `monitoring.trigger.ts` | Bajo demanda | Monitoreo de infraestructura |
+| `uptime.trigger.ts` | Diario | Verificación de uptime |
 
 ---
 
@@ -163,7 +240,9 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Lenguaje**: TypeScript 5
 - **UI**: Tailwind CSS v4 + OKLCH tokens
 - **Fonts**: DM Sans (display), Inter (body), JetBrains Mono (code)
-- **Gráficos**: Recharts, React Flow
+- **Gráficos**: Recharts, React Flow, Leaflet.js 🆕
+- **PDF**: @react-pdf/renderer 🆕
+- **Documentación API**: swagger-ui-react 🆕
 - **3D**: Three.js / React Three Fiber
 - **Estado**: Zustand, TanStack React Query
 - **Iconos**: Lucide React
@@ -193,14 +272,19 @@ src/
 │   │   ├── audits.ts             #   Crear/ejecutar auditorías
 │   │   ├── projects.ts           #   CRUD de proyectos
 │   │   └── reports.ts            #   Generar reportes
-│   ├── ai/                       # AI Health Dashboard
-│   ├── api/                      # API Routes (40+ endpoints)
+│   ├── ai/                       # AI Health Dashboard 🆕
+│   │   └── health/               #   Dashboard de salud de modelos
+│   ├── api/                      # API Routes (50+ endpoints)
 │   │   ├── ai/                   #   Copilot, reportes, healthcheck
+│   │   ├── api-keys/             #   🆕 CRUD + usage tracking + expiry
 │   │   ├── auth/                 #   Validate email, callback
 │   │   ├── cron/                 #   SIEM exporter, uptime
-│   │   ├── intelligence/         #   Investigaciones, tools, health
+│   │   ├── docs/                 #   🆕 API documentation pages
+│   │   ├── intelligence/         #   Investigaciones, tools, health, discovery
 │   │   ├── monitoring/           #   Monitoreo y alertas
-│   │   ├── notifications/        #   Push subscriptions
+│   │   ├── notifications/        #   Push subscriptions 🆕
+│   │   ├── public/v1/            #   🆕 Public REST API (API Key auth)
+│   │   ├── reports/pdf/          #   🆕 PDF generation endpoint
 │   │   └── security/             #   Audit logs, SIEM, CSP reports
 │   ├── components/               # UI Components (Dashboard)
 │   │   ├── tabs/                 #   Overview, Intelligence, Reports, etc.
@@ -208,48 +292,315 @@ src/
 │   │   ├── DashboardSidebar.tsx
 │   │   ├── ScoreGauge.tsx
 │   │   ├── AttackSurfaceGraph.tsx
-│   │   └── ...
+│   │   ├── MitreBadge.tsx        #   🆕 MITRE technique badge
+│   │   └── DownloadPdfButton.tsx #   🆕 PDF download con progress
+│   ├── docs/                     # 🆕 Documentation pages
+│   │   └── api/                  #   API reference + playground
 │   ├── intelligence/             # Intelligence page/layout
 │   ├── login/                    # Login con Magic Link
+│   ├── mitre-coverage/           # 🆕 MITRE ATT&CK coverage dashboard
 │   ├── projects/                 # Project detail + audit pages
-│   └── security/                 # Security audit dashboard
-│
-├── components/                   # Componentes reutilizables
-│   └── PushSubscribeButton.tsx   #   Push notification suscripción
+│   ├── security/                 # 🆕 Security audit dashboard
+│   │   └── audit/                #   Audit logs + SIEM alerts
+│   ├── settings/                 # 🆕 Settings pages
+│   │   └── api-keys/             #   API Keys dashboard
+│   └── swagger/                  # 🆕 Swagger UI (lazy-loaded)
 │
 ├── features/                     # Feature modules
-│   └── intelligence/             #   Intelligence Shell, Tool Catalog
-│
-├── lib/                          # Librerías
-│   └── email-validation.ts       #   Validación anti-spam/desechables
+│   └── intelligence/             #   Intelligence Shell, Tool Catalog, Geo Map
 │
 ├── server/                       # Server-only logic
 │   ├── ai/                       #   AI Router (model pool, fallback)
-│   ├── db/                       #   DB test utilities
-│   ├── intelligence/             #   Core engine
+│   ├── api/                      #   🆕 Public API middleware (withPublicApi)
+│   ├── intelligence/
 │   │   ├── core/                 #     Dispatcher, cache, circuit-breaker
-│   │   ├── executors/            #     DNS, network, email, OSINT, website
-│   │   ├── security/             #     Egress guard (SSRF)
-│   │   └── registry/             #     Tool registry
-│   ├── notifications/            #   Push notification service
-│   └── security/                 #   SIEM exporter, audit
+│   │   ├── discovery/            #     🆕 DNS brute, CT monitor, shadow detector
+│   │   ├── executors/            #     25+ intelligence tools
+│   │   ├── mitre/                #     🆕 MITRE ATT&CK mapping
+│   │   └── security/             #     Egress guard
+│   └── security/                 #     SIEM exporter, API key expiry alerts 🆕
 │
 ├── shared/                       # Shared across app
 │   ├── config/                   #   Env validation
-│   ├── db/                       #   Drizzle schemas (30+ tablas)
+│   ├── data/                     #   🆕 MITRE mapping data (shared)
+│   ├── db/                       #   Drizzle schemas (35+ tablas)
 │   │   └── schemas/              #     health, intelligence, monitoring,
-│   │                             #     security-audit, push-subscriptions
-│   ├── lib/                      #   Auth, ratelimit, audit-log, logger
-│   └── utils/                    #   Network, PDF export
+│   │                             #     security-audit, api-keys, push-subscriptions
+│   ├── lib/                      #   Auth, ratelimit, audit-log, withPublicApi
+│   └── utils/                    #   Network, PDF export, email validation
 │
-├── proxy.ts                      # Next.js 16 proxy (replaces middleware)
+├── proxy.ts                      # Next.js 16 proxy (CSP, HSTS, security headers)
 └── trigger/                      # Trigger.dev background tasks
+    ├── siem.trigger.ts           #   SIEM exporter (cada 5 min)
+    ├── discovery.trigger.ts      #   🆕 Discovery continuo (cada 6h)
+    ├── api-key-expiry.trigger.ts #   🆕 Expiración API Keys (diario)
     ├── audit.trigger.ts          #   Auditorías programadas
     ├── monitoring.trigger.ts     #   Monitoreo de infraestructura
-    ├── siem.trigger.ts           #   SIEM exporter (cada 5 min)
     ├── uptime.trigger.ts         #   Uptime checks
     └── webhook.trigger.ts        #   Webhook delivery
 ```
+
+---
+
+## 📦 Módulos destacados
+
+### 🔄 Descubrimiento Continuo de Activos (P0.1)
+
+```mermaid
+flowchart LR
+    A[Cron Trigger 6h] --> B[DNS Brute Force]
+    A --> C[Certificate Transparency]
+    A --> D[Shadow Detection]
+    B --> E{New vs Known}
+    C --> E
+    D --> E
+    E -->|New Asset| F[Insert intelligence_assets]
+    E -->|Known| G[Update lastSeenAt]
+    F --> H[Log asset_change]
+    F --> I[Generate Finding]
+    I --> J[Alert if exposed]
+```
+
+Módulo de descubrimiento automático que ejecuta cada 6 horas:
+- **DNS Brute Force**: prueba miles de subdominios contra el dominio objetivo
+- **CT Log Monitor**: consulta logs de Certificate Transparency para nuevos certificados
+- **Shadow Detector**: compara activos descubiertos vs conocidos, detecta shadow IT
+
+**Archivos:** `src/server/intelligence/discovery/` (5 archivos) · `src/trigger/discovery.trigger.ts`
+
+---
+
+### 🎯 MITRE ATT&CK Mapping (P1.6)
+
+```mermaid
+flowchart LR
+    A[Tool Registry] -->|toolId| B[MITRE_MAPPING]
+    B --> C{MitreTechnique}
+    C --> D[Reconnaissance TA0043]
+    C --> E[Resource Dev TA0042]
+    C --> F[Initial Access TA0001]
+    C --> G[Discovery TA0007]
+    C --> H[C2 TA0011]
+    C --> I[Defense Evasion TA0005]
+    D --> J[Badge in IntelligenceTab]
+    E --> J
+    F --> J
+    G --> J
+    H --> J
+    I --> J
+    J --> K[/mitre-coverage dashboard]
+```
+
+Cada hallazgo de inteligencia se mapea automáticamente a técnicas MITRE ATT&CK:
+- **25+ técnicas** cubriendo 6 tácticas
+- **Badge visual** con tooltip: `T1583.001 · DNS Zone Transfer`
+- **Dashboard** en `/mitre-coverage` con gráficos de cobertura por táctica
+- **Tooltip expandible** con técnica ID, nombre, táctica, descripción y link a MITRE
+
+**Archivos:** `src/server/intelligence/mitre/mapping.ts` · `src/app/components/MitreBadge.tsx` · `src/app/mitre-coverage/`
+
+---
+
+### 🌐 API Pública REST (P1.1)
+
+```mermaid
+flowchart LR
+    A[Client] -->|API Key| B[withPublicApi middleware]
+    B --> C{Authenticate}
+    C -->|Valid| D[Rate Limit Check]
+    C -->|Invalid| E[401 Unauthorized]
+    D -->|OK| F[Handler]
+    D -->|Exceeded| G[429 Rate Limited]
+    F --> H[Log usage → security_audit_logs]
+    F --> I[Response]
+```
+
+Endpoints públicos con autenticación via API Key + rate limiting + audit logging:
+
+| Endpoint | Método | Auth | Descripción |
+|----------|--------|------|-------------|
+| `GET /api/public/v1/health` | GET | ❌ | Health check público |
+| `GET /api/public/v1/intelligence` | GET | ✅ API Key | Listar investigaciones |
+| `POST /api/public/v1/intelligence` | POST | ✅ API Key | Crear investigación |
+
+**Arquitectura:** `withPublicApi(handler)` middleware reusable en `src/server/api/public-router.ts`
+
+---
+
+### 📄 Reportes PDF White-Label (P1.2)
+
+```mermaid
+flowchart LR
+    A[Download Button] -->|POST| B[/api/reports/pdf]
+    B --> C[Fetch Findings]
+    B --> D[Fetch Assets]
+    B --> E[Fetch Branding]
+    C --> F[Generate PDF]
+    D --> F
+    E --> F
+    F --> G[Buffer → Response]
+    G --> H[Browser Download]
+```
+
+Reportes PDF profesionales con:
+- **Logo y colores** del cliente (branding desde localStorage)
+- **Donut chart** de severidad de findings (SVG nativo)
+- **Bar chart** de scores por investigación
+- **Página de assets** (subdominios, IPs, certificados)
+- **Progress bar** durante la generación
+- **Notificaciones toast** de éxito/error
+
+**Archivos:** `src/app/api/reports/pdf/route.ts` · `src/app/components/DownloadPdfButton.tsx`
+
+---
+
+### 🗺️ Mapa Geo Interactivo (P2.1)
+
+Mapa Leaflet.js incrustado en IntelligenceTab que muestra:
+- **Markers** de IPs con coordenadas GeoIP
+- **Clusters** para múltiples activos en misma región
+- **Tooltips** con severidad y tipo de activo
+- **Colores**: chartreuse (bajo), amber (medio), destructive (alto)
+- **Interactivo**: zoom, pan, click para detalles
+
+---
+
+### 🚨 Alertas Multi-Canal + SIEM (P0.3)
+
+```mermaid
+flowchart LR
+    A[Security Event] -->|logSecurityEvent| B[security_audit_logs]
+    B --> C[SIEM Exporter cada 5min]
+    C --> D{Pattern Matched?}
+    D -->|Open Redirect Attack| E[WEBHOOK_FORMATTERS]
+    D -->|Rate Limit Bypass| E
+    D -->|CSP Spike| E
+    D -->|AI Model Failure| E
+    D -->|API Key Expiry| E
+    E --> F[Slack Webhook]
+    E --> G[Email via Resend]
+    E --> H[PagerDuty Events]
+    E --> I[Splunk HEC]
+    E --> J[Push Notification]
+    F --> K[persistDelivery → siem_alert_logs]
+    G --> K
+    H --> K
+    I --> K
+    J --> K
+```
+
+**7 reglas de detección:**
+| Regla | Patrón | Canales |
+|-------|--------|---------|
+| Open Redirect Attack | Múltiples open_redirect_attempt desde misma IP | Slack, Email, PagerDuty |
+| Rate Limit Bypass | rate_limit_hit desde IPs rotadas | Slack, Email |
+| AI Model Failure | ai_model_health con status=down | Slack, Email, PagerDuty |
+| CSP Spike | >10 csp_violation en 5 min | Slack, Email |
+| Auth Failure Burst | auth_failure en 1 min | Slack, PagerDuty |
+| API Key Expiry 🆕 | Keys expirando en 1-7 días | Slack, Email |
+| Heartbeat | Ping cada 30 min | Todos los canales |
+
+**Archivos:** `src/server/security/siem-exporter.ts` · `src/server/security/api-key-expiry-alert.ts` 🆕 · `src/trigger/siem.trigger.ts` · `src/trigger/api-key-expiry.trigger.ts` 🆕
+
+---
+
+### 🔑 API Keys Dashboard
+
+Dashboard visual en `/settings/api-keys` para gestionar keys de acceso programático:
+
+```mermaid
+flowchart LR
+    A[Dashboard /settings/api-keys] --> B[List Keys]
+    A --> C[Create Key]
+    A --> D[Revoke Key]
+    B --> E[GET /api/api-keys]
+    B --> F[GET /api/api-keys/:id/usage]
+    C --> G[POST /api/api-keys]
+    D --> H[DELETE /api/api-keys]
+    E --> I[Display Table]
+    F --> J[Usage Stats + Mini-bars]
+    G --> K[Reveal Modal]
+    G --> L[Daily Expiry Cron]
+    L --> M[SIEM Alert]
+```
+
+| Feature | Descripción |
+|---------|-------------|
+| **Stat cards** | Active Keys, Used This Week, Total Requests, Expiring Soon |
+| **Create form** | Nombre + expiración (30/90/365d o Never) + reveal modal one-time |
+| **Key table** | Nombre, prefix, creado, último uso, requests con mini-bars, expiración |
+| **Filters** | Búsqueda por nombre, checkbox expiring soon, sort newest/oldest, refresh |
+| **Usage tracking** | `GET /api/api-keys/:id/usage` consulta `security_audit_logs` |
+| **Expiry alerts** | Cron diario + alerta SIEM multi-canal (Slack/Email/PagerDuty) |
+
+**Archivos:** `src/app/settings/api-keys/` (2 archivos) · `src/server/security/api-key-expiry-alert.ts` · `src/trigger/api-key-expiry.trigger.ts`
+
+---
+
+### 📖 Swagger UI + Documentación API
+
+```mermaid
+flowchart LR
+    A[/swagger] --> B[Dynamic Import ~3MB]
+    A --> C[Page Shell renders instantly]
+    B --> D[swagger-ui-react loads]
+    D --> E[openapi.json spec]
+    E --> F[Interactive Try It]
+    A --> G[/docs/api]
+    G --> H[Static reference]
+    G --> I[API Playground]
+    I --> J[Execute real queries]
+```
+
+| Ruta | Descripción | Bundle |
+|------|-------------|--------|
+| `/swagger` | Swagger UI interactivo (lazy) | ~3MB (carga bajo demanda) |
+| `/openapi.json` | OpenAPI 3.0 spec raw | ~5KB |
+| `/docs/api` | Documentación estática con ejemplos | 0 (inline) |
+| `/docs/api/playground` | Try-it-yourself con API keys | 0 (inline) |
+| `/api/public/v1/health` | Health check público (sin auth) | 0 |
+
+**Arquitectura:** swagger-ui-react cargado con `next/dynamic` + `ssr: false` para no impactar otras páginas
+
+---
+
+### 🛡️ Security Audit Dashboard
+
+Dashboard en `/security/audit` para monitorear eventos de seguridad:
+
+| Feature | Descripción |
+|---------|-------------|
+| **Timeline** | Lista paginada de últimos 100 eventos |
+| **Filtros** | Por tipo de evento, IP, rango de fechas |
+| **SIEM Alerts tab** | Historial de alertas enviadas + estado de delivery |
+| **Test Webhooks** | Botón que dispara `GET /api/security/siem/test` |
+| **Eventos trackeados** | rate_limit_hit, open_redirect_attempt, csp_violation, auth_failure, ai_model_health, api_key_expiry |
+
+**Archivos:** `src/app/security/audit/` · `src/server/security/` · `src/shared/lib/audit-log.ts`
+
+---
+
+### 🤖 AI Health Dashboard
+
+Dashboard en `/ai/health` que monitorea los modelos de IA:
+- **Gráfico de salud** por modelo (healthy/degraded/down)
+- **Latencia promedio** diaria por modelo
+- **Timeline de fallos** con eventos de error
+- **Uptime** por modelo en porcentaje
+
+**Backend:** `GET /api/ai/healthcheck` ejecutado cada 6h via Vercel Cron
+
+---
+
+### 📱 Push Notifications
+
+Sistema de notificaciones push al navegador:
+- **Web Push API** con claves VAPID
+- **Botón de suscripción** en el dashboard
+- **Alertas SIEM** enviadas como push
+- **Suscripción persistida** en `push_subscriptions` table
+
+**Archivos:** `src/server/notifications/push.ts` · `src/app/components/PushSubscribeButton.tsx`
 
 ---
 
@@ -311,6 +662,11 @@ SIEM_WEBHOOK_PAGERDUTY=https://events.pagerduty.com/v2/...
 SIEM_WEBHOOK_SPLUNK=https://http-inputs-mysplunk.splunkcloud.com/...
 SIEM_PAGERDUTY_ROUTING_KEY=xxx
 
+# ─── Email (Resend) para SIEM y Magic Links ─────────────────────
+RESEND_API_KEY=re_xxx                # https://resend.com/api-keys
+SIEM_EMAIL_FROM=alerts@scaudit.com   # Remitente de alertas SIEM
+SIEM_EMAIL_TO=admin@company.com      # Destinatario de alertas SIEM
+
 # ─── Push Notifications (opcional) ──────────────────────────────
 VAPID_PUBLIC_KEY=xxx               # npx web-push generate-vapid-keys
 VAPID_PRIVATE_KEY=xxx
@@ -329,7 +685,7 @@ pnpm db:generate   # Generar migración desde schemas
 pnpm db:push       # Aplicar migraciones a Supabase
 ```
 
-Las migraciones se almacenan en `drizzle/` (9 migrations hasta la fecha).
+Las migraciones se almacenan en `drizzle/` (11 migrations hasta la fecha, incluyendo tablas `developer_api_keys`, `security_audit_logs`, `siem_alert_logs`, `ai_health_logs`, `push_subscriptions`).
 
 ---
 
@@ -392,16 +748,19 @@ SCAUDIT Pro usa un **design system propietario** definido en OKLCH, inspirado en
 ## 🛡️ Seguridad
 
 ### Content Security Policy (CSP)
-- Aplicada dinámicamente por proxy.ts con nonce por request
+- Aplicada dinámicamente por `proxy.ts` con nonce por request
 - `strict-dynamic` para scripts (excepto en dev con `unsafe-eval`)
 - Report endpoint: `/api/security/csp-report`
 - Meta tag CSP defense-in-depth para páginas prerendered
+- Header `Permissions-Policy` para restringir APIs de navegador
 
 ### Rate Limiting
-- **Decorate generico**: `withRateLimit(config, handler)` envuelve cualquier route handler
+- **Decorator genérico**: `withRateLimit(config, handler)` envuelve cualquier route handler
+- **Headers estándar**: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` en todas las respuestas
 - **Identificación por IP**: extracción jerárquica (x-vercel-forwarded-for → x-real-ip → x-forwarded-for)
 - **Fail closed** en producción si Redis no está disponible
 - **Audit logging**: cada rate limit hit se registra en `security_audit_logs`
+- **Rate limit por API Key**: 60 req/min en API pública
 
 ### Protección SSRF
 - `egress-guard.ts`: validación CIDR matemática para IPv4 e IPv6
@@ -411,16 +770,23 @@ SCAUDIT Pro usa un **design system propietario** definido en OKLCH, inspirado en
 
 ### SIEM (Security Information & Event Management)
 - **Exportador** que corre cada 5 min via Vercel Cron
-- **7 reglas de detección**: open redirect attacks, rate limit bypass, AI model failure, CSP spikes, auth failure bursts
-- **3 canales de alerta**: Slack, PagerDuty, Splunk
-- **Heartbeat** cada 30 min para verificar pipeline
+- **7 reglas de detección**: open redirect attacks, rate limit bypass, AI model failure, CSP spikes, auth failure bursts, API key expiry, heartbeat
+- **4 canales de alerta**: Slack, PagerDuty, Splunk, Email (Resend)
+- **2 alertas adicionales**: Push notifications + heartbeat cada 30 min
 - **Dashboard** en `/security/audit` con filtros por tipo, IP y fecha
 
 ### Autenticación
 - Magic Link sin contraseña
 - Validación de email anti-spam/anti-desechables (400+ dominios bloqueados)
 - Protección anti-open-redirect en callback
-- Rate limiting dedicado por endpoint
+- Rate limiting dedicado por endpoint (20/min validate-email, 10/min callback)
+
+### API Keys Security
+- Keys generadas con criptografía segura (`crypto.randomBytes(64)`)
+- Solo se muestra una vez (reveal modal)
+- Rate limiting por key
+- Detección de keys expiradas o próximas a expirar
+- Audit trail de cada uso
 
 ---
 
@@ -456,7 +822,8 @@ npx playwright test    # Con interfaz gráfica
 - Rate limiting (20+ requests en 60s, bypass por IP rotation)
 - CSP (bloqueo de inline scripts maliciosos)
 - Open redirect (next parameters maliciosos)
-- Visual regression (login, ScoreGauge, AttackSurfaceGraph)
+- Visual regression (login, ScoreGauge, AttackSurfaceGraph, IntelligenceTab SVGs)
+- API key auth (public endpoints)
 
 ### CI/CD Pipeline
 
@@ -477,7 +844,7 @@ El pipeline de GitHub Actions ejecuta:
 |----------|--------|-------------|
 | `/api/ai/copilot` | POST | Chat con AI Copilot de infraestructura |
 | `/api/ai/report` | POST | Generar reporte SEO ejecutivo |
-| `/api/ai/healthcheck` | GET | Health check de modelos AI |
+| `/api/ai/healthcheck` | GET | Health check de modelos AI (cron cada 6h) |
 
 ### Inteligencia
 
@@ -490,6 +857,30 @@ El pipeline de GitHub Actions ejecuta:
 | `/api/intelligence/runs` | POST | Ejecutar herramientas |
 | `/api/intelligence/drift` | GET/POST | Análisis de drift de seguridad |
 | `/api/intelligence/assets/graph` | GET | Graph de activos descubiertos |
+| `/api/intelligence/discovery` | 🆕 GET/POST | Descubrimiento continuo de activos |
+
+### API Pública (REST)
+
+| Endpoint | Método | Auth | Descripción |
+|----------|--------|------|-------------|
+| `GET /api/public/v1/health` | GET | ❌ | Health check público |
+| `GET /api/public/v1/intelligence` | GET | ✅ API Key | Listar investigaciones |
+| `POST /api/public/v1/intelligence` | POST | ✅ API Key | Crear investigación |
+
+### API Keys
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `GET /api/api-keys` | GET | Listar todas las keys |
+| `POST /api/api-keys` | POST | Crear nueva key |
+| `DELETE /api/api-keys` | DELETE | Revocar key |
+| `GET /api/api-keys/:id/usage` | 🆕 GET | Estadísticas de uso real |
+
+### Reportes
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `POST /api/reports/pdf` | 🆕 POST | Generar PDF white-label descargable |
 
 ### Seguridad
 
@@ -508,6 +899,12 @@ El pipeline de GitHub Actions ejecuta:
 | `/api/auth/validate-email` | POST | Validación de email en tiempo real |
 | `/auth/callback` | GET | Callback de Magic Link |
 
+### Notificaciones
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `POST /api/notifications/push-subscribe` | 🆕 POST | Suscribir navegador a push notifications |
+
 ### Monitoreo
 
 | Endpoint | Método | Descripción |
@@ -516,13 +913,15 @@ El pipeline de GitHub Actions ejecuta:
 | `/api/telemetry/vitals` | POST | Web Vitals desde RUM |
 | `/api/webhooks` | POST | Webhooks de integración externa |
 
-### Cron (Vercel Cron Jobs)
+### Cron (Vercel Cron Jobs + Trigger.dev)
 
-| Endpoint | Schedule | Descripción |
-|----------|----------|-------------|
-| `/api/cron/uptime` | `0 0 * * *` (diario) | Verificación de uptime |
-| `/api/cron/siem` | `*/5 * * * *` (cada 5 min) | SIEM exporter |
-| `/api/ai/healthcheck` | `0 */6 * * *` (cada 6h) | Health check de modelos AI |
+| Task | Schedule | Descripción |
+|------|----------|-------------|
+| `api/cron/uptime` | `0 0 * * *` (diario) | Verificación de uptime |
+| `api/cron/siem` | `*/5 * * * *` (cada 5 min) | SIEM exporter |
+| `api/ai/healthcheck` | `0 */6 * * *` (cada 6h) | Health check de modelos AI |
+| `trigger/discovery.trigger` | 🆕 Cada 6h | Descubrimiento continuo de activos |
+| `trigger/api-key-expiry.trigger` | 🆕 Diario 09:00 UTC | Alertas de expiración API Keys |
 
 ---
 
@@ -546,7 +945,7 @@ vercel --prod
 El archivo `vercel.json` ya incluye:
 - Framework `nextjs` con standalone output
 - Cron jobs para uptime, SIEM y health check
-- Configuración de imágenes
+- Configuración de imágenes y headers de seguridad
 
 **Importante:** NO configurar `NEXT_PUBLIC_DEV_BYPASS_AUTH=true` en producción — el guard `NODE_ENV === 'development'` lo desactiva automáticamente.
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname } from "../security/egress-guard";
 import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import { processDnsResults } from "../history/orchestrator";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 
@@ -74,6 +75,27 @@ export const dnsLookupExecutor: ToolExecutor<{ domain: string }, any> = {
     }
 
     ctx.log(`DNS Lookup finalizado. Registros IPv4: ${output.a.length}, Registros IPv6: ${output.aaaa.length}`);
+
+    // Persistir snapshots y detectar cambios via history orchestrator
+    processDnsResults({
+      projectId: ctx.projectId,
+      investigationId: ctx.investigationId,
+      domain,
+      results: {
+        a: output.a,
+        aaaa: output.aaaa,
+        mx: output.mx,
+        ns: output.ns,
+        txt: output.txt,
+      },
+    }).then(({ changes }) => {
+      if (changes.length > 0) {
+        ctx.log(`[History] ${changes.length} cambio(s) DNS detectados en ${domain}: ${changes.map(c => `${c.recordType} (${c.type})`).join(', ')}`);
+      }
+    }).catch((err) => {
+      console.error(`[DNS Lookup] Error persistiendo history para ${domain}:`, err);
+    });
+
     return { success: true, output, findings };
   },
 };
@@ -111,6 +133,16 @@ export const dnsMxExecutor: ToolExecutor<{ domain: string }, any> = {
         evidence: { recordsCount: 0 },
       });
     }
+
+    // Persistir snapshots y detectar cambios via history orchestrator
+    processDnsResults({
+      projectId: ctx.projectId,
+      investigationId: ctx.investigationId,
+      domain,
+      results: { mx: output.records },
+    }).then(({ changes }) => {
+      if (changes.length > 0) ctx.log(`[History] ${changes.length} cambio(s) MX en ${domain}`);
+    }).catch((err) => console.error(`[DNS MX] Error persistiendo history:`, err));
 
     return { success: true, output, findings };
   },
@@ -154,6 +186,16 @@ export const dnsTxtExecutor: ToolExecutor<{ domain: string }, any> = {
       });
     }
 
+    // Persistir snapshots y detectar cambios via history orchestrator
+    processDnsResults({
+      projectId: ctx.projectId,
+      investigationId: ctx.investigationId,
+      domain,
+      results: { txt: output.records },
+    }).then(({ changes }) => {
+      if (changes.length > 0) ctx.log(`[History] ${changes.length} cambio(s) TXT en ${domain}`);
+    }).catch((err) => console.error(`[DNS TXT] Error persistiendo history:`, err));
+
     return { success: true, output, findings };
   },
 };
@@ -191,6 +233,16 @@ export const dnsNsExecutor: ToolExecutor<{ domain: string }, any> = {
         evidence: { servers: nsRecords },
       });
     }
+
+    // Persistir snapshots y detectar cambios via history orchestrator
+    processDnsResults({
+      projectId: ctx.projectId,
+      investigationId: ctx.investigationId,
+      domain,
+      results: { ns: output.servers },
+    }).then(({ changes }) => {
+      if (changes.length > 0) ctx.log(`[History] ${changes.length} cambio(s) NS en ${domain}`);
+    }).catch((err) => console.error(`[DNS NS] Error persistiendo history:`, err));
 
     return { success: true, output, findings };
   },

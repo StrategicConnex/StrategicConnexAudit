@@ -2,7 +2,7 @@
 
 import {
   LayoutDashboard, Globe, Activity, Search, BarChart3, Settings,
-  ShieldCheck, Sliders, HeartPulse
+  ShieldCheck, Sliders, HeartPulse, Crosshair, BookOpen, Zap, Key
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -162,7 +162,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
       </div>
 
       {/* External Links */}
-      <div className="px-4 mb-1 z-10">
+      <div className="px-4 mb-1 z-10 space-y-1">
         <a
           href="/ai/health"
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
@@ -170,6 +170,38 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           <HeartPulse size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">Salud IA</span>
           <span className="ml-auto text-[9px] bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Monitor</span>
+        </a>
+        <a
+          href="/mitre-coverage"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+        >
+          <Crosshair size={18} strokeWidth={2} className="text-muted-fg" />
+          <span className="tracking-tight">Cobertura MITRE</span>
+          <span className="ml-auto text-[9px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">ATT&CK</span>
+        </a>
+        <a
+          href="/docs/api"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+        >
+          <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
+          <span className="tracking-tight">API Reference</span>
+          <span className="ml-auto text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Docs</span>
+        </a>
+        <a
+          href="/settings/api-keys"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+        >
+          <Key size={18} strokeWidth={2} className="text-muted-fg" />
+          <span className="tracking-tight">API Keys</span>
+          <span className="ml-auto text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Dev</span>
+        </a>
+        <a
+          href="/swagger"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+        >
+          <Zap size={18} strokeWidth={2} className="text-muted-fg" />
+          <span className="tracking-tight">API Playground</span>
+          <span className="ml-auto text-[9px] bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Swagger</span>
         </a>
       </div>
 

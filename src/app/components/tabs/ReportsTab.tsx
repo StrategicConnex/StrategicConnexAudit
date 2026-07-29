@@ -3,6 +3,7 @@ import {
   FileText, Download, BarChart3, Sparkles, RefreshCw, 
   Check, Copy, AlertCircle 
 } from 'lucide-react';
+import { DownloadPdfButton } from '@/app/components/DownloadPdfButton';
 import { parseMarkdownReport } from '../report-utils';
 import { projects } from '@/shared/db/schemas';
 
@@ -56,12 +57,11 @@ export function ReportsTab({
               <p className="text-[13px] leading-relaxed text-muted-fg">Informe ejecutivo premium con visualizaciones detalladas de auditoría técnica, rendimiento de enlaces y estrategias recomendadas.</p>
             </div>
           </div>
-          <button 
-            onClick={() => setActiveTab('overview')}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-muted/10 border border-border hover:border-primary/30 text-white rounded-xl hover:bg-muted/20 transition-all text-[11px] font-bold uppercase tracking-widest cursor-pointer"
-          >
-            <Download className="w-4 h-4" /> Ir a Proyectos
-          </button>
+          <DownloadPdfButton
+            projectId={selectedProjectId}
+            label="Descargar PDF"
+            size="md"
+          />
         </div>
 
         {/* Card 2 */}

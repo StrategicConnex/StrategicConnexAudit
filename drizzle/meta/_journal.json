@@ -2,75 +2,16 @@
   "version": "7",
   "dialect": "postgresql",
   "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1778264391353,
-      "tag": "0000_old_zaladane",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1778821125742,
-      "tag": "0001_silky_ikaris",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1747404000000,
-      "tag": "0002_quota_enforcement",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1779081439620,
-      "tag": "0003_outstanding_agent_brand",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1779131186779,
-      "tag": "0004_elite_cassandra_nova",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1779156930148,
-      "tag": "0005_soft_hairball",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1785096633568,
-      "tag": "0006_security_audit_logs",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1785100500000,
-      "tag": "0007_siem_alert_logs",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1785160500000,
-      "tag": "0008_ai_health_logs",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1785161800000,
-      "tag": "0009_push_subscriptions",
-      "breakpoints": true
-    }
+    {"idx": 0,"version": "7","when": 1778264391353,"tag": "0000_old_zaladane","breakpoints": true},
+    {"idx": 1,"version": "7","when": 1778821125742,"tag": "0001_silky_ikaris","breakpoints": true},
+    {"idx": 2,"version": "7","when": 1747404000000,"tag": "0002_quota_enforcement","breakpoints": true},
+    {"idx": 3,"version": "7","when": 1779081439620,"tag": "0003_outstanding_agent_brand","breakpoints": true},
+    {"idx": 4,"version": "7","when": 1779131186779,"tag": "0004_elite_cassandra_nova","breakpoints": true},
+    {"idx": 5,"version": "7","when": 1779156930148,"tag": "0005_soft_hairball","breakpoints": true},
+    {"idx": 6,"version": "7","when": 1785096633568,"tag": "0006_security_audit_logs","breakpoints": true},
+    {"idx": 7,"version": "7","when": 1785100500000,"tag": "0007_siem_alert_logs","breakpoints": true},
+    {"idx": 8,"version": "7","when": 1785160500000,"tag": "0008_ai_health_logs","breakpoints": true},
+    {"idx": 9,"version": "7","when": 1785161800000,"tag": "0009_push_subscriptions","breakpoints": true},
+    {"idx": 10,"version": "7","when": 1785342800000,"tag": "0010_dns_whois_history","breakpoints": true}
   ]
 }

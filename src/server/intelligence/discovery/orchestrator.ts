@@ -19,6 +19,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { runDnsBruteForce } from "./dns-brute";
 import { runCtMonitor } from "./ct-monitor";
 import { runShadowDetection } from "./shadow-detector";
+import { persistDnsSnapshot } from "../history/dns-history";
 import type { DiscoveryConfig, DiscoveryRunResult, AssetChange } from "./types";
 
 // ─── Persistencia de asset_changes (tabla separada para tracking) ─────────────
