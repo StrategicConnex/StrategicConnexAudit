@@ -164,6 +164,14 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
       {/* External Links */}
       <div className="px-4 mb-1 z-10 space-y-1">
         <a
+          href="/docs"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+        >
+          <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
+          <span className="tracking-tight">Documentación</span>
+          <span className="ml-auto text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Docs</span>
+        </a>
+        <a
           href="/ai/health"
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
