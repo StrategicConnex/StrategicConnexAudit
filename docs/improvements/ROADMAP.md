@@ -62,9 +62,27 @@ flowchart LR
     I --> J[Alert if exposed]
 ```
 
-### P0.2 🔴 Historical DNS/WHOIS Tracking
+### P0.2 ✅ Historical DNS/WHOIS Tracking
 
-**Pendiente.** Ver detalles en sección P0.2 más abajo.
+**Completado.** Módulo completo de persistencia DNS/WHOIS + change detection + alertas SIEM.
+
+**Archivos creados:**
+- `src/server/intelligence/history/types.ts` — Tipos compartidos
+- `src/server/intelligence/history/dns-history.ts` — Persistencia + detección DNS
+- `src/server/intelligence/history/whois-history.ts` — Persistencia + auto-diff WHOIS
+- `src/server/intelligence/history/orchestrator.ts` — Orchestrador (persist + detect + alert)
+- `src/server/security/dns-change-alert.ts` — Alertas SIEM para cambios DNS
+- `src/server/security/whois-change-alert.ts` — Alertas SIEM para cambios WHOIS
+- `src/app/components/HistoryPanel.tsx` — UI DNS/WHOIS/Timeline en IntelligenceTab
+- `src/app/api/intelligence/history/route.ts` — API endpoint con rate limit
+- `src/shared/db/schemas/history.ts` — Tablas Drizzle
+- `drizzle/0010_dns_whois_history.sql` — Migración SQL
+
+**Dashboard de seguridad:**
+- 4 pestañas en `/security/audit`: Events, SIEM, WHOIS Alerts, DNS Alerts
+- Cada cambio WHOIS/DNS muestra diff visual con badges de severidad y canal de entrega
+
+**Pipeline validado:** Test de integración contra Supabase real pasado exitosamente.
 
 ### P0.3 ✅ Alertas Multi-Canal en Tiempo Real
 
@@ -247,11 +265,11 @@ Dashboard visual completo con:
 | Fase | Items | Completado | % |
 |------|-------|------------|---|
 | Fase 0 — Cimientos | 15 | 15 | ✅ 100% |
-| Fase 1 — P0 Fundación | 3 | 2 | 🟡 67% |
+| Fase 1 — P0 Fundación | 3 | 3 | ✅ **100%** |
 | Fase 2 — P1 Core Features | 6 | 3 | 🟡 50% |
 | Fase 3 — P2 UX/Dashboard | 6 | 1 | 🟢 17% |
 | Fase 4 — P3 Deseable | 4 | 0 | ⬜ 0% |
-| **Total** | **34** | **21** | **62%** |
+| **Total** | **34** | **22** | **65%** |
 
 ---
 
@@ -259,16 +277,9 @@ Dashboard visual completo con:
 ## PENDIENTE PARA PRÓXIMOS SPRINTS
 ## ═══════════════════════════════════════════════════════
 
-### P0.2 Historical DNS/WHOIS Tracking
+### P0.2 Historical DNS/WHOIS Tracking ✅
 
-**Inspiración:** SecurityTrails Passive DNS
-
-**Archivos a crear:**
-- `src/server/intelligence/history/` (nuevo módulo)
-- Endpoint `GET /api/intelligence/history/:type/:target`
-- UI de timeline comparativo en IntelligenceTab
-
-**Estimación:** 4-5 días
+**Completado.** Ver sección correspondiente arriba.
 
 ### P1.3 Team Collaboration + RBAC
 
