@@ -20,6 +20,8 @@ import {
 } from "../executors/website-executors";
 import { osintWhoisExecutor } from "../executors/osint-executors";
 import { networkBgpExecutor, threatCustomIntelExecutor } from "../executors/advanced-executors";
+import { whoisFullExecutor } from "../executors/whois-executors";
+
 
 export const executorRegistry: Record<string, ToolExecutor> = {
   "dns.lookup": dnsLookupExecutor,
@@ -43,6 +45,7 @@ export const executorRegistry: Record<string, ToolExecutor> = {
   "tls.scan": websiteTlsExecutor,
   "website.robots": websiteRobotsExecutor,
   "osint.whois": osintWhoisExecutor,
+  "whois.full": whoisFullExecutor,
   "network.bgp": networkBgpExecutor,
   "threat.custom_intel": threatCustomIntelExecutor,
 };

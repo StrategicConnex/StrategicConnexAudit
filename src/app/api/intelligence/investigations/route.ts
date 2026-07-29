@@ -10,6 +10,7 @@ import {
   intelligenceRunEvents,
   intelligenceToolRuns
 } from "@/shared/db/schemas";
+import { checkIntelScanRateLimit } from "@/shared/lib/ratelimit";
 import { createInvestigationSchema } from "@/features/intelligence/validators/intelligence.schema";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
@@ -139,6 +140,15 @@ export async function POST(req: NextRequest) {
     }
 
     const { projectId, target } = parseResult.data;
+
+    // Rate Limiting específico para escaneos de infraestructura
+    const rateLimit = await checkIntelScanRateLimit(user.id);
+    if (!rateLimit.success) {
+      return NextResponse.json({ 
+        success: false, 
+        error: "Límite de escaneos de infraestructura excedido. Espera unos segundos e intenta de nuevo." 
+      }, { status: 429 });
+    }
 
     // Check project authorization inside RLS context
     const project = await withRLS(user.id, async (tx) => {

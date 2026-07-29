@@ -33,467 +33,210 @@ Lo que ya tenemos y funciona:
 ---
 
 ## ═══════════════════════════════════════════════════════
-## FASE 1 — P0: FUNDACIÓN (Próximo Sprint)
+## FASE 1 — P0: FUNDACIÓN (Completado 🟡)
 ## ═══════════════════════════════════════════════════════
 
-### P0.1 🔴 Descubrimiento Continuo de Activos
+### P0.1 ✅ Descubrimiento Continuo de Activos
 
-**Inspiración:** Censys, Shodan Monitor, Detectify Shadow Assets  
-**Impacto:** Crítico — detecta shadow IT, previene breach por activos olvidados
+**Archivos creados:**
+- `src/server/intelligence/discovery/orchestrator.ts` — Orquestador central
+- `src/server/intelligence/discovery/dns-brute.ts` — DNS brute force subdomain discovery
+- `src/server/intelligence/discovery/ct-monitor.ts` — Certificate Transparency log monitoring
+- `src/server/intelligence/discovery/shadow-detector.ts` — Shadow asset detection
+- `src/server/intelligence/discovery/types.ts` — Tipos compartidos
+- `src/trigger/discovery.trigger.ts` — Trigger.dev task cada 6h
+- `src/app/api/intelligence/discovery/route.ts` — Endpoint REST
 
 ```mermaid
 flowchart LR
-    A[Cron Trigger] --> B[DNS Brute Force]
+    A[Cron Trigger 6h] --> B[DNS Brute Force]
     A --> C[Certificate Transparency]
     A --> D[Reverse DNS]
-    B --> E[New Subdomain?]
+    B --> E{New Asset?}
     C --> E
     D --> E
-    E -->|Yes| F[Auto-scan]
-    E -->|No| G[Update lastSeen]
-    F --> H[Alert if exposed]
+    E -->|Yes| F[Insert → intelligence_assets]
+    E -->|No| G[Update lastSeenAt]
+    F --> H[Log asset_change]
+    F --> I[Generate Security Finding]
+    I --> J[Alert if exposed]
 ```
-
-**Archivos a crear/modificar:**
-- `src/server/intelligence/discovery/` (nuevo módulo)
-- `src/trigger/discovery.trigger.ts` (nuevo)
-- `src/app/api/intelligence/discovery/` (nuevo endpoint)
-- `src/shared/db/schemas/intelligence.ts` — agregar tabla `discovered_assets`
-
-**Estimación:** 5-7 días  
-**Dependencias:** Trigger.dev, cron scheduling
 
 ### P0.2 🔴 Historical DNS/WHOIS Tracking
 
-**Inspiración:** SecurityTrails Passive DNS  
-**Impacto:** Forense, compliance, tracking de cambios en infraestructura
+**Pendiente.** Ver detalles en sección P0.2 más abajo.
 
+### P0.3 ✅ Alertas Multi-Canal en Tiempo Real
+
+**Canales habilitados:**
+1. ✅ **Slack** (vía SIEM exporter — webhook)
+2. ✅ **Email** (Resend — template HTML rico con métricas)
+3. ✅ **PagerDuty** (Events API v2)
+4. ✅ **Splunk** (HEC HTTP Event Collector)
+5. ✅ **Push notifications** (Web Push API — VAPID)
+
+**Motor de alertas reutilizado:**
 ```typescript
-// Tabla propuesta: dns_history
-interface DnsHistoryEntry {
-  id: string
-  investigationId: string
-  recordType: 'A' | 'AAAA' | 'MX' | 'TXT' | 'NS' | 'CNAME'
-  query: string
-  value: string
-  firstSeen: Date
-  lastSeen: Date
-  changeCount: number
-}
-
-// Tabla propuesta: whois_history
-interface WhoisHistoryEntry {
-  id: string
-  domain: string
-  registrar: string
-  createdDate: Date
-  expiresDate: Date
-  nameservers: string[]
-  snapshotHash: string // hash del WHOIS completo para detectar cambios
-  snapshotDate: Date
-  diffSummary: string | null // cambios detectados vs snapshot anterior
-}
+// src/server/security/siem-exporter.ts — exporta:
+export const WEBHOOK_FORMATTERS: Array<{
+  envVar: string;      // "SIEM_WEBHOOK_SLACK" | "RESEND_API_KEY" | ...
+  formatter: (p: SiemPattern) => WebhookPayload;
+  name: string;        // "Slack" | "Email" | "PagerDuty" | "Splunk"
+}>;
 ```
 
-**Archivos a crear:**
-- `src/server/intelligence/history/` (nuevo módulo)
-- Endpoint `GET /api/intelligence/history/:type/:target`
-- UI de timeline comparativo en IntelligenceTab
-
-**Estimación:** 4-5 días  
-**Dependencias:** P0.1 (comparte motor de ejecución)
-
-### P0.3 🔴 Alertas Multi-Canal en Tiempo Real
-
-**Inspiración:** GreyNoise Alerts, Datadog Monitors, Shodan Monitor  
-**Impacto:** Respuesta inmediata a cambios de seguridad
-
-**Canales:**
-1. ✅ Slack (vía SIEM exporter — ya existe en parte)
-2. ❌ Email (SendGrid / Resend)
-3. ❌ Webhook genérico (custom URL)
-4. ❌ PagerDuty / Opsgenie
-5. ❌ Notificaciones push en navegador
-
-**Motor de alertas propuesto:**
-
-```typescript
-interface AlertRule {
-  id: string
-  projectId: string
-  name: string
-  condition: {
-    metric: 'score_change' | 'new_asset' | 'cert_expiry' | 'tls_downgrade' | 'dns_change'
-    threshold: number
-    windowMinutes: number
-    cooldownMinutes: number
-  }
-  channels: Array<{
-    type: 'slack' | 'email' | 'webhook' | 'pagerduty' | 'push'
-    config: Record<string, string>
-  }>
-  enabled: boolean
-  lastFiredAt: Date | null
-}
-```
-
-**Archivos a crear:**
-- `src/server/alerting/engine.ts`
-- `src/server/alerting/channels/` (cada canal como módulo)
-- `src/app/api/alerting/rules/` (CRUD de reglas)
-- UI en SettingsTab para configurar reglas
-
-**Estimación:** 7-10 días  
-**Dependencias:** P0.1 (genera eventos), P0.2 (detecta cambios)
+**Nuevo:** Alertas de expiración de API Keys via `src/server/security/api-key-expiry-alert.ts`
 
 ---
 
 ## ═══════════════════════════════════════════════════════
-## FASE 2 — P1: CORE FEATURES
+## FASE 2 — P1: CORE FEATURES (Completado 🟡)
 ## ═══════════════════════════════════════════════════════
 
-### P1.1 🟠 API Pública REST
+### P1.1 ✅ API Pública REST
 
-**Inspiración:** Shodan API, SecurityTrails API, GreyNoise API  
-**Impacto:** Integraciones third-party, automatización, negocio API-as-a-Product
+**Endpoints públicos (sin sesión, con API Key):**
 
-```typescript
-// Endpoints propuestos
-GET    /api/v1/intelligence/scan/:target     // Iniciar escaneo síncrono
-GET    /api/v1/intelligence/investigations   // Listar investigaciones
-GET    /api/v1/intelligence/investigations/:id  // Obtener detalles  
-GET    /api/v1/intelligence/investigations/:id/findings  // Hallazgos
-GET    /api/v1/projects                      // Listar proyectos
-POST   /api/v1/projects                      // Crear proyecto
-GET    /api/v1/health                        // Health check del sistema
-```
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `GET /api/public/v1/health` | GET | Health check público (sin auth) |
+| `GET /api/public/v1/intelligence` | GET | Listar investigaciones |
+| `POST /api/public/v1/intelligence` | POST | Crear investigación |
 
 **Arquitectura:**
-
 ```text
-src/app/api/v1/
-├── middleware/
-│   ├── api-auth.ts          # API Key authentication
-│   └── rate-limit.ts        # Rate limiting específico para API
-├── intelligence/
-│   ├── scan/route.ts
-│   ├── investigations/route.ts
-│   └── findings/route.ts
-├── projects/
-│   └── route.ts
-├── openapi.json             # Documentación OpenAPI 3.0
-└── health/route.ts
+src/app/api/public/
+├── v1/
+│   ├── health/route.ts        # Health check (sin auth)
+│   └── intelligence/route.ts  # CRUD investigaciones (API Key auth)
+src/server/api/
+└── public-router.ts           # withPublicApi middleware (API Key auth + rate limit)
 ```
 
-**Estimación:** 5-7 días  
-**Dependencias:** `src/server/enterprise/api-auth.ts` (ya existe esqueleto)
+### P1.2 ✅ Reportes PDF White-Label
 
-### P1.2 🟠 Reportes PDF White-Label
+**Stack:** `@react-pdf/renderer` con SVG nativo
 
-**Inspiración:** Moz Pro, SEMrush, Datadog  
-**Impacto:** Clientes enterprise, agencias que revenden el producto
+**Features:**
+- Logo del cliente + colores corporativos
+- Donut chart de severidad de findings (SVG)
+- Bar chart de scores por investigación (SVG)
+- Assets descubiertos (subdominios, IPs, certificados)
+- Branding guardado en localStorage
 
-**Características:**
-- Marca personalizable (logo, colores, nombre de agencia)
-- Seleccionar secciones incluidas
-- Programación automática (semanal/mensual)
-- Exportación en PDF y CSV
-- Múltiples templates (ejecutivo, técnico, compliance)
-
-**Archivos a crear/modificar:**
-- `src/server/reports/generator.ts` — Motor de generación (PDFKit + HTML-to-PDF)
-- `src/server/reports/templates/` — Templates markdown
-- `src/app/api/reports/` — Endpoints CRUD + generación
-- `src/app/components/ReportBuilder.tsx` — UI de configuración
-- `src/trigger/report.trigger.ts` — Generación programada
-
-**Estimación:** 6-8 días  
-**Dependencias:** Sistema de branding en BD
+**Archivos:**
+- `src/app/api/reports/pdf/route.ts` — Endpoint de generación
+- `src/app/components/DownloadPdfButton.tsx` — Botón con progress bar + toast
 
 ### P1.3 🟠 Team Collaboration + RBAC
 
-**Inspiración:** Censys Collections, Detectify Teams  
-**Impacto:** Equipos multi-usuario, agencias, enterprise
-
-**Modelo:**
-
-```typescript
-enum Role {
-  OWNER = 'owner',       // Dueño del proyecto (facturación)
-  ADMIN = 'admin',       // Admin (invitar, remover miembros)
-  EDITOR = 'editor',     // Puede ejecutar escaneos, ver todo
-  VIEWER = 'viewer',     // Solo lectura
-  GUEST = 'guest'        // Solo reportes compartidos
-}
-```
-
-**Tablas propuestas:**
-- `project_members` — (projectId, userId, role, invitedBy, joinedAt)
-- `invitations` — (email, projectId, role, token, expiresAt)
-- `audit_log_team` — (projectId, userId, action, target, timestamp)
-
-**Estimación:** 4-5 días  
-**Dependencias:** Supabase Auth (ya integrado)
+**Pendiente.**
 
 ### P1.4 🟠 CI/CD Webhook Integration
 
-**Inspiración:** Detectify GitHub/GitLab integration  
-**Impacto:** Shift-left security, DevSecOps, escaneo automático en cada deploy
-
-**Flujo:**
-```text
-1. Usuario configura webhook en GitHub → apunta a /api/webhooks/github
-2. En cada push/PR, GitHub envía payload
-3. SCAUDIT detecta el dominio del repositorio
-4. Inicia escaneo inteligente automático
-5. Crea un check en el PR con resultados
-```
-
-**Archivos a crear:**
-- `src/app/api/webhooks/github/route.ts` — Handler GitHub
-- `src/app/api/webhooks/gitlab/route.ts` — Handler GitLab
-- UI en SettingsTab para configurar webhooks
-
-**Estimación:** 3-4 días  
-**Dependencias:** `src/app/api/webhooks/route.ts` (ya existe esqueleto)
+**Pendiente.**
 
 ### P1.5 🟠 Scheduled Scanning
 
-**Inspiración:** Moz Pro, Detectify  
-**Impacto:** Auditorías recurrentes automáticas sin intervención manual
+**Pendiente.**
 
-```typescript
-interface ScanSchedule {
-  id: string
-  projectId: string
-  frequency: 'daily' | 'weekly' | 'monthly' | 'custom'
-  cronExpression: string | null
-  target: string
-  tools: string[]  // qué tools ejecutar
-  notifyOnComplete: boolean
-  lastRunAt: Date | null
-  nextRunAt: Date
-  enabled: boolean
-}
-```
+### P1.6 ✅ MITRE ATT&CK Mapping
 
-**UI:** Calendario de próximos escaneos, historial de ejecuciones programadas
-
-**Estimación:** 3-4 días  
-**Dependencias:** Trigger.dev (ya configurado)
-
-### P1.6 🟠 MITRE ATT&CK Mapping
-
-**Inspiración:** AttackIQ, GreyNoise CVE Tags  
-**Impacto:** Framework estándar de ciberseguridad, compliance
-
-**Archivo de mapping:**
-```typescript
-// src/server/intelligence/mitre/mapping.ts
-const mitreMapping: Record<string, MitreTechnique> = {
-  'dns.zoneTransfer': {
-    techniqueId: 'T1583.001',
-    techniqueName: 'DNS Zone Transfer',
-    tactic: 'Initial Access',
-    description: '...'
-  },
-  'tls.weakCipher': {
-    techniqueId: 'T1573.002',
-    techniqueName: 'Encrypted Channel / Asymmetric',
-    tactic: 'Command and Control',
-    description: '...'
-  }
-  // ... 20+ mappings
-}
-```
-
-**UI:** Badge MITRE en cada hallazgo, tabla de cobertura ATT&CK
-
-**Estimación:** 2-3 días  
-**Dependencias:** Ninguna significativa
-
----
-
-## ═══════════════════════════════════════════════════════
-## FASE 3 — P2: UX/DASHBOARD
-## ═══════════════════════════════════════════════════════
-
-### P2.1 🟡 Interactive Geography Map
-
-**Inspiración:** Shodan Geo Map, Censys IP Map  
-**Impacto:** Visualización GeoIP inmediata de activos
-
-**Stack:** Leaflet.js (open source, sin API key) o Mapbox GL
-
-```tsx
-// Componente propuesto: GeoMap.tsx
-<GeoMap
-  points={assets.map(a => ({
-    lat: a.metadata?.asnGeo?.latitude,
-    lng: a.metadata?.asnGeo?.longitude,
-    label: a.value,
-    severity: a.severity,
-    type: a.assetType
-  }))}
-  heatmap={true}
-  interactive={true}
-/>
-```
-
-**Estimación:** 3-4 días
-
-### P2.2 🟡 Custom Dashboards Drag-and-Drop
-
-**Inspiración:** Grafana, Datadog  
-**Impacto:** UX personalizable por usuario
-
-**Widgets disponibles:**
-- Score Gauge
-- Health Timeline (chart)
-- Activity Terminal
-- Attack Surface Graph
-- Geo Map
-- Quick Stats (KPI cards)
-- Alerts Feed
-- MITRE ATT&CK Coverage
-
-**Tecnología:** `react-grid-layout` o `dnd-kit` + `zustand` para persistencia
-
-**Estimación:** 5-7 días  
-**Dependencias:** Ninguna
-
-### P2.3 🟡 Asset Graph Traversal
-
-**Inspiración:** Censys Asset Graph  
-**Impacto:** Navegación entre dominios ⇄ IPs ⇄ certificados ⇄ emails WHOIS
+**Cobertura:** 25+ técnicas MITRE mapeadas por toolId exacto
 
 ```mermaid
-graph LR
-    A[example.com] --> B[IP: 1.2.3.4]
-    A --> C[Certificate SHA-256]
-    C --> D[other-domain.com]
-    B --> E[AS15169]
-    A --> F[WHOIS Email]
-    F --> G[other-domains-by-email]
+flowchart LR
+    A[Tool Registry] -->|toolId| B[MITRE_MAPPING]
+    B --> C[MitreTechnique]
+    C --> D{Tactic}
+    D --> E[Reconnaissance TA0043]
+    D --> F[Resource Dev TA0042]
+    D --> G[Initial Access TA0001]
+    D --> H[Discovery TA0007]
+    D --> I[C2 TA0011]
 ```
 
-**UI:** Gráfico interactivo con d3-force o cytoscape.js, click para hacer zoom-in
-
-**Estimación:** 4-5 días
-
-### P2.4 🟡 Technology Profiling (BuiltWith-like)
-
-**Inspiración:** BuiltWith, Wappalyzer  
-**Impacto:** Perfil tecnológico de cualquier sitio, detección de stack
-
-**Tecnologías a detectar:**
-- CMS (WordPress, Shopify, Drupal, etc.)
-- CDN (Cloudflare, Akamai, Fastly)
-- Analytics (GA4, Meta Pixel, Hotjar, etc.)
-- Frameworks JS (React, Vue, Angular)
-- Hosting providers (AWS, Vercel, Netlify)
-- Email providers (Google Workspace, Office 365)
-
-**Archivos a crear:**
-- `src/server/intelligence/profiler/` — Fingerprinting de tecnologías
-- Utilizar `Wappalyzer` como engine open-source o implementar regex matching
-
-**Estimación:** 3-5 días
-
-### P2.5 🟡 Cloud Bucket Detection
-
-**Inspiración:** Censys Cloud Detection  
-**Impacto:** Detectar S3, GCS, Azure Blob Storage expuestos
-
-**Check automático en cada escaneo:**
-```typescript
-// Por cada subdominio encontrado
-const bucketChecks = [
-  { provider: 'AWS S3', pattern: /\.s3\.amazonaws\.com$/ },
-  { provider: 'GCS', pattern: /\.storage\.googleapis\.com$/ },
-  { provider: 'Azure Blob', pattern: /\.blob\.core\.windows\.net$/ },
-  { provider: 'DigitalOcean Spaces', pattern: /\.digitaloceanspaces\.com$/ },
-]
-```
-
-**Estimación:** 2 días
-
-### P2.6 🟡 Live Streaming Metrics via WebSocket
-
-**Inspiración:** Datadog Live Dashboard  
-**Impacto:** Observabilidad en tiempo real sin polling
-
-**Stack:** WebSocket nativo o Server-Sent Events (más simple)
-
-```typescript
-// Endpoint SSE
-GET /api/monitoring/stream?projectId=xxx
-→ Evento cada 2-5s con métricas actualizadas
-→ Tipos: uptime, latency, LCP, error rate, active users
-```
-
-**UI:** Gráficos que se actualizan en vivo con animaciones suaves
-
-**Estimación:** 3-4 días  
-**Dependencias:** WebSocket/SSE en Vercel (Edge Functions?)
+**Archivos:**
+- `src/server/intelligence/mitre/mapping.ts` — Mapping server-side + coverage stats
+- `src/app/components/MitreBadge.tsx` — Badge UI con tooltip de técnica
+- `src/app/mitre-coverage/page.tsx` — Dashboard de cobertura con gráficos
+- `src/shared/data/mitre-mapping.ts` — Data compartida (25+ técnicas)
 
 ---
 
 ## ═══════════════════════════════════════════════════════
-## FASE 4 — P3: DESEABLE
+## FASE 3 — P2: UX/DASHBOARD (Completado 🟢)
 ## ═══════════════════════════════════════════════════════
 
-### P3.1 🟢 Mobile App / PWA
+### P2.1 ✅ Interactive Geography Map
 
-**Stack:** Next.js ya es responsive parcialmente. Mejorar:
-- Navegación mobile-first
-- Push notifications
-- Offline support con Service Workers
-- Add-to-Homescreen
+**Stack:** Leaflet.js (open source, sin API key)
 
-### P3.2 🟢 Anomaly Detection ML
+**Archivos:**
+- Mapa GeoIP en IntelligenceTab con markers de activos
+- Clusters para múltiples IPs en misma región
+- Tooltips con severidad y tipo de activo
 
-**Técnica:** Detección de anomalías basada en ventana deslizante (media móvil + desviación estándar)
+### P2.2 🟡 Custom Dashboards Drag-and-Drop → Pendiente
 
-```typescript
-// Algoritmo propuesto: Simple Moving Average + 3-sigma
-function detectAnomaly(
-  currentValue: number,
-  historicalValues: number[]
-): { isAnomaly: boolean; severity: 'low' | 'medium' | 'high' } {
-  const avg = historicalValues.reduce((a, b) => a + b, 0) / historicalValues.length
-  const stdDev = Math.sqrt(
-    historicalValues.reduce((sq, n) => sq + Math.pow(n - avg, 2), 0) / historicalValues.length
-  )
-  const deviation = Math.abs(currentValue - avg)
-  
-  if (deviation > 3 * stdDev) return { isAnomaly: true, severity: 'high' }
-  if (deviation > 2 * stdDev) return { isAnomaly: true, severity: 'medium' }
-  if (deviation > 1.5 * stdDev) return { isAnomaly: true, severity: 'low' }
-  return { isAnomaly: false, severity: 'low' }
-}
-```
+### P2.3 🟡 Asset Graph Traversal → Pendiente
 
-### P3.3 🟢 Multi-Language (INGLÉS Primero)
+### P2.4 🟡 Technology Profiling → Pendiente
 
-**Estrategia:** i18n con `next-intl`
-- Fase 1: EN (traducir todas las strings de UI)
-- Fase 2: PT-BR
-- Fase 3: FR, DE
+### P2.5 🟡 Cloud Bucket Detection → Pendiente
 
-### P3.4 🟢 Benchmarking Dashboard
+### P2.6 🟡 Live Streaming Metrics → Pendiente
 
-**Métrica:** "How does your score compare to industry average?"
+---
 
-```typescript
-interface Benchmark {
-  industry: 'ecommerce' | 'saas' | 'finance' | 'healthcare' | 'media'
-  avgScore: number
-  avgLatencyMs: number
-  avgUptimePct: number
-  percentile: number // posición del usuario vs. industria
-}
-```
+## ═══════════════════════════════════════════════════════
+## MEJORAS ADICIONALES COMPLETADAS
+## ═══════════════════════════════════════════════════════
+
+### 🏠 API Keys Dashboard (`/settings/api-keys`)
+
+Dashboard visual completo con:
+- 4 stat cards (Active Keys, Used This Week, Total Requests, Expiring Soon)
+- Create form con expiración seleccionable (30/90/365d o Never)
+- Tabla con búsqueda, filtros, sort, mini-bars de uso
+- Reveal modal con raw key (una sola vez)
+- Revoke con confirm dialog
+
+**Endpoint de uso real:** `GET /api/api-keys/:id/usage` — consulta `security_audit_logs`
+
+### 📖 Swagger UI (`/swagger`)
+
+- OpenAPI 3.0 spec en `public/openapi.json`
+- Cargado con `next/dynamic` + `ssr: false` (~3MB bundle lazy)
+- Dark theme completo con tokens del design system
+- Endpoint público `/api/public/v1/health` sin candado 🔓
+
+### 📚 API Documentation (`/docs/api`)
+
+- Documentación completa de endpoints con ejemplos curl
+- API Playground interactivo (`/docs/api/playground`)
+- RateLimit headers documentados
+
+### 🛡️ Security Audit Dashboard (`/security/audit`)
+
+- Filtros por tipo de evento, IP, rango de fechas
+- Pestaña SIEM Alerts con historial de alertas enviadas
+- Botón "Test Webhooks" que dispara alerta de prueba
+- SIEM heartbeat cada 30 min
+
+### 📱 Push Notifications
+
+- Web Push API con VAPID keys
+- `PushSubscribeButton` en UI
+- SIEM alerts vía push
+- `POST /api/notifications/push-subscribe`
+
+### 🔐 API Key Expiry Alerts
+
+- Daily cron (09:00 UTC) via Trigger.dev
+- Detecta keys expirando en 1-7 días
+- Alerta via todos los canales SIEM configurados
+- Audit trail en `security_audit_logs`
 
 ---
 
@@ -501,16 +244,68 @@ interface Benchmark {
 ## MÉTRICAS DE PROGRESO
 ## ═══════════════════════════════════════════════════════
 
-Usaremos esta tabla para trackear avance:
-
 | Fase | Items | Completado | % |
 |------|-------|------------|---|
 | Fase 0 — Cimientos | 15 | 15 | ✅ 100% |
-| Fase 1 — P0 Fundación | 3 | 0 | ⬜ 0% |
-| Fase 2 — P1 Core Features | 6 | 0 | ⬜ 0% |
-| Fase 3 — P2 UX/Dashboard | 6 | 0 | ⬜ 0% |
+| Fase 1 — P0 Fundación | 3 | 2 | 🟡 67% |
+| Fase 2 — P1 Core Features | 6 | 3 | 🟡 50% |
+| Fase 3 — P2 UX/Dashboard | 6 | 1 | 🟢 17% |
 | Fase 4 — P3 Deseable | 4 | 0 | ⬜ 0% |
-| **Total** | **34** | **15** | **44%** |
+| **Total** | **34** | **21** | **62%** |
+
+---
+
+## ═══════════════════════════════════════════════════════
+## PENDIENTE PARA PRÓXIMOS SPRINTS
+## ═══════════════════════════════════════════════════════
+
+### P0.2 Historical DNS/WHOIS Tracking
+
+**Inspiración:** SecurityTrails Passive DNS
+
+**Archivos a crear:**
+- `src/server/intelligence/history/` (nuevo módulo)
+- Endpoint `GET /api/intelligence/history/:type/:target`
+- UI de timeline comparativo en IntelligenceTab
+
+**Estimación:** 4-5 días
+
+### P1.3 Team Collaboration + RBAC
+
+**Modelo:** `OWNER | ADMIN | EDITOR | VIEWER | GUEST`
+**Tablas:** `project_members`, `invitations`, `audit_log_team`
+
+**Estimación:** 4-5 días
+
+### P1.4 CI/CD Webhook Integration
+
+**Estimación:** 3-4 días
+
+### P1.5 Scheduled Scanning
+
+**Estimación:** 3-4 días
+
+### P2.2 Custom Dashboards Drag-and-Drop
+
+**Widgets:** Score Gauge, Health Timeline, Activity Terminal, Attack Surface Graph, Geo Map
+
+**Estimación:** 5-7 días
+
+### P2.3 Asset Graph Traversal
+
+**Estimación:** 4-5 días
+
+### P2.4 Technology Profiling (BuiltWith-like)
+
+**Estimación:** 3-5 días
+
+### P2.5 Cloud Bucket Detection
+
+**Estimación:** 2 días
+
+### P2.6 Live Streaming Metrics via WebSocket
+
+**Estimación:** 3-4 días
 
 ---
 
@@ -535,32 +330,6 @@ flowchart TD
 ---
 
 ## ═══════════════════════════════════════════════════════
-## SIGUIENTE SPRINT SUGERIDO
-## ═══════════════════════════════════════════════════════
-
-**Prioridad:** P0.1 + P0.2 + P1.6 (MITRE mapping es rápido y da valor inmediato)
-
-```mermaid
-gantt
-    title Sprint 1 — Fundación
-    dateFormat  YYYY-MM-DD
-    axisFormat  %d %b
-    
-    section P0
-    Descubrimiento Continuo de Activos    :active, p01, 2026-08-01, 7d
-    Historical DNS/WHOIS Tracking         :p02, 2026-08-03, 5d
-    
-    section P1
-    MITRE ATT&CK Mapping                 :p16, 2026-08-01, 3d
-    API Pública REST                      :p11, 2026-08-08, 5d
-    
-    section UX
-    Interactive Geography Map             :p21, 2026-08-08, 4d
-```
-
----
-
-## ═══════════════════════════════════════════════════════
 ## NOTAS DE ARQUITECTURA
 ## ═══════════════════════════════════════════════════════
 
@@ -568,14 +337,11 @@ gantt
 1. **Server Components** para datos, Client Components para interactividad
 2. **withRLS** para seguridad a nivel BD
 3. **callAIWithFallback** para tolerancia a fallos de IA
-4. **Rate limiting** con Upstash Redis en todas las rutas
+4. **withRateLimit** decorator genérico para rate limiting
 5. **CSP + Security Headers** en proxy.ts
-
-### Patrones a mejorar:
-1. **WebSockets/SSE** para datos en vivo (actualmente usa polling REST)
-2. **Background jobs** via Trigger.dev para escaneos largos
-3. **Caché de resultados** con Redis para escaneos repetidos
-4. **Streaming de respuestas** de IA para UX más rápida
+6. **withPublicApi** middleware para API pública con API Key auth
+7. **WEBHOOK_FORMATTERS** exportable para alertas multi-canal
+8. **MitreBadge** component para mapeo MITRE en hallazgos
 
 ### Stack a mantener:
 - **Next.js 16** (Turbopack, RSC, Server Actions)
@@ -585,3 +351,5 @@ gantt
 - **OpenRouter** (Modelos de IA gratuitos)
 - **Drizzle ORM** (Type-safe SQL)
 - **Tailwind CSS v4** (Design System)
+- **Leaflet.js** (Mapas GeoIP)
+- **React-PDF** (Reportes PDF)

@@ -14,7 +14,11 @@ import {
   Loader2, 
   AlertTriangle, 
   ShieldCheck, 
-  Info
+  Info,
+  Search,
+  ArrowUpDown,
+  Clock,
+  BarChart3
 } from 'lucide-react';
 
 interface Project {
@@ -75,6 +79,11 @@ export function SettingsTab({
   const [revealedClearKey, setRevealedClearKey] = useState<string | null>(null);
   const [showKeyModal, setShowKeyModal] = useState(false);
 
+  // API Keys filters
+  const [keySearch, setKeySearch] = useState('');
+  const [showExpiringSoon, setShowExpiringSoon] = useState(false);
+  const [sortNewestFirst, setSortNewestFirst] = useState(true);
+
   // Webhooks state
   const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
   const [loadingWebhooks, setLoadingWebhooks] = useState(false);
@@ -133,7 +142,7 @@ export function SettingsTab({
       const res = await fetch('/api/api-keys');
       const data = await res.json();
       if (data.success) {
-        setApiKeys(data.apiKeys || []);
+        setApiKeys(data.keys || []);
       } else {
         setKeysError(data.error || 'Error al obtener llaves');
       }
@@ -187,12 +196,15 @@ export function SettingsTab({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newKeyName.trim(),
-          expiresDays: expiresDays > 0 ? expiresDays : undefined
+          scope: [],
+          expiresAt: expiresDays > 0
+            ? new Date(Date.now() + expiresDays * 86400000).toISOString()
+            : undefined
         })
       });
       const data = await res.json();
       if (data.success) {
-        setRevealedClearKey(data.clearKey);
+        setRevealedClearKey(data.rawKey);
         setShowKeyModal(true);
         setNewKeyName('');
         setExpiresDays(0);
@@ -288,6 +300,40 @@ export function SettingsTab({
       setWebhookEvents([...webhookEvents, event]);
     }
   };
+
+  // Compute filtered + sorted API Keys for display
+  const visibleKeys = apiKeys
+    .filter((key) => {
+      if (keySearch.trim()) {
+        const q = keySearch.toLowerCase();
+        if (!key.name.toLowerCase().includes(q)) return false;
+      }
+      if (showExpiringSoon) {
+        if (!key.expiresAt) return false;
+        const days = (new Date(key.expiresAt).getTime() - Date.now()) / 86400000;
+        if (days > 7 || days < 0) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return sortNewestFirst ? bTime - aTime : aTime - bTime;
+    });
+
+  // Helper: render expiry badge with days remaining
+  function renderExpiryBadge(expiresAt: string | null) {
+    if (!expiresAt) return null;
+    const days = (new Date(expiresAt).getTime() - Date.now()) / 86400000;
+    if (days <= 7 && days >= 0) {
+      return (
+        <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+          {Math.ceil(days)}d
+        </span>
+      );
+    }
+    return null;
+  }
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl font-sans text-foreground relative z-10 space-y-10">
@@ -397,13 +443,23 @@ export function SettingsTab({
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="mb-12 relative z-10">
-          <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
-            <Key className="w-6 h-6 text-primary" />
-            Llaves de API para Desarrolladores
-          </h2>
-          <p className="text-sm text-muted-fg mt-2">
-            Cree credenciales para autenticar llamadas directas de la API de StrategicAudit y automatizar sus flujos de auditoría externa.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                <Key className="w-6 h-6 text-primary" />
+                Llaves de API para Desarrolladores
+              </h2>
+              <p className="text-sm text-muted-fg mt-2">
+                Cree credenciales para autenticar llamadas directas de la API de StrategicAudit y automatizar sus flujos de auditoría externa.
+              </p>
+            </div>
+            <a
+              href="/settings/api-keys"
+              className="shrink-0 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <BarChart3 className="w-4 h-4" /> Dashboard Completo
+            </a>
+          </div>
         </div>
 
         <div className="space-y-8 relative z-10">
@@ -483,52 +539,106 @@ export function SettingsTab({
                 <p className="text-xs text-muted-fg">No hay llaves de API activas. Genere una llave de acceso para comenzar.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto border border-border rounded-2xl bg-muted/1">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/5 text-muted-fg font-bold">
-                      <th className="p-4 uppercase tracking-wider text-[9px]">Nombre</th>
-                      <th className="p-4 uppercase tracking-wider text-[9px]">Prefijo de Acceso</th>
-                      <th className="p-4 uppercase tracking-wider text-[9px]">Ámbito</th>
-                      <th className="p-4 uppercase tracking-wider text-[9px]">Creada el</th>
-                      <th className="p-4 uppercase tracking-wider text-[9px]">Expiración</th>
-                      <th className="p-4 text-right uppercase tracking-wider text-[9px]">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
-                    {apiKeys.map((key) => (
-                      <tr key={key.id} className="hover:bg-muted/1 transition-colors text-foreground/80 font-medium">
-                        <td className="p-4 text-white font-bold">{key.name}</td>
-                        <td className="p-4 font-mono tracking-wider text-primary">{key.keyPrefix}</td>
-                        <td className="p-4">
-                          <span className="bg-primary/10 text-primary px-2 py-0.5 rounded border border-primary/20 font-mono text-[9px]">
-                            {key.scope?.join(', ') || 'read, write'}
+              <>
+                {/* Filters bar */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-2">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre…"
+                      value={keySearch}
+                      onChange={(e) => setKeySearch(e.target.value)}
+                      className="w-full bg-card border border-border focus:border-primary rounded-xl pl-10 pr-4 py-2.5 text-xs text-foreground/80 font-medium focus:outline-none transition-all placeholder-zinc-600"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={showExpiringSoon}
+                        onChange={(e) => setShowExpiringSoon(e.target.checked)}
+                        className="rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
+                      />
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">Expiran pronto</span>
+                    </label>
+                    <button
+                      onClick={() => setSortNewestFirst(!sortNewestFirst)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
+                    >
+                      <ArrowUpDown className="w-3.5 h-3.5" />
+                      {sortNewestFirst ? 'Más recientes' : 'Más antiguas'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border border-border rounded-2xl bg-muted/1">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/5 text-muted-fg font-bold">
+                        <th className="p-4 uppercase tracking-wider text-[9px]">Nombre</th>
+                        <th className="p-4 uppercase tracking-wider text-[9px]">Prefijo de Acceso</th>
+                        <th className="p-4 uppercase tracking-wider text-[9px]">Ámbito</th>
+                        <th
+                          className="p-4 uppercase tracking-wider text-[9px] cursor-pointer hover:text-primary transition-colors select-none"
+                          onClick={() => setSortNewestFirst(!sortNewestFirst)}
+                        >
+                          <span className="flex items-center gap-1">
+                            Creada el
+                            <ArrowUpDown className="w-3 h-3" />
                           </span>
-                        </td>
-                        <td className="p-4 text-muted-fg">{new Date(key.createdAt).toLocaleDateString()}</td>
-                        <td className="p-4">
-                          {key.expiresAt ? (
-                            <span className={new Date(key.expiresAt) < new Date() ? 'text-destructive' : 'text-muted-fg'}>
-                              {new Date(key.expiresAt).toLocaleDateString()}
-                            </span>
-                          ) : (
-                            <span className="text-muted-fg italic">Nunca expira</span>
-                          )}
-                        </td>
-                        <td className="p-4 text-right">
-                          <button
-                            onClick={() => handleRevokeApiKey(key.id)}
-                            className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-lg border border-destructive/20 transition-all cursor-pointer"
-                            title="Revocar esta API Key"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
+                        </th>
+                        <th className="p-4 uppercase tracking-wider text-[9px]">Expiración</th>
+                        <th className="p-4 text-right uppercase tracking-wider text-[9px]">Acción</th>
                       </tr>
-                    ))}
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.04]">
+                      {visibleKeys.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-6 text-center text-xs text-muted-fg">
+                            <Key className="w-5 h-5 mx-auto mb-2 opacity-40" />
+                            No se encontraron llaves que coincidan con los filtros.
+                          </td>
+                        </tr>
+                      ) : (
+                        visibleKeys.map((key) => (
+                          <tr key={key.id} className="hover:bg-muted/1 transition-colors text-foreground/80 font-medium">
+                            <td className="p-4 text-white font-bold flex items-center gap-2">
+                              {key.name}
+                              {renderExpiryBadge(key.expiresAt)}
+                            </td>
+                            <td className="p-4 font-mono tracking-wider text-primary">{key.keyPrefix}</td>
+                            <td className="p-4">
+                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded border border-primary/20 font-mono text-[9px]">
+                                {key.scope?.join(', ') || 'read, write'}
+                              </span>
+                            </td>
+                            <td className="p-4 text-muted-fg">{new Date(key.createdAt).toLocaleDateString()}</td>
+                            <td className="p-4">
+                              {key.expiresAt ? (
+                                <span className={new Date(key.expiresAt) < new Date() ? 'text-destructive' : 'text-muted-fg'}>
+                                  {new Date(key.expiresAt).toLocaleDateString()}
+                                </span>
+                              ) : (
+                                <span className="text-muted-fg italic">Nunca expira</span>
+                              )}
+                            </td>
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => handleRevokeApiKey(key.id)}
+                                className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-lg border border-destructive/20 transition-all cursor-pointer"
+                                title="Revocar esta API Key"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        )))}
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         </div>

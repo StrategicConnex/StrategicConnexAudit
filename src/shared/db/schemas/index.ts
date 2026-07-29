@@ -485,3 +485,4 @@ export * from "./security-audit";
 export * from "./health";
 export * from "./push-subscriptions";
 
+export * from "./history";

@@ -1,0 +1,697 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SCAUDIT — StrategicAudit Pro REST API",
+    "description": "API pública de inteligencia de infraestructura cibernética. Automatiza escaneos de subdominios, TLS, DNS, emails y más.\n\n## Autenticación\n- **API Key** (para endpoints públicos): `Authorization: Bearer sa_live_xxx`\n- **Session Cookie** (para endpoints del dashboard): autenticación vía Supabase\n\n## Rate Limiting\nTodas las respuestas incluyen headers de rate limiting estándar (IETF) que indican el estado actual de tu cuota:\n| Header | Descripción |\n|--------|-------------|\n| `RateLimit-Limit` | Máximo de requests permitidos en la ventana de tiempo |\n| `RateLimit-Remaining` | Requests restantes en la ventana actual |\n| `RateLimit-Reset` | Timestamp Unix (ms) del momento en que se reestablece la cuota |\n| `Retry-After` | (Solo 429) Segundos hasta reintentar |\n\nLímites vigentes:\n- Endpoints públicos: 60 requests/min por API Key\n- Endpoints de dashboard: 30 requests/min por sesión\n- Reportes PDF: 5 requests/min\n- Escaneos de inteligencia: 30 requests/min por usuario",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Strategic Connex",
+      "url": "https://strategicconnex.com.ar"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://scaudit.vercel.app",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/api/public/v1/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Public health check — NO API key required. Returns platform status, version, and service connectivity. Perfect for first-time Swagger visitors, uptime monitors, and CI/CD pipeline checks.",
+        "tags": ["Health"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "All services operational — all dependency env vars are configured",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/HealthCheck"}
+              }
+            }
+          },
+          "503": {
+            "description": "Service degraded — one or more dependency env vars are missing",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/HealthCheck"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/api-keys": {
+      "post": {
+        "summary": "Create API Key",
+        "description": "Crea una nueva API Key para acceso programático. La key completa se muestra una sola vez.",
+        "tags": ["API Keys"],
+        "security": [{"sessionCookie": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Nombre descriptivo de la key",
+                    "example": "CI/CD Integration"
+                  },
+                  "expiresInDays": {
+                    "type": "integer",
+                    "description": "Días hasta expiración (opcional)",
+                    "example": 90
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API Key creada",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ApiKeyCreateResponse"}
+              }
+            },
+            "headers": {
+              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
+              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
+              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "429": {"$ref": "#/components/responses/RateLimit"},
+          "500": {"$ref": "#/components/responses/ServerError"}
+        }
+      },
+      "get": {
+        "summary": "List API Keys",
+        "description": "Lista todas las API Keys activas del usuario autenticado.",
+        "tags": ["API Keys"],
+        "security": [{"sessionCookie": []}],
+        "responses": {
+          "200": {
+            "description": "Lista de API Keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "keys": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/ApiKey"}
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
+              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
+              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+            }
+          },
+          "429": {"$ref": "#/components/responses/RateLimit"},
+          "500": {"$ref": "#/components/responses/ServerError"}
+        }
+      },
+      "delete": {
+        "summary": "Revoke API Key",
+        "description": "Revoca (elimina) una API Key existente.",
+        "tags": ["API Keys"],
+        "security": [{"sessionCookie": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["keyId"],
+                "properties": {
+                  "keyId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID de la key a revocar"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Key revocada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "message": {"type": "string"}
+                  }
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
+              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
+              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+            }
+          },
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "429": {"$ref": "#/components/responses/RateLimit"},
+          "500": {"$ref": "#/components/responses/ServerError"}
+        }
+      }
+    },
+    "/api/api-keys/{keyId}/usage": {
+      "get": {
+        "summary": "Get API Key Usage Stats",
+        "description": "Returns real usage statistics for a specific API key: total requests, today, this week, this month, and a 30-day daily breakdown.\n\nUsage data is sourced from security_audit_logs (eventType='api_key_usage') which is logged automatically by the public API middleware on every authenticated request.\n\nKeys without usage data may not have been used through the public API yet — the old intelligence API routes use a separate authentication path that is not yet instrumented for usage tracking.",
+        "tags": ["API Keys"],
+        "security": [{"sessionCookie": []}],
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "format": "uuid"},
+            "description": "ID of the API key"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage statistics for the API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "keyName": {"type": "string"},
+                    "keyPrefix": {"type": "string"},
+                    "totalRequests": {"type": "integer", "description": "Total API calls authenticated with this key"},
+                    "todayRequests": {"type": "integer"},
+                    "thisWeekRequests": {"type": "integer"},
+                    "thisMonthRequests": {"type": "integer"},
+                    "lastUsedAt": {"type": "string", "format": "date-time", "nullable": true},
+                    "dailyBreakdown": {
+                      "type": "array",
+                      "description": "Daily request counts for last 30 days",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {"type": "string", "format": "date"},
+                          "count": {"type": "integer"}
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "keyName": "CI/CD Pipeline",
+                  "keyPrefix": "sa_live_a1b2c3d4",
+                  "totalRequests": 142,
+                  "todayRequests": 12,
+                  "thisWeekRequests": 45,
+                  "thisMonthRequests": 142,
+                  "lastUsedAt": "2026-07-29T14:30:00.000Z",
+                  "dailyBreakdown": [
+                    {"date": "2026-07-01", "count": 5},
+                    {"date": "2026-07-02", "count": 8}
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
+              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
+              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {
+            "description": "Forbidden — key belongs to a different user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean", "example": false},
+                    "error": {"type": "string", "example": "Acceso denegado"}
+                  }
+                }
+              }
+            }
+          },
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "429": {"$ref": "#/components/responses/RateLimit"},
+          "500": {"$ref": "#/components/responses/ServerError"}
+        }
+      }
+    },
+    "/api/public/v1/intelligence": {
+      "get": {
+        "summary": "List Investigations",
+        "description": "Obtiene todas las investigaciones de infraestructura para un proyecto. investigationId opcional para obtener findings y assets detallados.",
+        "tags": ["Intelligence"],
+        "security": [{"apiKey": []}],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {"type": "string", "format": "uuid"},
+            "description": "ID del proyecto"
+          },
+          {
+            "name": "investigationId",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string", "format": "uuid"},
+            "description": "ID específico de investigación (opcional)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de investigaciones o detalle de una",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "investigations": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Investigation"}
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Finding"}
+                    },
+                    "assets": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Asset"}
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
+              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
+              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "429": {"$ref": "#/components/responses/RateLimit"},
+          "500": {"$ref": "#/components/responses/ServerError"}
+        }
+      },
+      "post": {
+        "summary": "Create Investigation",
+        "description": "Inicia un escaneo de inteligencia de infraestructura sobre un target (dominio, IP o email).",
+        "tags": ["Intelligence"],
+        "security": [{"apiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["projectId", "target", "targetType"],
+                "properties": {
+                  "projectId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID del proyecto"
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Target a escanear (dominio, IP o email)",
+                    "example": "example.com"
+                  },
+                  "targetType": {
+                    "type": "string",
+                    "enum": ["domain", "ip", "email"],
+                    "description": "Tipo de target"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Investigación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "investigation": {"$ref": "#/components/schemas/Investigation"}
+                  }
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
+              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
+              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "429": {"$ref": "#/components/responses/RateLimit"},
+          "500": {"$ref": "#/components/responses/ServerError"}
+        }
+      }
+    },
+    "/api/reports/pdf": {
+      "post": {
+        "summary": "Generate PDF Report",
+        "description": "Genera un reporte PDF descargable con findings, assets, gráficos de severidad y scores. Soporta branding white-label.",
+        "tags": ["Reports"],
+        "security": [{"sessionCookie": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["projectId"],
+                "properties": {
+                  "projectId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID del proyecto"
+                  },
+                  "investigationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID específico (opcional)"
+                  },
+                  "branding": {
+                    "type": "object",
+                    "description": "Branding white-label (opcional)",
+                    "properties": {
+                      "agencyName": {"type": "string", "example": "Strategic Connex"},
+                      "primaryColor": {"type": "string", "example": "oklch(68% 0.14 230)"},
+                      "logoUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "example": "https://scaudit.vercel.app/logo.png"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PDF binario",
+            "content": {
+              "application/pdf": {
+                "schema": {"type": "string", "format": "binary"}
+              }
+            },
+            "headers": {
+              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
+              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
+              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "429": {"$ref": "#/components/responses/RateLimit"},
+          "500": {"$ref": "#/components/responses/ServerError"}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API Key: sa_live_xxx"
+      },
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sb-access-token",
+        "description": "Cookie de sesión Supabase"
+      }
+    },
+    "headers": {
+      "RateLimit-Limit": {
+        "schema": {"type": "integer", "example": 60},
+        "description": "Máximo de requests permitidos en la ventana de tiempo actual"
+      },
+      "RateLimit-Remaining": {
+        "schema": {"type": "integer", "example": 58},
+        "description": "Requests restantes en la ventana de tiempo actual"
+      },
+      "RateLimit-Reset": {
+        "schema": {"type": "integer", "example": 1700000000000},
+        "description": "Timestamp Unix en milisegundos del momento en que se reestablece la cuota"
+      }
+    },
+    "schemas": {
+      "HealthCheck": {
+        "type": "object",
+        "required": ["status", "version", "timestamp", "uptime", "services", "environment"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok", "degraded", "down"],
+            "description": "Overall platform status"
+          },
+          "version": {
+            "type": "string",
+            "description": "API version",
+            "example": "1.0.0"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Current server time (ISO 8601)"
+          },
+          "uptime": {
+            "type": "integer",
+            "description": "Server uptime in seconds",
+            "example": 86400
+          },
+          "services": {
+            "type": "object",
+            "required": ["redisConfigured", "dbConfigured"],
+            "properties": {
+              "redisConfigured": {
+                "type": "boolean",
+                "description": "Redis/Upstash env vars are configured"
+              },
+              "dbConfigured": {
+                "type": "boolean",
+                "description": "Supabase env vars are configured"
+              }
+            }
+          },
+          "environment": {
+            "type": "string",
+            "description": "Runtime environment",
+            "example": "production"
+          }
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "name": {"type": "string"},
+          "keyPrefix": {"type": "string", "description": "Prefijo (sa_live_xxx...)"},
+          "createdAt": {"type": "string", "format": "date-time"},
+          "expiresAt": {"type": "string", "format": "date-time", "nullable": true},
+          "lastUsedAt": {"type": "string", "format": "date-time", "nullable": true}
+        }
+      },
+      "ApiKeyCreateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean"},
+          "key": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string", "format": "uuid"},
+              "name": {"type": "string"},
+              "rawKey": {"type": "string", "description": "Key completa — guárdala, no se mostrará de nuevo"},
+              "createdAt": {"type": "string", "format": "date-time"}
+            }
+          }
+        }
+      },
+      "Investigation": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "target": {"type": "string"},
+          "targetType": {
+            "type": "string",
+            "enum": ["domain", "ip", "email"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "failed"]
+          },
+          "score": {"type": "integer", "minimum": 0, "maximum": 100, "nullable": true},
+          "findingsCount": {"type": "integer"},
+          "createdAt": {"type": "string", "format": "date-time"},
+          "completedAt": {"type": "string", "format": "date-time", "nullable": true}
+        }
+      },
+      "Finding": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "investigationId": {"type": "string", "format": "uuid"},
+          "severity": {"type": "string", "enum": ["critical", "high", "medium", "low", "info"]},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "recommendation": {"type": "string", "nullable": true},
+          "affectedAsset": {"type": "string", "nullable": true},
+          "mitreTechniques": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Técnicas MITRE ATT&CK asociadas"
+          },
+          "createdAt": {"type": "string", "format": "date-time"}
+        }
+      },
+      "Asset": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "investigationId": {"type": "string", "format": "uuid"},
+          "assetType": {
+            "type": "string",
+            "enum": ["subdomain", "ip_address", "certificate", "email", "cdn"]
+          },
+          "value": {"type": "string"},
+          "ip": {"type": "string", "nullable": true},
+          "firstSeenAt": {"type": "string", "format": "date-time", "nullable": true},
+          "lastSeenAt": {"type": "string", "format": "date-time", "nullable": true}
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad Request — parámetros inválidos o faltantes",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean", "example": false},
+                "error": {"type": "string", "example": "projectId es requerido"}
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized — API Key inválida o faltante",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean", "example": false},
+                "error": {"type": "string", "example": "API Key inválida o expirada"}
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not Found — el recurso solicitado no existe",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean", "example": false},
+                "error": {"type": "string", "example": "Key no encontrada"}
+              }
+            }
+          }
+        }
+      },
+      "RateLimit": {
+        "description": "Too Many Requests — límite de rate alcanzado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean", "example": false},
+                "error": {
+                  "type": "string",
+                  "example": "Límite de solicitudes excedido. Intenta de nuevo en 60 segundos."
+                }
+              }
+            }
+          }
+        },
+        "headers": {
+          "Retry-After": {
+            "schema": {"type": "integer"},
+            "description": "Segundos hasta que el rate limit se reestablece"
+          },
+          "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
+          "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
+          "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+        }
+      },
+      "ServerError": {
+        "description": "Internal Server Error — ocurrió un error inesperado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean", "example": false},
+                "error": {"type": "string", "example": "Error interno del servidor"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {"name": "API Keys", "description": "Gestión de API Keys para acceso programático"},
+    {"name": "Intelligence", "description": "Escaneo de inteligencia de infraestructura"},
+    {"name": "Reports", "description": "Generación de reportes PDF"},
+    {"name": "Health", "description": "Platform health and status checks"}
+  ],
+  "externalDocs": {
+    "description": "Documentación interactiva completa",
+    "url": "https://scaudit.vercel.app/docs/api"
+  }
+}
