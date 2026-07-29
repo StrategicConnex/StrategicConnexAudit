@@ -14,7 +14,6 @@
       "schedule": "0 0 * * *"
     }
   ],
-  "nodeVersion": "24.x",
   "regions": ["iad1"],
   "public": true,
   "github": {
