@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Crosshair, ShieldOff, ShieldCheck, AlertTriangle, Loader2,
   Terminal, FileText, ChevronDown, Clock, Activity, Search, Skull, ArrowRight
@@ -35,6 +36,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 export function AdversaryTab({ projectId }: AdversaryTabProps) {
+  const t = useTranslations('adversary');
   const [scenarios, setScenarios] = useState<ScenarioDef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +55,10 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
       if (data.success) {
         setScenarios(data.catalog);
       } else {
-        setError(data.error || 'Error al cargar escenarios');
+        setError(t('fetchError', { error: data.error || '' }));
       }
     } catch (err: any) {
-      setError('Error de conexion: ' + (err.message || err));
+      setError(t('networkError', { error: err.message || err }));
     } finally {
       setLoading(false);
     }
@@ -81,10 +83,10 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
         setRunOutput(data.output);
         fetchScenarios();
       } else {
-        setError(data.error || 'Error al ejecutar escenario');
+        setError(t('runError', { error: data.error || '' }));
       }
     } catch (err: any) {
-      setError('Error de conexion: ' + (err.message || err));
+      setError(t('networkError', { error: err.message || err }));
     } finally {
       setRunningScenario(null);
     }
@@ -105,7 +107,7 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-6 h-6 text-primary animate-spin" />
-        <span className="ml-3 text-sm text-muted-fg">Cargando escenarios de simulacion...</span>
+        <span className="ml-3 text-sm text-muted-fg">{t('loading')}</span>
       </div>
     );
   }
@@ -119,17 +121,16 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
           <div>
             <h2 className="text-lg font-extrabold text-foreground tracking-tight flex items-center gap-3">
               <Crosshair className="w-6 h-6 text-destructive" />
-              Adversary Simulation
+              {t('pageTitle')}
             </h2>
             <p className="text-xs text-muted-fg mt-1 max-w-2xl">
-              Simula TTPs de MITRE ATT&amp;CK contra tu infraestructura para medir la cobertura
-              de deteccion de tu stack de seguridad (EDR, SIEM, WAF).
+              {t('pageDesc')}
             </p>
           </div>
           <div className="flex items-center gap-2 bg-muted/10 border border-border/50 px-4 py-2 rounded-xl">
             <Activity className="w-4 h-4 text-primary" />
             <span className="text-sm font-bold text-foreground">{coverageRate}%</span>
-            <span className="text-[9px] text-muted-fg uppercase tracking-wider">Cobertura</span>
+            <span className="text-[9px] text-muted-fg uppercase tracking-wider">{t('coverage')}</span>
           </div>
         </div>
       </div>
@@ -148,25 +149,25 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
           <div className="flex items-center px-6 py-3 border-b border-chartreuse/10 bg-muted/10">
             <Terminal className="w-4 h-4 text-chartreuse mr-2" />
             <span className="text-xs font-bold text-chartreuse uppercase tracking-widest">
-              Output de Simulacion
+              {t('outputTitle')}
             </span>
           </div>
           <pre className="p-6 text-[10px] font-mono text-chartreuse/80 leading-relaxed whitespace-pre overflow-x-auto">
             {runOutput}
           </pre>
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-chartreuse/10 bg-muted/10">
-            <span className="text-[10px] text-muted-fg">Reportar resultado:</span>
+            <span className="text-[10px] text-muted-fg">{t('reportResult')}</span>
             <button
               onClick={() => { setRunOutput(null); fetchScenarios(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-chartreuse/10 border border-chartreuse/20 text-chartreuse text-[10px] font-bold hover:bg-chartreuse/20 transition-all cursor-pointer"
             >
-              <ShieldCheck className="w-3 h-3" /> Detectado
+              <ShieldCheck className="w-3 h-3" /> {t('btnDetected')}
             </button>
             <button
               onClick={() => { setRunOutput(null); fetchScenarios(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold hover:bg-destructive/20 transition-all cursor-pointer"
             >
-              <ShieldOff className="w-3 h-3" /> No detectado
+              <ShieldOff className="w-3 h-3" /> {t('btnNotDetected')}
             </button>
           </div>
         </div>
@@ -176,7 +177,7 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => setActiveFilter('all')}
           className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${activeFilter === 'all' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/5 border-border text-muted-fg hover:text-foreground'}`}>
-          Todos ({scenarios.length})
+          {t('filterAll', { count: scenarios.length })}
         </button>
         {tactics.map((t) => (
           <button key={t} onClick={() => setActiveFilter(t)}
@@ -190,19 +191,19 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-muted/5 border border-border/50 p-4 rounded-xl text-center">
           <span className="text-xl font-extrabold text-foreground">{scenarios.length}</span>
-          <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest block mt-1">Escenarios</span>
+          <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest block mt-1">{t('statScenarios')}</span>
         </div>
         <div className="bg-muted/5 border border-border/50 p-4 rounded-xl text-center">
           <span className="text-xl font-extrabold text-chartreuse">{executedCount}</span>
-          <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest block mt-1">Ejecutados</span>
+          <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest block mt-1">{t('statExecuted')}</span>
         </div>
         <div className="bg-muted/5 border border-border/50 p-4 rounded-xl text-center">
           <span className="text-xl font-extrabold text-primary">{totalDetected}</span>
-          <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest block mt-1">Detectados</span>
+          <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest block mt-1">{t('statDetected')}</span>
         </div>
         <div className="bg-muted/5 border border-border/50 p-4 rounded-xl text-center">
           <span className="text-xl font-extrabold text-destructive">{totalMissed}</span>
-          <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest block mt-1">Sin Detectar</span>
+          <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest block mt-1">{t('statMissed')}</span>
         </div>
       </div>
 
@@ -235,7 +236,7 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
                   {scenario.detectionRate !== null && (
                     <div className={`text-center px-3 py-1 rounded-lg border ${detColor} bg-muted/5`}>
                       <span className="text-sm font-extrabold">{scenario.detectionRate}%</span>
-                      <span className="text-[8px] block uppercase tracking-widest">Detectado</span>
+                      <span className="text-[8px] block uppercase tracking-widest">{t('badgeDetected')}</span>
                     </div>
                   )}
                 </div>
@@ -247,7 +248,7 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
                   <p className="text-xs text-foreground/80 leading-relaxed">{scenario.description}</p>
                   <div className="bg-primary/5 border border-primary/10 p-4 rounded-xl">
                     <span className="text-[9px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5 mb-2">
-                      <ShieldCheck className="w-3 h-3" /> Deteccion
+                      <ShieldCheck className="w-3 h-3" /> {t('sectionDetection')}
                     </span>
                     <p className="text-[11px] text-foreground/70 leading-relaxed">{scenario.detectionAdvice}</p>
                   </div>
@@ -260,12 +261,12 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
                     <button onClick={(e) => { e.stopPropagation(); handleRunScenario(scenario.mitreId); }}
                       disabled={isRunning}
                       className="flex items-center gap-2 bg-foreground text-background hover:bg-foreground/80 transition-all font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl border border-border cursor-pointer active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed">
-                      {isRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Ejecutando...</>
-                        : <><ArrowRight className="w-3.5 h-3.5" /> Ejecutar Simulacion</>}
+                      {isRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('btnRunning')}</>
+                        : <><ArrowRight className="w-3.5 h-3.5" /> {t('btnRunSimulation')}</>}
                     </button>
                     {scenario.totalRuns > 0 && (
                       <span className="text-[10px] text-muted-fg flex items-center gap-1.5">
-                        <Clock className="w-3 h-3" /> {scenario.totalRuns} ejec. / {scenario.detectedCount} detect.
+                        <Clock className="w-3 h-3" /> {t('runsCount', { total: scenario.totalRuns, detected: scenario.detectedCount })}
                       </span>
                     )}
                   </div>

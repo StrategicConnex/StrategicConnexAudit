@@ -323,60 +323,108 @@ export async function callAIWithFallback(
 }
 
 /**
+ * Bilingual template strings for getNoApiKeyResponse.
+ * Each task type has an en/es entry.
+ */
+const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
+  "copilot-remediation": {
+    en:
+      "### ⚠️ Infrastructure Copilot — Not Configured\n\n" +
+      "The AI engine is inactive because the OpenRouter API key " +
+      "(`OPENROUTER_API_KEY`) is missing from the server environment variables.\n\n" +
+      "**Activation is free and requires no credit card:**\n\n" +
+      "1. Go to https://openrouter.ai/keys and create a free account\n" +
+      "2. Generate an API Key (no balance needed)\n" +
+      "3. Add it to your `.env.local` file:\n" +
+      '   ```\n   OPENROUTER_API_KEY=sk-or-v1-...\n   ```\n\n' +
+      "**Free models included:** Gemini Flash, DeepSeek V3, Llama 4, " +
+      "Mistral Small, Qwen 2.5\n" +
+      "**Rate limit:** 50 requests/day (free) or 1,000/day ($10+ purchases).",
+    es:
+      "### ⚠️ Copilot de Infraestructura — No Configurado\n\n" +
+      "El motor de IA no está activo porque falta la clave de API de OpenRouter " +
+      "(`OPENROUTER_API_KEY`) en las variables de entorno del servidor.\n\n" +
+      "**Activar es gratis y no requiere tarjeta de crédito:**\n\n" +
+      "1. Ve a https://openrouter.ai/keys y crea una cuenta gratuita\n" +
+      "2. Genera una API Key (no necesitas agregar saldo)\n" +
+      "3. Configúrala en tu archivo `.env.local`:\n" +
+      '   ```\n   OPENROUTER_API_KEY=sk-or-v1-...\n   ```\n\n' +
+      "**Modelos gratuitos incluidos:** Gemini Flash, DeepSeek V3, Llama 4, " +
+      "Mistral Small, Qwen 2.5\n" +
+      "**Límite:** 50 solicitudes/día (sin pago) o 1,000/día (con $10+ compras).",
+  },
+  "incident-brief": {
+    en:
+      "## ⚠️ Incident Brief — AI Engine Not Configured\n\n" +
+      "To generate automatic executive Incident Briefs, set the " +
+      "`OPENROUTER_API_KEY` environment variable with your free OpenRouter key.\n\n" +
+      "**Don't have one?** Create a free account at https://openrouter.ai/keys " +
+      "— no credit card required to use `:free` models.\n\n" +
+      "**Free tier limit:** 50 executive summaries per day.\n\n" +
+      "In the meantime, raw findings data is available below.",
+    es:
+      "## ⚠️ Incident Brief — Motor de IA No Configurado\n\n" +
+      "Para generar un Incident Brief ejecutivo automático, configura la variable " +
+      "de entorno `OPENROUTER_API_KEY` con tu clave gratuita de OpenRouter.\n\n" +
+      "**¿No tienes una?** Crea una cuenta gratis en https://openrouter.ai/keys " +
+      "— no se requiere tarjeta de crédito para usar modelos `:free`.\n\n" +
+      "**Límite gratuito:** 50 resúmenes ejecutivos por día.\n\n" +
+      "Mientras tanto, los datos de hallazgos sin procesar están disponibles abajo.",
+  },
+  "general-chat": {
+    en:
+      "Hi there! 👋\n\n" +
+      "It looks like the AI API Key is not configured in the server's " +
+      "environment variables (`OPENROUTER_API_KEY`).\n\n" +
+      "**Setting it up is free and takes 2 minutes:**\n\n" +
+      "1. Sign up for free at https://openrouter.ai/keys\n" +
+      "2. Generate your API Key (no credit card needed)\n" +
+      "3. Add it to your `.env.local` file:\n\n" +
+      "```\nOPENROUTER_API_KEY=sk-or-v1-...\n```\n\n" +
+      "Available free models include Gemini Flash, DeepSeek V3, " +
+      "Llama 4, Mistral Small and Qwen 2.5.",
+    es:
+      "¡Hola! 👋\n\n" +
+      "Parece que la API Key de IA no está configurada en las variables de entorno " +
+      "del servidor (`OPENROUTER_API_KEY`).\n\n" +
+      "**Configurarla es gratis y toma 2 minutos:**\n\n" +
+      "1. Regístrate gratis en https://openrouter.ai/keys\n" +
+      "2. Genera tu API Key (sin tarjeta de crédito)\n" +
+      "3. Agrega al archivo `.env.local`:\n\n" +
+      "```\nOPENROUTER_API_KEY=sk-or-v1-...\n```\n\n" +
+      "Los modelos gratuitos disponibles incluyen Gemini Flash, DeepSeek V3, " +
+      "Llama 4, Mistral Small y Qwen 2.5.",
+  },
+  "seo-report": {
+    en:
+      "## ⚠️ Report with Data — AI Analysis Disabled\n\n" +
+      "The artificial intelligence API is not configured on the server.\n\n" +
+      "Below are the raw SEO performance metrics " +
+      "(clicks, impressions, position, active users). Generative " +
+      "AI-powered analysis is currently disabled.\n\n" +
+      "**To enable it:** Set `OPENROUTER_API_KEY` in your server environment.\n" +
+      "Sign up free at https://openrouter.ai/keys — no credit card needed.",
+    es:
+      "## ⚠️ Reporte con Datos Sin Análisis IA\n\n" +
+      "La API de inteligencia artificial no está configurada en el servidor.\n\n" +
+      "A continuación se muestran los datos numéricos de rendimiento SEO " +
+      "(clics, impresiones, posición, usuarios activos). El análisis " +
+      "generativo potenciado por IA está deshabilitado.\n\n" +
+      "**Para activarlo:** Configura `OPENROUTER_API_KEY` en tu servidor.\n" +
+      "Regístrate gratis en https://openrouter.ai/keys — sin tarjeta de crédito.",
+  },
+};
+
+/**
  * Returns a contextual AI response when OpenRouter is not configured.
  * Never breaks the UX by showing raw errors.
+ *
+ * @param taskType - The type of AI task
+ * @param locale - Language locale ('es' | 'en'), defaults to 'es'
  */
-export function getNoApiKeyResponse(taskType: AITaskType): string {
-  switch (taskType) {
-    case "copilot-remediation":
-      return (
-        "### ⚠️ Copilot de Infraestructura — No Configurado\n\n" +
-        "El motor de IA no está activo porque falta la clave de API de OpenRouter " +
-        "(`OPENROUTER_API_KEY`) en las variables de entorno del servidor.\n\n" +
-        "**Activar es gratis y no requiere tarjeta de crédito:**\n\n" +
-        "1. Ve a https://openrouter.ai/keys y crea una cuenta gratuita\n" +
-        "2. Genera una API Key (no necesitas agregar saldo)\n" +
-        "3. Configúrala en tu archivo `.env.local`:\n" +
-        '   ```\n   OPENROUTER_API_KEY=sk-or-v1-...\n   ```\n\n' +
-        "**Modelos gratuitos incluidos:** Gemini Flash, DeepSeek V3, Llama 4, " +
-        "Mistral Small, Qwen 2.5\n" +
-        "**Límite:** 50 solicitudes/día (sin pago) o 1,000/día (con $10+ compras)."
-      );
-
-    case "incident-brief":
-      return (
-        "## ⚠️ Incident Brief — Motor de IA No Configurado\n\n" +
-        "Para generar un Incident Brief ejecutivo automático, configura la variable " +
-        "de entorno `OPENROUTER_API_KEY` con tu clave gratuita de OpenRouter.\n\n" +
-        "**¿No tienes una?** Crea una cuenta gratis en https://openrouter.ai/keys " +
-        "— no se requiere tarjeta de crédito para usar modelos `:free`.\n\n" +
-        "**Límite gratuito:** 50 resúmenes ejecutivos por día.\n\n" +
-        "Mientras tanto, los datos de hallazgos sin procesar están disponibles abajo."
-      );
-
-    case "general-chat":
-      return (
-        "¡Hola! 👋\n\n" +
-        "Parece que la API Key de IA no está configurada en las variables de entorno " +
-        "del servidor (`OPENROUTER_API_KEY`).\n\n" +
-        "**Configurarla es gratis y toma 2 minutos:**\n\n" +
-        "1. Regístrate gratis en https://openrouter.ai/keys\n" +
-        "2. Genera tu API Key (sin tarjeta de crédito)\n" +
-        "3. Agrega al archivo `.env.local`:\n\n" +
-        "```\nOPENROUTER_API_KEY=sk-or-v1-...\n```\n\n" +
-        "Los modelos gratuitos disponibles incluyen Gemini Flash, DeepSeek V3, " +
-        "Llama 4, Mistral Small y Qwen 2.5."
-      );
-
-    case "seo-report":
-      return (
-        "## ⚠️ Reporte con Datos Sin Análisis IA\n\n" +
-        "La API de inteligencia artificial no está configurada en el servidor.\n\n" +
-        "A continuación se muestran los datos numéricos de rendimiento SEO " +
-        "(clics, impresiones, posición, usuarios activos). El análisis " +
-        "generativo potenciado por IA está deshabilitado.\n\n" +
-        "**Para activarlo:** Configura `OPENROUTER_API_KEY` en tu servidor.\n" +
-        "Regístrate gratis en https://openrouter.ai/keys — sin tarjeta de crédito."
-      );
-  }
+export function getNoApiKeyResponse(
+  taskType: AITaskType,
+  locale: "es" | "en" = "es"
+): string {
+  return NO_API_KEY_MESSAGES[taskType][locale];
 }
