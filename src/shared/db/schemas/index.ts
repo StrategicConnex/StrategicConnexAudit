@@ -486,3 +486,5 @@ export * from "./health";
 export * from "./push-subscriptions";
 
 export * from "./history";
+export * from "./teams";
+export * from "./technologies";

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 interface AttackSurfaceNode {
   id: string;
@@ -60,6 +60,9 @@ const SEVERITY_OVERLAY: Record<string, string> = {
 export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGraphProps) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; node: AttackSurfaceNode } | null>(null);
+  const [dynamicNodes, setDynamicNodes] = useState<AttackSurfaceNode[]>([]);
+  const [dynamicEdges, setDynamicEdges] = useState<AttackSurfaceEdge[]>([]);
+  const [loadingNode, setLoadingNode] = useState<string | null>(null);
 
   const { nodes, edges } = useMemo(() => {
     const ns: AttackSurfaceNode[] = [];
@@ -140,8 +143,31 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
       es.push({ from: 'domain', to: 'mx', animated: false });
     }
 
-    return { nodes: ns, edges: es };
-  }, [target, metadata, score]);
+    return { nodes: [...ns, ...dynamicNodes], edges: [...es, ...dynamicEdges] };
+  }, [target, metadata, score, dynamicNodes, dynamicEdges]);
+
+  const handleNodeClick = useCallback(async (node: AttackSurfaceNode) => {
+    if (loadingNode === node.id) return;
+    setLoadingNode(node.id);
+    try {
+      const res = await fetch(`/api/intelligence/graph?nodeId=${encodeURIComponent(node.id)}`);
+      const data = await res.json();
+      if (data.success) {
+        setDynamicNodes(prev => {
+          const newNodes = data.nodes.filter((n: any) => !prev.some(p => p.id === n.id) && !nodes.some((base: any) => base.id === n.id));
+          return [...prev, ...newNodes];
+        });
+        setDynamicEdges(prev => {
+          const newEdges = data.edges.filter((e: any) => !prev.some(p => p.from === e.from && p.to === e.to) && !edges.some((base: any) => base.from === e.from && base.to === e.to));
+          return [...prev, ...newEdges];
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load adjacent nodes", err);
+    } finally {
+      setLoadingNode(null);
+    }
+  }, [loadingNode, target, metadata, score]);
 
   const handleMouseEnter = (node: AttackSurfaceNode, e: React.MouseEvent) => {
     const svgEl = e.currentTarget.closest('svg') as SVGSVGElement;
@@ -243,9 +269,10 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
             return (
               <g
                 key={node.id}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', opacity: loadingNode === node.id ? 0.6 : 1 }}
                 onMouseEnter={(e) => handleMouseEnter(node, e)}
                 onMouseLeave={handleMouseLeave}
+                onClick={() => handleNodeClick(node)}
               >
                 {/* Severity pulse ring */}
                 {node.severity === 'critical' && (

@@ -9,6 +9,7 @@ import ToolCatalog from "./ToolCatalog";
 import { AttackSurfaceGraph } from "./AttackSurfaceGraph";
 import { exportIntelligenceToPdf } from "@/shared/utils/exportIntelligencePdf";
 import { Sparkles, Terminal, Activity, ShieldCheck, History, BookOpen, ChevronRight, ArrowRight, TrendingUp, Menu, X, ArrowLeft, Loader2, Download } from "lucide-react";
+import { LiveMetricsBar } from "@/app/components/LiveMetricsBar";
 
 interface IntelligenceShellProps {
   projectId: string;
@@ -767,6 +768,10 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
         </form>
       </aside>
 
+      <LiveMetricsBar
+        projectId={projectId}
+        investigationId={activeInvestigationId ?? undefined}
+      />
     </div>
   );
 }

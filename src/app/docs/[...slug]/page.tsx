@@ -34,17 +34,13 @@ function stripFrontMatter(raw: string): string {
 
 function stripJekyllSyntax(raw: string): string {
   return raw
-    // {: .note }, {: .tip }, {: .warning }, {: .important }, {: .no_toc }
-    .replace(/\{:\s*\.[a-zA-Z_-]+\s*\}/g, "")
     // {:toc}
     .replace(/\{:\s*toc\s*\}/g, "")
     // 1. TOC (ordered list marker for Jekyll TOC)
     .replace(/^1\.\s+TOC\s*$/gm, "")
     // <details markdown="block"> → <details>
     .replace(/<details\s+markdown="block">/g, "<details>")
-    // {: .text-delta } inline
-    .replace(/\{:\s*\.text-delta\s*\}/g, "")
-    // {: .label } and variants
+    // {: .any-class } (catch-all for Jekyll IAL like {: .note }, {: .label }, {: .text-delta })
     .replace(/\{:\s*\.[a-zA-Z0-9_-]+\s*}/g, "")
     // {% raw %} / {% endraw %}
     .replace(/\{%\s*raw\s*%\}/g, "")
