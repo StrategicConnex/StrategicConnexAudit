@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { 
   Settings, 
   Palette, 
@@ -59,6 +60,8 @@ export function SettingsTab({
   selectedProjectId = '', 
   setSelectedProjectId 
 }: SettingsTabProps) {
+  const t = useTranslations('settings');
+
   // Global agency branding settings (localStorage)
   const [agencyName, setAgencyName] = useState('');
   const [primaryColor, setPrimaryColor] = useState('oklch(68% 0.14 230)');
@@ -130,7 +133,7 @@ export function SettingsTab({
         color: primaryColor,
         logoUrl: logoUrl
       }));
-      alert("¡Configuración de marca blanca guardada correctamente!");
+      alert(t('brandingSaveSuccess'));
     }
   };
 
@@ -144,10 +147,10 @@ export function SettingsTab({
       if (data.success) {
         setApiKeys(data.keys || []);
       } else {
-        setKeysError(data.error || 'Error al obtener llaves');
+        setKeysError(data.error || t('apiKeysFetchNetworkError'));
       }
     } catch (err: any) {
-      setKeysError(err.message || 'Error de conexión');
+      setKeysError(err.message || t('apiKeysFetchNetworkError'));
     } finally {
       setLoadingKeys(false);
     }
@@ -164,10 +167,10 @@ export function SettingsTab({
       if (data.success) {
         setWebhooks(data.webhooks || []);
       } else {
-        setWebhooksError(data.error || 'Error al obtener webhooks');
+        setWebhooksError(data.error || t('webhooksFetchNetworkError'));
       }
     } catch (err: any) {
-      setWebhooksError(err.message || 'Error de conexión');
+      setWebhooksError(err.message || t('webhooksFetchNetworkError'));
     } finally {
       setLoadingWebhooks(false);
     }
@@ -210,10 +213,10 @@ export function SettingsTab({
         setExpiresDays(0);
         fetchApiKeys(); // reload
       } else {
-        setKeysError(data.error || 'Error al crear la llave');
+        setKeysError(data.error || t('apiKeysCreateNetworkError'));
       }
     } catch (err: any) {
-      setKeysError(err.message || 'Error de conexión al crear llave');
+      setKeysError(err.message || t('apiKeysCreateNetworkError'));
     } finally {
       setCreatingKey(false);
     }
@@ -221,7 +224,7 @@ export function SettingsTab({
 
   // Revoke API Key
   const handleRevokeApiKey = async (id: string) => {
-    if (!confirm('¿Está seguro de que desea revocar esta llave de API? Los sistemas integrados que la usen perderán el acceso de inmediato.')) {
+    if (!confirm(t('apiKeysRevokeConfirm'))) {
       return;
     }
     try {
@@ -230,10 +233,10 @@ export function SettingsTab({
       if (data.success) {
         fetchApiKeys();
       } else {
-        alert(`Error al revocar llave: ${data.error}`);
+        alert(t('apiKeysRevokeError', { error: data.error }));
       }
     } catch (err: any) {
-      alert(`Error de red al revocar llave: ${err.message}`);
+      alert(t('apiKeysRevokeNetworkError', { error: err.message }));
     }
   };
 
@@ -265,10 +268,10 @@ export function SettingsTab({
         setWebhookActive(true);
         fetchWebhooks(selectedProjectId); // reload
       } else {
-        setWebhooksError(data.error || 'Error al crear el webhook');
+        setWebhooksError(data.error || t('webhooksCreateNetworkError'));
       }
     } catch (err: any) {
-      setWebhooksError(err.message || 'Error de conexión al crear webhook');
+      setWebhooksError(err.message || t('webhooksCreateNetworkError'));
     } finally {
       setCreatingWebhook(false);
     }
@@ -276,7 +279,7 @@ export function SettingsTab({
 
   // Delete Webhook
   const handleDeleteWebhook = async (id: string) => {
-    if (!confirm('¿Está seguro de que desea eliminar esta integración de webhook? Se detendrá el envío de eventos de inmediato.')) {
+    if (!confirm(t('webhooksDeleteConfirm'))) {
       return;
     }
     try {
@@ -285,10 +288,10 @@ export function SettingsTab({
       if (data.success) {
         fetchWebhooks(selectedProjectId);
       } else {
-        alert(`Error al eliminar webhook: ${data.error}`);
+        alert(t('webhooksDeleteError', { error: data.error }));
       }
     } catch (err: any) {
-      alert(`Error de red al eliminar webhook: ${err.message}`);
+      alert(t('webhooksDeleteNetworkError', { error: err.message }));
     }
   };
 
@@ -345,21 +348,21 @@ export function SettingsTab({
         <div className="mb-12 relative z-10">
           <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
             <Settings className="w-6 h-6 text-primary" />
-            Configuración del Sistema
+            {t('pageTitle')}
           </h2>
-          <p className="text-sm text-muted-fg mt-2">Administre las credenciales de API, llaves de análisis y preferencias de personalización de su marca.</p>
+          <p className="text-sm text-muted-fg mt-2">{t('pageSubtitle')}</p>
         </div>
 
         <div className="space-y-12 relative z-10">
           {/* IA integrations */}
           <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">Integraciones de Inteligencia Artificial</h3>
+            <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">{t('sectionAi')}</h3>
             <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-all">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[15px] font-bold text-white tracking-tight">OpenRouter / LLM API Gateway</span>
-                <span className="text-[9px] font-bold bg-chartreuse/10 text-chartreuse px-3 py-1 rounded-full border border-chartreuse/20 uppercase tracking-wider">Activo</span>
+                <span className="text-[15px] font-bold text-white tracking-tight">{t('aiGatewayLabel')}</span>
+                <span className="text-[9px] font-bold bg-chartreuse/10 text-chartreuse px-3 py-1 rounded-full border border-chartreuse/20 uppercase tracking-wider">{t('aiGatewayBadge')}</span>
               </div>
-              <p className="text-xs text-muted-fg mb-6 leading-relaxed">El aprovisionamiento de modelos generativos se gestiona de forma segura a través de variables de entorno del servidor.</p>
+              <p className="text-xs text-muted-fg mb-6 leading-relaxed">{t('aiGatewayDesc')}</p>
               <input 
                 type="password" 
                 value="************************************************" 
@@ -372,17 +375,17 @@ export function SettingsTab({
           {/* White label settings */}
           <div className="space-y-6">
             <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3 flex items-center gap-2">
-              <Palette className="w-4 h-4 text-primary" /> Marca Blanca (White Label)
+              <Palette className="w-4 h-4 text-primary" /> {t('sectionBranding')}
             </h3>
             <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-all">
-              <p className="text-xs text-muted-fg mb-10 leading-relaxed">Personalice los informes y las plantillas ejecutivas PDF con la identidad y el logotipo de su agencia o cliente corporativo.</p>
+              <p className="text-xs text-muted-fg mb-10 leading-relaxed">{t('brandingDesc')}</p>
               
               <div className="grid gap-8">
                 <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Nombre de la Agencia</label>
+                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('brandingNameLabel')}</label>
                   <input 
                     type="text" 
-                    placeholder="Ej: Strategic SEO Agency" 
+                    placeholder={t('brandingNamePlaceholder')} 
                     className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                     id="branding-name-input"
                     value={agencyName}
@@ -392,7 +395,7 @@ export function SettingsTab({
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Color Principal</label>
+                    <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('brandingColorLabel')}</label>
                     <div className="flex gap-4 items-center">
                       <input 
                         type="color" 
@@ -404,7 +407,7 @@ export function SettingsTab({
                       <input 
                         type="text" 
                         id="branding-color-text"
-                        placeholder="oklch(68% 0.14 230)" 
+                        placeholder={t('brandingColorPlaceholder')} 
                         className="flex-1 bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm font-bold text-foreground/80 focus:outline-none transition-all uppercase placeholder-zinc-700"
                         value={primaryColor}
                         onChange={(e) => setPrimaryColor(e.target.value)}
@@ -413,10 +416,10 @@ export function SettingsTab({
                   </div>
                   
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Logo URL (PNG/SVG)</label>
+                    <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('brandingLogoLabel')}</label>
                     <input 
                       type="text" 
-                      placeholder="https://tudominio.com/logo.png" 
+                      placeholder={t('brandingLogoPlaceholder')} 
                       className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                       value={logoUrl}
                       onChange={(e) => setLogoUrl(e.target.value)}
@@ -430,7 +433,7 @@ export function SettingsTab({
                   onClick={handleSaveBranding}
                   className="bg-cyan-500 hover:bg-cyan-400 text-black px-10 py-3.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-all flex items-center gap-3 group cursor-pointer"
                 >
-                  <Save className="w-4 h-4 group-hover:scale-110 transition-transform text-black" /> Guardar Preferencias
+                  <Save className="w-4 h-4 group-hover:scale-110 transition-transform text-black" /> {t('brandingSaveButton')}
                 </button>
               </div>
             </div>
@@ -447,17 +450,17 @@ export function SettingsTab({
             <div>
               <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
                 <Key className="w-6 h-6 text-primary" />
-                Llaves de API para Desarrolladores
+                {t('apiKeysTitle')}
               </h2>
               <p className="text-sm text-muted-fg mt-2">
-                Cree credenciales para autenticar llamadas directas de la API de StrategicAudit y automatizar sus flujos de auditoría externa.
+                {t('apiKeysDesc')}
               </p>
             </div>
             <a
               href="/settings/api-keys"
               className="shrink-0 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all flex items-center gap-2 cursor-pointer"
             >
-              <BarChart3 className="w-4 h-4" /> Dashboard Completo
+              <BarChart3 className="w-4 h-4" /> {t('apiKeysDashboardButton')}
             </a>
           </div>
         </div>
@@ -466,16 +469,16 @@ export function SettingsTab({
           {/* Create Key Form */}
           <form onSubmit={handleCreateApiKey} className="bg-muted/1 border border-border rounded-2xl p-8 space-y-6">
             <h4 className="text-xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-2">
-              <Plus className="w-4 h-4 text-primary" /> Crear Nueva Llave de Acceso
+              <Plus className="w-4 h-4 text-primary" /> {t('apiKeysCreateTitle')}
             </h4>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Nombre Descriptivo</label>
+                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysNameLabel')}</label>
                 <input 
                   type="text" 
                   required
-                  placeholder="Ej: Servidor de Monitoreo Staging" 
+                  placeholder={t('apiKeysNamePlaceholder')} 
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
@@ -483,16 +486,16 @@ export function SettingsTab({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Periodo de Expiración</label>
+                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysExpiryLabel')}</label>
                 <select
                   value={expiresDays}
                   onChange={(e) => setExpiresDays(Number(e.target.value))}
                   className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-muted-fg font-bold focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                 >
-                  <option value={0}>Sin expiración</option>
-                  <option value={30}>30 Días</option>
-                  <option value={90}>90 Días</option>
-                  <option value={365}>365 Días</option>
+                  <option value={0}>{t('apiKeysExpiryNever')}</option>
+                  <option value={30}>{t('apiKeysExpiry30')}</option>
+                  <option value={90}>{t('apiKeysExpiry90')}</option>
+                  <option value={365}>{t('apiKeysExpiry365')}</option>
                 </select>
               </div>
             </div>
@@ -512,11 +515,11 @@ export function SettingsTab({
               >
                 {creatingKey ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-black" /> Generando...
+                    <Loader2 className="w-4 h-4 animate-spin text-black" /> {t('apiKeysGenerating')}
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4 h-4 text-black" /> Generar API Key
+                    <Plus className="w-4 h-4 text-black" /> {t('apiKeysGenerateButton')}
                   </>
                 )}
               </button>
@@ -526,7 +529,7 @@ export function SettingsTab({
           {/* Active Keys List */}
           <div className="space-y-4">
             <h4 className="text-xs font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">
-              Llaves Activas ({apiKeys.length})
+              {t('apiKeysCount', { count: apiKeys.length })}
             </h4>
 
             {loadingKeys ? (
@@ -536,7 +539,7 @@ export function SettingsTab({
             ) : apiKeys.length === 0 ? (
               <div className="text-center py-10 bg-muted/1 border border-dashed border-border rounded-2xl">
                 <Key className="w-8 h-8 text-muted-fg mx-auto mb-3" />
-                <p className="text-xs text-muted-fg">No hay llaves de API activas. Genere una llave de acceso para comenzar.</p>
+                <p className="text-xs text-muted-fg">{t('apiKeysEmpty')}</p>
               </div>
             ) : (
               <>
@@ -546,7 +549,7 @@ export function SettingsTab({
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
                     <input
                       type="text"
-                      placeholder="Buscar por nombre…"
+                      placeholder={t('apiKeysSearchPlaceholder')}
                       value={keySearch}
                       onChange={(e) => setKeySearch(e.target.value)}
                       className="w-full bg-card border border-border focus:border-primary rounded-xl pl-10 pr-4 py-2.5 text-xs text-foreground/80 font-medium focus:outline-none transition-all placeholder-zinc-600"
@@ -561,14 +564,14 @@ export function SettingsTab({
                         className="rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
                       />
                       <Clock className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">Expiran pronto</span>
+                      <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">{t('apiKeysFilterExpiringSoon')}</span>
                     </label>
                     <button
                       onClick={() => setSortNewestFirst(!sortNewestFirst)}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
                     >
                       <ArrowUpDown className="w-3.5 h-3.5" />
-                      {sortNewestFirst ? 'Más recientes' : 'Más antiguas'}
+                      {sortNewestFirst ? t('apiKeysSortNewest') : t('apiKeysSortOldest')}
                     </button>
                   </div>
                 </div>
@@ -577,20 +580,19 @@ export function SettingsTab({
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-border bg-muted/5 text-muted-fg font-bold">
-                        <th className="p-4 uppercase tracking-wider text-[9px]">Nombre</th>
-                        <th className="p-4 uppercase tracking-wider text-[9px]">Prefijo de Acceso</th>
-                        <th className="p-4 uppercase tracking-wider text-[9px]">Ámbito</th>
+                        <th className="p-4 uppercase tracking-wider text-[9px]">{t('apiKeysColName')}</th>
+                        <th className="p-4 uppercase tracking-wider text-[9px]">{t('apiKeysColPrefix')}</th>
+                        <th className="p-4 uppercase tracking-wider text-[9px]">{t('apiKeysColScope')}</th>
                         <th
                           className="p-4 uppercase tracking-wider text-[9px] cursor-pointer hover:text-primary transition-colors select-none"
                           onClick={() => setSortNewestFirst(!sortNewestFirst)}
-                        >
-                          <span className="flex items-center gap-1">
-                            Creada el
-                            <ArrowUpDown className="w-3 h-3" />
-                          </span>
+                        >                            <span className="flex items-center gap-1">
+                              {t('apiKeysColCreated')}
+                              <ArrowUpDown className="w-3 h-3" />
+                            </span>
                         </th>
-                        <th className="p-4 uppercase tracking-wider text-[9px]">Expiración</th>
-                        <th className="p-4 text-right uppercase tracking-wider text-[9px]">Acción</th>
+                        <th className="p-4 uppercase tracking-wider text-[9px]">{t('apiKeysColExpiry')}</th>
+                        <th className="p-4 text-right uppercase tracking-wider text-[9px]">{t('apiKeysColAction')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.04]">
@@ -598,7 +600,7 @@ export function SettingsTab({
                         <tr>
                           <td colSpan={6} className="p-6 text-center text-xs text-muted-fg">
                             <Key className="w-5 h-5 mx-auto mb-2 opacity-40" />
-                            No se encontraron llaves que coincidan con los filtros.
+                            {t('apiKeysNoResults')}
                           </td>
                         </tr>
                       ) : (
@@ -621,14 +623,14 @@ export function SettingsTab({
                                   {new Date(key.expiresAt).toLocaleDateString()}
                                 </span>
                               ) : (
-                                <span className="text-muted-fg italic">Nunca expira</span>
+                                <span className="text-muted-fg italic">{t('apiKeysNeverExpires')}</span>
                               )}
                             </td>
                             <td className="p-4 text-right">
                               <button
                                 onClick={() => handleRevokeApiKey(key.id)}
                                 className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-lg border border-destructive/20 transition-all cursor-pointer"
-                                title="Revocar esta API Key"
+                                title={t('apiKeysRevokeTitle')}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -653,17 +655,17 @@ export function SettingsTab({
             <div>
               <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
                 <Globe className="w-6 h-6 text-primary" />
-                Configuración de Webhooks
+                {t('webhooksTitle')}
               </h2>
               <p className="text-sm text-muted-fg mt-2">
-                Reciba notificaciones HTTP en tiempo real directamente en su servidor cuando ocurran eventos en sus auditorías de red.
+                {t('webhooksDesc')}
               </p>
             </div>
             
             {/* Active Project Selector */}
             {initialProjects.length > 0 && (
               <div className="flex flex-col gap-1.5 min-w-[220px]">
-                <label className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Dominio de Auditoría</label>
+                <label className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksProjectLabel')}</label>
                 <select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId && setSelectedProjectId(e.target.value)}
@@ -683,16 +685,16 @@ export function SettingsTab({
           {selectedProjectId ? (
             <form onSubmit={handleCreateWebhook} className="bg-muted/1 border border-border rounded-2xl p-8 space-y-6">
               <h4 className="text-xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-2">
-                <Plus className="w-4 h-4 text-primary" /> Registrar Nuevo Destino de Eventos
+                <Plus className="w-4 h-4 text-primary" /> {t('webhooksCreateTitle')}
               </h4>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Nombre del Destino</label>
+                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksNameLabel')}</label>
                   <input 
                     type="text" 
                     required
-                    placeholder="Ej: Slack Alert Endpoint" 
+                    placeholder={t('webhooksNamePlaceholder')} 
                     value={newWebhookName}
                     onChange={(e) => setNewWebhookName(e.target.value)}
                     className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
@@ -700,11 +702,11 @@ export function SettingsTab({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">URL de Endpoint (Debe ser HTTPS)</label>
+                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksUrlLabel')}</label>
                   <input 
                     type="url" 
                     required
-                    placeholder="https://api.tuempresa.com/webhooks/alerts" 
+                    placeholder={t('webhooksUrlPlaceholder')} 
                     value={newWebhookUrl}
                     onChange={(e) => setNewWebhookUrl(e.target.value)}
                     className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)] font-mono"
@@ -714,7 +716,7 @@ export function SettingsTab({
 
               {/* Event Suscription */}
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest block">Suscripción a Eventos</label>
+                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest block">{t('webhooksEventsLabel')}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-all cursor-pointer">
                     <input
@@ -725,7 +727,7 @@ export function SettingsTab({
                     />
                     <div>
                       <span className="text-xs font-bold text-white block font-mono">audit.completed</span>
-                      <span className="text-[10px] text-muted-fg">Se dispara cada vez que se finaliza un escaneo o auditoría completa en el dominio.</span>
+                      <span className="text-[10px] text-muted-fg">{t('webhooksEventAuditDesc')}</span>
                     </div>
                   </label>
 
@@ -738,7 +740,7 @@ export function SettingsTab({
                     />
                     <div>
                       <span className="text-xs font-bold text-white block font-mono">alert.triggered</span>
-                      <span className="text-[10px] text-muted-fg">Se dispara cuando ocurre una degradación de latencia o cookies críticas expiran.</span>
+                      <span className="text-[10px] text-muted-fg">{t('webhooksEventAlertDesc')}</span>
                     </div>
                   </label>
                 </div>
@@ -759,7 +761,7 @@ export function SettingsTab({
                     onChange={(e) => setWebhookActive(e.target.checked)}
                     className="rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
                   />
-                  <span className="text-xs text-muted-fg font-bold uppercase tracking-wider">Activo de Inmediato</span>
+                  <span className="text-xs text-muted-fg font-bold uppercase tracking-wider">{t('webhooksActiveLabel')}</span>
                 </label>
 
                 <button
@@ -769,11 +771,11 @@ export function SettingsTab({
                 >
                   {creatingWebhook ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-black" /> Registrando...
+                      <Loader2 className="w-4 h-4 animate-spin text-black" /> {t('webhooksRegistering')}
                     </>
                   ) : (
                     <>
-                      <Plus className="w-4 h-4 text-black" /> Registrar Webhook
+                      <Plus className="w-4 h-4 text-black" /> {t('webhooksRegisterButton')}
                     </>
                   )}
                 </button>
@@ -782,7 +784,7 @@ export function SettingsTab({
           ) : (
             <div className="text-center py-10 bg-muted/1 border border-dashed border-border rounded-2xl">
               <Info className="w-8 h-8 text-primary mx-auto mb-3" />
-              <p className="text-xs text-muted-fg">Cree y configure un proyecto primero para poder asociar endpoints de webhooks.</p>
+              <p className="text-xs text-muted-fg">{t('webhooksNoProject')}</p>
             </div>
           )}
 
@@ -790,7 +792,7 @@ export function SettingsTab({
           {selectedProjectId && (
             <div className="space-y-4">
               <h4 className="text-xs font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">
-                Destinos Registrados del Proyecto ({webhooks.length})
+                {t('webhooksCount', { count: webhooks.length })}
               </h4>
 
               {loadingWebhooks ? (
@@ -800,7 +802,7 @@ export function SettingsTab({
               ) : webhooks.length === 0 ? (
                 <div className="text-center py-10 bg-muted/1 border border-dashed border-border rounded-2xl">
                   <Globe className="w-8 h-8 text-muted-fg mx-auto mb-3" />
-                  <p className="text-xs text-muted-fg">No hay destinos de webhook registrados para este proyecto.</p>
+                  <p className="text-xs text-muted-fg">{t('webhooksEmpty')}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
@@ -817,7 +819,7 @@ export function SettingsTab({
                               ? 'bg-chartreuse/10 text-chartreuse border-chartreuse/20' 
                               : 'bg-zinc-500/10 text-muted-fg border-border/50'
                           }`}>
-                            {wh.active ? 'Activo' : 'Pausado'}
+                            {wh.active ? t('webhooksActiveBadge') : t('webhooksPausedBadge')}
                           </span>
                         </div>
 
@@ -826,7 +828,7 @@ export function SettingsTab({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 pt-1 text-[9px] font-mono">
-                          <span className="text-muted-fg uppercase font-bold tracking-wider mr-2">Suscrito a:</span>
+                          <span className="text-muted-fg uppercase font-bold tracking-wider mr-2">{t('webhooksSubscribedTo')}</span>
                           {wh.events.map(ev => (
                             <span key={ev} className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded">
                               {ev}
@@ -839,15 +841,15 @@ export function SettingsTab({
                         <button
                           onClick={() => handleCopy(wh.secretToken, wh.id)}
                           className="bg-zinc-500/10 hover:bg-zinc-500/20 border border-border hover:border-primary/30 text-muted-fg hover:text-primary px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
-                          title="Copiar Secreto de Firma"
+                          title={t('webhooksCopySecret')}
                         >
                           {copiedId === wh.id ? (
                             <>
-                              <Check className="w-3.5 h-3.5 text-chartreuse" /> Copiado
+                              <Check className="w-3.5 h-3.5 text-chartreuse" /> {t('webhooksCopied')}
                             </>
                           ) : (
                             <>
-                              <Copy className="w-3.5 h-3.5" /> Copiar Firma whsec
+                              <Copy className="w-3.5 h-3.5" /> {t('webhooksCopySecret')}
                             </>
                           )}
                         </button>
@@ -855,7 +857,7 @@ export function SettingsTab({
                         <button
                           onClick={() => handleDeleteWebhook(wh.id)}
                           className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-xl border border-destructive/20 transition-all cursor-pointer"
-                          title="Eliminar Webhook"
+                          title={t('webhooksDeleteTitle')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -877,26 +879,26 @@ export function SettingsTab({
               <div className="w-12 h-12 bg-primary/15 border border-primary/30 rounded-full flex items-center justify-center mx-auto text-primary shadow-[0_0_15px_rgba(98,113,196,0.1)]">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">¡Llave de API Creada con Éxito!</h3>
+              <h3 className="text-lg font-bold text-white">{t('apiKeysModalTitle')}</h3>
               <p className="text-xs text-muted-fg leading-relaxed">
-                Por razones de seguridad, esta credencial solo se mostrará **una vez**. Asegúrese de guardarla de forma segura antes de cerrar esta ventana.
+                {t('apiKeysModalDesc')}
               </p>
             </div>
 
             <div className="bg-black border border-border rounded-xl p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Firma Secreta de Acceso</span>
+                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysModalSecretLabel')}</span>
                 <button
                   onClick={() => handleCopy(revealedClearKey, 'modal-key')}
                   className="text-primary hover:text-primary/80 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
                 >
                   {copiedId === 'modal-key' ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-chartreuse" /> ¡Copiada!
+                      <Check className="w-3.5 h-3.5 text-chartreuse" /> {t('apiKeysModalCopied')}
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3.5 h-3.5" /> Copiar Llave
+                      <Copy className="w-3.5 h-3.5" /> {t('apiKeysModalCopy')}
                     </>
                   )}
                 </button>
@@ -915,7 +917,7 @@ export function SettingsTab({
                 }}
                 className="bg-zinc-100 hover:bg-white text-black font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(255,255,255,0.1)] transition-all cursor-pointer"
               >
-                He Guardado la Llave
+                {t('apiKeysModalButton')}
               </button>
             </div>
           </div>
@@ -930,26 +932,26 @@ export function SettingsTab({
               <div className="w-12 h-12 bg-primary/15 border border-primary/30 rounded-full flex items-center justify-center mx-auto text-primary shadow-[0_0_15px_rgba(98,113,196,0.1)]">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">¡Webhook Registrado con Éxito!</h3>
+              <h3 className="text-lg font-bold text-white">{t('webhooksModalTitle')}</h3>
               <p className="text-xs text-muted-fg leading-relaxed">
-                Utilice este secreto de firma para validar de forma criptográfica la autenticidad e integridad de los payloads de eventos entrantes (`alert.triggered`, `audit.completed`).
+                {t('webhooksModalDesc')}
               </p>
             </div>
 
             <div className="bg-black border border-border rounded-xl p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Secret Token de Firma (signing secret)</span>
+                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksModalSecretLabel')}</span>
                 <button
                   onClick={() => handleCopy(revealedWebhookSecret, 'modal-webhook')}
                   className="text-primary hover:text-primary/80 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
                 >
                   {copiedId === 'modal-webhook' ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-chartreuse" /> ¡Copiado!
+                      <Check className="w-3.5 h-3.5 text-chartreuse" /> {t('webhooksModalCopied')}
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3.5 h-3.5" /> Copiar Secreto
+                      <Copy className="w-3.5 h-3.5" /> {t('webhooksModalCopy')}
                     </>
                   )}
                 </button>
@@ -968,7 +970,7 @@ export function SettingsTab({
                 }}
                 className="bg-zinc-100 hover:bg-white text-black font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(255,255,255,0.1)] transition-all cursor-pointer"
               >
-                He Guardado el Secreto
+                {t('webhooksModalButton')}
               </button>
             </div>
           </div>
