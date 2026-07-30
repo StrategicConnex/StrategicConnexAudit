@@ -1,9 +1,13 @@
+'use client';
+
 import React from 'react';
 import {
   Globe, ChevronRight, Activity,
   Terminal, CheckCircle2, Zap,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { ProjectCard } from '../ProjectCard';
+import { BenchmarkingSection } from '../BenchmarkingSection';
 import { projects } from '@/shared/db/schemas';
 
 export type ProjectWithNested = typeof projects.$inferSelect & {
@@ -18,9 +22,11 @@ interface OverviewTabProps {
   initialProjects: ProjectWithNested[];
   dashboardData: ProjectWithNested[];
   setActiveTab: (tab: string) => void;
+  projectId?: string;
 }
 
-export function OverviewTab({ initialProjects, dashboardData, setActiveTab }: OverviewTabProps) {
+export function OverviewTab({ initialProjects, dashboardData, setActiveTab, projectId }: OverviewTabProps) {
+  const t = useTranslations('overview');
   return (
     <div className="space-y-6">
 
@@ -104,9 +110,9 @@ export function OverviewTab({ initialProjects, dashboardData, setActiveTab }: Ov
             <div>
               <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5 mb-1">
                 <Activity className="w-3.5 h-3.5 text-primary" />
-                Telemetría (30 Días)
+                {t('telemetry')}
               </h3>
-              <p className="text-sm font-bold text-foreground tracking-tight font-display">LCP Promedio vs Auditorías</p>
+              <p className="text-sm font-bold text-foreground tracking-tight font-display">{t('avgLcpVsAudits')}</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-fg uppercase tracking-widest">
@@ -152,7 +158,7 @@ export function OverviewTab({ initialProjects, dashboardData, setActiveTab }: Ov
         <div className="glass-card rounded-2xl p-6 flex flex-col">
           <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5 mb-4">
             <Terminal className="w-3.5 h-3.5 text-primary" />
-            Activity Log
+            {t('activityLog')}
           </h3>
 
           <div className="flex-1 font-mono text-[10px] space-y-2.5 relative"
@@ -185,21 +191,23 @@ export function OverviewTab({ initialProjects, dashboardData, setActiveTab }: Ov
         </div>
       </div>
 
-      {/* ═══ 3. COMPLIANCE & TRUST BANNER ═══ */}
+      {/* ═══ 3. BENCHMARKING ═══ */}
+      <BenchmarkingSection projectId={projectId} />
+
+      {/* ═══ 4. COMPLIANCE & TRUST BANNER ═══ */}
       <div className="glass-card rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
         <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full" style={{ background: 'oklch(68% 0.14 230 / 0.3)' }} />
         <div className="space-y-1.5 max-w-xl pl-4">
           <div className="flex items-center gap-2">
             <span className="text-[9px] font-extrabold text-primary uppercase tracking-wider flex items-center gap-1 px-2 py-0.5 rounded-md border" style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}>
-              Enterprise
+              {t('enterprise')}
             </span>
             <span className="w-1 h-1 rounded-full bg-border" />
             <span className="text-[10px] font-bold text-muted-fg tracking-widest uppercase">GSC API Sync Active</span>
           </div>
-          <h4 className="font-display text-sm font-bold text-foreground tracking-tight">Motor de Inteligencia Activo</h4>
+          <h4 className="font-display text-sm font-bold text-foreground tracking-tight">{t('intelligenceEngine')}</h4>
           <p className="text-xs text-muted-fg leading-relaxed">
-            Nuestro sistema realiza análisis continuos basados en las directrices de calidad 
-            y core updates de Google, garantizando el cumplimiento técnico automatizado.
+            {t('engineDesc')}
           </p>
         </div>
 
@@ -209,13 +217,13 @@ export function OverviewTab({ initialProjects, dashboardData, setActiveTab }: Ov
             <p className="text-xs font-bold text-foreground mt-0.5 font-display">SOC 2</p>
           </div>
           <div className="text-center px-4 py-1" style={{ borderRight: '1px solid oklch(15% 0.008 265 / 0.2)' }}>
-            <p className="text-[9px] font-extrabold text-muted-fg uppercase tracking-widest">Estándar</p>
+            <p className="text-[9px] font-extrabold text-muted-fg uppercase tracking-widest">{t('standard')}</p>
             <p className="text-xs font-bold text-foreground mt-0.5 font-display">Lighthouse 12</p>
           </div>
           <div className="text-center px-4 py-1">
-            <p className="text-[9px] font-extrabold text-muted-fg uppercase tracking-widest">Estado</p>
+            <p className="text-[9px] font-extrabold text-muted-fg uppercase tracking-widest">{t('status')}</p>
             <p className="text-xs font-bold text-chartreuse mt-0.5 flex items-center justify-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Seguro
+              <CheckCircle2 className="w-3 h-3" /> {t('secure')}
             </p>
           </div>
         </div>
@@ -227,16 +235,16 @@ export function OverviewTab({ initialProjects, dashboardData, setActiveTab }: Ov
           <div>
             <h2 className="font-display text-lg font-extrabold tracking-tight text-foreground flex items-center gap-2">
               <Globe className="w-4 h-4 text-primary" />
-              Nodos de Monitoreo
+              {t('monitoringNodes')}
             </h2>
-            <p className="text-xs text-muted-fg mt-1 font-medium">Salud técnica de Core Web Vitals en tiempo real.</p>
+            <p className="text-xs text-muted-fg mt-1 font-medium">{t('healthDesc')}</p>
           </div>
           <button 
             onClick={() => setActiveTab('projects')}
             className="text-[10px] font-bold uppercase tracking-widest text-primary transition-colors flex items-center gap-1.5 group px-3 py-1.5 rounded-md border" 
             style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}
           >
-            Explorar Red 
+            {t('exploreNetwork')}
             <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </button>
         </div>

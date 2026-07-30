@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   BarChart3, TrendingUp, TrendingDown, Activity, ShieldCheck,
-  Zap, Loader2, AlertCircle
+  Zap, Loader2, AlertCircle, Radar
 } from "lucide-react";
+import {
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  Radar as RechartsRadar, ResponsiveContainer, Tooltip
+} from "recharts";
 
 interface BenchmarkStats {
   min: number; max: number; avg: number; median: number;
@@ -36,7 +40,7 @@ interface BenchmarkingData {
   yourPercentile: YourPercentile;
 }
 
-function getRank(value: number | null, pct: number | null): { label: string; rank: 'top' | 'above' | 'below' | 'bottom'; color: string } {
+function getRank(value: number | null, pct: number | null) {
   if (value === null || pct === null) return { label: "N/A", rank: "below", color: "text-muted-fg" };
   if (pct <= 25) return { label: "Top " + pct + "%", rank: "top", color: "text-chartreuse" };
   if (pct <= 50) return { label: "Sobre mediana", rank: "above", color: "text-primary" };
@@ -54,15 +58,38 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
     fetch("/api/benchmarking" + params)
       .then((r) => r.json())
       .then((d) => {
-        if (d.success) {
-          setData(d);
-        } else {
-          setError(d.error || "Error al cargar benchmarks");
-        }
+        if (d.success) setData(d);
+        else setError(d.error || "Error al cargar benchmarks");
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [projectId]);
+
+  const radarData = useMemo(() => {
+    if (!data?.benchmarks) return [];
+    const { benchmarks, yourMetrics } = data;
+    const maxU = benchmarks.uptime.max || 100;
+    const maxL = benchmarks.latency.p95 || 5000;
+    const maxS = benchmarks.healthScore.max || 100;
+
+    return [
+      {
+        dimension: "Uptime",
+        Tu: yourMetrics ? Math.round((yourMetrics.uptimePercent / maxU) * 100) : 0,
+        Industria: Math.round((benchmarks.uptime.median / maxU) * 100),
+      },
+      {
+        dimension: "Latencia",
+        Tu: yourMetrics?.avgLatencyMs ? Math.round((1 - yourMetrics.avgLatencyMs / maxL) * 100) : 0,
+        Industria: Math.round((1 - benchmarks.latency.median / maxL) * 100),
+      },
+      {
+        dimension: "Health",
+        Tu: yourMetrics?.score != null ? Math.round((yourMetrics.score / maxS) * 100) : 0,
+        Industria: Math.round((benchmarks.healthScore.median / maxS) * 100),
+      },
+    ];
+  }, [data]);
 
   if (loading) {
     return (
@@ -84,11 +111,12 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
 
   const { benchmarks, yourMetrics, yourPercentile } = data;
   const uptimeRank = getRank(yourMetrics?.uptimePercent ?? null, yourPercentile.uptime);
-  const latencyRank = getRank(yourMetrics?.avgLatencyMs != null && yourMetrics.avgLatencyMs > 0 ? yourMetrics.avgLatencyMs : null, yourPercentile.latency);
+  const latencyRank = getRank(yourMetrics?.avgLatencyMs ?? null, yourPercentile.latency);
   const scoreRank = getRank(yourMetrics?.score ?? null, yourPercentile.score);
 
   return (
     <div className="glass-card rounded-2xl p-6 space-y-5">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -100,12 +128,10 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
             Tu desempeno vs {benchmarks.totalProjects} proyecto{benchmarks.totalProjects !== 1 ? "s" : ""} activos
           </p>
         </div>
-        <span className="text-[9px] font-mono text-muted-fg">
-          {new Date(benchmarks.computedAt).toLocaleString()}
-        </span>
+        <span className="text-[9px] font-mono text-muted-fg">{new Date(benchmarks.computedAt).toLocaleString()}</span>
       </div>
 
-      {/* Metric cards */}
+      {/* 3 metric cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Uptime */}
         <div className="rounded-xl p-4 border transition-all duration-300 hover:scale-[1.02]"
@@ -122,24 +148,12 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[9px] text-muted-fg">Tu proyecto</p>
-              <p className="text-lg font-extrabold text-foreground font-display">
-                {yourMetrics ? yourMetrics.uptimePercent + "%" : "--"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[9px] text-muted-fg">Mediana industria</p>
-              <p className="text-lg font-extrabold text-foreground/70 font-display">
-                {benchmarks.uptime.median}%
-              </p>
-            </div>
+            <div><p className="text-[9px] text-muted-fg">Tu proyecto</p><p className="text-lg font-extrabold text-foreground font-display">{yourMetrics ? yourMetrics.uptimePercent + "%" : "--"}</p></div>
+            <div><p className="text-[9px] text-muted-fg">Mediana industria</p><p className="text-lg font-extrabold text-foreground/70 font-display">{benchmarks.uptime.median}%</p></div>
           </div>
           <div className="mt-3 pt-3 border-t" style={{ borderColor: "oklch(15% 0.008 265 / 0.15)" }}>
             <div className="flex justify-between text-[9px] text-muted-fg">
-              <span>P25: {benchmarks.uptime.p25}%</span>
-              <span>P75: {benchmarks.uptime.p75}%</span>
-              <span>P95: {benchmarks.uptime.p95}%</span>
+              <span>P25: {benchmarks.uptime.p25}%</span><span>P75: {benchmarks.uptime.p75}%</span><span>P95: {benchmarks.uptime.p95}%</span>
             </div>
           </div>
         </div>
@@ -159,24 +173,12 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[9px] text-muted-fg">Tu proyecto</p>
-              <p className="text-lg font-extrabold text-foreground font-display">
-                {yourMetrics?.avgLatencyMs ? yourMetrics.avgLatencyMs + "ms" : "--"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[9px] text-muted-fg">Mediana industria</p>
-              <p className="text-lg font-extrabold text-foreground/70 font-display">
-                {benchmarks.latency.median}ms
-              </p>
-            </div>
+            <div><p className="text-[9px] text-muted-fg">Tu proyecto</p><p className="text-lg font-extrabold text-foreground font-display">{yourMetrics?.avgLatencyMs ? yourMetrics.avgLatencyMs + "ms" : "--"}</p></div>
+            <div><p className="text-[9px] text-muted-fg">Mediana industria</p><p className="text-lg font-extrabold text-foreground/70 font-display">{benchmarks.latency.median}ms</p></div>
           </div>
           <div className="mt-3 pt-3 border-t" style={{ borderColor: "oklch(15% 0.008 265 / 0.15)" }}>
             <div className="flex justify-between text-[9px] text-muted-fg">
-              <span>P25: {benchmarks.latency.p25}ms</span>
-              <span>P75: {benchmarks.latency.p75}ms</span>
-              <span>P95: {benchmarks.latency.p95}ms</span>
+              <span>P25: {benchmarks.latency.p25}ms</span><span>P75: {benchmarks.latency.p75}ms</span><span>P95: {benchmarks.latency.p95}ms</span>
             </div>
           </div>
         </div>
@@ -196,33 +198,49 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[9px] text-muted-fg">Tu proyecto</p>
-              <p className="text-lg font-extrabold text-foreground font-display">
-                {yourMetrics?.score != null ? yourMetrics.score + "/100" : "--"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[9px] text-muted-fg">Mediana industria</p>
-              <p className="text-lg font-extrabold text-foreground/70 font-display">
-                {benchmarks.healthScore.median}/100
-              </p>
-            </div>
+            <div><p className="text-[9px] text-muted-fg">Tu proyecto</p><p className="text-lg font-extrabold text-foreground font-display">{yourMetrics?.score != null ? yourMetrics.score + "/100" : "--"}</p></div>
+            <div><p className="text-[9px] text-muted-fg">Mediana industria</p><p className="text-lg font-extrabold text-foreground/70 font-display">{benchmarks.healthScore.median}/100</p></div>
           </div>
           <div className="mt-3 pt-3 border-t" style={{ borderColor: "oklch(15% 0.008 265 / 0.15)" }}>
             <div className="flex justify-between text-[9px] text-muted-fg">
-              <span>P25: {benchmarks.healthScore.p25}</span>
-              <span>P75: {benchmarks.healthScore.p75}</span>
-              <span>P95: {benchmarks.healthScore.p95}</span>
+              <span>P25: {benchmarks.healthScore.p25}</span><span>P75: {benchmarks.healthScore.p75}</span><span>P95: {benchmarks.healthScore.p95}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Summary footer */}
+      {/* Radar Chart */}
+      {radarData.length > 0 && (
+        <div className="rounded-xl border p-5" style={{ background: "oklch(100% 0 0 / 0.02)", borderColor: "oklch(15% 0.008 265 / 0.3)" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <Radar className="w-4 h-4 text-primary" />
+            <h4 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Performance Radar</h4>
+          </div>
+          <div className="w-full" style={{ height: 260 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="oklch(100% 0 0 / 0.06)" />
+                <PolarAngleAxis dataKey="dimension" tick={{ fill: "oklch(60% 0.01 265)", fontSize: 10, fontWeight: 700 }} />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: "oklch(40% 0.01 265)", fontSize: 8 }} tickCount={5} />
+                <RechartsRadar name="Industria" dataKey="Industria" stroke="oklch(78% 0.18 140)" fill="oklch(78% 0.18 140)" fillOpacity={0.08} strokeWidth={1.5} dot={{ fill: "oklch(78% 0.18 140)", r: 2 }} />
+                <RechartsRadar name="Tu proyecto" dataKey="Tu" stroke="oklch(68% 0.14 230)" fill="oklch(68% 0.14 230)" fillOpacity={0.12} strokeWidth={2} dot={{ fill: "oklch(68% 0.14 230)", r: 3 }} />
+                <Tooltip contentStyle={{ background: "oklch(8% 0.005 265)", border: "1px solid oklch(15% 0.008 265 / 0.3)", borderRadius: 8, fontSize: 11, color: "oklch(85% 0 0)" }} formatter={(value: any) => [String(value) + '/100', 'Puntaje']} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex items-center justify-center gap-6 mt-2">
+            <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-fg uppercase tracking-widest">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: "oklch(78% 0.18 140)" }} /> Industria
+            </span>
+            <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-fg uppercase tracking-widest">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: "oklch(68% 0.14 230)" }} /> Tu proyecto
+            </span>
+          </div>
+        </div>
+      )}
+
       <p className="text-[10px] text-muted-fg/60 text-center pt-2">
         Basado en {benchmarks.uptime.count} proyectos con datos de uptime, {benchmarks.latency.count} con latencia y {benchmarks.healthScore.count} con health scores.
-        Los percentiles se calculan sobre los ultimos 30 dias.
       </p>
     </div>
   );

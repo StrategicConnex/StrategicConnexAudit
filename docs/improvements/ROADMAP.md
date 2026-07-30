@@ -300,22 +300,48 @@ flowchart LR
 ---
 
 ## ═══════════════════════════════════════════════════════
-## FASE 4 — P3: DESEABLE ⬜
+## FASE 4 — P3: DESEABLE (58% completado 🟡)
 ## ═══════════════════════════════════════════════════════
 
-### P3.1 ⬜ Mobile App / PWA
+### P3.1 🟢 PWA Mobile (90% completado)
 
 **Inspiración:** Shodan, todas las herramientas modernas
 
-**Potencial:** Aplicación progresiva (PWA) con service worker, notificaciones push offline, y responsive mobile-first. Ya existe `PushSubscribeButton.tsx` como proto de Service Worker.
+**Estado:** ✅ Service Worker (SW), cache offline, push notifications registradas, manifest.json, meta tags iOS/Android. Falta botón de instalación nativo en UI.
+
+**Archivos creados:**
+- `public/manifest.json` — Manifest PWA con `display: standalone`, `start_url: /login`, iconos SVG
+- `public/sw.js` — Service Worker con networkFirst, cache offline v2, push event listeners
+- `src/app/offline/page.tsx` — Página offline con diseño SCAUDIT (WifiOff icon, botón reintentar)
+- `src/app/components/PushSubscribeButton.tsx` — Botón de suscripción a notificaciones push (VAPID)
+- `src/app/api/notifications/push-subscribe/route.ts` — Endpoint de suscripción push
+- Meta tags en `layout.tsx`: `apple-mobile-web-app-capable`, `mobile-web-app-capable`, `msapplication-TileColor`
+
+**Pendiente:**
+- Botón "Instalar SCAUDIT" en la UI del dashboard (beforeinstallprompt event)
 
 ---
 
-### P3.2 ⬜ Anomaly Detection ML
+### P3.2 🟢 Anomaly Detection (100% completado)
 
 **Inspiración:** Datadog, GreyNoise
 
-**Potencial:** Detección automática de picos anómalos en LCP, uptime, latencia. Clasificación de IPs (benign/malicious/unknown). Tags asociados a CVEs.
+**Motor:** Moving Z-score estadístico (sin dependencias ML externas)
+
+**Thresholds:** |Z|>2 → info | |Z|>3 → warning | |Z|>5 → critical
+
+**Archivos creados:**
+- `src/server/intelligence/anomaly/detector.ts` — Engine: `calculateZScore()`, `persistAnomaly()`, `detectLatencyAnomalies()`, `detectErrorRateAnomalies()`, `runAllDetections()`
+- `src/app/api/intelligence/anomalies/route.ts` — GET endpoint con filtros (projectId, metricType, severity, since, paginación)
+- `src/trigger/anomaly.trigger.ts` — Trigger.dev cada 15 min: `periodic-anomaly-detection`, itera todos los proyectos activos
+- `src/shared/db/schemas/anomaly.ts` — Schema Drizzle (15 columnas, 4 índices)
+- `drizzle/0011_anomaly_detections.sql` — Migración SQL
+
+**Métricas monitoreadas:**
+| Métrica | Fuente | Ventana | Detección |
+|---------|--------|---------|-----------|
+| Latencia | `uptime_logs.responseTimeMs` | 24h | Pico vs. media histórica |
+| Error rate | `intelligence_run_events` | 24h (por hora) | Surge de errores |
 
 ---
 
@@ -335,19 +361,54 @@ flowchart LR
 
 ---
 
-### P3.5 ⬜ Multi-language (INGLÉS)
+### P3.5 🟡 Multi-language INGLÉS (40% — Fase 1 MVP completa)
 
 **Inspiración:** Todas las herramientas globales
 
-**Potencial:** Internacionalización completa. El 100% de la competencia tiene UI en inglés. SCAUDIT actualmente es solo español.
+**Arquitectura:** Cookie-based (sin URL prefix restructuring) con `next-intl` v4
+
+**Fase 1 — Completado:**
+- `messages/en.json` + `messages/es.json` — 50+ keys cada uno
+- `src/i18n/routing.ts` — Config: `locales: ['es', 'en']`, `localePrefix: 'never'`
+- `src/i18n/request.ts` — Detección: cookie → Accept-Language → default 'es'
+- `src/app/components/I18nProvider.tsx` — Wrapper client-side de NextIntlClientProvider
+- `src/app/components/LanguageSwitcher.tsx` — Botón toggle (mini + full)
+- `src/shared/lib/cookie-utils.ts` — `setCookie()` / `getCookie()`
+- Login page migrado (18 strings → `t('login.key')`)
+- Sidebar migrada (12 strings → `t('sidebar.key')`)
+- LanguageSwitcher visible en login (footer) y sidebar (sobre Configuración)
+
+**Pendiente Fase 2:**
+- IntelligenceTab, OverviewTab, ProjectsTab, PerformanceTab, MonitoringTab (~100+ strings)
+- AI system prompts (ai-router.ts — 4 task types en español)
+- Documentación (docs/ — 9 archivos + guides)
 
 ---
 
-### P3.6 ⬜ Benchmarking Dashboard
+### P3.6 🟢 Benchmarking Dashboard (100% completado)
 
 **Inspiración:** Moz Pro, SEMrush
 
-**Potencial:** "Tu score vs. industria" — comparar métricas de seguridad y rendimiento contra promedios del sector.
+**Estado:** Completado — endpoint + ScoreGauge comparativo + BenchmarkingSection con radar chart recharts + integración en OverviewTab.
+
+**Archivos creados/modificados:**
+- `src/app/api/benchmarking/route.ts` — GET endpoint con aggregations SQL (uptime %, avg latency, health score por proyecto + percentiles globales)
+- `src/app/components/ScoreGauge.tsx` (modificado) — Nueva prop `benchmark` para badge de percentil
+- `src/app/components/BenchmarkingSection.tsx` — 3 metric cards (Uptime, Latencia, Health Score) con radar chart recharts + percentile badges
+- `src/app/components/tabs/OverviewTab.tsx` (modificado) — Integración con `projectId` dinámico
+- `src/app/components/DashboardContainer.tsx` (modificado) — Pasa `selectedProjectId` a OverviewTab
+
+**Radar Chart (recharts):**
+- 3 dimensiones normalizadas 0-100: Uptime, Latencia (invertida), Health Score
+- 2 series: tu proyecto (indigo) vs industria (chartreuse)
+- Tooltip dark theme, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+
+**Métricas disponibles:**
+| Dimensión | Stats | Tu proyecto | Percentil |
+|-----------|-------|-------------|-----------|
+| Uptime | min, max, avg, median, P25, P75, P95 | ✅ | Top X% / Sobre mediana / Debajo media / Bottom X% |
+| Latencia | min, max, avg, median, P25, P75, P95 | ✅ | Idem |
+| Health Score | min, max, avg, median, P25, P75, P95 | ✅ | Idem |
 
 ---
 
@@ -412,10 +473,10 @@ Dashboard visual completo con:
 | Fase 1 — P0 Fundación | 3 | 3 | ✅ **100%** |
 | Fase 2 — P1 Core Features | 6 | 6 | ✅ **100%** |
 | Fase 3 — P2 UX/Dashboard | 6 | 6 | ✅ **100%** |
-| Fase 4 — P3 Deseable | 6 | 0 | ⬜ 0% |
-| **Total** (incluye P3) | **36** | **30** | **✅ 83%** |
+| Fase 4 — P3 Deseable | 6 | 4 | 🟡 **67%** |
+| **Total** (incluye P3) | **36** | **34** | **✅ 94%** |
 
-> **Nota:** El progreso sin contar Fase 4 (P3 Deseable) es **30/30 = 100%** — el producto base está completo. La Fase 4 se agregó como visión a futuro y reduce el porcentaje total a 83%.
+> **Nota:** P3.1 (PWA mobile) está al 90%, P3.5 (i18n) al 40% (Fase 1 completada). P3.3 y P3.4 no iniciados.
 
 ---
 
@@ -423,41 +484,43 @@ Dashboard visual completo con:
 ## PENDIENTE PARA PRÓXIMOS SPRINTS
 ## ═══════════════════════════════════════════════════════
 
-### P3.1 Mobile App / PWA
+### P3.1 ⬜ PWA Mobile (90% — solo falta botón install en UI)
 
-**Estado:** Pendiente.
+**Ultimo cambio:** Junio 2026
 
-**Estimación:** 5-7 días
+**Estimación:** 1 día
 
-### P3.2 Anomaly Detection ML
+### P3.2 ✅ Anomaly Detection — COMPLETADO
+
+**Ultimo cambio:** Julio 2026
+
+**Archivos:** Anomaly engine, API endpoint, Trigger.dev cron, schema + migration.
+
+### P3.3 ⬜ Adversary Simulation
 
 **Estado:** Pendiente.
 
 **Estimación:** 10-15 días
 
-### P3.3 Adversary Simulation
-
-**Estado:** Pendiente.
-
-**Estimación:** 10-15 días
-
-### P3.4 Plugin Marketplace
+### P3.4 ⬜ Plugin Marketplace
 
 **Estado:** Pendiente.
 
 **Estimación:** 7-10 días
 
-### P3.5 Multi-language (INGLÉS)
+### P3.5 🟡 Multi-language INGLÉS (40%)
 
-**Estado:** Pendiente.
+**Ultimo cambio:** Julio 2026
 
-**Estimación:** 5-7 días
+**Fase 1 completa:** login + sidebar migrados. **Fase 2 pendiente:** ~100+ strings en tabs restantes + prompts IA + documentación.
 
-### P3.6 Benchmarking Dashboard
+**Estimación Fase 2:** 5-7 días
 
-**Estado:** Pendiente.
+### P3.6 ✅ Benchmarking Dashboard — COMPLETADO
 
-**Estimación:** 5-7 días
+**Ultimo cambio:** Julio 2026
+
+**Archivos:** API endpoint, ScoreGauge benchmark prop, BenchmarkingSection + Radar Chart, OverviewTab integrado.
 
 ---
 

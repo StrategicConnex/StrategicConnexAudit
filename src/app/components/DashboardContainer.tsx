@@ -95,7 +95,8 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
               <OverviewTab 
                 initialProjects={initialProjects} 
                 dashboardData={dashboardData} 
-                setActiveTab={(tab) => setActiveTab(tab as DashboardTab)} 
+                setActiveTab={(tab) => setActiveTab(tab as DashboardTab)}
+                projectId={selectedProjectId}
               />
             )}
 

@@ -1,5 +1,8 @@
+'use client';
+
 import React from 'react';
 import { Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { ProjectCard } from '../ProjectCard';
 import { projects } from '@/shared/db/schemas';
 
@@ -17,12 +20,13 @@ interface ProjectsTabProps {
 }
 
 export function ProjectsTab({ dashboardData, NewProjectModal }: ProjectsTabProps) {
+  const t = useTranslations('projects');
   return (
     <div className="space-y-6 relative z-10 font-sans text-zinc-100">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[19px] font-extrabold tracking-tight text-white">Listado Completo de Dominios</h2>
-          <p className="text-xs text-zinc-500 mt-1">Administre y audite la infraestructura de los sitios web asignados a su cuenta corporativa.</p>
+          <h2 className="text-[19px] font-extrabold tracking-tight text-white">{t('title')}</h2>
+          <p className="text-xs text-zinc-500 mt-1">{t('description')}</p>
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { ToasterProvider } from "@/app/components/ToasterProvider";
 import { I18nProvider } from "@/app/components/I18nProvider";
+import { RegisterServiceWorker } from "@/app/components/RegisterServiceWorker";
 
 
 const inter = Inter({
@@ -85,6 +86,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-full flex flex-col">
+        <RegisterServiceWorker />
         <I18nProvider>
           {children}
         </I18nProvider>
