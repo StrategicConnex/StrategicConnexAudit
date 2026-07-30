@@ -566,10 +566,10 @@ Dashboard visual completo con:
 | Fase 1 — P0 Fundación | 3 | 3 | ✅ **100%** |
 | Fase 2 — P1 Core Features | 6 | 6 | ✅ **100%** |
 | Fase 3 — P2 UX/Dashboard | 6 | 6 | ✅ **100%** |
-| Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** (P3.4 completado con plugin-executor + registro dinámico) |
-| **Total** (incluye P3) | **36** | **36** | **✅ 100%** |
+| Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** (P3.4 + P3.5 completados) |
+| **Total** (incluye P3) | **38** | **38** | **✅ 100%** |
 
-> **Nota:** P3.5 (i18n) al **95%** (11/11 tabs Fase 2 migrados + commiteados). Solo falta traducir los 4 system prompts de IA en ai-router.ts (~15 min). P3.4 Plugin Marketplace completado con ToolExecutor adapter + registro dinámico en executor-registry y tool-registry. **Toda la Fase 4 al 100%.**
+> **Nota:** P3.5 completo al 100% (11/11 tabs + AI prompts bilingües). P3.4 completo con ToolExecutor adapter + registro dinámico. **Toda la Fase 4 al 100%.** SCAUDIT Pro es **open source y no se monetizará** — los planes free/pro/business/enterprise son exclusivamente para rate limiting interno sin Stripe ni facturación.
 
 ---
 
