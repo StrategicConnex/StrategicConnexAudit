@@ -231,7 +231,10 @@ export async function POST(req: NextRequest) {
       { id: "website.security_headers", category: "security" },
       { id: "tls.scan", category: "security" },
       { id: "website.robots", category: "security" },
-      { id: "osint.whois", category: "network" }
+      { id: "osint.whois", category: "network" },
+      { id: "tls.advanced", category: "ssl-tls" },
+      { id: "network.subdomain_takeover", category: "network" },
+      { id: "threat.cve_lookup", category: "threat" }
     ];
 
     logEvent("info", "Ejecutando suite de escaneos técnicos concurrentes...");
