@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { TrendingUp, Search, Plus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 export interface KeywordItem {
@@ -20,15 +21,16 @@ interface KeywordsTabProps {
 }
 
 export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handleAddKeyword }: KeywordsTabProps) {
+  const t = useTranslations('keywords');
   return (
     <div className="space-y-12 relative z-10 font-sans text-foreground">
       {/* GSC Integrations Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         {[
-          { label: 'Impressions', value: '124.8K', change: '+14.2%', trend: 'up' },
-          { label: 'Organic Clicks', value: '8,420', change: '+8.6%', trend: 'up' },
-          { label: 'Avg. CTR', value: '6.74%', change: 'Stable', trend: 'stable' },
-          { label: 'Avg. Position', value: '4.2', change: '+0.4', trend: 'up' },
+          { label: t('metricImpressions'), value: '124.8K', change: '+14.2%', trend: 'up' },
+          { label: t('metricClicks'), value: '8,420', change: '+8.6%', trend: 'up' },
+          { label: t('metricCtr'), value: '6.74%', change: t('metricStable'), trend: 'stable' },
+          { label: t('metricPosition'), value: '4.2', change: '+0.4', trend: 'up' },
         ].map((metric, i) => (
           <div key={i} className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 flex flex-col gap-4 ">
             <div className="flex items-center justify-between">
@@ -44,7 +46,7 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-extrabold tracking-tighter text-white leading-none">{metric.value}</span>
             </div>
-            <p className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">Google Search Console (30d)</p>
+            <p className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">{t('metricSource')}</p>
           </div>
         ))}
       </div>
@@ -53,8 +55,8 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
       <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10  relative overflow-hidden">
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         <div className="mb-8">
-          <h3 className="font-extrabold text-white text-lg tracking-tight">Monitoreo Activo de Keywords</h3>
-          <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-1">Configure el rastreo en tiempo real para sus dominios con análisis SEO impulsado por IA</p>
+          <h3 className="font-extrabold text-white text-lg tracking-tight">{t('monitorTitle')}</h3>
+          <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-1">{t('monitorDesc')}</p>
         </div>
         <form onSubmit={handleAddKeyword} className="flex gap-4 flex-col sm:flex-row relative z-10">
           <div className="relative flex-1">
@@ -63,7 +65,7 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
               type="text" 
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
-              placeholder="Ingrese una palabra clave para monitorear..."
+              placeholder={t('inputPlaceholder')}
               className="w-full bg-card border border-border focus:border-primary rounded-xl pl-12 pr-4 py-3.5 text-foreground/80 text-sm focus:outline-none transition-all placeholder-zinc-600 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
             />
           </div>
@@ -71,7 +73,7 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
             type="submit" 
             className="px-8 py-3.5 bg-cyan-500 text-black text-[11px] font-extrabold uppercase tracking-widest rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Empezar a Rastrear
+            <Plus className="w-4 h-4" /> {t('startTrackingButton')}
           </button>
         </form>
       </div>
@@ -79,19 +81,19 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
       {/* Tracked keywords list */}
       <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden ">
         <div className="p-8 border-b border-border bg-muted/1">
-          <h3 className="font-extrabold text-white text-base tracking-tight">Tabla de Rendimiento de Keywords</h3>
-          <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">Métricas e históricos de posicionamiento en tiempo real</p>
+          <h3 className="font-extrabold text-white text-base tracking-tight">{t('tableTitle')}</h3>
+          <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">{t('tableDesc')}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border bg-muted/1 text-[10px] font-bold uppercase text-muted-fg tracking-wider">
-                <th className="px-8 py-5">Keyword</th>
-                <th className="px-8 py-5">Dominio</th>
-                <th className="px-8 py-5 text-center">Volumen</th>
-                <th className="px-8 py-5 text-center">KD%</th>
-                <th className="px-8 py-5 text-center">Posición</th>
-                <th className="px-8 py-5 text-center">Cambio</th>
+                <th className="px-8 py-5">{t('colKeyword')}</th>
+                <th className="px-8 py-5">{t('colDomain')}</th>
+                <th className="px-8 py-5 text-center">{t('colVolume')}</th>
+                <th className="px-8 py-5 text-center">{t('colDifficulty')}</th>
+                <th className="px-8 py-5 text-center">{t('colPosition')}</th>
+                <th className="px-8 py-5 text-center">{t('colChange')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04] text-sm">
