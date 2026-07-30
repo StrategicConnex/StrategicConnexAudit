@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Bell, Key, Link2, Plus, Trash2, Cpu, CheckCircle2, AlertTriangle,
   Sliders, Play, Copy, Check, Sparkles, Send, ShieldCheck, Zap
@@ -13,6 +14,7 @@ interface MonitoringTabProps {
 }
 
 export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedProjectId }: MonitoringTabProps) {
+  const t = useTranslations('monitoring');
   // State for Monitoring Schedule
   const [schedule, setSchedule] = useState<{
     enabled: boolean;
@@ -350,16 +352,16 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <Sliders className="w-6 h-6 text-[oklch(68% 0.14 230)]" />
-            Controles de Monitoreo y APIs Activas
+            {t('pageTitle')}
           </h1>
           <p className="text-xs text-muted-fg mt-1">
-            Gestión de tareas de indexación programadas, endpoints webhook, tokens de desarrollo e incidentes de drift.
+            {t('pageSubtitle')}
           </p>
         </div>
 
         {/* Project Selector */}
         <div className="flex items-center gap-3 shrink-0">
-          <label className="text-[11px] font-bold uppercase tracking-widest text-muted-fg">Proyecto Activo:</label>
+          <label className="text-[11px] font-bold uppercase tracking-widest text-muted-fg">{t('projectLabel')}</label>
           <select
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
@@ -384,16 +386,16 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <span className="p-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
                 <Cpu className="w-4 h-4" />
               </span>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">Programación de Sweeps</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">{t('scheduleTitle')}</h3>
             </div>
             
             <p className="text-xs text-muted-fg mb-5 leading-relaxed">
-              Define la frecuencia de los análisis completos sobre el dominio para detectar variaciones involuntarias en registros SSL o DNS.
+              {t('scheduleDesc')}
             </p>
 
             <form onSubmit={saveScheduleSettings} className="space-y-4">
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/5 border border-border/30">
-                <span className="text-xs font-medium text-foreground/80">Auditoría Automática</span>
+                <span className="text-xs font-medium text-foreground/80">{t('scheduleToggleLabel')}</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -406,23 +408,23 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">Intervalo Técnico</label>
+                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">{t('scheduleIntervalLabel')}</label>
                 <select
                   disabled={!schedule.enabled}
                   value={schedule.interval}
                   onChange={(e) => setSchedule(prev => ({ ...prev, interval: e.target.value as any }))}
                   className="w-full bg-[#0c0c0e]/80 border border-border disabled:opacity-40 text-foreground/80 text-xs rounded-lg px-3 py-2.5 outline-none focus:border-primary/40"
                 >
-                  <option value="daily">Diario (Alta frecuencia)</option>
-                  <option value="weekly">Semanal (Estándar recomendado)</option>
-                  <option value="monthly">Mensual</option>
+                  <option value="daily">{t('intervalDaily')}</option>
+                  <option value="weekly">{t('intervalWeekly')}</option>
+                  <option value="monthly">{t('intervalMonthly')}</option>
                 </select>
               </div>
 
               {schedule.enabled && schedule.nextRunAt && (
                 <div className="text-[10px] text-muted-fg flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-primary animate-pulse" />
-                  Próxima auditoría programada: {new Date(schedule.nextRunAt).toLocaleDateString()}
+                  {t('scheduleNextRunLabel')} {new Date(schedule.nextRunAt).toLocaleDateString()}
                 </div>
               )}
 
@@ -431,7 +433,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 disabled={isSavingSchedule}
                 className="w-full flex items-center justify-center gap-2 bg-muted/10 border border-border/40 hover:bg-primary/10 hover:border-primary/20 text-xs font-bold text-foreground/80 px-4 py-2.5 rounded-lg transition-all duration-300 active:scale-[0.98] cursor-pointer"
               >
-                {isSavingSchedule ? 'Guardando...' : 'Actualizar Programación'}
+                {isSavingSchedule ? t('scheduleSaving') : t('scheduleUpdateButton')}
               </button>
             </form>
           </div>
@@ -445,7 +447,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 <span className="p-1.5 rounded-lg bg-primary/10 text-indigo-400 border border-primary/20">
                   <Zap className="w-4 h-4" />
                 </span>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">Cupos y Limites de Plan</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">{t('quotaTitle')}</h3>
               </div>
               <span className="text-[9px] font-black uppercase text-primary bg-cyan-400/10 border border-cyan-400/20 px-2 py-0.5 rounded">
                 Plan {currentPlan}
@@ -463,7 +465,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   </svg>
                   <span className="absolute text-xs font-bold text-white">{initialProjects.length} / {planInfo.projects === 999 ? '∞' : planInfo.projects}</span>
                 </div>
-                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider mt-2">Recursos Activos</span>
+                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider mt-2">{t('quotaResourcesLabel')}</span>
               </div>
 
               {/* Dial 2: Scans */}
@@ -475,12 +477,12 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   </svg>
                   <span className="absolute text-xs font-bold text-white">{activeScansSimulated} / {planInfo.scans === 9999 ? '∞' : planInfo.scans}</span>
                 </div>
-                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider mt-2">Escaneos / mes</span>
+                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider mt-2">{t('quotaScansLabel')}</span>
               </div>
             </div>
             
             <p className="text-[11px] text-muted-fg mb-3 text-center">
-              Fórmula de facturación recurrente. Próximo cobro: {planInfo.price} el 01/06/2026.
+              {t('quotaBillingInfo', { price: planInfo.price })}
             </p>
           </div>
 
@@ -488,7 +490,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
             onClick={() => setShowPlanModal(true)}
             className="w-full bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
           >
-            Actualizar Suscripción
+            {t('quotaUpgradeButton')}
           </button>
         </div>
 
@@ -499,30 +501,27 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <span className="p-1.5 rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
                 <Bell className="w-4 h-4" />
               </span>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">Alertas en Slack</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">{t('slackTitle')}</h3>
             </div>
 
             <p className="text-xs text-muted-fg mb-4 leading-relaxed">
-              Recibe notificaciones en Slack en tiempo real cuando cambie la firma TLS o se identifique SPF roto.
+              {t('slackDesc')}
             </p>
 
             <div className="space-y-2 mb-4">
-              <div className="flex items-center justify-between text-xs p-2 rounded bg-destructive/5 border border-destructive/10">
-                <span className="text-muted-fg flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Critico
-                </span>
+              <div className="flex items-center justify-between text-xs p-2 rounded bg-destructive/5 border border-destructive/10">                  <span className="text-muted-fg flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {t('severityCritical')}
+                  </span>
                 <span className="font-mono text-foreground/80 text-[10px]">#security-incidents</span>
               </div>
-              <div className="flex items-center justify-between text-xs p-2 rounded bg-[oklch(75% 0.13 80)]/5 border border-[oklch(75% 0.13 80)]/10">
-                <span className="text-muted-fg flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Advertencia
-                </span>
+              <div className="flex items-center justify-between text-xs p-2 rounded bg-[oklch(75% 0.13 80)]/5 border border-[oklch(75% 0.13 80)]/10">                  <span className="text-muted-fg flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> {t('severityWarning')}
+                  </span>
                 <span className="font-mono text-foreground/80 text-[10px]">#seo-drift</span>
               </div>
-              <div className="flex items-center justify-between text-xs p-2 rounded bg-primary/5 border border-primary/10">
-                <span className="text-muted-fg flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" /> Informativo
-                </span>
+              <div className="flex items-center justify-between text-xs p-2 rounded bg-primary/5 border border-primary/10">                  <span className="text-muted-fg flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" /> {t('severityInfo')}
+                  </span>
                 <span className="font-mono text-foreground/80 text-[10px]">#deploy-logs</span>
               </div>
             </div>
@@ -532,7 +531,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
             onClick={triggerSlackTest}
             className="w-full flex items-center justify-center gap-2 bg-muted/10 border border-border/40 hover:bg-destructive/10 hover:border-destructive/20 text-xs font-bold text-destructive px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
           >
-            <Send className="w-3.5 h-3.5" /> Enviar Canal de Test (Webhook Slack)
+            <Send className="w-3.5 h-3.5" /> {t('slackTestButton')}
           </button>
         </div>
 
@@ -545,20 +544,20 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         <div className="lg:col-span-2 glass-card rounded-xl p-6 border border-border/50 space-y-4">
           <div className="flex items-center justify-between border-b border-border/50 pb-4">
             <div>
-              <h3 className="text-sm font-bold text-white tracking-tight">Historial de Incidentes & Drift</h3>
-              <p className="text-[11px] text-muted-fg mt-0.5">Logs de cambios no autorizados detectados en DNS o firmas SSL.</p>
+              <h3 className="text-sm font-bold text-white tracking-tight">{t('driftTitle')}</h3>
+              <p className="text-[11px] text-muted-fg mt-0.5">{t('driftDesc')}</p>
             </div>
             <span className="text-[10px] font-bold text-muted-fg bg-muted/20 border border-border/40 px-2 py-0.5 rounded">
-              {alerts.length} eventos
+              {t('driftEventCount', { count: alerts.length })}
             </span>
           </div>
 
           {isLoadingSchedule ? (
-            <div className="py-12 text-center text-xs text-muted-fg">Cargando alertas de seguridad...</div>
+            <div className="py-12 text-center text-xs text-muted-fg">{t('driftLoading')}</div>
           ) : alerts.length === 0 ? (
             <div className="py-16 text-center space-y-3">
               <CheckCircle2 className="w-8 h-8 text-chartreuse mx-auto" />
-              <p className="text-xs text-muted-fg">Excelente! Sin discrepancias ni drifts detectados en las últimas comprobaciones.</p>
+              <p className="text-xs text-muted-fg">{t('driftEmpty')}</p>
             </div>
           ) : (
             <div className="space-y-3 max-h-[360px] overflow-y-auto pr-2">
@@ -600,7 +599,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                         }}
                         className="text-[10px] font-bold text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 px-2.5 py-1 rounded transition-colors shrink-0 cursor-pointer"
                       >
-                        Resolver
+                        {t('driftResolveButton')}
                       </button>
                     )}
                   </div>
@@ -616,15 +615,15 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
             <div className="border-b border-border/50 pb-4">
               <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
                 <Link2 className="w-4 h-4 text-primary" />
-                Webhook Integraciones
+                {t('webhookSectionTitle')}
               </h3>
-              <p className="text-[11px] text-muted-fg mt-0.5">Notifica a tus servidores cuando finalicen los análisis.</p>
+              <p className="text-[11px] text-muted-fg mt-0.5">{t('webhookSectionDesc')}</p>
             </div>
 
             {isLoadingWebhooks ? (
-              <div className="py-8 text-center text-xs text-muted-fg">Cargando endpoints...</div>
+              <div className="py-8 text-center text-xs text-muted-fg">{t('webhookLoading')}</div>
             ) : webhooks.length === 0 ? (
-              <p className="text-xs text-muted-fg text-center py-6">No hay webhooks registrados.</p>
+              <p className="text-xs text-muted-fg text-center py-6">{t('webhookEmpty')}</p>
             ) : (
               <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2">
                 {webhooks.map((w) => (
@@ -649,7 +648,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
             <input
               type="text"
               required
-              placeholder="Nombre (ej. Vercel Audit Hook)"
+              placeholder={t('webhookNamePlaceholder')}
               value={newWebhookName}
               onChange={(e) => setNewWebhookName(e.target.value)}
               className="w-full bg-[#0c0c0e]/80 border border-border text-foreground/80 text-xs rounded-lg px-3 py-2 outline-none focus:border-primary/40"
@@ -659,7 +658,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <input
                 type="url"
                 required
-                placeholder="https://api.tuempresa.com/hook"
+                placeholder={t('webhookUrlPlaceholder')}
                 value={newWebhookUrl}
                 onChange={(e) => setNewWebhookUrl(e.target.value)}
                 className="flex-1 bg-[#0c0c0e]/80 border border-border text-foreground/80 text-xs rounded-lg px-3 py-2 outline-none focus:border-primary/40"
@@ -687,17 +686,17 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
                   <Key className="w-4 h-4 text-primary" />
-                  API Keys de Desarrollador
+                  {t('apiKeysSectionTitle')}
                 </h3>
-                <p className="text-[11px] text-muted-fg mt-0.5">Accede de manera programática a los resultados de auditorías.</p>
+                <p className="text-[11px] text-muted-fg mt-0.5">{t('apiKeysSectionDesc')}</p>
               </div>
               <span className="text-[10px] font-mono text-muted-fg">Prefijo: sa_live_</span>
             </div>
 
             {isLoadingKeys ? (
-              <div className="py-8 text-center text-xs text-muted-fg">Cargando tokens de acceso...</div>
+              <div className="py-8 text-center text-xs text-muted-fg">{t('apiKeysLoading')}</div>
             ) : apiKeys.length === 0 ? (
-              <p className="text-xs text-muted-fg text-center py-6">No has generado credenciales aún.</p>
+              <p className="text-xs text-muted-fg text-center py-6">{t('apiKeysEmpty')}</p>
             ) : (
               <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2 mb-4">
                 {apiKeys.map((key) => (
@@ -730,9 +729,9 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <div className="p-4 mb-4 rounded-lg bg-cyan-950/20 border border-primary/20 space-y-2 animate-in slide-in-from-top-2 duration-300">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" /> Token Generado Exitosamente
+                    <ShieldCheck className="w-3.5 h-3.5" /> {t('apiKeysGeneratedTitle')}
                   </span>
-                  <span className="text-[9px] text-muted-fg">Copia esta clave, no se volverá a mostrar.</span>
+                  <span className="text-[9px] text-muted-fg">{t('apiKeysCopyWarning')}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 bg-card border border-border/40 p-2.5 rounded font-mono text-xs text-foreground/80 overflow-x-auto select-all">
                   <span className="break-all">{createdClearKey}</span>
@@ -751,7 +750,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
             <input
               type="text"
               required
-              placeholder="Nombre del Token (ej. CI/CD Pipeline Key)"
+              placeholder={t('apiKeysNamePlaceholder')}
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
               className="flex-1 bg-[#0c0c0e]/80 border border-border text-foreground/80 text-xs rounded-lg px-3 py-2.5 outline-none focus:border-primary/40"
@@ -761,7 +760,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               disabled={isCreatingKey}
               className="bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary px-4 py-2.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shrink-0"
             >
-              {isCreatingKey ? 'Creando...' : 'Generar API Key'}
+              {isCreatingKey ? t('apiKeysCreating') : t('apiKeysGenerateButton')}
             </button>
           </form>
         </div>
@@ -774,19 +773,19 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 <Play className="w-4 h-4" />
               </span>
               <div>
-                <h3 className="text-sm font-bold text-white tracking-tight">Escáner Masivo de Dominios</h3>
-                <p className="text-[11px] text-muted-fg mt-0.5">Encola múltiples auditorías simultáneas en paralelo.</p>
+                <h3 className="text-sm font-bold text-white tracking-tight">{t('bulkTitle')}</h3>
+                <p className="text-[11px] text-muted-fg mt-0.5">{t('bulkDesc')}</p>
               </div>
             </div>
 
             <p className="text-xs text-muted-fg mb-4 leading-relaxed">
-              Introduce una lista de dominios separados por comas o saltos de línea. El sistema los auditará de manera asíncrona.
+              {t('bulkInstructions')}
             </p>
 
             <form onSubmit={handleQueueBulk} className="space-y-4">
               <textarea
                 required
-                placeholder="ejemplo.com&#10;otrodominio.org&#10;empresa.cl"
+                placeholder={t('bulkPlaceholder')}
                 rows={4}
                 value={bulkInput}
                 onChange={(e) => setBulkInput(e.target.value)}
@@ -812,7 +811,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 disabled={isQueuingBulk}
                 className="w-full flex items-center justify-center gap-2 bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
               >
-                {isQueuingBulk ? 'Encolando Dominios...' : 'Procesar Cola Masiva'}
+                {isQueuingBulk ? t('bulkQueuing') : t('bulkProcessButton')}
               </button>
             </form>
           </div>
@@ -831,11 +830,10 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               ✕
             </button>
 
-            <div className="text-center space-y-1">
-              <span className="text-[10px] font-extrabold tracking-widest text-[oklch(68% 0.14 230)] bg-primary/10 px-3 py-1 rounded-full uppercase">Suscripciones Flexibles</span>
-              <h2 className="text-2xl font-black text-white tracking-tight mt-3">Eleva tu Postura de Seguridad Técnica</h2>
+            <div className="text-center space-y-1">                  <span className="text-[10px] font-extrabold tracking-widest text-[oklch(68% 0.14 230)] bg-primary/10 px-3 py-1 rounded-full uppercase">{t('pricingBadge')}</span>
+              <h2 className="text-2xl font-black text-white tracking-tight mt-3">{t('pricingTitle')}</h2>
               <p className="text-xs text-muted-fg max-w-lg mx-auto">
-                Selecciona la capacidad de procesamiento continuo que mejor se adapte al tamaño de tu infraestructura web.
+                {t('pricingDesc')}
               </p>
             </div>
 
@@ -849,10 +847,10 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">Starter</p>
+                  <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">{t('planStarter')}</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$49</span>
-                    <span className="text-[11px] font-bold text-muted-fg">/ mes</span>
+                    <span className="text-[11px] font-bold text-muted-fg">{t('planPerMonth')}</span>
                   </div>
                   <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
                     <li className="flex items-center gap-2">✓ 10 Recursos Activos</li>
@@ -868,7 +866,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   }}
                   className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-all cursor-pointer"
                 >
-                  {currentPlan === 'starter' ? 'Plan Activo' : 'Seleccionar Starter'}
+                  {currentPlan === 'starter' ? t('planActive') : t('planSelect', { plan: t('planStarter') })}
                 </button>
               </div>
 
@@ -879,13 +877,13 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black tracking-widest text-[oklch(68% 0.14 230)] bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-full uppercase">
-                  Recomendado
+                  {t('planRecommended')}
                 </span>
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-[oklch(68% 0.14 230)] uppercase tracking-widest">Business</p>
+                  <p className="text-xs font-bold text-[oklch(68% 0.14 230)] uppercase tracking-widest">{t('planBusiness')}</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$149</span>
-                    <span className="text-[11px] font-bold text-muted-fg">/ mes</span>
+                    <span className="text-[11px] font-bold text-muted-fg">{t('planPerMonth')}</span>
                   </div>
                   <ul className="text-xs text-foreground/80 space-y-2.5 pt-2">
                     <li className="flex items-center gap-2">✓ 50 Recursos Activos</li>
@@ -901,7 +899,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   }}
                   className="w-full text-xs font-bold py-2.5 rounded-lg bg-[oklch(68% 0.14 230)] hover:bg-[oklch(68% 0.14 230)]/80 text-black transition-all cursor-pointer"
                 >
-                  {currentPlan === 'business' ? 'Plan Activo' : 'Seleccionar Business'}
+                  {currentPlan === 'business' ? t('planActive') : t('planSelect', { plan: t('planBusiness') })}
                 </button>
               </div>
 
@@ -912,10 +910,10 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">Enterprise</p>
+                  <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">{t('planEnterprise')}</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$499</span>
-                    <span className="text-[11px] font-bold text-muted-fg">/ mes</span>
+                    <span className="text-[11px] font-bold text-muted-fg">{t('planPerMonth')}</span>
                   </div>
                   <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
                     <li className="flex items-center gap-2">✓ Recursos Ilimitados</li>
@@ -931,7 +929,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   }}
                   className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-all cursor-pointer"
                 >
-                  {currentPlan === 'enterprise' ? 'Plan Activo' : 'Seleccionar Enterprise'}
+                  {currentPlan === 'enterprise' ? t('planActive') : t('planSelect', { plan: t('planEnterprise') })}
                 </button>
               </div>
 
