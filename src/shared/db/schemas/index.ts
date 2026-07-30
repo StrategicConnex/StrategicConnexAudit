@@ -488,3 +488,6 @@ export * from "./push-subscriptions";
 export * from "./history";
 export * from "./teams";
 export * from "./technologies";
+
+// ─── 40. Anomaly Detections (P3.2)
+export * from "./anomaly";

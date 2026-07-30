@@ -8,6 +8,7 @@ import {
   Mail, Shield, Activity, MapPin, Layers, Compass, BookMarked,
   ChevronDown, FileText, TrendingDown, Network
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { ScoreGauge } from '@/app/components/ScoreGauge';
 import { AttackSurfaceGraph } from '@/app/components/AttackSurfaceGraph';
 import { IncidentBriefModal } from '@/app/components/IncidentBriefModal';
@@ -172,6 +173,8 @@ export function IntelligenceTab({
   const [copiedBlockIdx, setCopiedBlockIdx] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
+
+  const t = useTranslations('intelligence');
 
   // Advanced interaction states
   const [expandedAccordions, setExpandedAccordions] = useState<Record<string, boolean>>({});
@@ -489,9 +492,9 @@ export function IntelligenceTab({
     const target = targetInput.trim();
     setTargetInput('');
 
-    // Pre-launch validation
+  // Pre-launch validation
     if (!selectedProjectId) {
-      setErrorText('Por favor, selecciona un proyecto para vincular el análisis.');
+      setErrorText('Seleccioná un proyecto activo antes de ejecutar un análisis.');
       return;
     }
 
@@ -610,7 +613,7 @@ export function IntelligenceTab({
         {/* Project Selector inside Workspace */}
         <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-5">
           <label className="block text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-2">
-            Proyecto Activo
+            {t('activeProject')}
           </label>
           <div className="relative">
             <select
@@ -634,7 +637,7 @@ export function IntelligenceTab({
         <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl flex-1 flex flex-col min-h-[300px] overflow-hidden">
           <div className="p-5 border-b border-border flex items-center justify-between bg-muted/1">
             <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-2">
-              <History className="w-3.5 h-3.5" /> Historial de Análisis
+              <History className="w-3.5 h-3.5" /> {t('analysisHistory')}
             </h3>
             <span className="text-[10px] bg-muted/5 border border-border/50 px-2 py-0.5 rounded-full font-bold">
               {investigations.length}
@@ -720,9 +723,9 @@ export function IntelligenceTab({
           
           <div className="relative z-10 flex flex-col gap-6">
             <div>
-              <h3 className="font-extrabold text-foreground text-base tracking-tight">Escanear Infraestructura Cibernética</h3>
+              <h3 className="font-extrabold text-foreground text-base tracking-tight">{t('scanInfrastructure')}</h3>
               <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
-                Ingresa un Dominio, IP o URL para auditar registros DNS, SSL, TLS y cabeceras de red
+                {t('scanSubtitle')}
               </p>
             </div>
 
@@ -748,11 +751,11 @@ export function IntelligenceTab({
               >
                 {isScanning ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Escaneando
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('scanning')}
                   </>
                 ) : (
                   <>
-                    Auditar <ArrowRight className="w-3.5 h-3.5" />
+                    {t('audit')} <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>
@@ -860,7 +863,7 @@ export function IntelligenceTab({
               {/* Score Gauge — Velocímetro SVG Cinematico */}
               <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4 md:col-span-1">
                 <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">
-                  Índice de Seguridad
+                  {t('securityIndex')}
                 </h3>
 
                 {selectedDetails.investigation.score !== null ? (
@@ -902,7 +905,7 @@ export function IntelligenceTab({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest">
-                      Análisis Finalizado
+                      {t('analysisComplete')}
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-fg font-medium">
@@ -972,7 +975,7 @@ export function IntelligenceTab({
                       {selectedDetails.investigation.target}
                     </h4>
                     <p className="text-xs text-muted-fg leading-relaxed mt-1">
-                      {selectedDetails.investigation.summary || 'Análisis de vulnerabilidad técnica de red completado exitosamente.'}
+                      {selectedDetails.investigation.summary || t('analysisComplete')}
                     </p>
                   </div>
                 </div>
@@ -997,9 +1000,8 @@ export function IntelligenceTab({
                   <button
                     onClick={() => setShowBriefModal(true)}
                     className="w-full flex items-center justify-center gap-2 bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 hover:border-destructive/40 text-destructive font-extrabold text-xs px-4 py-3 rounded-xl transition-all duration-300 hover:scale-[1.01] cursor-pointer group"
-                  >
-                    <FileText className="w-4 h-4 group-hover:animate-pulse" />
-                    Generar Incident Brief con IA
+                  >                        <FileText className="w-4 h-4 group-hover:animate-pulse" />
+                    {t('generateBrief')}
                     <span className="text-[9px] font-black bg-destructive/20 border border-destructive/30 px-2 py-0.5 rounded uppercase tracking-wider">
                       {selectedDetails.findings.filter(f => f.severity === 'critical' || f.severity === 'high').length} hallazgos
                     </span>
@@ -1082,14 +1084,13 @@ export function IntelligenceTab({
               
               return (
                 <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 flex flex-col gap-6">
-                  <div>
-                    <h3 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
-                      <Shield className="w-5 h-5 text-primary" />
-                      Salud de Correo y Seguridad Web
-                    </h3>
-                    <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
-                      Diagnóstico granular de protocolos de entrega segura de correo y protección de infraestructura web
-                    </p>
+                  <div>                        <h3 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
+                          <Shield className="w-5 h-5 text-primary" />
+                          {t('emailWebSecurity')}
+                        </h3>
+                        <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
+                          {t('scanSubtitle')}
+                        </p>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 border-t border-border/50 pt-6">
