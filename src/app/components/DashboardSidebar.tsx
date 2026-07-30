@@ -2,7 +2,7 @@
 
 import {
   LayoutDashboard, Globe, Activity, Search, BarChart3, Settings,
-  ShieldCheck, Sliders, HeartPulse, Crosshair, BookOpen, Zap, Key
+  ShieldCheck, Sliders, HeartPulse, Crosshair, BookOpen, Zap, Key, Skull
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
@@ -14,7 +14,7 @@ const AiCoreVisual = dynamic(() => import('./AiCoreVisual'), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type DashboardTab = 'overview' | 'projects' | 'performance' | 'keywords' | 'reports' | 'intelligence' | 'monitoring' | 'settings';
+export type DashboardTab = 'overview' | 'projects' | 'performance' | 'keywords' | 'reports' | 'intelligence' | 'monitoring' | 'adversary' | 'settings';
 
 interface DashboardSidebarProps {
   activeTab: DashboardTab;
@@ -143,6 +143,15 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           label={t('tabs.monitoring')}
           badge={<span className="text-[9px] bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('apis')}</span>}
           onClick={() => onTabChange('monitoring')}
+        />
+
+        <NavButton
+          tab="adversary"
+          activeTab={activeTab}
+          icon={<Skull size={18} strokeWidth={2} />}
+          label={t('tabs.adversary')}
+          badge={<span className="text-[9px] bg-destructive/10 text-destructive border border-destructive/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">BAS</span>}
+          onClick={() => onTabChange('adversary')}
         />
       </nav>
 

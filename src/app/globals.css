@@ -38,12 +38,47 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* ─── Animation tokens — keyframes definidos inline ────────────────── */
   --animate-scan-pulse: scan-pulse 2.2s ease-in-out infinite;
   --animate-shimmer: shimmer 2.5s linear infinite;
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-slide-in-right: slide-in-right 0.3s ease-out;
   --animate-scale-check: scale-check 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   --animate-message-in: message-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes scan-pulse {
+    0% { transform: scale(0.95); }
+    50% { transform: scale(1); }
+    100% { transform: scale(0.95); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes scale-check {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes message-in {
+    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
   --font-display: var(--font-display);
   --font-mono: var(--font-mono);
   --font-sans: var(--font-inter);
@@ -73,10 +108,13 @@
   --ring: oklch(68% 0.14 230);
   --radius: 12px;
   --scan-line: rgba(255, 255, 255, 0.008);
+}
 
-  /* Legacy aliases — backward compat with older component references */
-  --background: oklch(1.8% 0.003 265);
-  --foreground: oklch(93% 0.008 265);
+/* ─── Keyframes globales (no referenciados por animate-*) ────────────── */
+
+@keyframes pulse-beat {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
 }
 
 /* ─── Glass utilities ─────────────────────────────────────────────────── */
@@ -107,6 +145,18 @@
   animation: scan-pulse 2.2s ease-in-out infinite;
 }
 
+@utility radar-grid {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, oklch(100% 0 0 / 0.008) 1px, transparent 1px),
+                    linear-gradient(to bottom, oklch(100% 0 0 / 0.008) 1px, transparent 1px);
+}
+
+@utility tech-shimmer {
+  background: linear-gradient(90deg, oklch(100% 0 0 / 0.02) 25%, oklch(100% 0 0 / 0.06) 50%, oklch(100% 0 0 / 0.02) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s infinite linear;
+}
+
 body {
   background-color: var(--bg);
   color: var(--fg);
@@ -132,60 +182,6 @@ h1, h2, h3, h4,
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: oklch(15% 0.008 265); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: oklch(22% 0.01 265); }
-
-
-
-@utility radar-grid {
-  background-size: 40px 40px;
-  background-image: linear-gradient(to right, oklch(100% 0 0 / 0.008) 1px, transparent 1px),
-                    linear-gradient(to bottom, oklch(100% 0 0 / 0.008) 1px, transparent 1px);
-}
-
-@utility tech-shimmer {
-  background: linear-gradient(90deg, oklch(100% 0 0 / 0.02) 25%, oklch(100% 0 0 / 0.06) 50%, oklch(100% 0 0 / 0.02) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 2.5s infinite linear;
-}
-
-/* ─── Keyframes (curated set — no glitch, no float, no neural) ──────── */
-
-@keyframes scan-pulse {
-  0% { transform: scale(0.95); }
-  50% { transform: scale(1); }
-  100% { transform: scale(0.95); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slide-in-right {
-  from { opacity: 0; transform: translateX(8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes scale-check {
-  0% { transform: scale(0); opacity: 0; }
-  60% { transform: scale(1.2); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes message-in {
-  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes pulse-beat {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.03); }
-}
-
 
 /* ─── Typography utilities ──────────────────────────────────────────── */
 
