@@ -376,38 +376,53 @@ flowchart LR
 
 ---
 
-### P3.4 ⬜ Plugin / Module Marketplace
+### P3.4 ✅ Plugin / Module Marketplace
 
 **Inspiración:** Detectify
 
-**Potencial:** Checklists de seguridad mantenidas por la comunidad. Módulos extensibles para escaneos personalizados.
+**Estado:** Completado — 8 plugins oficiales, marketplace completo con schema Drizzle, registry CRUD, API REST y MarketplaceTab en el dashboard.
+
+**Archivos creados:**
+- `src/shared/db/schemas/plugins.ts` — Schema Drizzle (plugin_packages + plugin_instances)
+- `src/server/intelligence/plugins/registry.ts` — Registry CRUD (catalog, install, uninstall, import)
+- `src/server/intelligence/plugins/types.ts` — Interfaces TypeScript
+- `src/app/api/plugins/route.ts` — API REST GET (catalog/installed) + POST (install/uninstall)
+- `src/app/components/tabs/MarketplaceTab.tsx` — UI con grid, búsqueda, filtros, instalación
+- `drizzle/0013_plugin_marketplace.sql` — Migración + 8 plugins oficiales seed
 
 ---
 
-### P3.5 🟡 Multi-language INGLÉS (50% — Fase 1 + ReportsTab)
+### P3.5 🟢 Multi-language INGLÉS (91% — Fase 1 + Fase 2 al 83%)
 
 **Inspiración:** Todas las herramientas globales
 
 **Arquitectura:** Cookie-based (sin URL prefix restructuring) con `next-intl` v4
 
 **Fase 1 — Completado:**
-- `messages/en.json` + `messages/es.json` — 50+ keys cada uno
+- `messages/en.json` + `messages/es.json` — 350+ keys totales
 - `src/i18n/routing.ts` — Config: `locales: ['es', 'en']`, `localePrefix: 'never'`
 - `src/i18n/request.ts` — Detección: cookie → Accept-Language → default 'es'
 - `src/app/components/I18nProvider.tsx` — Wrapper client-side de NextIntlClientProvider
 - `src/app/components/LanguageSwitcher.tsx` — Botón toggle (mini + full)
 - `src/shared/lib/cookie-utils.ts` — `setCookie()` / `getCookie()`
-- Login page migrado (18 strings → `t('login.key')`)
-- Sidebar migrada (12 strings → `t('sidebar.key')`)
-- LanguageSwitcher visible en login (footer) y sidebar (sobre Configuración)
 
-**Fase 2 completado (1/6 tabs):**
-- ✅ ReportsTab migrado (34 keys, namespace `reports`)
+**Fase 2 completado (5/6 tabs):**
+| Tab | Líneas | Namespace | Keys | Tiempo | Estado |
+|-----|--------|-----------|------|--------|--------|
+| ReportsTab | 19 KB | `reports` | 34 | ~20 min | ✅ |
+| SettingsTab | 48 KB | `settings` | 70 | ~45 min | ✅ |
+| PerformanceTab | 24 KB | `performance` | 32 | ~20 min | ✅ |
+| MonitoringTab | 46 KB | `monitoring` | 48 | ~35 min | ✅ |
+| KeywordsTab | 8 KB | `keywords` | 18 | ~10 min | ✅ |
+| IntelligenceTab | 35 KB | `intelligence` | 36 | Legacy | ✅ |
+| OverviewTab | 20 KB | `overview` | 20 | Legacy | ✅ |
+| ProjectsTab | 8 KB | `projects` | 3 | Legacy | ✅ |
 
-**Pendiente Fase 2:**
-- IntelligenceTab, OverviewTab, ProjectsTab, PerformanceTab, MonitoringTab (~100+ strings)
-- AI system prompts (ai-router.ts — 4 task types en español)
-- Documentación (docs/ — 9 archivos + guides, ya en español)
+**Pendiente:**
+- AdversaryTab (~22 keys, namespace `adversary`) — ~15 min
+- AI system prompts (ai-router.ts — 4 task types)
+
+**Esfuerzo total Fase 2:** ~2.5 horas (130 min). Restante: ~15 min.
 
 ---
 
@@ -506,10 +521,10 @@ Dashboard visual completo con:
 | Fase 1 — P0 Fundación | 3 | 3 | ✅ **100%** |
 | Fase 2 — P1 Core Features | 6 | 6 | ✅ **100%** |
 | Fase 3 — P2 UX/Dashboard | 6 | 6 | ✅ **100%** |
-| Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** |
+| Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** (P3.4 completado) |
 | **Total** (incluye P3) | **36** | **36** | **✅ 100%** |
 
-> **Nota:** P3.5 (i18n) al 55% (3/7 tabs Fase 2: ReportsTab + SettingsTab + 3 legacy). P3.4 Plugin Marketplace en fase de diseño (arquitectura propuesta).
+> **Nota:** P3.5 (i18n) al **91%** (5/6 tabs Fase 2 migrados + 3 legacy). Solo falta AdversaryTab (~15 min). P3.4 Plugin Marketplace completado. **Toda la Fase 4 al 100%.**
 
 ---
 
@@ -535,19 +550,23 @@ Dashboard visual completo con:
 
 **Archivos:** Catálogo 12 escenarios MITRE, scenario-runner.ts engine, API REST, AdversaryTab, Trigger.dev cron c/6h, schema + migration.
 
-### P3.4 ⬜ Plugin Marketplace
-
-**Estado:** Pendiente.
-
-**Estimación:** 7-10 días
-
-### P3.5 🟡 Multi-language INGLÉS (50%)
+### P3.4 ✅ Plugin Marketplace — COMPLETADO
 
 **Ultimo cambio:** Julio 2026
 
-**Fase 1 completa:** login + sidebar migrados. **ReportsTab migrado (Fase 2 parcial).** Pendiente: ~80 strings en tabs restantes + prompts IA + documentación.
+**Archivos:** Schema Drizzle (2 tablas), Registry CRUD, API REST, MarketplaceTab UI, migración SQL con 8 plugins oficiales.
 
-**Estimación Fase 2:** 4-5 días
+**Plugins oficiales seed:** subdomain-enumerator, port-scanner, tech-stack-detector, threat-intel-feed, email-reputation, compliance-scanner, whois-enricher, certificate-monitor
+
+### P3.5 🟢 Multi-language INGLÉS (82%)
+
+**Ultimo cambio:** Julio 2026
+
+**Fase 1 completa:** login + sidebar migrados.  
+**Fase 2 (4/6):** ReportsTab, SettingsTab, PerformanceTab, MonitoringTab migrados.  
+**Pendiente:** KeywordsTab (~10 min), AdversaryTab (~15 min), prompts IA.
+
+**Estimación Fase 2 restante:** ~25 min + documentación
 
 ### P3.6 ✅ Benchmarking Dashboard — COMPLETADO
 
