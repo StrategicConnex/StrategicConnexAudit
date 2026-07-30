@@ -14,6 +14,8 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { checkIntelScanRateLimit } from "@/shared/lib/ratelimit";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
+import { executorRegistry } from "@/server/intelligence/core/executor-registry";
+import { toolRegistry } from "@/server/intelligence/registry/tool-registry";
 import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
 import { Finding } from "@/server/intelligence/types/executor.types";
 
@@ -209,35 +211,14 @@ export async function POST(req: NextRequest) {
 
     logEvent("info", `Iniciando Auditoría Técnica Avanzada modular para el host: ${normalizedTarget}`);
 
-    // 6. Lanzar ejecución paralela controlada de las 16 herramientas de ciberseguridad
-    const toolsToRun = [
-      { id: "dns.lookup", category: "network" },
-      { id: "dns.mx", category: "network" },
-      { id: "dns.txt", category: "network" },
-      { id: "dns.ns", category: "network" },
-      { id: "email.spf", category: "security" },
-      { id: "email.dmarc", category: "security" },
-      { id: "email.dkim", category: "security" },
-      { id: "network.ping", category: "network" },
-      { id: "network.reverse_dns", category: "network" },
-      { id: "network.geoip", category: "network" },
-      { id: "network.traceroute", category: "network" },
-      { id: "network.asn", category: "network" },
-      { id: "network.cdn", category: "network" },
-      { id: "network.waf", category: "network" },
-      { id: "network.reverse_ip", category: "network" },
-      { id: "threat.ip_reputation", category: "security" },
-      { id: "website.headers", category: "security" },
-      { id: "website.security_headers", category: "security" },
-      { id: "tls.scan", category: "security" },
-      { id: "website.robots", category: "security" },
-      { id: "osint.whois", category: "network" },
-      { id: "tls.advanced", category: "ssl-tls" },
-      { id: "network.subdomain_takeover", category: "network" },
-      { id: "threat.cve_lookup", category: "threat" }
-    ];
+    // 6. Lanzar ejecución paralela — tools leídas dinámicamente del toolRegistry
+    //    Solo se ejecutan tools que tengan un executor registrado (evita tools huérfanas)
+    const knownExecutors = new Set(Object.keys(executorRegistry));
+    const toolsToRun = toolRegistry
+      .filter((t) => knownExecutors.has(t.id))
+      .map((t) => ({ id: t.id, category: t.category }));
 
-    logEvent("info", "Ejecutando suite de escaneos técnicos concurrentes...");
+    logEvent("info", `Ejecutando suite de ${toolsToRun.length} herramientas de escaneo concurrentes...`);
 
     const executionPromises = toolsToRun.map(async (tool) => {
       const toolStart = Date.now();
