@@ -380,15 +380,58 @@ flowchart LR
 
 **Inspiración:** Detectify
 
-**Estado:** Completado — 8 plugins oficiales, marketplace completo con schema Drizzle, registry CRUD, API REST y MarketplaceTab en el dashboard.
+**Estado:** Completado — 8 plugins oficiales, marketplace completo con schema Drizzle, registry CRUD, API REST, MarketplaceTab UI, y **ToolExecutor adapter** que permite ejecutar plugins como herramientas nativas desde IntelligenceTab.
 
-**Archivos creados:**
-- `src/shared/db/schemas/plugins.ts` — Schema Drizzle (plugin_packages + plugin_instances)
-- `src/server/intelligence/plugins/registry.ts` — Registry CRUD (catalog, install, uninstall, import)
-- `src/server/intelligence/plugins/types.ts` — Interfaces TypeScript
-- `src/app/api/plugins/route.ts` — API REST GET (catalog/installed) + POST (install/uninstall)
-- `src/app/components/tabs/MarketplaceTab.tsx` — UI con grid, búsqueda, filtros, instalación
-- `drizzle/0013_plugin_marketplace.sql` — Migración + 8 plugins oficiales seed
+**Arquitectura de integración con el dispatcher:**
+```
+PluginPackage (DB)
+     │
+     ├──→ createPluginExecutor() → ToolExecutor
+     │         ├── Factory: PluginPackage → ToolExecutor
+     │         ├── buildZodSchema(): JSONB schema → Zod schema
+     │         ├── PLUGIN_TO_NATIVE_MAP: 5 plugins → executors nativos
+     │         └── BUILTIN_PLUGIN_RUNNERS: 3 runners personalizados
+     │
+     ├──→ createPluginToolDefinition() → IntelligenceToolDefinition
+     │
+     ├──→ registerDynamicExecutor() → executorRegistry (Map)
+     ├──→ registerDynamicToolDefinition() → toolRegistry (dynamic[])
+     │
+     └──→ dispatcher.executeTool() — lazy init si toolId empieza con "plugin."
+```
+
+**3 niveles de fallback en la ejecución de plugins:**
+| Nivel | Mecanismo | Plugins cubiertos |
+|-------|-----------|-------------------|
+| 1. Executor nativo | `PLUGIN_TO_NATIVE_MAP` → `getExecutor()` existente | tech-stack-detector, whois-enricher, port-scanner, certificate-monitor, email-reputation |
+| 2. Built-in runner | `BUILTIN_PLUGIN_RUNNERS[pkg.name]` | subdomain-enumerator (DNS brute force), threat-intel-feed, compliance-scanner |
+| 3. "No implementado" | Mensaje informativo | Plugins sin mapping ni runner |
+
+**Lazy init en el dispatcher:** Si `toolId` empieza con `plugin.`, `executeTool()` llama `await initializePluginExecutors()` antes de resolver. Idempotente por instancia serverless. **0 overhead para herramientas nativas.**
+
+**Post-install registration:** `POST /api/plugins` llama `registerSinglePluginExecutor(pkg.name)` después de un install exitoso — el executor está disponible inmediatamente sin esperar cold start.
+
+**Archivos creados (7):**
+| Archivo | Propósito |
+|---------|-----------|
+| `src/shared/db/schemas/plugins.ts` | Schema Drizzle (plugin_packages + plugin_instances) |
+| `src/server/intelligence/plugins/registry.ts` | Registry CRUD (catalog, install, uninstall, import) con withRLS |
+| `src/server/intelligence/plugins/types.ts` | Interfaces TypeScript |
+| `src/server/intelligence/plugins/plugin-executor.ts` | ToolExecutor adapter: factory + init + 3 runners + native mapping |
+| `src/app/api/plugins/route.ts` | API REST GET + POST con register post-install |
+| `src/app/components/tabs/MarketplaceTab.tsx` | UI con grid, búsqueda, filtros, instalación |
+| `drizzle/0013_plugin_marketplace.sql` | Migración + 8 plugins oficiales seed |
+
+**Archivos modificados (3):**
+| Archivo | Cambio |
+|---------|--------|
+| `executor-registry.ts` | `pluginExecutorRegistry` Map + `registerDynamicExecutor()` + `getExecutor()` fallback dinámico |
+| `tool-registry.ts` | `dynamicToolDefinitions[]` + `registerDynamicToolDefinition()` + `getToolDefinition()` fallback dinámico |
+| `dispatcher.ts` | Lazy init: `if (toolId.startsWith('plugin.')) await initializePluginExecutors()` |
+
+**8 plugins oficiales seed:** subdomain-enumerator, port-scanner, tech-stack-detector, threat-intel-feed, email-reputation, compliance-scanner, whois-enricher, certificate-monitor
+
+**Commit:** `bf95e65` — 13 archivos, +1362 líneas
 
 ---
 
@@ -523,10 +566,10 @@ Dashboard visual completo con:
 | Fase 1 — P0 Fundación | 3 | 3 | ✅ **100%** |
 | Fase 2 — P1 Core Features | 6 | 6 | ✅ **100%** |
 | Fase 3 — P2 UX/Dashboard | 6 | 6 | ✅ **100%** |
-| Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** (P3.4 completado) |
+| Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** (P3.4 completado con plugin-executor + registro dinámico) |
 | **Total** (incluye P3) | **36** | **36** | **✅ 100%** |
 
-> **Nota:** P3.5 (i18n) al **95%** (11/11 tabs Fase 2 migrados + commiteados). Solo falta traducir los 4 system prompts de IA en ai-router.ts (~15 min). P3.4 Plugin Marketplace completado. **Toda la Fase 4 al 100%.**
+> **Nota:** P3.5 (i18n) al **95%** (11/11 tabs Fase 2 migrados + commiteados). Solo falta traducir los 4 system prompts de IA en ai-router.ts (~15 min). P3.4 Plugin Marketplace completado con ToolExecutor adapter + registro dinámico en executor-registry y tool-registry. **Toda la Fase 4 al 100%.**
 
 ---
 
