@@ -6,7 +6,7 @@ import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq, and, gt } from "drizzle-orm";
 import { tasks } from "@trigger.dev/sdk";
 import type { runProjectAudit } from "@/trigger/audit.trigger";
-import { validateSafeUrl, normalizeUrl } from "@/shared/utils/network";
+import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
 import { directDb } from "@/shared/db";
 
 const AuditSchema = z.object({

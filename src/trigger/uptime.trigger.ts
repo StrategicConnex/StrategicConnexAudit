@@ -2,7 +2,7 @@ import { schedules, wait } from "@trigger.dev/sdk";
 import { db } from "@/shared/db";
 import { projects, uptimeLogs } from "@/shared/db/schemas";
 import { isNull } from "drizzle-orm";
-import { validateSafeUrl, normalizeUrl } from "@/shared/utils/network";
+import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
 
 export const uptimeMonitor = schedules.task({
   id: "uptime-monitor",
