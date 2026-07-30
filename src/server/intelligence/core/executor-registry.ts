@@ -22,6 +22,9 @@ import { osintWhoisExecutor } from "../executors/osint-executors";
 import { technologyProfilerExecutor } from "../executors/technology-profiler";
 import { networkBgpExecutor, threatCustomIntelExecutor } from "../executors/advanced-executors";
 import { whoisFullExecutor } from "../executors/whois-executors";
+import { tlsAdvancedExecutor } from "../executors/tls-advanced";
+import { subdomainTakeoverExecutor } from "../executors/subdomain-takeover";
+import { cveLookupExecutor } from "../executors/cve-lookup";
 
 export const executorRegistry: Record<string, ToolExecutor> = {
   "dns.lookup": dnsLookupExecutor,
@@ -49,6 +52,9 @@ export const executorRegistry: Record<string, ToolExecutor> = {
   "whois.full": whoisFullExecutor,
   "network.bgp": networkBgpExecutor,
   "threat.custom_intel": threatCustomIntelExecutor,
+  "tls.advanced": tlsAdvancedExecutor,
+  "network.subdomain_takeover": subdomainTakeoverExecutor,
+  "threat.cve_lookup": cveLookupExecutor,
 };
 
 // ─── Dynamic (Plugin) Executor Registry ─────────────────────────────────────
