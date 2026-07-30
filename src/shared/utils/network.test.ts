@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isPrivateIp, normalizeUrl, validateSafeUrl } from "./network";
+import { isPrivateIp, normalizeUrl, validateSafeUrl } from "@/server/intelligence/security/egress-guard";
 
 describe("isPrivateIp", () => {
   it("should return true for IPv4 loopback & private subnets", () => {

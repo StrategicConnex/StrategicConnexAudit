@@ -187,3 +187,65 @@ export async function safeFetch(url: string, init: RequestInit = {}): Promise<Re
   return response;
 }
 export type SafeFetch = typeof safeFetch;
+
+// ─── Shared Network Utilities (consolidated from network.ts) ────────────
+
+/**
+ * Alias for isBlockedAddress — kept for backward compatibility with
+ * code that imports from the old shared/utils/network.ts.
+ */
+export const isPrivateIp = isBlockedAddress;
+
+/**
+ * Safely normalizes any input domain or URL to have a valid http/https prefix.
+ */
+export function normalizeUrl(url: string): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
+/**
+ * Validates that a target URL is safe to visit (prevents SSRF and DNS Rebinding).
+ * Similar to assertPublicHostname but accepts a full URL and returns the URL string.
+ */
+export async function validateSafeUrl(targetUrl: string): Promise<string> {
+  const parsedUrl = new URL(targetUrl);
+
+  // 1. Enforce strict http/https protocol
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    throw new Error(`Protocolo no soportado: ${parsedUrl.protocol}. Solo se admiten HTTP y HTTPS.`);
+  }
+
+  const hostname = parsedUrl.hostname;
+
+  // 2. Direct validation if hostname is raw IP
+  if (net.isIP(hostname)) {
+    if (isBlockedAddress(hostname)) {
+      throw new Error(`Acceso denegado: IP privada detectada (${hostname})`);
+    }
+    return targetUrl;
+  }
+
+  // 3. DNS Lookup — check all resolved addresses
+  try {
+    const addresses = await lookup(hostname, { all: true });
+    for (const address of addresses) {
+      if (isBlockedAddress(address.address)) {
+        throw new Error(`Acceso denegado: El host ${hostname} se resuelve a una IP privada (${address.address})`);
+      }
+    }
+  } catch (dnsErr: unknown) {
+    const err = dnsErr as Error;
+    if (err?.message?.includes("Acceso denegado")) {
+      throw err;
+    }
+    console.warn(`[EgressGuard] No se pudo resolver DNS para el host ${hostname}:`, err?.message || err);
+  }
+
+  return targetUrl;
+}
+

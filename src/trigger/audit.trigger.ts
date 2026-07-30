@@ -3,7 +3,7 @@ import { directDb } from "@/shared/db";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
-import { validateSafeUrl, normalizeUrl } from "@/shared/utils/network";
+import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
 
 console.log("[Trigger Module] audit.trigger.ts cargado correctamente.");
 console.log("[Trigger Module] DATABASE_URL presente:", !!process.env.DATABASE_URL);
