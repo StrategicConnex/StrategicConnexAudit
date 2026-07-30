@@ -13,6 +13,7 @@ import { SettingsTab } from './tabs/SettingsTab';
 import { IntelligenceTab } from './tabs/IntelligenceTab';
 import { MonitoringTab } from './tabs/MonitoringTab';
 import { AdversaryTab } from './tabs/AdversaryTab';
+import { MarketplaceTab } from './tabs/MarketplaceTab';
 import { useAiReport } from './useAiReport';
 
 const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mod.NewProjectModal), {
@@ -163,6 +164,10 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
               <AdversaryTab
                 projectId={selectedProjectId}
               />
+            )}
+
+            {activeTab === 'plugins' && (
+              <MarketplaceTab />
             )}
 
           </div>

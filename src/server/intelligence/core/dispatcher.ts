@@ -4,6 +4,7 @@ import { getToolDefinition } from "../registry/tool-registry";
 import { httpSemaphore, dnsSemaphore } from "./concurrency";
 import { executionCache, IntelligenceCache } from "./cache";
 import { enforceToolRunPolicy } from "./policy-enforcer";
+import { initializePluginExecutors } from "../plugins/plugin-executor";
 import net from "node:net";
 import dns from "node:dns/promises";
 
@@ -12,13 +13,14 @@ import dns from "node:dns/promises";
  * bajo un contexto de ejecución, validación de inputs y timeout seguro.
  *
  * Pipeline de ejecución:
- *   0. Validación de plan y registro de usage metering
- *   1. Resolución del ejecutor en el registro
- *   2. Validación Zod de inputs
- *   3. Lookup de caché (evita re-ejecuciones en < TTL)
- *   4. Adquisición de semáforo según categoría (HTTP/DNS)
- *   5. Ejecución con AbortController + timeout
- *   6. Almacenamiento en caché del resultado exitoso
+ *   0. Plugin executor lazy init (si toolId empieza con "plugin.")
+ *   1. Validación de plan y registro de usage metering
+ *   2. Resolución del ejecutor en el registro
+ *   3. Validación Zod de inputs
+ *   4. Lookup de caché (evita re-ejecuciones en < TTL)
+ *   5. Adquisición de semáforo según categoría (HTTP/DNS)
+ *   6. Ejecución con AbortController + timeout
+ *   7. Almacenamiento en caché del resultado exitoso
  */
 export async function executeTool(
   toolId: string,
@@ -28,6 +30,12 @@ export async function executeTool(
   investigationId?: string,
   userId?: string
 ): Promise<ExecutionResult<any>> {
+  // 0. Lazy init para plugins — asegura que los executors de plugins
+  //    oficiales estén registrados antes de la resolución.
+  if (toolId.startsWith("plugin.")) {
+    await initializePluginExecutors();
+  }
+
   const executor = getExecutor(toolId);
   const toolDef = getToolDefinition(toolId);
 
