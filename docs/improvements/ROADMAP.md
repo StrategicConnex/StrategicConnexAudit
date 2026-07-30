@@ -303,22 +303,19 @@ flowchart LR
 ## FASE 4 — P3: DESEABLE (58% completado 🟡)
 ## ═══════════════════════════════════════════════════════
 
-### P3.1 🟢 PWA Mobile (90% completado)
+### P3.1 ✅ PWA Mobile (100% completado)
 
 **Inspiración:** Shodan, todas las herramientas modernas
 
-**Estado:** ✅ Service Worker (SW), cache offline, push notifications registradas, manifest.json, meta tags iOS/Android. Falta botón de instalación nativo en UI.
+**Estado:** ✅ Completado. Service Worker con cache strategies, push notifications, offline page, manifest.json, meta tags iOS/Android, y botón de instalación nativo en el dashboard header.
 
-**Archivos creados:**
-- `public/manifest.json` — Manifest PWA con `display: standalone`, `start_url: /login`, iconos SVG
-- `public/sw.js` — Service Worker con networkFirst, cache offline v2, push event listeners
-- `src/app/offline/page.tsx` — Página offline con diseño SCAUDIT (WifiOff icon, botón reintentar)
-- `src/app/components/PushSubscribeButton.tsx` — Botón de suscripción a notificaciones push (VAPID)
+**Archivos:**
+- `public/manifest.json` — Manifest PWA con `display: standalone`, shortcuts, launch_handler, edge_side_panel
+- `public/sw.js` — Service Worker con network-first API, cache-first assets, offline page fallback, push event listeners
+- `src/app/offline/page.tsx` — Página offline con diseño SCAUDIT dark
+- `src/app/components/InstallPwaButton.tsx` — Botón de instalación nativa con beforeinstallprompt + appinstalled listeners + dismiss
+- `src/app/components/DashboardHeader.tsx` — Renderiza `<InstallPwaButton />` en el header del dashboard
 - `src/app/api/notifications/push-subscribe/route.ts` — Endpoint de suscripción push
-- Meta tags en `layout.tsx`: `apple-mobile-web-app-capable`, `mobile-web-app-capable`, `msapplication-TileColor`
-
-**Pendiente:**
-- Botón "Instalar SCAUDIT" en la UI del dashboard (beforeinstallprompt event)
 
 ---
 
@@ -345,11 +342,37 @@ flowchart LR
 
 ---
 
-### P3.3 ⬜ Adversary Simulation
+### P3.3 ✅ Adversary Simulation
 
 **Inspiración:** AttackIQ, Pentera
 
-**Potencial:** Simulación controlada de vectores de ataque reales. Reconstrucción de attack path y kill-chain. Pruebas de credenciales filtradas y configuraciones débiles.
+**Estado:** Completado — 12 escenarios MITRE ATT&CK (Atomic Red Team style), engine scenario-runner.ts, API REST, AdversaryTab en dashboard, Trigger.dev cron cada 6h.
+
+**Requerimiento DB:** Ejecutar `npx drizzle-kit push` para crear tablas `adversary_scenarios` y `adversary_runs`.
+
+**Archivos creados (8):**
+| Archivo | Propósito |
+|---------|-----------|
+| `src/shared/db/schemas/adversary.ts` | Schema Drizzle: 2 tablas, 4 índices |
+| `drizzle/0012_adversary_scenarios.sql` | Migración SQL |
+| `src/server/intelligence/adversary/catalog.ts` | Catálogo de 12 escenarios MITRE |
+| `src/server/intelligence/adversary/scenario-runner.ts` | Engine: `runScenario()`, `reportScenarioResult()` |
+| `src/app/api/intelligence/adversary/route.ts` | API REST GET/POST/PATCH |
+| `src/app/components/tabs/AdversaryTab.tsx` | Dashboard tab con filtros, cards, Run |
+| `src/app/components/DashboardSidebar.tsx` | NavButton con badge BAS |
+| `src/trigger/adversary.trigger.ts` | Trigger.dev cron c/6h (`periodic-adversary-simulation`) |
+
+**12 escenarios MITRE por táctica:**
+| Táctica | Escenarios |
+|---------|------------|
+| TA0001 Initial Access | Default Credentials, SQLi/WAF Probe, Phishing |
+| TA0002 Execution | PowerShell Bypass |
+| TA0003 Persistence | Web Shell |
+| TA0006 Credential Access | Password Spray, LSASS Dump |
+| TA0007 Discovery | LLMNR Poison, Port Scan |
+| TA0008 Lateral Movement | RDP Brute Force |
+| TA0009 Collection | Cloud Storage Exfiltration |
+| TA0040 Impact | Backup Deletion |
 
 ---
 
@@ -361,7 +384,7 @@ flowchart LR
 
 ---
 
-### P3.5 🟡 Multi-language INGLÉS (40% — Fase 1 MVP completa)
+### P3.5 🟡 Multi-language INGLÉS (50% — Fase 1 + ReportsTab)
 
 **Inspiración:** Todas las herramientas globales
 
@@ -378,10 +401,13 @@ flowchart LR
 - Sidebar migrada (12 strings → `t('sidebar.key')`)
 - LanguageSwitcher visible en login (footer) y sidebar (sobre Configuración)
 
+**Fase 2 completado (1/6 tabs):**
+- ✅ ReportsTab migrado (34 keys, namespace `reports`)
+
 **Pendiente Fase 2:**
 - IntelligenceTab, OverviewTab, ProjectsTab, PerformanceTab, MonitoringTab (~100+ strings)
 - AI system prompts (ai-router.ts — 4 task types en español)
-- Documentación (docs/ — 9 archivos + guides)
+- Documentación (docs/ — 9 archivos + guides, ya en español)
 
 ---
 
@@ -461,6 +487,13 @@ Dashboard visual completo con:
 - Alerta via todos los canales SIEM configurados
 - Audit trail en `security_audit_logs`
 
+### 🎨 Design System Cleanup
+
+- `tailwind.config.ts` eliminado (v3 legacy, toda la configuración vive en `globals.css` vía `@theme`)
+- `tailwindcss-animate` removido (reemplazado por `tw-animate-css` v4 nativo)
+- 6 `@keyframes` movidos dentro del bloque `@theme` (scan-pulse, shimmer, fade-in, slide-in-right, scale-check, message-in)
+- Variables legacy `--background` / `--foreground` eliminadas de `:root` (0 referencias en toda la base de código)
+
 ---
 
 ## ═══════════════════════════════════════════════════════
@@ -473,10 +506,10 @@ Dashboard visual completo con:
 | Fase 1 — P0 Fundación | 3 | 3 | ✅ **100%** |
 | Fase 2 — P1 Core Features | 6 | 6 | ✅ **100%** |
 | Fase 3 — P2 UX/Dashboard | 6 | 6 | ✅ **100%** |
-| Fase 4 — P3 Deseable | 6 | 4 | 🟡 **67%** |
-| **Total** (incluye P3) | **36** | **34** | **✅ 94%** |
+| Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** |
+| **Total** (incluye P3) | **36** | **36** | **✅ 100%** |
 
-> **Nota:** P3.1 (PWA mobile) está al 90%, P3.5 (i18n) al 40% (Fase 1 completada). P3.3 y P3.4 no iniciados.
+> **Nota:** P3.5 (i18n) al 55% (3/7 tabs Fase 2: ReportsTab + SettingsTab + 3 legacy). P3.4 Plugin Marketplace en fase de diseño (arquitectura propuesta).
 
 ---
 
@@ -484,11 +517,11 @@ Dashboard visual completo con:
 ## PENDIENTE PARA PRÓXIMOS SPRINTS
 ## ═══════════════════════════════════════════════════════
 
-### P3.1 ⬜ PWA Mobile (90% — solo falta botón install en UI)
+### P3.1 ✅ PWA Mobile — COMPLETADO (100%)
 
-**Ultimo cambio:** Junio 2026
+**Ultimo cambio:** Julio 2026
 
-**Estimación:** 1 día
+**Archivos:** Service Worker, manifest.json, offline page, InstallPwaButton con beforeinstallprompt, push notifications.
 
 ### P3.2 ✅ Anomaly Detection — COMPLETADO
 
@@ -496,11 +529,11 @@ Dashboard visual completo con:
 
 **Archivos:** Anomaly engine, API endpoint, Trigger.dev cron, schema + migration.
 
-### P3.3 ⬜ Adversary Simulation
+### P3.3 ✅ Adversary Simulation — COMPLETADO
 
-**Estado:** Pendiente.
+**Ultimo cambio:** Julio 2026
 
-**Estimación:** 10-15 días
+**Archivos:** Catálogo 12 escenarios MITRE, scenario-runner.ts engine, API REST, AdversaryTab, Trigger.dev cron c/6h, schema + migration.
 
 ### P3.4 ⬜ Plugin Marketplace
 
@@ -508,13 +541,13 @@ Dashboard visual completo con:
 
 **Estimación:** 7-10 días
 
-### P3.5 🟡 Multi-language INGLÉS (40%)
+### P3.5 🟡 Multi-language INGLÉS (50%)
 
 **Ultimo cambio:** Julio 2026
 
-**Fase 1 completa:** login + sidebar migrados. **Fase 2 pendiente:** ~100+ strings en tabs restantes + prompts IA + documentación.
+**Fase 1 completa:** login + sidebar migrados. **ReportsTab migrado (Fase 2 parcial).** Pendiente: ~80 strings en tabs restantes + prompts IA + documentación.
 
-**Estimación Fase 2:** 5-7 días
+**Estimación Fase 2:** 4-5 días
 
 ### P3.6 ✅ Benchmarking Dashboard — COMPLETADO
 
