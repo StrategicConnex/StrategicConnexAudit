@@ -23,7 +23,6 @@ import { technologyProfilerExecutor } from "../executors/technology-profiler";
 import { networkBgpExecutor, threatCustomIntelExecutor } from "../executors/advanced-executors";
 import { whoisFullExecutor } from "../executors/whois-executors";
 
-
 export const executorRegistry: Record<string, ToolExecutor> = {
   "dns.lookup": dnsLookupExecutor,
   "dns.mx": dnsMxExecutor,
@@ -52,6 +51,35 @@ export const executorRegistry: Record<string, ToolExecutor> = {
   "threat.custom_intel": threatCustomIntelExecutor,
 };
 
+// ─── Dynamic (Plugin) Executor Registry ─────────────────────────────────────
+
+const pluginExecutorRegistry = new Map<string, ToolExecutor>();
+
+/**
+ * Registra un executor dinámico (ej. de Plugin Marketplace) en el registro.
+ * Los executors dinámicos se resuelven DESPUÉS de los nativos en getExecutor().
+ */
+export function registerDynamicExecutor(id: string, executor: ToolExecutor): void {
+  pluginExecutorRegistry.set(id, executor);
+}
+
+/**
+ * Elimina un executor dinámico del registro.
+ */
+export function unregisterDynamicExecutor(id: string): void {
+  pluginExecutorRegistry.delete(id);
+}
+
+/**
+ * Retorna el número de executors dinámicos registrados actualmente.
+ */
+export function getDynamicExecutorCount(): number {
+  return pluginExecutorRegistry.size;
+}
+
 export function getExecutor(toolId: string): ToolExecutor | undefined {
-  return executorRegistry[toolId];
+  // 1. Static (nativo) registry — más rápido para herramientas core
+  if (executorRegistry[toolId]) return executorRegistry[toolId];
+  // 2. Dynamic (plugin) registry — herramientas instaladas por el usuario
+  return pluginExecutorRegistry.get(toolId);
 }

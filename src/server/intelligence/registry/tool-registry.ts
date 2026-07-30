@@ -74,7 +74,43 @@ export const toolRegistry: IntelligenceToolDefinition[] = [
   { id: "threat.custom_intel", name: "Custom Threat Intel", category: "threat", description: "Cross reference with custom private intel feeds.", inputSchema: domainInput, requiredPlan: "enterprise", risk: "passive", costUnits: 10, cacheTtlSeconds: 600, timeoutMs: 15000, executor: "threat.custom_intel" },
 ];
 
+// ─── Dynamic (Plugin) Tool Definitions ──────────────────────────────────────
+
+const dynamicToolDefinitions: IntelligenceToolDefinition[] = [];
+
+/**
+ * Registra una definición de herramienta dinámica (ej. de Plugin Marketplace).
+ * Las definiciones dinámicas se resuelven DESPUÉS de las nativas en getToolDefinition().
+ */
+export function registerDynamicToolDefinition(def: IntelligenceToolDefinition): void {
+  const idx = dynamicToolDefinitions.findIndex((t) => t.id === def.id);
+  if (idx >= 0) {
+    dynamicToolDefinitions[idx] = def; // actualizar si ya existe
+  } else {
+    dynamicToolDefinitions.push(def);
+  }
+}
+
+/**
+ * Elimina una definición de herramienta dinámica del registro.
+ */
+export function unregisterDynamicToolDefinition(id: string): void {
+  const idx = dynamicToolDefinitions.findIndex((t) => t.id === id);
+  if (idx >= 0) dynamicToolDefinitions.splice(idx, 1);
+}
+
+/**
+ * Retorna el número de tool definitions dinámicas registradas actualmente.
+ */
+export function getDynamicToolDefinitionCount(): number {
+  return dynamicToolDefinitions.length;
+}
+
 export function getToolDefinition(id: string): IntelligenceToolDefinition | undefined {
-  return toolRegistry.find((t) => t.id === id);
+  // 1. Static (nativo) registry
+  const native = toolRegistry.find((t) => t.id === id);
+  if (native) return native;
+  // 2. Dynamic (plugin) registry
+  return dynamicToolDefinitions.find((t) => t.id === id);
 }
 

@@ -494,4 +494,5 @@ export * from "./anomaly";
 
 // ─── 41. Adversary Simulation (P3.3)
 export * from "./adversary";
-
+// ─── 42. Plugin Marketplace (P3.4)
+export * from "./plugins";
