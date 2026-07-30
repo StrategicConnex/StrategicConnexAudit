@@ -392,37 +392,39 @@ flowchart LR
 
 ---
 
-### P3.5 🟢 Multi-language INGLÉS (91% — Fase 1 + Fase 2 al 83%)
+### P3.5 🟢 Multi-language INGLÉS (95% — Tabs 100%, solo prompts IA pendientes)
 
 **Inspiración:** Todas las herramientas globales
 
 **Arquitectura:** Cookie-based (sin URL prefix restructuring) con `next-intl` v4
 
 **Fase 1 — Completado:**
-- `messages/en.json` + `messages/es.json` — 350+ keys totales
+- `messages/en.json` + `messages/es.json` — 650+ keys totales
 - `src/i18n/routing.ts` — Config: `locales: ['es', 'en']`, `localePrefix: 'never'`
 - `src/i18n/request.ts` — Detección: cookie → Accept-Language → default 'es'
 - `src/app/components/I18nProvider.tsx` — Wrapper client-side de NextIntlClientProvider
 - `src/app/components/LanguageSwitcher.tsx` — Botón toggle (mini + full)
 - `src/shared/lib/cookie-utils.ts` — `setCookie()` / `getCookie()`
 
-**Fase 2 completado (5/6 tabs):**
-| Tab | Líneas | Namespace | Keys | Tiempo | Estado |
+**Fase 2 completado (11/11 tabs):**
+| Tab | Tamaño | Namespace | Keys | Tiempo | Estado |
 |-----|--------|-----------|------|--------|--------|
-| ReportsTab | 19 KB | `reports` | 34 | ~20 min | ✅ |
-| SettingsTab | 48 KB | `settings` | 70 | ~45 min | ✅ |
-| PerformanceTab | 24 KB | `performance` | 32 | ~20 min | ✅ |
-| MonitoringTab | 46 KB | `monitoring` | 48 | ~35 min | ✅ |
-| KeywordsTab | 8 KB | `keywords` | 18 | ~10 min | ✅ |
+| Login | ~30 KB | `login` | 26 | Legacy | ✅ |
+| Sidebar | ~10 KB | `sidebar` | 15 | Legacy | ✅ |
 | IntelligenceTab | 35 KB | `intelligence` | 36 | Legacy | ✅ |
 | OverviewTab | 20 KB | `overview` | 20 | Legacy | ✅ |
 | ProjectsTab | 8 KB | `projects` | 3 | Legacy | ✅ |
+| ReportsTab | 19 KB | `reports` | 34 | ~20 min | ✅ Commiteado |
+| SettingsTab | 48 KB | `settings` | 70 | ~45 min | ✅ Commiteado |
+| PerformanceTab | 24 KB | `performance` | 32 | ~20 min | ✅ Commiteado |
+| MonitoringTab | 46 KB | `monitoring` | 48 | ~35 min | ✅ Commiteado |
+| KeywordsTab | 8 KB | `keywords` | 18 | ~10 min | ✅ **Commiteado** `4fdbbd2` |
+| AdversaryTab | 10 KB | `adversary` | 22 | ~15 min | ✅ Migrado (sin commitear) |
 
 **Pendiente:**
-- AdversaryTab (~22 keys, namespace `adversary`) — ~15 min
-- AI system prompts (ai-router.ts — 4 task types)
+- AI system prompts (ai-router.ts — 4 task types, ~15 min)
 
-**Esfuerzo total Fase 2:** ~2.5 horas (130 min). Restante: ~15 min.
+**Esfuerzo total Fase 2:** ~3 horas. Restante: ~15 min (prompts IA).
 
 ---
 
@@ -524,7 +526,7 @@ Dashboard visual completo con:
 | Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** (P3.4 completado) |
 | **Total** (incluye P3) | **36** | **36** | **✅ 100%** |
 
-> **Nota:** P3.5 (i18n) al **91%** (5/6 tabs Fase 2 migrados + 3 legacy). Solo falta AdversaryTab (~15 min). P3.4 Plugin Marketplace completado. **Toda la Fase 4 al 100%.**
+> **Nota:** P3.5 (i18n) al **95%** (11/11 tabs Fase 2 migrados + commiteados). Solo falta traducir los 4 system prompts de IA en ai-router.ts (~15 min). P3.4 Plugin Marketplace completado. **Toda la Fase 4 al 100%.**
 
 ---
 
@@ -558,15 +560,15 @@ Dashboard visual completo con:
 
 **Plugins oficiales seed:** subdomain-enumerator, port-scanner, tech-stack-detector, threat-intel-feed, email-reputation, compliance-scanner, whois-enricher, certificate-monitor
 
-### P3.5 🟢 Multi-language INGLÉS (82%)
+### P3.5 🟢 Multi-language INGLÉS (95%)
 
 **Ultimo cambio:** Julio 2026
 
 **Fase 1 completa:** login + sidebar migrados.  
-**Fase 2 (4/6):** ReportsTab, SettingsTab, PerformanceTab, MonitoringTab migrados.  
-**Pendiente:** KeywordsTab (~10 min), AdversaryTab (~15 min), prompts IA.
+**Fase 2 completa (11/11 tabs):** ReportsTab, SettingsTab, PerformanceTab, MonitoringTab, KeywordsTab, AdversaryTab migrados.  
+**Pendiente:** System prompts IA en ai-router.ts (~15 min).
 
-**Estimación Fase 2 restante:** ~25 min + documentación
+**Estimación restante:** ~15 min
 
 ### P3.6 ✅ Benchmarking Dashboard — COMPLETADO
 
