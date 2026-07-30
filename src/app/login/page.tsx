@@ -5,6 +5,8 @@ import { createClient } from '@/shared/lib/supabase/client';
 import { useSearchParams } from 'next/navigation';
 
 import { Mail, Loader2, CheckCircle2, AlertCircle, ArrowRight, Shield, Sparkles } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { LanguageSwitcher } from '@/app/components/LanguageSwitcher';
 import AiCoreVisual from '../components/AiCoreVisual';
 
 // ─── Placeholder rotativo ──────────────────────────────────────────
@@ -56,6 +58,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/';
   const supabase = createClient();
+  const t = useTranslations('login');
 
   // ─── Entrance stagger ───────────────────────────────────────────
   useEffect(() => {
@@ -85,9 +88,8 @@ function LoginContent() {
       if (res.status === 429) {
         // Rate limited — mostrar advertencia pero permitir reintentar
         setValidationState('invalid');
-        setValidationReason(data.retryAfter
-          ? `Límite de intentos alcanzado. Espera ${data.retryAfter} segundos.`
-          : 'Demasiadas solicitudes. Intenta de nuevo en un minuto.'
+        setValidationReason(data.retryAfter                        ? t('rateLimitedWithRetry', { retryAfter: data.retryAfter })
+                        : t('rateLimited')
         );
         return;
       }
@@ -97,13 +99,13 @@ function LoginContent() {
         setValidationReason(null);
       } else {
         setValidationState('invalid');
-        setValidationReason(data.reason || 'Correo no válido');
+        setValidationReason(data.reason || t('emailInvalid'));
       }
     } catch {
       // Fallback: si la API falla, validación básica local
       const basicValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
       setValidationState(basicValid ? 'valid' : 'invalid');
-      setValidationReason(basicValid ? null : 'Error de conexión. Verifica tu conexión a internet.');
+      setValidationReason(basicValid ? null : t('networkError'));
     }
   }, []);
 
@@ -124,12 +126,12 @@ function LoginContent() {
     e.preventDefault();
 
     if (!email.trim()) {
-      setMessage({ type: 'error', text: 'Por favor, ingresa tu correo electrónico.' });
+      setMessage({ type: 'error', text: t('emailRequired') });
       return;
     }
 
     if (validationState === 'invalid') {
-      setMessage({ type: 'error', text: validationReason || 'Correo no válido.' });
+      setMessage({ type: 'error', text: validationReason || t('emailInvalidGeneric') });
       return;
     }
 
@@ -149,7 +151,7 @@ function LoginContent() {
       setEmailSent(true);
       setMessage({
         type: 'success',
-        text: '¡Enlace enviado! Revisa tu bandeja de entrada (y la carpeta de spam si no lo ves en unos minutos).',
+        text: t('emailSentSuccess'),
       });
     }
     setLoading(false);
@@ -176,24 +178,21 @@ function LoginContent() {
               </div>
 
               <h2 className="font-display text-xl sm:text-2xl font-extrabold text-foreground tracking-tight mb-3 text-center">
-                Revisa tu correo
+                {t('emailSentTitle')}
               </h2>
 
               <p className="text-sm sm:text-base text-muted-fg mb-2 leading-relaxed text-center">
-                Hemos enviado un enlace mágico a{' '}
-                <strong className="text-foreground/90">{email}</strong>.
+                {t('emailSentDescription', { email })}
               </p>
 
               <p className="text-xs sm:text-sm text-muted-fg/70 mb-6 sm:mb-8 leading-relaxed text-center">
-                Haz clic en el enlace para acceder. Si no lo ves en unos minutos,
-                revisa tu carpeta de <strong className="text-foreground/60">spam</strong>.
+                {t('emailSentSpamNote')}
               </p>
 
               <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4 mb-6 sm:mb-8 text-left">
                 <p className="text-xs sm:text-sm text-amber-400/80 leading-relaxed flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  ¿No recibiste el correo? Verifica que escribiste bien tu dirección y revisa la carpeta de spam.
-                  El enlace es válido por <strong>10 minutos</strong>.
+                  {t('emailSentWarning')}
                 </p>
               </div>
 
@@ -204,13 +203,13 @@ function LoginContent() {
                 }}
                 className="block mx-auto text-sm text-muted-fg hover:text-foreground transition-colors"
               >
-                ← Usar otro correo
+                {t('useAnotherEmail')}
               </button>
             </div>
           </div>
 
           <p className="mt-6 text-center text-[10px] sm:text-xs text-muted-fg/40">
-            Protegido por Supabase Auth & StrategicAudit Pro Infrastructure
+            {t('footerProtected')} & StrategicAudit Pro Infrastructure
           </p>
         </div>
       </div>
@@ -250,10 +249,10 @@ function LoginContent() {
               <AiCoreVisual size={80} interactive={true} />
             </div>
             <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-              StrategicAudit Pro
+              {t('title')}
             </h1>
             <p className="text-sm sm:text-base text-muted-fg mt-2">
-              Ingresa tu correo para acceder
+              {t('subtitle')}
             </p>
           </div>
 
@@ -264,7 +263,7 @@ function LoginContent() {
                 htmlFor="login-email"
                 className="text-xs sm:text-sm font-medium text-card-fg/80 ml-1 transition-colors"
               >
-                Correo Electrónico
+                {t('emailLabel')}
               </label>
 
               <div className="relative group">
@@ -355,7 +354,7 @@ function LoginContent() {
                   <p className="text-[11px] sm:text-xs text-chartreuse/80 mt-1.5 ml-1 flex items-center gap-1"
                      style={{ animation: 'message-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                     <CheckCircle2 className="w-3 h-3 shrink-0" />
-                    Correo válido
+                    {t('emailValid')}
                   </p>
                 )}
               </div>
@@ -410,23 +409,21 @@ function LoginContent() {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                    <span className="text-sm sm:text-base">Enviando enlace...</span>
+                    <span className="text-sm sm:text-base">{t('sendingButton')}</span>
                   </>
                 ) : (
                   <>
                     <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm sm:text-base">Enviar enlace mágico</span>
+                    <span className="text-sm sm:text-base">{t('sendButton')}</span>
                     <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </span>
-            </button>
-
-            <p className="text-[10px] sm:text-xs text-muted-fg/70 text-center leading-relaxed">
-              Te enviaremos un enlace de acceso por correo. No necesita contraseña.
+            </button>              <p className="text-[10px] sm:text-xs text-muted-fg/70 text-center leading-relaxed">
+              {t('footerText')}
               {validationState === 'invalid' && validationReason?.toLowerCase().includes('desechable') && (
                 <span className="block mt-1.5 text-amber-400/60 text-[10px] sm:text-xs">
-                  Usa tu correo corporativo o personal (Gmail, Outlook, etc.)
+                  {t('disposableEmail')}
                 </span>
               )}
             </p>
@@ -436,17 +433,28 @@ function LoginContent() {
           <div className="mt-7 sm:mt-8 pt-5 sm:pt-6 border-t border-border">
             <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-muted-fg/60">
               <Shield className="w-3 h-3" />
-              <span>Protegido por Supabase Auth</span>
+              <span>{t('footerProtected')}</span>
               <span className="text-border mx-1">·</span>
               <Sparkles className="w-3 h-3" />
-              <span>Enterprise Grade</span>
+              <span>{t('footerEnterprise')}</span>
             </div>
           </div>
-        </div>
-
-        <p className="mt-5 sm:mt-6 text-center text-[10px] sm:text-xs text-muted-fg/40">
-          StrategicAudit Pro &mdash; Enterprise Cyber Intelligence
+        </div>          <div className="mt-3 flex justify-center">
+            <LanguageSwitcher mini />
+          </div>
+          <p className="mt-2 text-center text-[10px] sm:text-xs text-muted-fg/40">
+          {t('footerBrand')}
         </p>
+      </div>
+    </div>
+  );
+}
+
+function LoginSkeleton() {
+  return (
+    <div className="min-h-dvh bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-primary" />
       </div>
     </div>
   );
@@ -454,14 +462,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-dvh bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-primary" />
-          <span className="text-xs sm:text-sm text-muted-fg">Cargando...</span>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<LoginSkeleton />}>
       <LoginContent />
     </Suspense>
   );

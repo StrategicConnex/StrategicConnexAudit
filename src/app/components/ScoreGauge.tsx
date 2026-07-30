@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
+import { useRealtimeMetrics } from '../../shared/hooks/useRealtimeMetrics';
 
 interface ScoreGaugeProps {
   score: number;
   previousScore?: number | null;
   size?: 'sm' | 'md' | 'lg';
+  projectId?: string;
+  benchmark?: { value: number; label: string; rank: 'top' | 'above' | 'below' | 'bottom' } | null;
 }
 
 function getScoreConfig(score: number) {
@@ -17,9 +20,20 @@ function getScoreConfig(score: number) {
   return { label: 'Peligro', color: '#D4373C', glow: 'rgba(212,55,60,0.5)', textColor: 'text-destructive', bg: 'bg-destructive/10 border-destructive/20' };
 }
 
-export function ScoreGauge({ score, previousScore, size = 'md' }: ScoreGaugeProps) {
+export function ScoreGauge({ score, previousScore, size = 'md', projectId, benchmark }: ScoreGaugeProps) {
   const [animatedScore, setAnimatedScore] = useState(0);
   const [animatedDash, setAnimatedDash] = useState(0);
+  
+  const { latestFinding, assetsDiscovered } = useRealtimeMetrics(projectId);
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    if (latestFinding || assetsDiscovered > 0) {
+      setPulse(true);
+      const timer = setTimeout(() => setPulse(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [latestFinding, assetsDiscovered]);
 
   const config = getScoreConfig(score);
 
@@ -57,7 +71,7 @@ export function ScoreGauge({ score, previousScore, size = 'md' }: ScoreGaugeProp
   return (
     <div className="flex flex-col items-center gap-3">
       {/* Gauge SVG */}
-      <div className="relative" style={{ width: svgSize, height: svgSize }}>
+      <div className={`relative transition-transform duration-200 ${pulse ? 'scale-105' : 'scale-100'}`} style={{ width: svgSize, height: svgSize }}>
         <svg
           width={svgSize}
           height={svgSize}
@@ -172,6 +186,35 @@ export function ScoreGauge({ score, previousScore, size = 'md' }: ScoreGaugeProp
           </span>
         )}
       </div>
+
+      {/* Benchmark percentile badge */}
+      {benchmark && (
+        <div className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${
+          benchmark.rank === 'top'
+            ? 'text-chartreuse bg-chartreuse/10 border-chartreuse/20'
+            : benchmark.rank === 'above'
+            ? 'text-primary bg-primary/10 border-primary/20'
+            : benchmark.rank === 'below'
+            ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+            : 'text-destructive bg-destructive/10 border-destructive/20'
+        }`}>
+          {benchmark.rank === 'top' && <TrendingUp className="w-3 h-3" />}
+          {benchmark.rank === 'above' && <TrendingUp className="w-3 h-3" />}
+          {benchmark.rank === 'below' && <TrendingDown className="w-3 h-3" />}
+          {benchmark.rank === 'bottom' && <Minus className="w-3 h-3" />}
+          <span>vs {benchmark.label}: <strong>{benchmark.value}%</strong></span>
+        </div>
+      )}
+
+      {/* Live Updates Indicator */}
+      {projectId && (
+        <div className="flex items-center gap-1 mt-1 opacity-70">
+          <Activity className={`w-3 h-3 ${pulse ? 'text-blue-400 animate-pulse' : 'text-muted-fg'}`} />
+          <span className="text-[9px] font-medium text-muted-fg">
+            Live metrics
+          </span>
+        </div>
+      )}
     </div>
   );
 }

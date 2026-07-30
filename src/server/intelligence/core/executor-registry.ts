@@ -19,6 +19,7 @@ import {
   websiteRobotsExecutor
 } from "../executors/website-executors";
 import { osintWhoisExecutor } from "../executors/osint-executors";
+import { technologyProfilerExecutor } from "../executors/technology-profiler";
 import { networkBgpExecutor, threatCustomIntelExecutor } from "../executors/advanced-executors";
 import { whoisFullExecutor } from "../executors/whois-executors";
 
@@ -44,6 +45,7 @@ export const executorRegistry: Record<string, ToolExecutor> = {
   "website.security_headers": websiteSecurityHeadersExecutor,
   "tls.scan": websiteTlsExecutor,
   "website.robots": websiteRobotsExecutor,
+  "website.tech_stack": technologyProfilerExecutor,
   "osint.whois": osintWhoisExecutor,
   "whois.full": whoisFullExecutor,
   "network.bgp": networkBgpExecutor,

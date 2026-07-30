@@ -1,0 +1,51 @@
+{
+  "name": "SCAUDIT — Enterprise Network Intelligence",
+  "short_name": "SCAUDIT",
+  "description": "Plataforma avanzada de inteligencia de red, monitoreo de superficie de ataque y auditoria de ciberseguridad continua.",
+  "start_url": "/login",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#060608",
+  "theme_color": "#060608",
+  "categories": ["security", "business", "productivity"],
+  "lang": "es",
+  "scope": "/",
+  "id": "/",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "icons": [
+    {
+      "src": "/logo-dark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-dark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Escaneo Rapido",
+      "short_name": "Escanear",
+      "description": "Iniciar un escaneo de inteligencia",
+      "url": "/intelligence?scan=quick"
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ir al panel principal",
+      "url": "/login"
+    }
+  ],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "edge_side_panel": {
+    "preferred_width": 480
+  }
+}

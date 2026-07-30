@@ -146,17 +146,46 @@ src/server/api/
 - `src/app/api/reports/pdf/route.ts` — Endpoint de generación
 - `src/app/components/DownloadPdfButton.tsx` — Botón con progress bar + toast
 
-### P1.3 🟠 Team Collaboration + RBAC
+### P1.3 ✅ Team Collaboration + RBAC
 
-**Pendiente.**
+**Modelo RBAC completo con 5 roles:** `OWNER | ADMIN | EDITOR | VIEWER | GUEST`
 
-### P1.4 🟠 CI/CD Webhook Integration
+**Archivos:**
+- `src/server/auth/rbac.ts` — `canPerformAction()`, `hasRolePermission()`, tipos `ProjectRole` y `PermissionAction`
+- `src/app/api/projects/[id]/members/route.ts` — Endpoint REST para gestión de miembros (GET/POST/DELETE)
+- `src/shared/db/schemas/teams.ts` — Tabla `project_members` + enum `project_role`
 
-**Pendiente.**
+**Features:**
+- Verificación de permisos jerárquica (owner > admin > editor > viewer > guest)
+- Acciones protegidas: `create_project`, `delete_project`, `manage_members`, `run_audit`, `view_reports`
+- Integración con `withRLS()` para seguridad a nivel BD
 
-### P1.5 🟠 Scheduled Scanning
+---
 
-**Pendiente.**
+### P1.4 ✅ CI/CD Webhook Integration
+
+**Archivos:**
+- `src/app/api/webhooks/cicd/route.ts` — Endpoint CI/CD que recibe webhooks de pipelines
+- `src/app/api/webhooks/route.ts` — Endpoint genérico de webhooks con validación HMAC
+
+**Features:**
+- Validación HMAC para autenticidad del webhook
+- Disparo automático de escaneos al recibir push
+- Webhook genérico con rate limiting
+
+---
+
+### P1.5 ✅ Scheduled Scanning
+
+**Archivos:**
+- `src/trigger/scheduled-scan.trigger.ts` — Trigger.dev task con cron cada hora
+
+**Features:**
+- Evalúa proyectos con escaneos agendados activos
+- Dispara auditorías de inteligencia automáticamente
+- Logging de ejecución en consola
+
+---
 
 ### P1.6 ✅ MITRE ATT&CK Mapping
 
@@ -183,7 +212,7 @@ flowchart LR
 ---
 
 ## ═══════════════════════════════════════════════════════
-## FASE 3 — P2: UX/DASHBOARD (Completado 🟢)
+## FASE 3 — P2: UX/DASHBOARD (67% completado 🟡)
 ## ═══════════════════════════════════════════════════════
 
 ### P2.1 ✅ Interactive Geography Map
@@ -195,15 +224,130 @@ flowchart LR
 - Clusters para múltiples IPs en misma región
 - Tooltips con severidad y tipo de activo
 
-### P2.2 🟡 Custom Dashboards Drag-and-Drop → Pendiente
+### P2.2 ✅ Custom Dashboards Drag-and-Drop
 
-### P2.3 🟡 Asset Graph Traversal → Pendiente
+**Archivos:**
+- `src/app/components/CustomDashboardGrid.tsx` — Grid de widgets arrastrables con persistencia en localStorage
 
-### P2.4 🟡 Technology Profiling → Pendiente
+**Widgets disponibles:**
+- Score Gauge, Health Timeline, Activity Terminal, Attack Surface Graph, Geo Map
+- Persistencia de orden y visibilidad por usuario
 
-### P2.5 🟡 Cloud Bucket Detection → Pendiente
+---
 
-### P2.6 🟡 Live Streaming Metrics → Pendiente
+### P2.3 ✅ Asset Graph Traversal
+
+**Archivos:**
+- `src/app/api/intelligence/graph/route.ts` — Endpoint de graph traversal con búsqueda por nodeId
+
+**Features:**
+- Navegación entre dominios ⇄ IPs ⇄ certificados
+- Relaciones de activos descubiertos
+
+---
+
+### P2.4 ✅ Technology Profiling (BuiltWith-like)
+
+**Estado:** Completado — detector de 40+ tecnologías vía HTTP headers, DNS CNAME, cookies, meta tags, script src e inline JS.
+
+**Archivos:**
+- `src/server/intelligence/executors/technology-profiler.ts` — Motor de detección con 6 métodos de fingerprinting
+- `src/server/intelligence/core/executor-registry.ts` — Registro como `website.tech_stack`
+- `src/server/intelligence/registry/tool-registry.ts` — Tool entry con ID `website.tech_stack`
+
+**Capacidades de detección:**
+| Método | Signaturas | Detecta |
+|--------|-----------|---------|
+| HTTP Headers | 21 | Nginx, Apache, Cloudflare, Caddy, IIS, LiteSpeed, Express.js, Next.js, ASP.NET, PHP, WordPress, Drupal, Vercel, Akamai, CloudFront, Fastly, Azure CDN, Sucuri |
+| DNS CNAME | 5 | Cloudflare, CloudFront, Fastly, Akamai, Azure CDN |
+| Cookies | 6 | Cloudflare, PHP, ASP.NET, Laravel, GA, Meta Pixel |
+| Meta tags | 10 | WordPress, Drupal, Joomla, Shopify, Ghost, Astro, Hugo, Webflow, Squarespace, Wix |
+| Script src | 37 | Next.js, Nuxt.js, React, Vue.js, Angular, Svelte, Gatsby, Remix, jQuery, D3.js, Chart.js, Moment.js, Lodash, GSAP, Swiper, Three.js, Bootstrap, Tailwind CSS, Font Awesome, WordPress, Shopify, Contentful, Sanity, Strapi, Prismic, Magento, GTM, GA, Hotjar, Clarity, Mixpanel, Amplitude, FullStory, HubSpot, Meta Pixel, LinkedIn |
+| Inline JS | 3 | Google Analytics, Meta Pixel, Google Tag Manager |
+
+---
+
+### P2.5 ✅ Cloud Bucket Detection
+
+**Archivos:**
+- `src/server/intelligence/executors/bucket-detector.ts` — Detector de buckets cloud vía DNS
+
+**Features:**
+- Detecta S3, GCS, Azure Blob expuestos
+- Modo agresivo con permutaciones de nombres
+
+---
+
+### P2.6 ✅ Live Streaming Metrics via WebSocket
+
+**Estado:** Completado — métricas en vivo via polling JSON cada 15s (setInterval, compatible con Vercel serverless, sin SSE/WebSocket por límite de 10s en plan Hobby).
+
+**Archivos creados:**
+- `src/app/api/intelligence/live/route.ts` — Endpoint JSON con uptime %, latencia promedio, findings críticos y últimos eventos
+- `src/app/components/LiveMetricsBar.tsx` — Componente colapsable (hover-to-expand) que consume el endpoint cada 15s
+- `src/features/intelligence/components/IntelligenceShell.tsx` — Integrado como barra flotante bottom-right
+
+**Métricas transmitidas (cada 15s):**
+| Métrica | Fuente | Descripción |
+|---------|--------|-------------|
+| Uptime % | `uptimeLogs` | Últimos 5 checks en ventana de 24h |
+| Latencia promedio | `uptimeLogs` | Response time promedio (ms) |
+| Findings críticos/high | `intelligence_findings` | Conteo de severidad crítica y alta |
+| Eventos recientes | `intelligence_run_events` | Total de eventos activos |
+
+**Trade-off:** Se usó polling (HTTP GET cada 15s) en lugar de SSE/WebSocket porque Vercel serverless (plan Hobby) tiene un timeout máximo de 10s por función. El polling es más confiable y permite conexión inmediata sin requerir un servidor persistent
+
+---
+
+## ═══════════════════════════════════════════════════════
+## FASE 4 — P3: DESEABLE ⬜
+## ═══════════════════════════════════════════════════════
+
+### P3.1 ⬜ Mobile App / PWA
+
+**Inspiración:** Shodan, todas las herramientas modernas
+
+**Potencial:** Aplicación progresiva (PWA) con service worker, notificaciones push offline, y responsive mobile-first. Ya existe `PushSubscribeButton.tsx` como proto de Service Worker.
+
+---
+
+### P3.2 ⬜ Anomaly Detection ML
+
+**Inspiración:** Datadog, GreyNoise
+
+**Potencial:** Detección automática de picos anómalos en LCP, uptime, latencia. Clasificación de IPs (benign/malicious/unknown). Tags asociados a CVEs.
+
+---
+
+### P3.3 ⬜ Adversary Simulation
+
+**Inspiración:** AttackIQ, Pentera
+
+**Potencial:** Simulación controlada de vectores de ataque reales. Reconstrucción de attack path y kill-chain. Pruebas de credenciales filtradas y configuraciones débiles.
+
+---
+
+### P3.4 ⬜ Plugin / Module Marketplace
+
+**Inspiración:** Detectify
+
+**Potencial:** Checklists de seguridad mantenidas por la comunidad. Módulos extensibles para escaneos personalizados.
+
+---
+
+### P3.5 ⬜ Multi-language (INGLÉS)
+
+**Inspiración:** Todas las herramientas globales
+
+**Potencial:** Internacionalización completa. El 100% de la competencia tiene UI en inglés. SCAUDIT actualmente es solo español.
+
+---
+
+### P3.6 ⬜ Benchmarking Dashboard
+
+**Inspiración:** Moz Pro, SEMrush
+
+**Potencial:** "Tu score vs. industria" — comparar métricas de seguridad y rendimiento contra promedios del sector.
 
 ---
 
@@ -266,10 +410,12 @@ Dashboard visual completo con:
 |------|-------|------------|---|
 | Fase 0 — Cimientos | 15 | 15 | ✅ 100% |
 | Fase 1 — P0 Fundación | 3 | 3 | ✅ **100%** |
-| Fase 2 — P1 Core Features | 6 | 3 | 🟡 50% |
-| Fase 3 — P2 UX/Dashboard | 6 | 1 | 🟢 17% |
-| Fase 4 — P3 Deseable | 4 | 0 | ⬜ 0% |
-| **Total** | **34** | **22** | **65%** |
+| Fase 2 — P1 Core Features | 6 | 6 | ✅ **100%** |
+| Fase 3 — P2 UX/Dashboard | 6 | 6 | ✅ **100%** |
+| Fase 4 — P3 Deseable | 6 | 0 | ⬜ 0% |
+| **Total** (incluye P3) | **36** | **30** | **✅ 83%** |
+
+> **Nota:** El progreso sin contar Fase 4 (P3 Deseable) es **30/30 = 100%** — el producto base está completo. La Fase 4 se agregó como visión a futuro y reduce el porcentaje total a 83%.
 
 ---
 
@@ -277,46 +423,41 @@ Dashboard visual completo con:
 ## PENDIENTE PARA PRÓXIMOS SPRINTS
 ## ═══════════════════════════════════════════════════════
 
-### P0.2 Historical DNS/WHOIS Tracking ✅
+### P3.1 Mobile App / PWA
 
-**Completado.** Ver sección correspondiente arriba.
-
-### P1.3 Team Collaboration + RBAC
-
-**Modelo:** `OWNER | ADMIN | EDITOR | VIEWER | GUEST`
-**Tablas:** `project_members`, `invitations`, `audit_log_team`
-
-**Estimación:** 4-5 días
-
-### P1.4 CI/CD Webhook Integration
-
-**Estimación:** 3-4 días
-
-### P1.5 Scheduled Scanning
-
-**Estimación:** 3-4 días
-
-### P2.2 Custom Dashboards Drag-and-Drop
-
-**Widgets:** Score Gauge, Health Timeline, Activity Terminal, Attack Surface Graph, Geo Map
+**Estado:** Pendiente.
 
 **Estimación:** 5-7 días
 
-### P2.3 Asset Graph Traversal
+### P3.2 Anomaly Detection ML
 
-**Estimación:** 4-5 días
+**Estado:** Pendiente.
 
-### P2.4 Technology Profiling (BuiltWith-like)
+**Estimación:** 10-15 días
 
-**Estimación:** 3-5 días
+### P3.3 Adversary Simulation
 
-### P2.5 Cloud Bucket Detection
+**Estado:** Pendiente.
 
-**Estimación:** 2 días
+**Estimación:** 10-15 días
 
-### P2.6 Live Streaming Metrics via WebSocket
+### P3.4 Plugin Marketplace
 
-**Estimación:** 3-4 días
+**Estado:** Pendiente.
+
+**Estimación:** 7-10 días
+
+### P3.5 Multi-language (INGLÉS)
+
+**Estado:** Pendiente.
+
+**Estimación:** 5-7 días
+
+### P3.6 Benchmarking Dashboard
+
+**Estado:** Pendiente.
+
+**Estimación:** 5-7 días
 
 ---
 
@@ -332,9 +473,11 @@ flowchart TD
     P0_2 --> P2_3[P2.3 Asset Graph]
     P0_3 --> P1_4[P1.4 CI/CD Webhook]
     P1_1[P1.1 API Pública] --> P3_4[P3.4 Benchmarking]
-    P1_3[P1.3 Team RBAC] --> P1_2
-    P1_6[P1.6 MITRE Mapping] --> P2_2[P2.2 Custom Dashboards]
-    P2_1[P2.1 Geo Map] --> P2_3
+    P0_3 --> P1_4[P1.4 CI/CD Webhook]
+    P1_1[P1.1 API Pública] --> P3_6[P3.6 Benchmarking]
+    P1_3[P1.3 Team RBAC] --> P1_2[P1.2 Reportes PDF]
+    P1_6[P1.6 MITRE ATT&CK] --> P2_2[P2.2 Custom Dashboards]
+    P2_1[P2.1 Geo Map] --> P2_3[P2.3 Asset Graph]
     P2_6[P2.6 Live Streaming] --> P2_2
 ```
 
