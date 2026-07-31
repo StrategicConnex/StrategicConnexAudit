@@ -326,3 +326,314 @@ export const websiteRobotsExecutor: ToolExecutor<{ url: string }, any> = {
     return { success: true, output, findings };
   },
 };
+
+// ─── 5. Redirect Analysis ──────────────────────────────────────────────────
+
+export const websiteRedirectsExecutor: ToolExecutor<{ url: string }, any> = {
+  id: "website.redirects",
+  timeoutMs: 15000,
+  category: "website",
+  validate(input: unknown) { return urlSchema.parse(input); },
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+    ctx.log(`[Redirects] Analizando cadena de redirecciones para: ${url}`);
+    const parsed = new URL(url);
+    await assertPublicHostname(parsed.hostname);
+
+    const chain: { url: string; status: number; location: string | null }[] = [];
+    let currentUrl = url;
+    const maxFollow = 10;
+
+    for (let i = 0; i < maxFollow; i++) {
+      try {
+        const res = await safeFetch(currentUrl, {
+          method: "HEAD",
+          redirect: "manual",
+        });
+        const location = res.headers.get("location");
+        chain.push({ url: currentUrl, status: res.status, location });
+
+        if (res.status < 300 || res.status >= 400) break;
+        if (!location) break;
+        currentUrl = new URL(location, currentUrl).href;
+      } catch (e: any) {
+        chain.push({ url: currentUrl, status: 0, location: null });
+        break;
+      }
+    }
+
+    const redirectCount = chain.filter((c) => c.status >= 300 && c.status < 400).length;
+    const finalStatus = chain[chain.length - 1]?.status || 0;
+    const hasHttpsUpgrade = chain.some((c) => c.url.startsWith("http://") && c.location?.startsWith("https://"));
+    const hasChainLoops = chain.length >= maxFollow;
+
+    const output = {
+      url,
+      chain,
+      redirectCount,
+      finalStatus,
+      hasHttpsUpgrade,
+      hasChainLoops,
+    };
+
+    const findings: Finding[] = [];
+
+    if (redirectCount > 3) {
+      findings.push({
+        severity: "medium", confidence: 0.9,
+        title: "Cadena de Redirecciones Excesiva",
+        description: `La URL ${url} requiere ${redirectCount} redirecciones antes de llegar al destino final. Las cadenas largas degradan el rendimiento SEO y la experiencia de usuario.`,
+        recommendation: "Reduzca la cadena de redirecciones actualizando los enlaces directos al destino final siempre que sea posible.",
+        affectedAsset: url,
+        evidence: { redirectCount, chain: chain.map((c) => `${c.status} ${c.url}`) },
+      });
+    }
+
+    if (!hasHttpsUpgrade && url.startsWith("http://")) {
+      findings.push({
+        severity: "high", confidence: 0.95,
+        title: "Redirección HTTPS Ausente",
+        description: `La URL ${url} se sirve sobre HTTP y no redirige automáticamente a HTTPS. Los usuarios pueden conectarse sin cifrado.`,
+        recommendation: "Configure una redirección 301 permanente de HTTP a HTTPS en su servidor web o CDN.",
+        affectedAsset: url,
+        evidence: { hasHttpsUpgrade: false },
+      });
+    }
+
+    if (hasChainLoops) {
+      findings.push({
+        severity: "critical", confidence: 1.0,
+        title: "Posible Bucle de Redirecciones",
+        description: `Se detectaron ${maxFollow} o más redirecciones consecutivas, lo que sugiere un bucle de redirecciones. Los navegadores mostrarán un error "too many redirects".`,
+        recommendation: "Revise la configuración de redirecciones en su servidor web, CDN y framework para eliminar el bucle.",
+        affectedAsset: url,
+        evidence: { chain: chain.map((c) => `${c.status} ${c.url}`) },
+      });
+    }
+
+    ctx.log(`[Redirects] ${url}: ${redirectCount} redirecciones, status final ${finalStatus}`);
+    return { success: true, output, findings };
+  },
+};
+
+// ─── 6. Cookie Analysis ────────────────────────────────────────────────────
+
+export const websiteCookiesExecutor: ToolExecutor<{ url: string }, any> = {
+  id: "website.cookies",
+  timeoutMs: 12000,
+  category: "website",
+  validate(input: unknown) { return urlSchema.parse(input); },
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+    ctx.log(`[Cookies] Analizando cookies para: ${url}`);
+    const parsed = new URL(url);
+    await assertPublicHostname(parsed.hostname);
+
+    let setCookieHeaders: string[] = [];
+    try {
+      const res = await safeFetch(url, { method: "GET", redirect: "follow" });
+      setCookieHeaders = res.headers.getSetCookie?.() || [];
+      if (setCookieHeaders.length === 0) {
+        // Fallback if getSetCookie not available
+        const raw = res.headers.get("set-cookie");
+        if (raw) setCookieHeaders = [raw];
+      }
+    } catch (e: any) {
+      ctx.log(`Error fetching cookies: ${e.message}`);
+      return { success: false, output: { url }, findings: [], error: `Error al analizar cookies: ${e.message}` };
+    }
+
+    interface CookieInfo {
+      name: string;
+      hasSecure: boolean;
+      hasHttpOnly: boolean;
+      hasSameSite: boolean;
+      sameSiteValue: string;
+      hasExpiry: boolean;
+    }
+
+    const cookies: CookieInfo[] = setCookieHeaders.map((header) => {
+      const parts = header.split(";").map((p) => p.trim());
+      const name = parts[0]?.split("=")[0] || "unknown";
+      const lower = header.toLowerCase();
+      const sameSitePart = parts.find((p) => p.toLowerCase().startsWith("samesite="));
+      return {
+        name,
+        hasSecure: lower.includes("secure"),
+        hasHttpOnly: lower.includes("httponly"),
+        hasSameSite: !!sameSitePart,
+        sameSiteValue: sameSitePart?.split("=")[1]?.toLowerCase() || "",
+        hasExpiry: lower.includes("expires=") || lower.includes("max-age="),
+      };
+    });
+
+    const output = {
+      url,
+      cookies,
+      cookieCount: cookies.length,
+    };
+
+    const findings: Finding[] = [];
+
+    for (const cookie of cookies) {
+      if (!cookie.hasSecure) {
+        findings.push({
+          severity: "medium", confidence: 0.95,
+          title: `Cookie "${cookie.name}" sin flag Secure`,
+          description: `La cookie "${cookie.name}" se envía sin el flag Secure. Puede ser transmitida por conexiones HTTP no cifradas, exponiéndola a interceptación (session hijacking).`,
+          recommendation: "Agregue el flag 'Secure' a todas las cookies que contengan información de sesión o sensible.",
+          affectedAsset: url,
+          evidence: { cookie: cookie.name, missingFlag: "Secure" },
+        });
+      }
+      if (!cookie.hasHttpOnly) {
+        findings.push({
+          severity: "medium", confidence: 0.9,
+          title: `Cookie "${cookie.name}" sin flag HttpOnly`,
+          description: `La cookie "${cookie.name}" es accesible desde JavaScript del lado del cliente. Esto la hace vulnerable a robo mediante XSS (Cross-Site Scripting).`,
+          recommendation: "Agregue el flag 'HttpOnly' a las cookies de sesión para que no sean accesibles desde JavaScript.",
+          affectedAsset: url,
+          evidence: { cookie: cookie.name, missingFlag: "HttpOnly" },
+        });
+      }
+      if (!cookie.hasSameSite) {
+        findings.push({
+          severity: "low", confidence: 0.8,
+          title: `Cookie "${cookie.name}" sin atributo SameSite`,
+          description: `La cookie "${cookie.name}" no especifica la directiva SameSite. Los navegadores modernos aplican SameSite=Lax por defecto, pero puede haber comportamiento inconsistente.`,
+          recommendation: "Agregue el atributo 'SameSite=Lax' o 'SameSite=Strict' según los requisitos de su aplicación.",
+          affectedAsset: url,
+          evidence: { cookie: cookie.name, missingFlag: "SameSite" },
+        });
+      }
+    }
+
+    ctx.log(`[Cookies] ${url}: ${cookies.length} cookie(s) analizadas`);
+    return { success: true, output, findings };
+  },
+};
+
+// ─── 7. CSP Analysis ───────────────────────────────────────────────────────
+
+export const websiteCspExecutor: ToolExecutor<{ url: string }, any> = {
+  id: "website.csp",
+  timeoutMs: 12000,
+  category: "website",
+  validate(input: unknown) { return urlSchema.parse(input); },
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+    ctx.log(`[CSP] Analizando Content-Security-Policy para: ${url}`);
+    const parsed = new URL(url);
+    await assertPublicHostname(parsed.hostname);
+
+    let cspHeader = "";
+    try {
+      const res = await safeFetch(url, { method: "HEAD", redirect: "follow" });
+      cspHeader = res.headers.get("content-security-policy") ||
+                  res.headers.get("content-security-policy-report-only") || "";
+
+      if (!cspHeader) {
+        // Fallback a GET si HEAD no devuelve CSP
+        const res2 = await safeFetch(url, { method: "GET", redirect: "follow" });
+        cspHeader = res2.headers.get("content-security-policy") ||
+                    res2.headers.get("content-security-policy-report-only") || "";
+      }
+    } catch (e: any) {
+      ctx.log(`Error fetching CSP: ${e.message}`);
+      return { success: false, output: { url, csp: null }, findings: [], error: `Error al obtener CSP: ${e.message}` };
+    }
+
+    const directives: Record<string, string[]> = {};
+    if (cspHeader) {
+      const parts = cspHeader.split(";");
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        const spaceIdx = trimmed.indexOf(" ");
+        const name = spaceIdx > 0 ? trimmed.substring(0, spaceIdx) : trimmed;
+        const value = spaceIdx > 0 ? trimmed.substring(spaceIdx + 1).trim() : "";
+        directives[name] = value ? value.split(/\s+/).filter(Boolean) : [];
+      }
+    }
+
+    const hasUnsafeInline = Object.values(directives).some((vals) =>
+      vals.some((v) => v === "'unsafe-inline'")
+    );
+    const hasUnsafeEval = Object.values(directives).some((vals) =>
+      vals.some((v) => v === "'unsafe-eval'")
+    );
+    const hasWildcardSrc = Object.values(directives).some((vals) =>
+      vals.some((v) => v === "*" || v === "http://*" || v === "https://*")
+    );
+    const hasStrictDynamic = Object.values(directives).some((vals) =>
+      vals.some((v) => v === "'strict-dynamic'")
+    );
+
+    const score = cspHeader
+      ? Math.max(0, Math.min(100,
+          100
+          - (hasUnsafeInline ? 25 : 0)
+          - (hasUnsafeEval ? 15 : 0)
+          - (hasWildcardSrc ? 20 : 0)
+          + (hasStrictDynamic ? 10 : 0)
+        ))
+      : 0;
+
+    const output = {
+      url,
+      csp: cspHeader || null,
+      directives,
+      score,
+      hasUnsafeInline,
+      hasUnsafeEval,
+      hasWildcardSrc,
+      hasStrictDynamic,
+      directiveCount: Object.keys(directives).length,
+    };
+
+    const findings: Finding[] = [];
+
+    if (!cspHeader) {
+      findings.push({
+        severity: "high", confidence: 1.0,
+        title: "Content-Security-Policy Ausente",
+        description: `El sitio ${url} no envía ninguna cabecera Content-Security-Policy. Sin CSP, los navegadores no pueden mitigar ataques XSS y de inyección de datos.`,
+        recommendation: "Implemente la cabecera Content-Security-Policy con directivas restrictivas para script-src, style-src y object-src.",
+        affectedAsset: url,
+        evidence: { cspScore: 0 },
+      });
+    } else {
+      if (hasUnsafeInline) {
+        findings.push({
+          severity: "high", confidence: 0.95,
+          title: "CSP permite 'unsafe-inline'",
+          description: "La política CSP incluye 'unsafe-inline' en una o más directivas, lo que permite la ejecución de scripts inline y reduce significativamente la protección contra XSS.",
+          recommendation: "Elimine 'unsafe-inline' y use nonces o hashes para scripts inline legítimos. Considere 'strict-dynamic' como alternativa moderna.",
+          affectedAsset: url,
+          evidence: { directives: Object.entries(directives).filter(([, v]) => v.includes("'unsafe-inline'")).map(([k]) => k) },
+        });
+      }
+      if (hasWildcardSrc) {
+        findings.push({
+          severity: "medium", confidence: 0.9,
+          title: "CSP contiene comodín (*) en fuentes",
+          description: "La política CSP utiliza comodines (*) en una o más directivas, permitiendo la carga de recursos desde cualquier origen. Esto debilita significativamente la política.",
+          recommendation: "Reemplace los comodines con orígenes específicos. Por ejemplo, use 'self' en lugar de *.",
+          affectedAsset: url,
+          evidence: { directives: Object.entries(directives).filter(([, v]) => v.includes("*")).map(([k]) => k) },
+        });
+      }
+      if (score < 50) {
+        findings.push({
+          severity: "medium", confidence: 0.85,
+          title: "Score CSP Bajo",
+          description: `La política CSP tiene un score de ${score}/100. Existen múltiples debilidades que reducen la efectividad de la protección contra XSS.`,
+          recommendation: "Revise y fortalezca la política CSP eliminando unsafe-inline, unsafe-eval y comodines.",
+          affectedAsset: url,
+          evidence: { cspScore: score },
+        });
+      }
+    }
+
+    ctx.log(`[CSP] ${url}: ${cspHeader ? `Score ${score}/100` : "Ausente"}`);
+    return { success: true, output, findings };
+  },
+};
+
