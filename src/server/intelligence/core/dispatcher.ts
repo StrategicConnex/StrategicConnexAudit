@@ -1,6 +1,5 @@
-import { getExecutor } from "./executor-registry";
+import { getExecutor, getToolDefinition } from "./tool-registry";
 import { ExecutionContext, ExecutionResult } from "../types/executor.types";
-import { getToolDefinition } from "../registry/tool-registry";
 import { httpSemaphore, dnsSemaphore } from "./concurrency";
 import { executionCache, IntelligenceCache } from "./cache";
 import { enforceToolRunPolicy } from "./policy-enforcer";

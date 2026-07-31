@@ -5,7 +5,9 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { DownloadPdfButton } from '@/app/components/DownloadPdfButton';
-import { parseMarkdownReport } from '../report-utils';
+import { parseMarkdownReport, extractMermaidBlocks, tableRowsToChartData } from '../report-utils';
+import { MermaidBlock } from '@/app/components/MermaidBlock';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { projects } from '@/shared/db/schemas';
 
 interface AIReportState {
@@ -277,6 +279,8 @@ export function ReportsTab({
 function ReportVisualView({ text, isFallback }: { text: string; isFallback?: boolean }) {
   const t = useTranslations('reports');
   const data = parseMarkdownReport(text);
+  const mermaidBlocks = extractMermaidBlocks(text);
+  const chartData = tableRowsToChartData(data.tableRows);
   return (
     <div className="space-y-10 text-foreground/80 font-sans">
       {isFallback && (
@@ -317,6 +321,39 @@ function ReportVisualView({ text, isFallback }: { text: string; isFallback?: boo
           </div>
         </div>
       </div>
+
+      {/* Gráfico de barras de los KPIs de rendimiento */}
+      {chartData.length > 0 && (
+        <div className="bg-card p-6 border border-border rounded-2xl">
+          <h4 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-4">{t('visualChartTitle')}</h4>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} interval={0} angle={-18} textAnchor="end" height={48} />
+                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                <Tooltip
+                  contentStyle={{
+                    background: '#0f172a', border: '1px solid #334155', borderRadius: 12,
+                    fontSize: 12, color: '#e2e8f0',
+                  }}
+                />
+                <Bar dataKey="value" fill="#22d3ee" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Diagramas mermaid generados por la IA */}
+      {mermaidBlocks.length > 0 && (
+        <div className="space-y-6">
+          <h4 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('visualDiagrams')}</h4>
+          {mermaidBlocks.map((block, idx) => (
+            <MermaidBlock key={idx} code={block.code} id={`report-mermaid-${idx}`} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

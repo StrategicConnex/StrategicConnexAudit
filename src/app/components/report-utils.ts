@@ -144,6 +144,88 @@ export function parseMarkdownReport(text: string): ParsedReport {
   };
 }
 
+// ─── Mermaid extraction ────────────────────────────────────────────────────────
+
+/**
+ * Extrae los bloques ```mermaid ... ``` del texto crudo del reporte para
+ * renderizarlos como diagramas SVG con el componente MermaidBlock.
+ * Devuelve un array de { code } en orden de aparición.
+ */
+export function extractMermaidBlocks(text: string): { code: string }[] {
+  const blocks: { code: string }[] = [];
+  const regex = /```mermaid\s*\n([\s\S]*?)```/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const code = match[1].trim();
+    if (code) blocks.push({ code });
+  }
+  return blocks;
+}
+
+/**
+ * Convierte las filas de la tabla de rendimiento en datos numéricos para
+ * gráficos (recharts). Devuelve [{ name, value }] parseando el primer número
+ * de cada valor (ej. "8,420 clicks" → 8420, "6.74%" → 6.74).
+ */
+export function tableRowsToChartData(
+  rows: ParsedReport['tableRows']
+): { name: string; value: number }[] {
+  return rows
+    .map((row) => {
+      const parsed = parseNumericValue(row.value);
+      return { name: row.metric, value: parsed };
+    })
+    .filter((d) => d.value !== null && isFinite(d.value))
+    .map((d) => ({ name: d.name, value: d.value as number }));
+}
+
+function parseNumericValue(value: string): number | null {
+  if (!value) return null;
+
+  let cleaned = value.replace(/[#%$\s]/g, '').trim();
+
+  // Extraer el número inicial con sufijo de escala opcional ("124.8K busquedas"
+  // → "124.8K", "8,420 clicks" → "8,420", "-4,2%" → "-4,2"). El sufijo K/M
+  // puede estar seguido de unidades, por eso se detecta dentro del match.
+  const numMatch = cleaned.match(/^-?[\d.,]+[kKmM]?/);
+  if (!numMatch) return null;
+  cleaned = numMatch[0];
+
+  // Sufijos de escala (ej. "124.8K" → 124800, "1.2M" → 1200000)
+  let multiplier = 1;
+  const suffixMatch = cleaned.match(/([kKmM])$/);
+  if (suffixMatch) {
+    multiplier = suffixMatch[1].toLowerCase() === 'k' ? 1_000 : 1_000_000;
+    cleaned = cleaned.slice(0, -1);
+  }
+
+  // Heurística de separador decimal vs miles:
+  //  - "8,420" / "12,345,678" → miles (8420 / 12345678)
+  //  - "6,74" → decimal (6.74)
+  //  - "6.74" → decimal (6.74)  - "124.800" → miles (124800)
+  if (cleaned.includes(',')) {
+    const parts = cleaned.split(',');
+    const last = parts[parts.length - 1];
+    // Coma de miles solo si el último grupo tiene exactamente 3 dígitos,
+    // no hay punto decimal y todos los grupos intermedios son de 3 dígitos.
+    const isThousands =
+      last.length === 3 &&
+      !cleaned.includes('.') &&
+      parts.every((p, i) => (i === 0 ? p.length >= 1 && p.length <= 3 : p.length === 3));
+    cleaned = isThousands ? parts.join('') : parts.join('.');
+  }
+  // Punto decimal con exactamente 3 dígitos después y sin otra coma → miles
+  else if (cleaned.includes('.')) {
+    const [intPart, decPart] = cleaned.split('.');
+    if (decPart !== undefined && decPart.length === 3) {
+      cleaned = intPart + decPart; // "124.800" → 124800
+    }
+  }
+
+  const parsed = parseFloat(cleaned);
+  return isFinite(parsed) ? parsed * multiplier : null;
+}
+
 // ─── Sanitizer ────────────────────────────────────────────────────────────────
 
 /** Escapes HTML special characters to prevent XSS in generated reports. */

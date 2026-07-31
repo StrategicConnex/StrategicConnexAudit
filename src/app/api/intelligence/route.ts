@@ -14,8 +14,7 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { checkIntelScanRateLimit } from "@/shared/lib/ratelimit";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
-import { executorRegistry } from "@/server/intelligence/core/executor-registry";
-import { toolRegistry } from "@/server/intelligence/registry/tool-registry";
+import { getExecutor, isKnownTool, listToolDefinitions } from "@/server/intelligence/core/tool-registry";
 import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
 import { Finding } from "@/server/intelligence/types/executor.types";
 import { buildResultMap, getPrimaryIp, buildScanResponse, buildScanMetadata } from "@/server/intelligence/core/scan-response";
@@ -212,11 +211,11 @@ export async function POST(req: NextRequest) {
 
     logEvent("info", `Iniciando Auditoría Técnica Avanzada modular para el host: ${normalizedTarget}`);
 
-    // 6. Lanzar ejecución paralela — tools leídas dinámicamente del toolRegistry
-    //    Solo se ejecutan tools que tengan un executor registrado (evita tools huérfanas)
-    const knownExecutors = new Set(Object.keys(executorRegistry));
-    const toolsToRun = toolRegistry
-      .filter((t) => knownExecutors.has(t.id))
+    // 6. Lanzar ejecución paralela — tools leídas dinámicamente del tool-registry
+    //    Solo se ejecutan tools NATIVOS con executor (evita huérfanas y plugins
+    //    dinámicos del batch scan — los plugins se ejecutan bajo demanda).
+    const toolsToRun = listToolDefinitions()
+      .filter((t) => isKnownTool(t.id))
       .map((t) => ({ id: t.id, category: t.category }));
 
     logEvent("info", `Ejecutando suite de ${toolsToRun.length} herramientas de escaneo concurrentes...`);

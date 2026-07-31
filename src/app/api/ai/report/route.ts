@@ -8,6 +8,11 @@ import { callAIWithFallback, AIMessage } from '@/server/ai/ai-router';
 
 export const dynamic = 'force-dynamic';
 
+// Vercel serverless: el router IA prueba varios modelos en cadena (hasta 30s
+// por intento). Sin maxDuration, la plataforma mata la función a los 10s (Hobby)
+// o 60s (Pro) y el cliente ve la barra colgada al 35%/90% sin informe.
+export const maxDuration = 120;
+
 interface ResilientReportData {
   totalClicks: number;
   totalImpressions: number;
@@ -131,7 +136,7 @@ export const POST = withRateLimit(
 
       const userMsg: AIMessage = {
         role: "user",
-        content: `Actua como el Consultor SEO Principal de una de las agencias de marketing digital organico mas prestigiosas del mundo. Tu trabajo es redactar un Reporte Ejecutivo Mensual de Posicionamiento y Salud Tecnica SEO de alta gama para el proyecto "${project.name}" (dominio: ${project.domain}).\n\n${dataAvailabilityNote}\n\nDatos disponibles:\n- Clicks organicos (30d): ${hasGscData ? totalClicks : 'Sin datos - GSC no conectado'}\n- Impresiones (30d): ${hasGscData ? totalImpressions : 'Sin datos - GSC no conectado'}\n- CTR promedio: ${avgCtr !== null ? avgCtr.toFixed(2) + '%' : 'Sin datos'}\n- Posicion promedio: ${avgPosition !== null ? '#' + avgPosition.toFixed(1) : 'Sin datos'}\n- Usuarios activos (GA4, 30d): ${hasGa4Data ? totalActiveUsers : 'Sin datos - GA4 no conectado'}\n- Conversiones: ${hasGa4Data ? totalConversions : 'Sin datos'}\n- Salud Tecnica: ${healthScore !== null ? healthScore + '/100' : 'Auditoria no ejecutada aun'}\n\nInstrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconnex.com.ar)". Usa Markdown elegante. Se honesto sobre la disponibilidad de datos. Estructura: Resumen Ejecutivo, Analisis de Rendimiento (tabla), Diagnostico Tecnico y Plan de Accion (3-4 tareas).`
+        content: `Actua como el Consultor SEO Principal de una de las agencias de marketing digital organico mas prestigiosas del mundo. Tu trabajo es redactar un Reporte Ejecutivo Mensual de Posicionamiento y Salud Tecnica SEO de alta gama para el proyecto "${project.name}" (dominio: ${project.domain}).\n\n${dataAvailabilityNote}\n\nDatos disponibles:\n- Clicks organicos (30d): ${hasGscData ? totalClicks : 'Sin datos - GSC no conectado'}\n- Impresiones (30d): ${hasGscData ? totalImpressions : 'Sin datos - GSC no conectado'}\n- CTR promedio: ${avgCtr !== null ? avgCtr.toFixed(2) + '%' : 'Sin datos'}\n- Posicion promedio: ${avgPosition !== null ? '#' + avgPosition.toFixed(1) : 'Sin datos'}\n- Usuarios activos (GA4, 30d): ${hasGa4Data ? totalActiveUsers : 'Sin datos - GA4 no conectado'}\n- Conversiones: ${hasGa4Data ? totalConversions : 'Sin datos'}\n- Salud Tecnica: ${healthScore !== null ? healthScore + '/100' : 'Auditoria no ejecutada aun'}\n\nInstrucciones: Comienza estrictamente con "Desde Strategic Connex (strategicconnex.com.ar)". Usa Markdown elegante. Se honesto sobre la disponibilidad de datos. Estructura: Resumen Ejecutivo, Analisis de Rendimiento (tabla), Diagnostico Tecnico y Plan de Accion (3-4 tareas).\n\nDIAGRAMAS: Incluye EXACTAMENTE UN diagrama mermaid al final de la seccion "Plan de Accion" que represente el flujo de priorizacion de las tareas (formato flowchart, con bloques por prioridad Alta/Media/Baja). El bloque debe estar delimitado por \`\`\`mermaid y \`\`\`. Ejemplo de estructura valida: \`\`\`mermaid\nflowchart TD\n    A[Inicio] --> B{Tarea 1 - Alta}\n    B -->|Completada| C[Tarea 2 - Media]\n\`\`\`.`
       };
 
       const aiResult = await callAIWithFallback({

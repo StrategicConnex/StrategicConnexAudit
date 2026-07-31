@@ -52,54 +52,54 @@ async function computeAggregates(userId: string, projectId?: string | null) {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days
 
   const { uptimeRows, scoreRows } = await withRLS(userId, async (tx) => {
-    // 1. Uptime % per project (last 30 days)
-    interface UptimeRow extends Record<string, unknown> { projectId: string; isUp: boolean; responseTimeMs: number | null }
+    // 1. Uptime % + avg latency per project (last 30 days) — agregado en SQL
+    //    Evita descargar cada fila de uptime_logs a JS: una fila por proyecto.
+    interface UptimeRow extends Record<string, unknown> {
+      projectId: string;
+      up: number;
+      total: number;
+      avgLatencyMs: number | null;
+    }
     const uptimeResult = await tx.execute<UptimeRow>(
       sql`
-        SELECT project_id as "projectId", is_up as "isUp", response_time_ms as "responseTimeMs"
+        SELECT project_id AS "projectId",
+               COUNT(*) FILTER (WHERE is_up)::int AS "up",
+               COUNT(*)::int AS "total",
+               AVG(response_time_ms)::float8 AS "avgLatencyMs"
         FROM uptime_logs
         WHERE checked_at >= ${since}
-        ORDER BY checked_at DESC
+        GROUP BY project_id
       `
     );
 
-    // 2. Health scores from intelligence_investigations
-    interface ScoreRow extends Record<string, unknown> { projectId: string; score: number }
+    // 2. Avg health score per project — agregado en SQL (misma semántica que el promedio JS anterior)
+    interface ScoreRow extends Record<string, unknown> { projectId: string; score: number | null }
     const scoreResult = await tx.execute<ScoreRow>(
       sql`
-        SELECT project_id as "projectId", score
+        SELECT project_id AS "projectId",
+               AVG(score)::float8 AS "score"
         FROM intelligence_investigations
         WHERE score IS NOT NULL
-        ORDER BY created_at DESC
+        GROUP BY project_id
       `
     );
 
     return { uptimeRows: uptimeResult, scoreRows: scoreResult };
   });
 
-  // Group by project and compute uptime %
-  const projectUptimes = new Map<string, { up: number; total: number; latencies: number[] }>();
+  // Una fila por proyecto: GROUP BY ya agregó todo en DB
+  const projectUptimes = new Map<string, { up: number; total: number; avgLatencyMs: number | null }>();
   for (const row of uptimeRows.rows ?? []) {
-    const pid = row.projectId;
-    if (!projectUptimes.has(pid)) {
-      projectUptimes.set(pid, { up: 0, total: 0, latencies: [] });
-    }
-    const entry = projectUptimes.get(pid)!;
-    entry.total++;
-    if (row.isUp) entry.up++;
-    if (row.responseTimeMs != null) {
-      entry.latencies.push(row.responseTimeMs);
-    }
+    projectUptimes.set(row.projectId, {
+      up: Number(row.up ?? 0),
+      total: Number(row.total ?? 0),
+      avgLatencyMs: row.avgLatencyMs != null ? Number(row.avgLatencyMs) : null,
+    });
   }
 
-  // Latest score per project
-  const projectScores = new Map<string, number[]>();
+  const projectScores = new Map<string, number>();
   for (const row of scoreRows.rows ?? []) {
-    const pid = row.projectId;
-    if (!projectScores.has(pid)) {
-      projectScores.set(pid, []);
-    }
-    projectScores.get(pid)!.push(row.score);
+    if (row.score != null) projectScores.set(row.projectId, Number(row.score));
   }
 
   // Build metrics array
@@ -111,18 +111,16 @@ async function computeAggregates(userId: string, projectId?: string | null) {
   const projectMetrics: ProjectMetric[] = [];
   for (const pid of allProjects) {
     const uptime = projectUptimes.get(pid);
-    const scores = projectScores.get(pid);
+    const avgScore = projectScores.get(pid);
     projectMetrics.push({
       projectId: pid,
       uptimePercent: uptime && uptime.total > 0
         ? Math.round((uptime.up / uptime.total) * 10000) / 100
         : 0,
-      avgLatencyMs: uptime && uptime.latencies.length > 0
-        ? Math.round(uptime.latencies.reduce((a, b) => a + b, 0) / uptime.latencies.length)
+      avgLatencyMs: uptime && uptime.avgLatencyMs != null
+        ? Math.round(uptime.avgLatencyMs)
         : 0,
-      score: scores && scores.length > 0
-        ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-        : null,
+      score: avgScore != null ? Math.round(avgScore) : null,
     });
   }
 

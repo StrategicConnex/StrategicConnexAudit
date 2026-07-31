@@ -3,13 +3,23 @@
  *
  * Extraido de POST /api/intelligence/route.ts para reutilizacion en
  * todas las rutas de inteligencia y facilitar testing aislado.
+ *
+ * Lecturas tipadas: cada `R.get()` se castea al contrato de salida del
+ * executor (ver executor.types.ts) — NUNCA a `any`. Esto fija los nombres
+ * de campos reales que produce cada executor (ej. dns.lookup → { a, aaaa,
+ * mx, ns, txt, soa } en minuscula) y evita drift de keys mayusculas.
  */
 
 import { Finding } from "../types/executor.types";
+import type {
+  DnsLookupOutput, DnsMxOutput, DnsTxtOutput, DnsNsOutput,
+  ReverseDnsOutput, CdnOutput, WafOutput, ReverseIpOutput,
+  IpReputationOutput, TracerouteOutput, TlsScanOutput,
+} from "../types/executor.types";
 
 export interface ExecutionToolResult {
   toolId: string;
-  output: any;
+  output: unknown;
 }
 
 export interface ScanInvestigation {
@@ -23,7 +33,7 @@ export interface ScanInvestigation {
 }
 
 export interface BuildResponseParams {
-  R: Map<string, any>;
+  R: Map<string, unknown>;
   investigation: ScanInvestigation;
   target: string;
   normalizedTarget: string;
@@ -35,24 +45,47 @@ export interface BuildResponseParams {
 }
 
 export interface BuildMetadataParams {
-  R: Map<string, any>;
+  R: Map<string, unknown>;
   mailHealthScore: number;
   infraScore: number;
 }
 
-export function buildResultMap(results: ExecutionToolResult[]): Map<string, any> {
+export function buildResultMap(results: ExecutionToolResult[]): Map<string, unknown> {
   return new Map(results.map((r) => [r.toolId, r.output]));
 }
 
-export function getPrimaryIp(R: Map<string, any>): string | null {
-  const dnsLookup = R.get("dns.lookup");
-  if (!dnsLookup || typeof dnsLookup !== "object") return null;
-  const A = Array.isArray((dnsLookup as { A?: unknown }).A) ? (dnsLookup as { A: unknown[] }).A : [];
-  return A.length > 0 && typeof A[0] === "string" ? A[0] : null;
+// ─── Accessors tipados por tool ──────────────────────────────────────────────
+
+const asObj = <T>(value: unknown): T | undefined =>
+  value && typeof value === "object" ? (value as T) : undefined;
+
+const asArr = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
+/** Acceso tipado a una tool: R.get(id) como objeto o undefined. */
+const get = <T>(R: Map<string, unknown>, id: string): T | undefined =>
+  asObj<T>(R.get(id));
+
+export function getPrimaryIp(R: Map<string, unknown>): string | null {
+  const dnsLookup = get<DnsLookupOutput>(R, "dns.lookup");
+  const a = dnsLookup?.a ?? [];
+  return a.length > 0 && typeof a[0] === "string" ? a[0] : null;
 }
 
 export function buildScanResponse(params: BuildResponseParams) {
   const { R, investigation, target, normalizedTarget, targetType, score, mailHealthScore, infraScore, aggregatedFindings } = params;
+
+  const dnsLookup = get<DnsLookupOutput>(R, "dns.lookup");
+  const dnsMx = get<DnsMxOutput>(R, "dns.mx");
+  const dnsNs = get<DnsNsOutput>(R, "dns.ns");
+  const dnsTxt = get<DnsTxtOutput>(R, "dns.txt");
+  const tlsScan = get<TlsScanOutput>(R, "tls.scan");
+
+  // Contratos de email / headers (parciales — solo los campos que leemos)
+  const spf = get<{ record?: string; spfParsed?: unknown }>(R, "email.spf");
+  const dmarc = get<{ record?: string; dmarcParsed?: unknown }>(R, "email.dmarc");
+  const dkim = get<{ count?: number }>(R, "email.dkim");
+  const secHeaders = get<{ securityHeaders?: { hsts?: boolean } }>(R, "website.security_headers");
+
   return {
     success: true,
     investigation: {
@@ -62,18 +95,18 @@ export function buildScanResponse(params: BuildResponseParams) {
       metadata: { mailHealthCompositeScore: mailHealthScore, infrastructureScore: infraScore },
     },
     dns: {
-      A: R.get("dns.lookup")?.A || [], AAAA: R.get("dns.lookup")?.AAAA || [],
-      MX: R.get("dns.mx")?.MX || [], NS: R.get("dns.ns")?.NS || [],
-      TXT: R.get("dns.txt")?.TXT || [],
+      A: dnsLookup?.a ?? [], AAAA: dnsLookup?.aaaa ?? [],
+      MX: dnsMx?.records ?? [], NS: dnsNs?.servers ?? [],
+      TXT: dnsTxt?.records ?? [],
     },
-    ssl: R.get("tls.scan") || {},
+    ssl: (tlsScan ?? {}) as TlsScanOutput,
     email: {
-      spf: R.get("email.spf")?.record || null, spfParsed: R.get("email.spf")?.spfParsed || null,
-      dmarc: R.get("email.dmarc")?.record || null, dmarcParsed: R.get("email.dmarc")?.dmarcParsed || null,
-      dkim: R.get("email.dkim") || {}, bimi: { success: false, error: "No configurado" },
+      spf: spf?.record ?? null, spfParsed: spf?.spfParsed ?? null,
+      dmarc: dmarc?.record ?? null, dmarcParsed: dmarc?.dmarcParsed ?? null,
+      dkim: dkim ?? {}, bimi: { success: false, error: "No configurado" },
     },
     headers: R.get("website.headers") || {},
-    redirect: { success: true, redirectsToHttps: !!(R.get("website.security_headers")?.securityHeaders?.hsts) },
+    redirect: { success: true, redirectsToHttps: !!secHeaders?.securityHeaders?.hsts },
     findings: aggregatedFindings,
     dnssec: R.get("dns.dnssec") || {}, propagation: R.get("dns.propagation") || {},
     zone: R.get("dns.zone") || {}, redirects: R.get("website.redirects") || {},
@@ -86,26 +119,38 @@ export function buildScanResponse(params: BuildResponseParams) {
 
 export function buildScanMetadata(params: BuildMetadataParams) {
   const { R, mailHealthScore, infraScore } = params;
+
+  const spf = get<{ spfParsed?: unknown }>(R, "email.spf");
+  const dmarc = get<{ dmarcParsed?: unknown }>(R, "email.dmarc");
+  const dkim = get<{ count?: number }>(R, "email.dkim");
+  const secHeaders = get<{ securityHeaders?: { hsts?: boolean } }>(R, "website.security_headers");
+  const reverseDns = get<ReverseDnsOutput>(R, "network.reverse_dns");
+  const cdn = get<CdnOutput>(R, "network.cdn");
+  const waf = get<WafOutput>(R, "network.waf");
+  const reverseIp = get<ReverseIpOutput>(R, "network.reverse_ip");
+  const reputation = get<IpReputationOutput>(R, "threat.ip_reputation");
+  const traceroute = get<TracerouteOutput>(R, "network.traceroute");
+
   return {
     mailHealthCompositeScore: mailHealthScore, infrastructureScore: infraScore,
-    spfParsed: R.get("email.spf")?.spfParsed || null,
-    dmarcParsed: R.get("email.dmarc")?.dmarcParsed || null,
-    dkimCount: R.get("email.dkim")?.count || 0, bimiSuccess: false,
-    redirectsToHttps: !!(R.get("website.security_headers")?.securityHeaders?.hsts),
+    spfParsed: spf?.spfParsed ?? null,
+    dmarcParsed: dmarc?.dmarcParsed ?? null,
+    dkimCount: dkim?.count ?? 0, bimiSuccess: false,
+    redirectsToHttps: !!secHeaders?.securityHeaders?.hsts,
     whois: R.get("osint.whois") || {},
     asnGeo: { ...(R.get("network.geoip") || {}), ...(R.get("network.asn") || {}) },
-    reverseDns: R.get("network.reverse_dns")?.ptr || [],
+    reverseDns: asArr<string>(reverseDns?.ptr ?? []),
     ping: R.get("network.ping") || {},
     cdnWaf: {
-      detected: !!(R.get("network.cdn")?.detected || R.get("network.waf")?.detected),
-      cdnProvider: R.get("network.cdn")?.provider || null,
-      wafProvider: R.get("network.waf")?.wafProvider || null,
-      cdnMethod: R.get("network.cdn")?.method || null,
-      wafConfidence: R.get("network.waf")?.confidence || 0,
+      detected: !!(cdn?.detected || waf?.detected),
+      cdnProvider: cdn?.provider ?? null,
+      wafProvider: waf?.wafProvider ?? null,
+      cdnMethod: cdn?.method ?? null,
+      wafConfidence: waf?.confidence ?? 0,
     },
-    reverseIp: R.get("network.reverse_ip")?.domains || [],
-    dnsbl: R.get("threat.ip_reputation")?.blacklistsListed || [],
-    reputation: R.get("threat.ip_reputation") || {},
-    traceroute: R.get("network.traceroute")?.hops || [],
+    reverseIp: asArr<string>(reverseIp?.domains ?? []),
+    dnsbl: asArr(reputation?.blacklistsListed ?? []),
+    reputation: reputation ?? {},
+    traceroute: asArr(traceroute?.hops ?? []),
   };
 }

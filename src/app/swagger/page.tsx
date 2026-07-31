@@ -1,33 +1,19 @@
-'use client';
-
-import React from 'react';
-import dynamic from 'next/dynamic';
+import { Suspense } from 'react';
 import { ArrowLeft, BookOpen } from 'lucide-react';
+import SwaggerLazyLoader from './SwaggerLazyLoader';
 
 /**
- * Lazy-load Swagger UI (~3MB bundle) — only loads when user visits /swagger.
- * SSR is disabled because swagger-ui-react requires browser APIs (window, fetch).
- */
-const SwaggerClient = dynamic(() => import('./SwaggerClient'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center py-32">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-        <p className="text-sm text-muted-fg">Loading API documentation…</p>
-      </div>
-    </div>
-  ),
-});
-
-/**
- * Swagger UI page — renders the SCAUDIT OpenAPI spec interactively.
+ * Swagger UI page — Server Component that renders the SCAUDIT OpenAPI spec
+ * interactively.
  *
- * The heavy swagger-ui-react bundle is code-split via next/dynamic
- * and only downloaded when this route is visited.
+ * The heavy swagger-ui-react bundle (~3MB) lives behind SwaggerLazyLoader,
+ * a client component using next/dynamic with ssr:false. That keeps the chunk
+ * OUT of this route's initial HTML/JS (verified: not in the initial script
+ * tags) — it downloads only after hydration, with a skeleton meanwhile.
+ * The Suspense boundary is a belt-and-suspenders fallback for the loader.
  *
- * Dark theme CSS overrides are inlined here (not in SwaggerClient)
- * so the page gets styled immediately without waiting for the chunk.
+ * Dark theme CSS overrides are inlined here (not in SwaggerClient) so the
+ * page gets styled immediately without waiting for the chunk.
  */
 export default function SwaggerPage() {
   return (
@@ -141,7 +127,9 @@ export default function SwaggerPage() {
         </p>
       </div>
 
-      <SwaggerClient />
+      <Suspense fallback={null}>
+        <SwaggerLazyLoader />
+      </Suspense>
     </div>
   );
 }

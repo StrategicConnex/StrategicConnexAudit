@@ -122,3 +122,78 @@ describe("checkAiRateLimit", () => {
     expect(mockLimit).toHaveBeenNthCalledWith(2, "bob");
   });
 });
+
+// ─── Test: isEmailAllowlisted ───────────────────────────────────────────────
+
+describe("isEmailAllowlisted", () => {
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("devuelve true para el email hardcodeado en la allowlist", async () => {
+    const mod = await import("./ratelimit");
+    expect(mod.isEmailAllowlisted("palacios_juan@hotmail.com")).toBe(true);
+  });
+
+  it("normaliza mayusculas y espacios antes de comparar", async () => {
+    const mod = await import("./ratelimit");
+    // Con espacios alrededor y mayúsculas mixtas
+    expect(mod.isEmailAllowlisted("  PALACIOS_JUAN@Hotmail.COM  ")).toBe(true);
+    expect(mod.isEmailAllowlisted("Palacios_Juan@hotmail.com")).toBe(true);
+  });
+
+  it("respeta AUTH_EMAIL_ALLOWLIST con multiples emails separados por coma", async () => {
+    vi.stubEnv("AUTH_EMAIL_ALLOWLIST", " admin@corp.com ,  otro@test.io ");
+    const mod = await import("./ratelimit");
+
+    // Emails de la env var (con y sin espacios/case)
+    expect(mod.isEmailAllowlisted("admin@corp.com")).toBe(true);
+    expect(mod.isEmailAllowlisted("OTRO@test.io")).toBe(true);
+    // El hardcodeado sigue funcionando junto a la env var
+    expect(mod.isEmailAllowlisted("palacios_juan@hotmail.com")).toBe(true);
+    // Email fuera de ambas listas
+    expect(mod.isEmailAllowlisted("nobody@example.com")).toBe(false);
+  });
+
+  it("ignora entradas vacias de AUTH_EMAIL_ALLOWLIST (comas dobles o espacios)", async () => {
+    vi.stubEnv("AUTH_EMAIL_ALLOWLIST", " , , admin@corp.com , ");
+    const mod = await import("./ratelimit");
+
+    expect(mod.isEmailAllowlisted("admin@corp.com")).toBe(true);
+    expect(mod.isEmailAllowlisted("palacios_juan@hotmail.com")).toBe(true);
+    expect(mod.isEmailAllowlisted("other@corp.com")).toBe(false);
+  });
+
+  it("normaliza mayusculas tambien en los valores de AUTH_EMAIL_ALLOWLIST", async () => {
+    vi.stubEnv("AUTH_EMAIL_ALLOWLIST", "Admin@Corp.com,  OTRO@TEST.IO ");
+    const mod = await import("./ratelimit");
+
+    expect(mod.isEmailAllowlisted("admin@corp.com")).toBe(true);
+    expect(mod.isEmailAllowlisted("otro@test.io")).toBe(true);
+  });
+
+  it("devuelve false para email vacio, null o undefined", async () => {
+    const mod = await import("./ratelimit");
+
+    expect(mod.isEmailAllowlisted("")).toBe(false);
+    expect(mod.isEmailAllowlisted("   ")).toBe(false);
+    expect(mod.isEmailAllowlisted(null)).toBe(false);
+    expect(mod.isEmailAllowlisted(undefined)).toBe(false);
+  });
+
+  it("email vacio devuelve false incluso con AUTH_EMAIL_ALLOWLIST configurada (early-return)", async () => {
+    vi.stubEnv("AUTH_EMAIL_ALLOWLIST", "admin@corp.com");
+    const mod = await import("./ratelimit");
+
+    // El guard !email se ejecuta antes de leer la env var
+    expect(mod.isEmailAllowlisted("")).toBe(false);
+    expect(mod.isEmailAllowlisted(null)).toBe(false);
+  });
+
+  it("devuelve false para emails no listados sin env var configurada", async () => {
+    const mod = await import("./ratelimit");
+
+    expect(mod.isEmailAllowlisted("random@user.com")).toBe(false);
+    expect(mod.isEmailAllowlisted("PALACIOS@hotmail.com")).toBe(false); // no es el email exacto
+  });
+});

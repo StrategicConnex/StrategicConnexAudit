@@ -203,7 +203,9 @@
     "visualReportTitle": "Executive SEO Strategy Report",
     "visualDomainLabel": "Dominio Evaluado:",
     "visualExecSummary": "Resumen Ejecutivo",
-    "visualPerformance": "Diagnóstico y Desglose de Rendimiento"
+    "visualPerformance": "Diagnóstico y Desglose de Rendimiento",
+    "visualChartTitle": "Gráfico de Rendimiento",
+    "visualDiagrams": "Diagramas IA"
   },
   "settings": {
     "pageTitle": "Configuración del Sistema",
@@ -440,6 +442,7 @@
     "btnRunSimulation": "Ejecutar Simulación",
     "btnUninstalling": "Desinstalando...",
     "btnUninstall": "Desinstalar",
-    "runsCount": "{total} ejec. / {detected} detect."
+    "runsCount": "{total} ejec. / {detected} detect.",
+    "activeProject": "Proyecto Activo"
   }
 }

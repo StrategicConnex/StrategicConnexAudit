@@ -2,7 +2,11 @@ import { z } from "zod";
 import dns from "node:dns/promises";
 import net from "node:net";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import {
+  ToolExecutor, ExecutionContext, ExecutionResult, Finding,
+  PingOutput, ReverseDnsOutput, GeoIpOutput, TracerouteOutput,
+  AsnOutput, CdnOutput, WafOutput, ReverseIpOutput, IpReputationOutput,
+} from "../types/executor.types";
 
 const hostSchema = z.object({ host: z.string().min(3).max(253) });
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
@@ -133,14 +137,14 @@ async function serverlessPing(host: string, timeoutMs = 2500): Promise<{ duratio
 /**
  * 1. Ping Executor (TCP-based for Serverless compliance)
  */
-export const networkPingExecutor: ToolExecutor<{ host: string }, any> = {
+export const networkPingExecutor: ToolExecutor<{ host: string }, PingOutput> = {
   id: "network.ping",
   timeoutMs: 10000,
   category: "network",
   validate(input: unknown) {
     return hostSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<PingOutput>> {
     ctx.log(`Iniciando Ping TCP/HTTP seguro para: ${host}`);
     await assertPublicHostname(host);
 
@@ -187,14 +191,14 @@ export const networkPingExecutor: ToolExecutor<{ host: string }, any> = {
 /**
  * 2. Reverse DNS Executor (PTR records)
  */
-export const networkReverseDnsExecutor: ToolExecutor<{ ip: string }, any> = {
+export const networkReverseDnsExecutor: ToolExecutor<{ ip: string }, ReverseDnsOutput> = {
   id: "network.reverse_dns",
   timeoutMs: 8000,
   category: "network",
   validate(input: unknown) {
     return ipSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<ReverseDnsOutput>> {
     ctx.log(`Iniciando Reverse DNS seguro para IP: ${ip}`);
     await assertPublicHostname(ip);
 
@@ -232,14 +236,14 @@ export const networkReverseDnsExecutor: ToolExecutor<{ ip: string }, any> = {
 /**
  * 3. GeoIP & ASN Enrichment Executor
  */
-export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, any> = {
+export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, GeoIpOutput> = {
   id: "network.geoip",
   timeoutMs: 8000,
   category: "network",
   validate(input: unknown) {
     return ipSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<GeoIpOutput>> {
     ctx.log(`Iniciando GeoIP + ASN seguro para: ${ip}`);
     await assertPublicHostname(ip);
 
@@ -348,14 +352,14 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, any> = {
 /**
  * 4. Traceroute Simulator (Serverless Compatible)
  */
-export const networkTracerouteExecutor: ToolExecutor<{ host: string }, any> = {
+export const networkTracerouteExecutor: ToolExecutor<{ host: string }, TracerouteOutput> = {
   id: "network.traceroute",
   timeoutMs: 15000,
   category: "network",
   validate(input: unknown) {
     return hostSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<TracerouteOutput>> {
     ctx.log(`Iniciando Traceroute Simulado para: ${host}`);
     await assertPublicHostname(host);
 
@@ -486,14 +490,14 @@ export const networkTracerouteExecutor: ToolExecutor<{ host: string }, any> = {
 /**
  * 5. ASN Lookup Executor
  */
-export const networkAsnExecutor: ToolExecutor<{ ip: string }, any> = {
+export const networkAsnExecutor: ToolExecutor<{ ip: string }, AsnOutput> = {
   id: "network.asn",
   timeoutMs: 10000,
   category: "network",
   validate(input: unknown) {
     return ipSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<AsnOutput>> {
     ctx.log(`Iniciando consulta ASN para IP: ${ip}`);
     await assertPublicHostname(ip);
 
@@ -588,14 +592,14 @@ export const networkAsnExecutor: ToolExecutor<{ ip: string }, any> = {
 /**
  * 6. CDN Detection Executor
  */
-export const networkCdnExecutor: ToolExecutor<{ domain: string }, any> = {
+export const networkCdnExecutor: ToolExecutor<{ domain: string }, CdnOutput> = {
   id: "network.cdn",
   timeoutMs: 15000,
   category: "network",
   validate(input: unknown) {
     return domainSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<CdnOutput>> {
     ctx.log(`Iniciando detección pasiva de CDN para: ${domain}`);
     await assertPublicHostname(domain);
 
@@ -686,14 +690,14 @@ export const networkCdnExecutor: ToolExecutor<{ domain: string }, any> = {
 /**
  * 7. WAF (Web Application Firewall) Detection Executor
  */
-export const networkWafExecutor: ToolExecutor<{ url: string }, any> = {
+export const networkWafExecutor: ToolExecutor<{ url: string }, WafOutput> = {
   id: "network.waf",
   timeoutMs: 15000,
   category: "network",
   validate(input: unknown) {
     return urlSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<WafOutput>> {
     ctx.log(`Iniciando detección pasiva de WAF para: ${url}`);
 
     // Extraer host de la URL para assert perimetral seguro
@@ -780,14 +784,14 @@ export const networkWafExecutor: ToolExecutor<{ url: string }, any> = {
 /**
  * 8. Reverse IP / Co-hosted Domains Executor
  */
-export const networkReverseIpExecutor: ToolExecutor<{ ip: string }, any> = {
+export const networkReverseIpExecutor: ToolExecutor<{ ip: string }, ReverseIpOutput> = {
   id: "network.reverse_ip",
   timeoutMs: 12000,
   category: "network",
   validate(input: unknown) {
     return ipSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<ReverseIpOutput>> {
     ctx.log(`Iniciando consulta Reverse IP para: ${ip}`);
     await assertPublicHostname(ip);
 
@@ -831,14 +835,14 @@ export const networkReverseIpExecutor: ToolExecutor<{ ip: string }, any> = {
 /**
  * 9. IP Reputation Executor
  */
-export const threatIpReputationExecutor: ToolExecutor<{ ip: string }, any> = {
+export const threatIpReputationExecutor: ToolExecutor<{ ip: string }, IpReputationOutput> = {
   id: "threat.ip_reputation",
   timeoutMs: 12000,
   category: "threat",
   validate(input: unknown) {
     return ipSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { ip }): Promise<ExecutionResult<IpReputationOutput>> {
     ctx.log(`Iniciando análisis de Reputación de IP: ${ip}`);
     await assertPublicHostname(ip);
 
