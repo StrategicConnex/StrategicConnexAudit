@@ -109,11 +109,59 @@ export function getDynamicToolDefinitionCount(): number {
   return dynamicToolDefinitions.length;
 }
 
+let autoInitDone = false;
+let pendingInit: Promise<void> | null = null;
+
+/**
+ * Inicializa definiciones auto-descubiertas en el primer acceso.
+ * Escanea executors/loader.ts vía auto-register y mergea definiciones.
+ */
+async function ensureAutoDefinitionsInitialized(): Promise<void> {
+  if (autoInitDone) return;
+  autoInitDone = true;
+
+  try {
+    // 1. Primero disparar el scanner de executors para poblar auto-definitions
+    const { forceInitAutoExecutors } = await import("../core/executor-registry");
+    await forceInitAutoExecutors();
+
+    // 2. Ahora leer las definiciones que el scanner registró
+    const { getAutoDefinitions } = await import("../core/auto-register");
+    const autoDefs = getAutoDefinitions();
+
+    for (const def of autoDefs) {
+      const exists = toolRegistry.some((t) => t.id === def.id) ||
+                     dynamicToolDefinitions.some((t) => t.id === def.id);
+      if (!exists) {
+        dynamicToolDefinitions.push(def);
+      }
+    }
+  } catch {
+    // Silencioso — las definiciones manuales siguen funcionando
+  }
+}
+
+/**
+ * Retorna la definición de herramienta para un toolId.
+ * Resuelve en orden:
+ *   1. Registry manual (toolRegistry) — prioridad máxima
+ *   2. Registry dinámico (plugin + auto-descubrimiento)
+ *
+ * En el primer acceso, inicializa lazy las definiciones auto-descubiertas.
+ */
 export function getToolDefinition(id: string): IntelligenceToolDefinition | undefined {
   // 1. Static (nativo) registry
   const native = toolRegistry.find((t) => t.id === id);
   if (native) return native;
-  // 2. Dynamic (plugin) registry
+
+  // 2. Inicializar auto-descubrimiento lazy en background
+  if (!autoInitDone) {
+    if (!pendingInit) {
+      pendingInit = ensureAutoDefinitionsInitialized();
+    }
+  }
+
+  // 3. Dynamic (plugin + auto) registry
   return dynamicToolDefinitions.find((t) => t.id === id);
 }
 
