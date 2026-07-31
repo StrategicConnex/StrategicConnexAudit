@@ -15,15 +15,21 @@ export interface AiReportState {
 }
 
 // ─── Steps for the animated progress bar ─────────────────────────────────────
+// El último paso es 90% a propósito: 100% solo se alcanza cuando el backend
+// devuelve el reporte real. Así el usuario nunca ve "completado" sin contenido.
 
 const PROGRESS_STEPS = [
   { progress: 15, text: 'Conectando con base de datos PostgreSQL de StrategicAudit Pro...' },
   { progress: 35, text: 'Leyendo métricas históricas de GSC (clicks, impresiones y CTR)...' },
   { progress: 55, text: 'Consolidando métricas de analítica de GA4 y conversiones...' },
   { progress: 75, text: 'Procesando resultados de la última auditoría de velocidad...' },
-  { progress: 90, text: 'Google Gemini 1.5/2.5 Flash redactando el reporte en español...' },
-  { progress: 98, text: 'Estructurando informe final de marca blanca en Markdown...' },
+  { progress: 90, text: 'Redactando el informe ejecutivo con el motor de IA...' },
 ] as const;
+
+// Timeout global del fetch: alineado con maxDuration=120s del route. El router
+// IA prueba hasta 3 modelos de 20s (cadena acotada en ai-router) + queries DB,
+// así que 110s da margen para recibir el reporte resiliente sin cortar antes.
+const FETCH_TIMEOUT_MS = 110_000;
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -40,7 +46,7 @@ export function useAiReport(projectId: string) {
   const generate = useCallback(async () => {
     if (!projectId) return;
 
-    setState(s => ({ ...s, isGenerating: true, progress: 5, status: 'Inicializando motor de inteligencia artificial...', text: '' }));
+    setState(s => ({ ...s, isGenerating: true, progress: 5, status: 'Inicializando motor de inteligencia artificial...', text: '', isFallback: false }));
 
     let stepIdx = 0;
     const interval = setInterval(() => {
@@ -51,16 +57,29 @@ export function useAiReport(projectId: string) {
       }
     }, 1800);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
     try {
       const response = await fetch('/api/ai/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId }),
+        signal: controller.signal,
       });
-      const data = await response.json();
+
+      const data = await response.json().catch(() => ({}));
+      clearTimeout(timeoutId);
       clearInterval(interval);
 
-      if (data.success) {
+      if (!response.ok) {
+        const msg = data.error || `El servidor respondió con estado ${response.status}.`;
+        setState(s => ({ ...s, progress: 0, status: msg, isFallback: false, isGenerating: false }));
+        console.error('[AiReport] HTTP error:', response.status, msg);
+        return;
+      }
+
+      if (data.success && data.report) {
         setState(s => ({
           ...s,
           progress: 100,
@@ -69,14 +88,19 @@ export function useAiReport(projectId: string) {
           isFallback: !!data.isFallback,
           isGenerating: false,
         }));
+      } else if (data.success && !data.report) {
+        // El backend dice success pero no envió contenido — nunca mostrar 100% vacío.
+        setState(s => ({ ...s, progress: 0, status: 'El informe llegó vacío. Reintentá en unos segundos.', isFallback: false, isGenerating: false }));
+        console.error('[AiReport] Empty report:', data);
       } else {
-        clearInterval(interval);
-        setState(s => ({ ...s, progress: 0, status: 'Error al procesar el informe.', isFallback: false, isGenerating: false }));
+        setState(s => ({ ...s, progress: 0, status: data.error || 'Error al procesar el informe.', isFallback: false, isGenerating: false }));
         console.error('[AiReport] API error:', data.error);
       }
     } catch (error) {
+      clearTimeout(timeoutId);
       clearInterval(interval);
-      setState(s => ({ ...s, progress: 0, status: 'Error de conexión.', isGenerating: false }));
+      const timedOut = error instanceof DOMException && error.name === 'AbortError';
+      setState(s => ({ ...s, progress: 0, status: timedOut ? 'El servidor tardó demasiado. Reintentá en unos segundos.' : 'Error de conexión.', isGenerating: false }));
       console.error('[AiReport] Network error:', error);
     }
   }, [projectId]);

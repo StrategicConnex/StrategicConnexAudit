@@ -205,6 +205,8 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
             {activeTab === 'adversary' && (
               <AdversaryTab
                 projectId={selectedProjectId}
+                initialProjects={initialProjects}
+                setSelectedProjectId={setSelectedProjectId}
               />
             )}
 

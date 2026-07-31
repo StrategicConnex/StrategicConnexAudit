@@ -17,9 +17,13 @@ export async function withRLS<T>(
   try {
     return await db.transaction(async (tx) => {
       // Establecemos el claim 'sub' (User ID) en la sesin actual de Postgres.
+      // IMPORTANTE: usar SET LOCAL (transaccional) — SET ROLE sin LOCAL persiste
+      // tras el COMMIT y contamina la conexin del pool: la siguiente query con
+      // `db` plano correra como authenticated y fallara con 42501 permission
+      // denied en tablas sin grants para ese rol (ej. adversary_runs).
       const claims = JSON.stringify({ sub: userId, role: 'authenticated' });
       await tx.execute(sql`SELECT set_config('request.jwt.claims', ${claims}, true)`);
-      await tx.execute(sql`SET ROLE authenticated`);
+      await tx.execute(sql`SET LOCAL ROLE authenticated`);
       
       return await callback(tx);
     });

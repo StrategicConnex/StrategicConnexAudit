@@ -10,7 +10,7 @@ import {
 } from "./network-executors";
 import { calculateRiskScore } from "../core/risk-engine";
 import { executeTool } from "../core/dispatcher";
-import { getExecutor } from "../core/executor-registry";
+import { getExecutor, listToolDefinitions } from "../core/tool-registry";
 import { ExecutionContext, Finding } from "../types/executor.types";
 import { dnsDnssecExecutor, dnsPropagationExecutor, dnsZoneExecutor } from "./dns-advanced";
 import { websiteRedirectsExecutor, websiteCookiesExecutor, websiteCspExecutor } from "./website-executors";
@@ -223,6 +223,20 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
     it("Debería retornar undefined para herramientas no registradas", () => {
       const notFound = getExecutor("tool.nonexistent.xyz");
       expect(notFound).toBeUndefined();
+    });
+
+    it("Debería mantener el invariante de catálogo: 34 natives + 9 huérfanas = 43 defs", () => {
+      const all = listToolDefinitions();
+      expect(all.length).toBe(43);
+
+      // Las herramientas ejecutables (con executor registrado) son 34
+      const runnable = all.filter((t) => !!getExecutor(t.id));
+      expect(runnable.length).toBe(34);
+
+      // Las huérfanas de catálogo (sin executor) quedan excluidas del filtro de ejecución
+      const orphans = all.filter((t) => !getExecutor(t.id));
+      expect(orphans.length).toBe(9);
+      expect(orphans.some((o) => o.id === "network.port_scan")).toBe(true);
     });
 
     it("Debería bloquear de manera preventiva ataques SSRF dirigidos a hosts locales", async () => {

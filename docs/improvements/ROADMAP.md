@@ -394,8 +394,8 @@ PluginPackage (DB)
      │
      ├──→ createPluginToolDefinition() → IntelligenceToolDefinition
      │
-     ├──→ registerDynamicExecutor() → executorRegistry (Map)
-     ├──→ registerDynamicToolDefinition() → toolRegistry (dynamic[])
+     ├──→ registerTool({executor, definition}) → entry point único (C05)
+     │         └── pluginExecutorRegistry + dynamicToolDefinitions con guard
      │
      └──→ dispatcher.executeTool() — lazy init si toolId empieza con "plugin."
 ```
@@ -425,9 +425,9 @@ PluginPackage (DB)
 **Archivos modificados (3):**
 | Archivo | Cambio |
 |---------|--------|
-| `executor-registry.ts` | `pluginExecutorRegistry` Map + `registerDynamicExecutor()` + `getExecutor()` fallback dinámico |
-| `tool-registry.ts` | `dynamicToolDefinitions[]` + `registerDynamicToolDefinition()` + `getToolDefinition()` fallback dinámico |
-| `dispatcher.ts` | Lazy init: `if (toolId.startsWith('plugin.')) await initializePluginExecutors()` |
+| `core/tool-registry.ts` (consolidado C05) | `registerTool()` / `unregisterTool()` como entry point único + `pluginExecutorRegistry` + `dynamicToolDefinitions[]` con guard de colisión nativa |
+| `core/dispatcher.ts` | Lazy init: `if (toolId.startsWith('plugin.')) await initializePluginExecutors()` |
+| `plugins/plugin-executor.ts` | Factory `createPluginExecutor()` + `registerTool({executor, definition})` post-install |
 
 **8 plugins oficiales seed:** subdomain-enumerator, port-scanner, tech-stack-detector, threat-intel-feed, email-reputation, compliance-scanner, whois-enricher, certificate-monitor
 
@@ -435,7 +435,7 @@ PluginPackage (DB)
 
 ---
 
-### P3.5 🟢 Multi-language INGLÉS (95% — Tabs 100%, solo prompts IA pendientes)
+### P3.5 🟢 Multi-language INGLÉS (100% completado)
 
 **Inspiración:** Todas las herramientas globales
 
@@ -567,7 +567,7 @@ Dashboard visual completo con:
 | Fase 2 — P1 Core Features | 6 | 6 | ✅ **100%** |
 | Fase 3 — P2 UX/Dashboard | 6 | 6 | ✅ **100%** |
 | Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** (P3.4 + P3.5 completados) |
-| **Total** (incluye P3) | **38** | **38** | **✅ 100%** |
+| **Total** (incluye P3) | **36** | **36** | **✅ 100%** |
 
 > **Nota:** P3.5 completo al 100% (11/11 tabs + AI prompts bilingües). P3.4 completo con ToolExecutor adapter + registro dinámico. **Toda la Fase 4 al 100%.** SCAUDIT Pro es **open source y no se monetizará** — los planes free/pro/business/enterprise son exclusivamente para rate limiting interno sin Stripe ni facturación.
 
@@ -603,15 +603,15 @@ Dashboard visual completo con:
 
 **Plugins oficiales seed:** subdomain-enumerator, port-scanner, tech-stack-detector, threat-intel-feed, email-reputation, compliance-scanner, whois-enricher, certificate-monitor
 
-### P3.5 🟢 Multi-language INGLÉS (95%)
+### P3.5 ✅ Multi-language INGLÉS (100% completado)
 
 **Ultimo cambio:** Julio 2026
 
 **Fase 1 completa:** login + sidebar migrados.  
 **Fase 2 completa (11/11 tabs):** ReportsTab, SettingsTab, PerformanceTab, MonitoringTab, KeywordsTab, AdversaryTab migrados.  
-**Pendiente:** System prompts IA en ai-router.ts (~15 min).
+**Prompts de IA:** 4 system prompts de ai-router.ts traducidos (general-chat, seo-report, incident-brief, copilot-remediation).  
 
-**Estimación restante:** ~15 min
+**Estado:** Completado — 100%.
 
 ### P3.6 ✅ Benchmarking Dashboard — COMPLETADO
 

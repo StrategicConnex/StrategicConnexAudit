@@ -102,12 +102,12 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
     "nvidia/nemotron-3-super-120b-a12b:free",
     "nvidia/nemotron-3-nano-30b-a3b:free",
   ],
+  // Acotada a 3 modelos (peor caso 3×20s=60s) para que el reporte resiliente
+  // llegue al cliente antes del timeout de 110s y de maxDuration=120s en Vercel.
   "seo-report": [
     FREE_META_MODEL,
     "google/gemma-4-26b-a4b-it:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
   ],
 };
 
@@ -190,7 +190,9 @@ async function callModel(
       temperature,
       max_tokens: maxTokens,
     }),
-    signal: AbortSignal.timeout(30000),
+    // 20s por modelo: mantiene el peor caso (5 modelos) dentro de maxDuration=120s
+    // en Vercel, en vez de colgar la función 150s y que la plataforma la mate.
+    signal: AbortSignal.timeout(20000),
   });
 
   if (!response.ok) {

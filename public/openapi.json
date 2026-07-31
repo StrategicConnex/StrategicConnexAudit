@@ -24,14 +24,18 @@
       "get": {
         "summary": "Health Check",
         "description": "Public health check — NO API key required. Returns platform status, version, and service connectivity. Perfect for first-time Swagger visitors, uptime monitors, and CI/CD pipeline checks.",
-        "tags": ["Health"],
+        "tags": [
+          "Health"
+        ],
         "security": [],
         "responses": {
           "200": {
             "description": "All services operational — all dependency env vars are configured",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/HealthCheck"}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
               }
             }
           },
@@ -39,7 +43,53 @@
             "description": "Service degraded — one or more dependency env vars are missing",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/HealthCheck"}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests — rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "retryAfter": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "example": {
+                  "error": "Demasiadas solicitudes. Intenta de nuevo en 60 segundos.",
+                  "retryAfter": 60
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
               }
             }
           }
@@ -50,15 +100,23 @@
       "post": {
         "summary": "Create API Key",
         "description": "Crea una nueva API Key para acceso programático. La key completa se muestra una sola vez.",
-        "tags": ["API Keys"],
-        "security": [{"sessionCookie": []}],
+        "tags": [
+          "API Keys"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name"],
+                "required": [
+                  "name"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -80,25 +138,45 @@
             "description": "API Key creada",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/ApiKeyCreateResponse"}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyCreateResponse"
+                }
               }
             },
             "headers": {
-              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
-              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
-              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
             }
           },
-          "400": {"$ref": "#/components/responses/BadRequest"},
-          "429": {"$ref": "#/components/responses/RateLimit"},
-          "500": {"$ref": "#/components/responses/ServerError"}
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       },
       "get": {
         "summary": "List API Keys",
         "description": "Lista todas las API Keys activas del usuario autenticado.",
-        "tags": ["API Keys"],
-        "security": [{"sessionCookie": []}],
+        "tags": [
+          "API Keys"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Lista de API Keys",
@@ -107,37 +185,59 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {"type": "boolean"},
+                    "success": {
+                      "type": "boolean"
+                    },
                     "keys": {
                       "type": "array",
-                      "items": {"$ref": "#/components/schemas/ApiKey"}
+                      "items": {
+                        "$ref": "#/components/schemas/ApiKey"
+                      }
                     }
                   }
                 }
               }
             },
             "headers": {
-              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
-              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
-              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
             }
           },
-          "429": {"$ref": "#/components/responses/RateLimit"},
-          "500": {"$ref": "#/components/responses/ServerError"}
+          "429": {
+            "$ref": "#/components/responses/RateLimit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       },
       "delete": {
         "summary": "Revoke API Key",
         "description": "Revoca (elimina) una API Key existente.",
-        "tags": ["API Keys"],
-        "security": [{"sessionCookie": []}],
+        "tags": [
+          "API Keys"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["keyId"],
+                "required": [
+                  "keyId"
+                ],
                 "properties": {
                   "keyId": {
                     "type": "string",
@@ -157,21 +257,37 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {"type": "boolean"},
-                    "message": {"type": "string"}
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
                   }
                 }
               }
             },
             "headers": {
-              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
-              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
-              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
             }
           },
-          "404": {"$ref": "#/components/responses/NotFound"},
-          "429": {"$ref": "#/components/responses/RateLimit"},
-          "500": {"$ref": "#/components/responses/ServerError"}
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       }
     },
@@ -179,14 +295,23 @@
       "get": {
         "summary": "Get API Key Usage Stats",
         "description": "Returns real usage statistics for a specific API key: total requests, today, this week, this month, and a 30-day daily breakdown.\n\nUsage data is sourced from security_audit_logs (eventType='api_key_usage') which is logged automatically by the public API middleware on every authenticated request.\n\nKeys without usage data may not have been used through the public API yet — the old intelligence API routes use a separate authentication path that is not yet instrumented for usage tracking.",
-        "tags": ["API Keys"],
-        "security": [{"sessionCookie": []}],
+        "tags": [
+          "API Keys"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "parameters": [
           {
             "name": "keyId",
             "in": "path",
             "required": true,
-            "schema": {"type": "string", "format": "uuid"},
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
             "description": "ID of the API key"
           }
         ],
@@ -198,22 +323,46 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {"type": "boolean"},
-                    "keyName": {"type": "string"},
-                    "keyPrefix": {"type": "string"},
-                    "totalRequests": {"type": "integer", "description": "Total API calls authenticated with this key"},
-                    "todayRequests": {"type": "integer"},
-                    "thisWeekRequests": {"type": "integer"},
-                    "thisMonthRequests": {"type": "integer"},
-                    "lastUsedAt": {"type": "string", "format": "date-time", "nullable": true},
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "keyName": {
+                      "type": "string"
+                    },
+                    "keyPrefix": {
+                      "type": "string"
+                    },
+                    "totalRequests": {
+                      "type": "integer",
+                      "description": "Total API calls authenticated with this key"
+                    },
+                    "todayRequests": {
+                      "type": "integer"
+                    },
+                    "thisWeekRequests": {
+                      "type": "integer"
+                    },
+                    "thisMonthRequests": {
+                      "type": "integer"
+                    },
+                    "lastUsedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
                     "dailyBreakdown": {
                       "type": "array",
                       "description": "Daily request counts for last 30 days",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "date": {"type": "string", "format": "date"},
-                          "count": {"type": "integer"}
+                          "date": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
                         }
                       }
                     }
@@ -229,20 +378,36 @@
                   "thisMonthRequests": 142,
                   "lastUsedAt": "2026-07-29T14:30:00.000Z",
                   "dailyBreakdown": [
-                    {"date": "2026-07-01", "count": 5},
-                    {"date": "2026-07-02", "count": 8}
+                    {
+                      "date": "2026-07-01",
+                      "count": 5
+                    },
+                    {
+                      "date": "2026-07-02",
+                      "count": 8
+                    }
                   ]
                 }
               }
             },
             "headers": {
-              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
-              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
-              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
             }
           },
-          "400": {"$ref": "#/components/responses/BadRequest"},
-          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "Forbidden — key belongs to a different user",
             "content": {
@@ -250,16 +415,28 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {"type": "boolean", "example": false},
-                    "error": {"type": "string", "example": "Acceso denegado"}
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Acceso denegado"
+                    }
                   }
                 }
               }
             }
           },
-          "404": {"$ref": "#/components/responses/NotFound"},
-          "429": {"$ref": "#/components/responses/RateLimit"},
-          "500": {"$ref": "#/components/responses/ServerError"}
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       }
     },
@@ -267,21 +444,33 @@
       "get": {
         "summary": "List Investigations",
         "description": "Obtiene todas las investigaciones de infraestructura para un proyecto. investigationId opcional para obtener findings y assets detallados.",
-        "tags": ["Intelligence"],
-        "security": [{"apiKey": []}],
+        "tags": [
+          "Intelligence"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
         "parameters": [
           {
             "name": "projectId",
             "in": "query",
             "required": true,
-            "schema": {"type": "string", "format": "uuid"},
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
             "description": "ID del proyecto"
           },
           {
             "name": "investigationId",
             "in": "query",
             "required": false,
-            "schema": {"type": "string", "format": "uuid"},
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
             "description": "ID específico de investigación (opcional)"
           }
         ],
@@ -293,47 +482,79 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {"type": "boolean"},
+                    "success": {
+                      "type": "boolean"
+                    },
                     "investigations": {
                       "type": "array",
-                      "items": {"$ref": "#/components/schemas/Investigation"}
+                      "items": {
+                        "$ref": "#/components/schemas/Investigation"
+                      }
                     },
                     "findings": {
                       "type": "array",
-                      "items": {"$ref": "#/components/schemas/Finding"}
+                      "items": {
+                        "$ref": "#/components/schemas/Finding"
+                      }
                     },
                     "assets": {
                       "type": "array",
-                      "items": {"$ref": "#/components/schemas/Asset"}
+                      "items": {
+                        "$ref": "#/components/schemas/Asset"
+                      }
                     }
                   }
                 }
               }
             },
             "headers": {
-              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
-              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
-              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
             }
           },
-          "400": {"$ref": "#/components/responses/BadRequest"},
-          "401": {"$ref": "#/components/responses/Unauthorized"},
-          "429": {"$ref": "#/components/responses/RateLimit"},
-          "500": {"$ref": "#/components/responses/ServerError"}
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       },
       "post": {
         "summary": "Create Investigation",
         "description": "Inicia un escaneo de inteligencia de infraestructura sobre un target (dominio, IP o email).",
-        "tags": ["Intelligence"],
-        "security": [{"apiKey": []}],
+        "tags": [
+          "Intelligence"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["projectId", "target", "targetType"],
+                "required": [
+                  "projectId",
+                  "target",
+                  "targetType"
+                ],
                 "properties": {
                   "projectId": {
                     "type": "string",
@@ -347,7 +568,11 @@
                   },
                   "targetType": {
                     "type": "string",
-                    "enum": ["domain", "ip", "email"],
+                    "enum": [
+                      "domain",
+                      "ip",
+                      "email"
+                    ],
                     "description": "Tipo de target"
                   }
                 }
@@ -363,22 +588,40 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {"type": "boolean"},
-                    "investigation": {"$ref": "#/components/schemas/Investigation"}
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "investigation": {
+                      "$ref": "#/components/schemas/Investigation"
+                    }
                   }
                 }
               }
             },
             "headers": {
-              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
-              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
-              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
             }
           },
-          "400": {"$ref": "#/components/responses/BadRequest"},
-          "401": {"$ref": "#/components/responses/Unauthorized"},
-          "429": {"$ref": "#/components/responses/RateLimit"},
-          "500": {"$ref": "#/components/responses/ServerError"}
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       }
     },
@@ -386,15 +629,23 @@
       "post": {
         "summary": "Generate PDF Report",
         "description": "Genera un reporte PDF descargable con findings, assets, gráficos de severidad y scores. Soporta branding white-label.",
-        "tags": ["Reports"],
-        "security": [{"sessionCookie": []}],
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["projectId"],
+                "required": [
+                  "projectId"
+                ],
                 "properties": {
                   "projectId": {
                     "type": "string",
@@ -410,8 +661,14 @@
                     "type": "object",
                     "description": "Branding white-label (opcional)",
                     "properties": {
-                      "agencyName": {"type": "string", "example": "Strategic Connex"},
-                      "primaryColor": {"type": "string", "example": "oklch(68% 0.14 230)"},
+                      "agencyName": {
+                        "type": "string",
+                        "example": "Strategic Connex"
+                      },
+                      "primaryColor": {
+                        "type": "string",
+                        "example": "oklch(68% 0.14 230)"
+                      },
                       "logoUrl": {
                         "type": "string",
                         "format": "uri",
@@ -429,19 +686,36 @@
             "description": "PDF binario",
             "content": {
               "application/pdf": {
-                "schema": {"type": "string", "format": "binary"}
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
               }
             },
             "headers": {
-              "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
-              "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
-              "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
             }
           },
-          "400": {"$ref": "#/components/responses/BadRequest"},
-          "401": {"$ref": "#/components/responses/Unauthorized"},
-          "429": {"$ref": "#/components/responses/RateLimit"},
-          "500": {"$ref": "#/components/responses/ServerError"}
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       }
     }
@@ -462,26 +736,46 @@
     },
     "headers": {
       "RateLimit-Limit": {
-        "schema": {"type": "integer", "example": 60},
+        "schema": {
+          "type": "integer",
+          "example": 60
+        },
         "description": "Máximo de requests permitidos en la ventana de tiempo actual"
       },
       "RateLimit-Remaining": {
-        "schema": {"type": "integer", "example": 58},
+        "schema": {
+          "type": "integer",
+          "example": 58
+        },
         "description": "Requests restantes en la ventana de tiempo actual"
       },
       "RateLimit-Reset": {
-        "schema": {"type": "integer", "example": 1700000000000},
+        "schema": {
+          "type": "integer",
+          "example": 1700000000000
+        },
         "description": "Timestamp Unix en milisegundos del momento en que se reestablece la cuota"
       }
     },
     "schemas": {
       "HealthCheck": {
         "type": "object",
-        "required": ["status", "version", "timestamp", "uptime", "services", "environment"],
+        "required": [
+          "status",
+          "version",
+          "timestamp",
+          "uptime",
+          "services",
+          "environment"
+        ],
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["ok", "degraded", "down"],
+            "enum": [
+              "ok",
+              "degraded",
+              "down"
+            ],
             "description": "Overall platform status"
           },
           "version": {
@@ -501,7 +795,10 @@
           },
           "services": {
             "type": "object",
-            "required": ["redisConfigured", "dbConfigured"],
+            "required": [
+              "redisConfigured",
+              "dbConfigured"
+            ],
             "properties": {
               "redisConfigured": {
                 "type": "boolean",
@@ -523,25 +820,57 @@
       "ApiKey": {
         "type": "object",
         "properties": {
-          "id": {"type": "string", "format": "uuid"},
-          "name": {"type": "string"},
-          "keyPrefix": {"type": "string", "description": "Prefijo (sa_live_xxx...)"},
-          "createdAt": {"type": "string", "format": "date-time"},
-          "expiresAt": {"type": "string", "format": "date-time", "nullable": true},
-          "lastUsedAt": {"type": "string", "format": "date-time", "nullable": true}
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "keyPrefix": {
+            "type": "string",
+            "description": "Prefijo (sa_live_xxx...)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
         }
       },
       "ApiKeyCreateResponse": {
         "type": "object",
         "properties": {
-          "success": {"type": "boolean"},
+          "success": {
+            "type": "boolean"
+          },
           "key": {
             "type": "object",
             "properties": {
-              "id": {"type": "string", "format": "uuid"},
-              "name": {"type": "string"},
-              "rawKey": {"type": "string", "description": "Key completa — guárdala, no se mostrará de nuevo"},
-              "createdAt": {"type": "string", "format": "date-time"}
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "rawKey": {
+                "type": "string",
+                "description": "Key completa — guárdala, no se mostrará de nuevo"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
             }
           }
         }
@@ -549,53 +878,136 @@
       "Investigation": {
         "type": "object",
         "properties": {
-          "id": {"type": "string", "format": "uuid"},
-          "target": {"type": "string"},
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target": {
+            "type": "string"
+          },
           "targetType": {
             "type": "string",
-            "enum": ["domain", "ip", "email"]
+            "enum": [
+              "domain",
+              "ip",
+              "email"
+            ]
           },
           "status": {
             "type": "string",
-            "enum": ["pending", "in_progress", "completed", "failed"]
+            "enum": [
+              "pending",
+              "in_progress",
+              "completed",
+              "failed"
+            ]
           },
-          "score": {"type": "integer", "minimum": 0, "maximum": 100, "nullable": true},
-          "findingsCount": {"type": "integer"},
-          "createdAt": {"type": "string", "format": "date-time"},
-          "completedAt": {"type": "string", "format": "date-time", "nullable": true}
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "nullable": true
+          },
+          "findingsCount": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
         }
       },
       "Finding": {
         "type": "object",
         "properties": {
-          "id": {"type": "string", "format": "uuid"},
-          "investigationId": {"type": "string", "format": "uuid"},
-          "severity": {"type": "string", "enum": ["critical", "high", "medium", "low", "info"]},
-          "title": {"type": "string"},
-          "description": {"type": "string"},
-          "recommendation": {"type": "string", "nullable": true},
-          "affectedAsset": {"type": "string", "nullable": true},
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "investigationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string",
+            "nullable": true
+          },
+          "affectedAsset": {
+            "type": "string",
+            "nullable": true
+          },
           "mitreTechniques": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "Técnicas MITRE ATT&CK asociadas"
           },
-          "createdAt": {"type": "string", "format": "date-time"}
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "Asset": {
         "type": "object",
         "properties": {
-          "id": {"type": "string", "format": "uuid"},
-          "investigationId": {"type": "string", "format": "uuid"},
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "investigationId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "assetType": {
             "type": "string",
-            "enum": ["subdomain", "ip_address", "certificate", "email", "cdn"]
+            "enum": [
+              "subdomain",
+              "ip_address",
+              "certificate",
+              "email",
+              "cdn"
+            ]
           },
-          "value": {"type": "string"},
-          "ip": {"type": "string", "nullable": true},
-          "firstSeenAt": {"type": "string", "format": "date-time", "nullable": true},
-          "lastSeenAt": {"type": "string", "format": "date-time", "nullable": true}
+          "value": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
         }
       }
     },
@@ -607,8 +1019,14 @@
             "schema": {
               "type": "object",
               "properties": {
-                "success": {"type": "boolean", "example": false},
-                "error": {"type": "string", "example": "projectId es requerido"}
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "error": {
+                  "type": "string",
+                  "example": "projectId es requerido"
+                }
               }
             }
           }
@@ -621,8 +1039,14 @@
             "schema": {
               "type": "object",
               "properties": {
-                "success": {"type": "boolean", "example": false},
-                "error": {"type": "string", "example": "API Key inválida o expirada"}
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "error": {
+                  "type": "string",
+                  "example": "API Key inválida o expirada"
+                }
               }
             }
           }
@@ -635,8 +1059,14 @@
             "schema": {
               "type": "object",
               "properties": {
-                "success": {"type": "boolean", "example": false},
-                "error": {"type": "string", "example": "Key no encontrada"}
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "error": {
+                  "type": "string",
+                  "example": "Key no encontrada"
+                }
               }
             }
           }
@@ -649,7 +1079,10 @@
             "schema": {
               "type": "object",
               "properties": {
-                "success": {"type": "boolean", "example": false},
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
                 "error": {
                   "type": "string",
                   "example": "Límite de solicitudes excedido. Intenta de nuevo en 60 segundos."
@@ -660,12 +1093,20 @@
         },
         "headers": {
           "Retry-After": {
-            "schema": {"type": "integer"},
+            "schema": {
+              "type": "integer"
+            },
             "description": "Segundos hasta que el rate limit se reestablece"
           },
-          "RateLimit-Limit": {"$ref": "#/components/headers/RateLimit-Limit"},
-          "RateLimit-Remaining": {"$ref": "#/components/headers/RateLimit-Remaining"},
-          "RateLimit-Reset": {"$ref": "#/components/headers/RateLimit-Reset"}
+          "RateLimit-Limit": {
+            "$ref": "#/components/headers/RateLimit-Limit"
+          },
+          "RateLimit-Remaining": {
+            "$ref": "#/components/headers/RateLimit-Remaining"
+          },
+          "RateLimit-Reset": {
+            "$ref": "#/components/headers/RateLimit-Reset"
+          }
         }
       },
       "ServerError": {
@@ -675,8 +1116,14 @@
             "schema": {
               "type": "object",
               "properties": {
-                "success": {"type": "boolean", "example": false},
-                "error": {"type": "string", "example": "Error interno del servidor"}
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "error": {
+                  "type": "string",
+                  "example": "Error interno del servidor"
+                }
               }
             }
           }
@@ -685,10 +1132,22 @@
     }
   },
   "tags": [
-    {"name": "API Keys", "description": "Gestión de API Keys para acceso programático"},
-    {"name": "Intelligence", "description": "Escaneo de inteligencia de infraestructura"},
-    {"name": "Reports", "description": "Generación de reportes PDF"},
-    {"name": "Health", "description": "Platform health and status checks"}
+    {
+      "name": "API Keys",
+      "description": "Gestión de API Keys para acceso programático"
+    },
+    {
+      "name": "Intelligence",
+      "description": "Escaneo de inteligencia de infraestructura"
+    },
+    {
+      "name": "Reports",
+      "description": "Generación de reportes PDF"
+    },
+    {
+      "name": "Health",
+      "description": "Platform health and status checks"
+    }
   ],
   "externalDocs": {
     "description": "Documentación interactiva completa",

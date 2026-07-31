@@ -23,8 +23,16 @@ interface ScenarioDef {
   detectionRate: number | null;
 }
 
+interface AdversaryProject {
+  id: string;
+  name: string;
+  domain?: string;
+}
+
 interface AdversaryTabProps {
   projectId: string;
+  initialProjects?: AdversaryProject[];
+  setSelectedProjectId?: (id: string) => void;
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -35,7 +43,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   info: 'text-muted-fg bg-muted/10 border-border/50',
 };
 
-export function AdversaryTab({ projectId }: AdversaryTabProps) {
+export function AdversaryTab({ projectId, initialProjects = [], setSelectedProjectId }: AdversaryTabProps) {
   const t = useTranslations('adversary');
   const [scenarios, setScenarios] = useState<ScenarioDef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,6 +125,33 @@ export function AdversaryTab({ projectId }: AdversaryTabProps) {
 
       {/* Header */}
       <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8">
+        {/* Project selector — permite cargar un proyecto distinto sin salir del tab */}
+        {(initialProjects.length > 0 || setSelectedProjectId) && (
+          <div className="mb-6 border-b border-border/50 pb-6">
+            <label className="block text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-2">
+              {t('activeProject')}
+            </label>
+            <div className="relative max-w-xs">
+              <select
+                value={projectId}
+                onChange={(e) => setSelectedProjectId?.(e.target.value)}
+                className="w-full bg-muted border border-border hover:border-primary/20 text-foreground text-xs font-bold rounded-xl py-3 px-4 outline-none transition-all cursor-pointer appearance-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]"
+              >
+                {initialProjects.length === 0 && (
+                  <option value={projectId} className="bg-muted text-foreground">
+                    {projectId}
+                  </option>
+                )}
+                {initialProjects.map((proj) => (
+                  <option key={proj.id} value={proj.id} className="bg-muted text-foreground">
+                    {proj.name}{proj.domain ? ` (${proj.domain})` : ''}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-fg">▼</div>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-extrabold text-foreground tracking-tight flex items-center gap-3">

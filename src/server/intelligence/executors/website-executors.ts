@@ -1,7 +1,7 @@
 import { z } from "zod";
 import tls from "node:tls";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, TlsScanOutput } from "../types/executor.types";
 
 const urlSchema = z.object({ url: z.string().url() });
 const hostSchema = z.object({ host: z.string().min(3).max(253) });
@@ -164,16 +164,29 @@ export const websiteSecurityHeadersExecutor: ToolExecutor<{ url: string }, any> 
 /**
  * 3. TLS / SSL Certificate Inspector
  */
-export const websiteTlsExecutor: ToolExecutor<{ host: string }, any> = {
+export const websiteTlsExecutor: ToolExecutor<{ host: string }, TlsScanOutput> = {
   id: "tls.scan",
   timeoutMs: 15000,
   category: "ssl-tls",
   validate(input: unknown) {
     return hostSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<TlsScanOutput>> {
     ctx.log(`Realizando Handshake TLS seguro para: ${host}`);
     await assertPublicHostname(host);
+
+    // Output de error tipado: contrato completo para que ExecutionResult<TlsScanOutput>
+    // compile sin `as any`. scan-response solo lee estos campos cuando success=true.
+    const errorOutput = (): TlsScanOutput => ({
+      host,
+      subject: "Desconocido",
+      issuer: "Desconocido",
+      validFrom: "",
+      validTo: "",
+      daysRemaining: 0,
+      protocol: undefined,
+      cipher: "Desconocido",
+    });
 
     return new Promise((resolve) => {
       // SECURITY: rejectUnauthorized: false es INTENCIONAL. Somos un escáner de certificados TLS.
@@ -189,7 +202,7 @@ export const websiteTlsExecutor: ToolExecutor<{ host: string }, any> = {
         if (!cert || Object.keys(cert).length === 0) {
           resolve({
             success: false,
-            output: { host },
+            output: errorOutput(),
             findings: [],
             error: "No se pudo recuperar el certificado SSL del destino.",
           });
@@ -199,14 +212,14 @@ export const websiteTlsExecutor: ToolExecutor<{ host: string }, any> = {
         const validTo = new Date(cert.valid_to);
         const daysRemaining = Math.round((validTo.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
-        const output = {
+        const output: TlsScanOutput = {
           host,
           subject: cert.subject?.CN || "Desconocido",
           issuer: cert.issuer?.O || cert.issuer?.CN || "Desconocido",
           validFrom: cert.valid_from,
           validTo: cert.valid_to,
           daysRemaining,
-          protocol,
+          protocol: protocol ?? undefined,
           cipher: cipher?.name || "Desconocido",
         };
 
@@ -243,7 +256,7 @@ export const websiteTlsExecutor: ToolExecutor<{ host: string }, any> = {
         socket.destroy();
         resolve({
           success: false,
-          output: { host },
+          output: errorOutput(),
           findings: [],
           error: `Error estableciendo sesión TLS segura: ${err.message}`,
         });
@@ -253,7 +266,7 @@ export const websiteTlsExecutor: ToolExecutor<{ host: string }, any> = {
         socket.destroy();
         resolve({
           success: false,
-          output: { host },
+          output: errorOutput(),
           findings: [],
           error: "Tiempo de espera agotado al conectar por TLS (Timeout).",
         });

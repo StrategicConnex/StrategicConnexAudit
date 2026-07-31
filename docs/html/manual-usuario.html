@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Usuario — SCAUDIT Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "dark", themeVariables: { primaryColor: "#1e1b4b", primaryTextColor: "#e2e8f0", primaryBorderColor: "#6366f1", lineColor: "#6366f1", secondaryColor: "#052e16", tertiaryColor: "#111827" } });
+</script>
+<style>
+  :root { --bg:#060608; --fg:#e8e8f0; --card:#0d0d14; --border:#1e1e2e; --primary:#818cf8; --accent:#a3e635; --muted:#8b8b9e; --warn:#fbbf24; --danger:#f87171; --indigo:#6366f1; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--fg); font-family:'Segoe UI',-apple-system,'Inter',sans-serif; line-height:1.65; }
+  .layout { display:flex; min-height:100vh; }
+  nav { width:280px; border-right:1px solid var(--border); background:var(--card); position:sticky; top:0; height:100vh; overflow-y:auto; padding:1.4rem 1rem; flex-shrink:0; }
+  nav .brand { display:flex; align-items:center; gap:10px; margin-bottom:1.4rem; padding:0 .5rem; }
+  nav .brand .logo { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#6366f1,#818cf8); display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; font-size:15px; }
+  nav .brand b { font-size:.95rem; }
+  nav a.toc { display:block; padding:.4rem .6rem; border-radius:8px; color:var(--muted); text-decoration:none; font-size:.85rem; border-left:2px solid transparent; }
+  nav a.toc:hover { color:var(--fg); background:rgba(99,102,241,.08); }
+  nav a.toc.top { border-left-color:var(--primary); color:var(--primary); }
+  nav .sec { font-size:10px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); font-weight:800; padding:.8rem .6rem .3rem; }
+  main { flex:1; padding:2.5rem 3rem 5rem; max-width:1000px; }
+  .crumb { color:var(--muted); font-size:.82rem; margin-bottom:1.2rem; }
+  .crumb a { color:var(--primary); text-decoration:none; }
+  h1 { font-size:2rem; font-weight:800; letter-spacing:-.02em; margin-bottom:.4rem; }
+  h2 { font-size:1.4rem; font-weight:700; margin:2.6rem 0 .9rem; padding-bottom:.4rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  h2::before { content:""; width:22px; height:3px; background:var(--indigo); border-radius:99px; flex-shrink:0; }
+  h3 { font-size:1.08rem; font-weight:700; margin:1.6rem 0 .6rem; }
+  h4 { font-size:.95rem; font-weight:700; margin:1.2rem 0 .4rem; color:var(--primary); }
+  p { margin-bottom:.9rem; opacity:.92; }
+  ul, ol { margin:0 0 1rem 1.4rem; }
+  li { margin-bottom:.35rem; }
+  code { background:rgba(129,140,248,.12); color:#c7d2fe; padding:1px 6px; border-radius:5px; font-family:'JetBrains Mono','Consolas',monospace; font-size:.86em; }
+  pre { background:#0a0a12; border:1px solid var(--border); border-radius:12px; padding:1rem 1.2rem; overflow-x:auto; margin:1rem 0; font-family:'JetBrains Mono','Consolas',monospace; font-size:.83rem; line-height:1.55; color:#cbd5e1; }
+  pre code { background:none; padding:0; color:inherit; font-size:inherit; }
+  table { width:100%; border-collapse:collapse; margin:1rem 0 1.4rem; font-size:.88rem; }
+  th { text-align:left; background:rgba(129,140,248,.08); padding:.6rem .8rem; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-bottom:1px solid var(--border); }
+  td { padding:.6rem .8rem; border-bottom:1px solid var(--border); vertical-align:top; }
+  .box { border-radius:12px; padding:1rem 1.2rem; margin:1.2rem 0; border:1px solid; }
+  .box.tip { background:rgba(163,230,53,.06); border-color:rgba(163,230,53,.25); }
+  .box.warn { background:rgba(251,191,36,.06); border-color:rgba(251,191,36,.3); }
+  .box.info { background:rgba(129,140,248,.06); border-color:rgba(129,140,248,.25); }
+  .box b { display:block; margin-bottom:.3rem; font-size:.85rem; text-transform:uppercase; letter-spacing:.08em; }
+  .box.tip b { color:var(--accent); } .box.warn b { color:var(--warn); } .box.info b { color:var(--primary); }
+  .diagram { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1rem; overflow-x:auto; margin:1.2rem 0; }
+  .kbd { background:#1a1a28; border:1px solid var(--border); border-bottom-width:2px; border-radius:6px; padding:1px 8px; font-size:.8rem; font-family:'JetBrains Mono',monospace; }
+  .ui { font-weight:600; color:var(--accent); }
+  @media (max-width:900px){ .layout{flex-direction:column} nav{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border)} main{padding:1.5rem 1.2rem 3rem} }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav>
+    <div class="brand"><div class="logo">S</div><b>SCAUDIT Pro</b></div>
+    <a class="toc" href="index.html">← Centro de Documentación</a>
+    <div class="sec">Manual de Usuario</div>
+    <a class="toc top" href="#primeros-pasos">1. Primeros pasos</a>
+    <a class="toc" href="#login">2. Login y autenticación</a>
+    <a class="toc" href="#dashboard">3. Dashboard (Overview)</a>
+    <a class="toc" href="#proyectos">4. Gestión de proyectos</a>
+    <a class="toc" href="#inteligencia">5. Inteligencia cibernética</a>
+    <a class="toc" href="#reportes">6. Reportes IA y PDF</a>
+    <a class="toc" href="#monitoring">7. Monitoreo y rendimiento</a>
+    <a class="toc" href="#keywords">8. Keywords SEO</a>
+    <a class="toc" href="#adversary">9. Adversary Simulation</a>
+    <a class="toc" href="#plugins">10. Plugin Marketplace</a>
+    <a class="toc" href="#settings">11. Configuración y API Keys</a>
+    <a class="toc" href="#pwa">12. PWA e instalación</a>
+    <a class="toc" href="#i18n">13. Cambio de idioma</a>
+    <a class="toc" href="#faq">14. Preguntas frecuentes</a>
+  </nav>
+
+  <main>
+    <div class="crumb"><a href="index.html">Documentación</a> / Manual de Usuario Final</div>
+    <h1>👤 Manual de Usuario Final</h1>
+    <p>Guía de uso <strong>completa y extremadamente detallada</strong> de la plataforma SCAUDIT Pro, pensada para analistas de seguridad, consultores SEO y administradores de infraestructura.</p>
+
+    <h2 id="primeros-pasos">1. Primeros pasos</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    A["Abrir scaudit.vercel.app"] --> B["Login con Magic Link"]
+    B --> C["Crear proyecto"]
+    C --> D["Conectar GSC / GA4 (opcional)"]
+    D --> E["Ejecutar escaneo de inteligencia"]
+    E --> F["Revisar hallazgos + score"]
+    F --> G["Generar reporte IA / PDF"]
+</pre>
+    </div>
+    <h3>¿Qué es SCAUDIT Pro?</h3>
+    <p>SCAUDIT Pro es una plataforma enterprise de inteligencia de red y monitoreo de superficie de ataque. Combina:</p>
+    <ul>
+      <li><strong>Inteligencia cibernética</strong>: escaneo de DNS, WHOIS, GeoIP, SSL/TLS, OSINT y 34+ herramientas.</li>
+      <li><strong>Auditoría técnica SEO</strong>: crawlers, Core Web Vitals, integración GSC/GA4.</li>
+      <li><strong>Seguridad continua</strong>: SIEM con alertas multi-canal, detección de anomalías y adversary simulation.</li>
+      <li><strong>Reportes</strong>: informes IA con gráficos y diagramas, PDF white-label.</li>
+    </ul>
+    <div class="box tip"><b>Resumen rápido</b>Si ya tienes cuenta: ve a <span class="ui">Nuevo Proyecto</span> → ingresa un dominio → <span class="ui">Escanear</span>. En menos de 2 minutos tendrás un score de seguridad con hallazgos y recomendaciones.</div>
+
+    <h2 id="login">2. Login y autenticación</h2>
+    <h3>2.1 Iniciar sesión con Magic Link</h3>
+    <ol>
+      <li>Ve a <code>/login</code>.</li>
+      <li>Ingresa tu email. La plataforma valida en tiempo real: rechaza correos desechables, temporales y typosquatting.</li>
+      <li>Presiona <span class="ui">Enviar Magic Link</span>.</li>
+      <li>Revisa tu bandeja de entrada y haz clic en el enlace recibido.</li>
+      <li>Serás redirigido automáticamente al dashboard.</li>
+    </ol>
+    <div class="box info"><b>Sin contraseñas</b>SCAUDIT usa Magic Link (OTP por email). No hay contraseñas que recordar ni que se puedan robar.</div>
+    <h3>2.2 Rate limit del login</h3>
+    <table>
+      <tr><th>Endpoint</th><th>Límite</th><th>Bypass</th></tr>
+      <tr><td>validate-email</td><td>40 req/60s por IP</td><td>Emails en <code>AUTH_EMAIL_ALLOWLIST</code></td></tr>
+      <tr><td>auth callback</td><td>10 req/60s por IP</td><td>Emails en <code>AUTH_EMAIL_ALLOWLIST</code></td></tr>
+    </table>
+    <div class="box warn"><b>Límite de intentos alcanzado</b>Si ves este mensaje, espera 60 segundos. Para cuentas con acceso frecuente, agrega el email a <code>AUTH_EMAIL_ALLOWLIST</code> (el owner ya está incluido por defecto).</div>
+
+    <h2 id="dashboard">3. Dashboard (Overview)</h2>
+    <p>El dashboard es el <strong>Command Center</strong> de todos tus proyectos:</p>
+    <ul>
+      <li><strong>Project Cards</strong>: cada proyecto muestra health score, última auditoría, estado de integraciones y métricas en vivo (latencia, uptime).</li>
+      <li><strong>Score Gauge</strong>: medidor visual del health score (0-100) con clasificación.</li>
+      <li><strong>Benchmarking</strong>: radar chart que compara tu proyecto vs la industria (percentiles P25/P75/P95).</li>
+      <li><strong>Attack Surface Graph</strong>: grafo interactivo de dominios ⇄ IPs ⇄ certificados.</li>
+      <li><strong>Métricas rápidas</strong>: clicks orgánicos, impresiones, CTR y posición promedio (si GSC está conectado).</li>
+    </ul>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    subgraph Overview["OverviewTab"]
+        Cards["Project Cards"]
+        Gauge["ScoreGauge + benchmark"]
+        Radar["BenchmarkingSection (radar chart)"]
+        Graph["AttackSurfaceGraph"]
+    end
+    Cards --> Gauge
+    Gauge --> Radar
+    Cards --> Graph
+    Radar -->|P25/P75/P95| Compare["Comparación vs industria"]
+</pre>
+    </div>
+
+    <h2 id="proyectos">4. Gestión de proyectos</h2>
+    <h3>4.1 Crear un proyecto</h3>
+    <ol>
+      <li>Haz clic en <span class="ui">Nuevo Proyecto</span> (esquina superior derecha).</li>
+      <li>Completa: nombre del proyecto, dominio (ej. <code>tuempresa.com</code>).</li>
+      <li>Opcional: conecta Google Search Console y Google Analytics 4.</li>
+      <li>Presiona <span class="ui">Crear</span>.</li>
+    </ol>
+    <h3>4.2 Acciones sobre un proyecto</h3>
+    <table>
+      <tr><th>Acción</th><th>Descripción</th></tr>
+      <tr><td>Ejecutar auditoría</td><td>Crawler SEO profundo: títulos, metadatos, H1/H2, estructura.</td></tr>
+      <tr><td>Escaneo de inteligencia</td><td>Corre las herramientas de inteligencia sobre el dominio.</td></tr>
+      <tr><td>Desactivar</td><td>Detiene el monitoreo sin borrar datos.</td></tr>
+      <tr><td>Exportar</td><td>PDF white-label y CSV de keywords.</td></tr>
+    </table>
+
+    <h2 id="inteligencia">5. Inteligencia cibernética</h2>
+    <p>La pestaña <span class="ui">Intelligence</span> es el corazón técnico de la plataforma.</p>
+    <h3>5.1 Ejecutar un escaneo</h3>
+    <ol>
+      <li>Selecciona el proyecto en el selector superior.</li>
+      <li>Elige el objetivo (dominio, IP, URL) o usa el dominio del proyecto.</li>
+      <li>Selecciona herramientas del catálogo o usa <span class="ui">Escaneo Completo</span> (todas las aplicables).</li>
+      <li>Presiona <span class="ui">Ejecutar</span>.</li>
+    </ol>
+    <h3>5.2 Herramientas disponibles (34+ executors)</h3>
+    <table>
+      <tr><th>Categoría</th><th>Herramientas</th></tr>
+      <tr><td>DNS</td><td>lookup (A/AAAA/MX/TXT/NS/SOA), dnssec, propagation, zone, DMARC, SPF</td></tr>
+      <tr><td>Red</td><td>ping, traceroute, reverse DNS, GeoIP, ASN, CDN, WAF, reverse IP</td></tr>
+      <tr><td>Website</td><td>headers, security headers, TLS/SSL scan, robots.txt, redirects, cookies, CSP, tech stack</td></tr>
+      <tr><td>Email</td><td>SPF, DMARC, DKIM, email breach</td></tr>
+      <tr><td>OSINT</td><td>WHOIS, shodan, reputation IP (blacklists), subdomain discovery</td></tr>
+    </table>
+    <h3>5.3 Resultados del escaneo</h3>
+    <ul>
+      <li><strong>Hallazgos</strong>: cada uno con severidad (info/low/medium/high/critical), confianza y recomendación.</li>
+      <li><strong>Badge MITRE</strong>: cada hallazgo se mapea a técnicas MITRE ATT&CK (ej. T1583.001).</li>
+      <li><strong>Mapa Geo</strong>: activos con coordenadas GeoIP.</li>
+      <li><strong>Score de seguridad</strong>: 0-100 calculado por el risk engine.</li>
+      <li><strong>Historial</strong>: pestaña History con timeline de cambios DNS/WHOIS.</li>
+    </ul>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    Target["Dominio / IP / URL"] --> Dispatch["Dispatcher"]
+    Dispatch --> Exec["Executors (34+)"]
+    Exec --> ScanResp["scan-response tipado"]
+    ScanResp --> Findings["Findings + severity"]
+    ScanResp --> Score["Score 0-100"]
+    Findings --> Mitre["Badge MITRE ATT&CK"]
+    ScanResp --> Geo["Mapa GeoIP"]
+    ScanResp --> History["History DNS/WHOIS"]
+    Findings --> Copilot["AI Copilot remediation"]
+</pre>
+    </div>
+
+    <h2 id="reportes">6. Reportes IA y PDF</h2>
+    <h3>6.1 Generar reporte con IA</h3>
+    <ol>
+      <li>Ve a la pestaña <span class="ui">Reports</span>.</li>
+      <li>Selecciona proyecto y período.</li>
+      <li>Presiona <span class="ui">Generar con IA</span>.</li>
+      <li>La barra de progreso avanza (tope 90% mientras genera; 100% solo cuando el informe está listo).</li>
+    </ol>
+    <div class="box info"><b>Contenido del informe IA</b>El reporte ejecutivo incluye: resumen ejecutivo, análisis de rendimiento (tabla), diagnóstico técnico de salud (LCP/INP/CLS), plan de acción priorizado con <strong>diagrama Mermaid</strong> y <strong>gráficos de barras</strong> con los datos de rendimiento.</div>
+    <h3>6.2 Exportar PDF white-label</h3>
+    <ol>
+      <li>Configura branding (logo + colores) en Settings.</li>
+      <li>Desde el dashboard o ReportsTab, presiona <span class="ui">Exportar PDF</span>.</li>
+      <li>Se genera el PDF con donut chart de severidad, bar chart de scores y página de assets.</li>
+    </ol>
+
+    <h2 id="monitoring">7. Monitoreo y rendimiento</h2>
+    <h3>7.1 Live Streaming Metrics</h3>
+    <p>Barra flotante (abajo a la derecha en Intelligence) que se expande al hover y muestra en vivo (cada 15s):</p>
+    <ul>
+      <li><strong>Uptime %</strong>: últimos 5 checks en ventana de 24h.</li>
+      <li><strong>Latencia promedio</strong> (ms).</li>
+      <li><strong>Findings críticos/high</strong>: conteo de severidad.</li>
+    </ul>
+    <h3>7.2 PerformanceTab</h3>
+    <ul>
+      <li>Core Web Vitals: LCP, INP, CLS, TTFB, FCP.</li>
+      <li>Lighthouse scores con gráficos.</li>
+      <li>Anomalías detectadas (Z-score) en latencia y error rate.</li>
+    </ul>
+
+    <h2 id="keywords">8. Keywords SEO</h2>
+    <ul>
+      <li>Seguimiento de posiciones de keywords objetivo.</li>
+      <li>Volumen de búsqueda, CPC y competencia.</li>
+      <li>Exportación CSV de keywords desde datos reales de BD.</li>
+    </ul>
+
+    <h2 id="adversary">9. Adversary Simulation</h2>
+    <p>Simula ataques reales (estilo Atomic Red Team) contra tu infraestructura:</p>
+    <table>
+      <tr><th>Escenario</th><th>Táctica MITRE</th><th>Qué simula</th></tr>
+      <tr><td>Default Credentials</td><td>TA0001 Initial Access</td><td>Credenciales por defecto en servicios expuestos</td></tr>
+      <tr><td>SQLi / WAF Probe</td><td>TA0001</td><td>Inyección SQL y detección de WAF</td></tr>
+      <tr><td>Password Spray</td><td>TA0006 Credential Access</td><td>Ataque de fuerza bruta de contraseñas</td></tr>
+      <tr><td>RDP Brute Force</td><td>TA0008 Lateral Movement</td><td>Fuerza bruta sobre RDP</td></tr>
+      <tr><td>Port Scan</td><td>TA0007 Discovery</td><td>Enumeración de puertos</td></tr>
+      <tr><td>Web Shell</td><td>TA0003 Persistence</td><td>Persistencia mediante webshell</td></tr>
+      <tr><td>Backup Deletion</td><td>TA0040 Impact</td><td>Eliminación de backups</td></tr>
+    </table>
+    <ol>
+      <li>En la pestaña <span class="ui">Adversary</span>, selecciona el proyecto.</li>
+      <li>Elige un escenario o ejecuta todos.</li>
+      <li>Presiona <span class="ui">Run</span>. Los resultados se persisten en <code>adversary_runs</code>.</li>
+    </ol>
+    <div class="box warn"><b>Uso responsable</b>Ejecuta simulaciones solo contra infraestructura de la que eres propietario o tienes autorización explícita.</div>
+
+    <h2 id="plugins">10. Plugin Marketplace</h2>
+    <p>La pestaña <span class="ui">Marketplace</span> permite instalar plugins que se ejecutan como herramientas nativas:</p>
+    <table>
+      <tr><th>Plugin</th><th>Qué hace</th></tr>
+      <tr><td>subdomain-enumerator</td><td>Enumeración de subdominios por DNS brute force</td></tr>
+      <tr><td>port-scanner</td><td>Escaneo de puertos</td></tr>
+      <tr><td>tech-stack-detector</td><td>Fingerprinting de tecnologías</td></tr>
+      <tr><td>threat-intel-feed</td><td>Feed de inteligencia de amenazas</td></tr>
+      <tr><td>email-reputation</td><td>Reputación de dominio email</td></tr>
+      <tr><td>compliance-scanner</td><td>Chequeos de compliance</td></tr>
+      <tr><td>whois-enricher</td><td>Enriquecimiento WHOIS</td></tr>
+      <tr><td>certificate-monitor</td><td>Monitoreo de certificados TLS</td></tr>
+    </table>
+    <ol>
+      <li>Navega el catálogo (búsqueda + filtros).</li>
+      <li>Presiona <span class="ui">Instalar</span> en el plugin deseado.</li>
+      <li>El plugin queda disponible en IntelligenceTab como tool <code>plugin.*</code>.</li>
+    </ol>
+
+    <h2 id="settings">11. Configuración y API Keys</h2>
+    <h3>11.1 SettingsTab</h3>
+    <ul>
+      <li>Perfil y preferencias de la cuenta.</li>
+      <li>Branding de reportes (logo, colores) para PDF white-label.</li>
+      <li>Integraciones (GSC, GA4, Bing).</li>
+      <li>Preferencias de idioma y notificaciones.</li>
+    </ul>
+    <h3>11.2 API Keys Dashboard (<code>/settings/api-keys</code>)</h3>
+    <ul>
+      <li>Stat cards: Active Keys, Used This Week, Total Requests, Expiring Soon.</li>
+      <li>Crear key con expiración (30/90/365 días o Never). La key se muestra <strong>una sola vez</strong>.</li>
+      <li>Tabla con búsqueda, filtros y mini-bars de uso.</li>
+      <li>Revocar keys con confirmación.</li>
+    </ul>
+
+    <h2 id="pwa">12. PWA e instalación</h2>
+    <ol>
+      <li>Abre SCAUDIT en Chrome/Edge (desktop o Android).</li>
+      <li>Presiona el botón <span class="ui">Instalar SCAUDIT</span> en el header del dashboard.</li>
+      <li>La app se instala en modo <strong>standalone</strong> (ventana propia, sin barra del navegador).</li>
+      <li>Funciona <strong>offline</strong>: si pierdes conexión, la offline page se muestra con el diseño SCAUDIT.</li>
+    </ol>
+
+    <h2 id="i18n">13. Cambio de idioma</h2>
+    <ul>
+      <li>Usa el <span class="ui">LanguageSwitcher</span> (es/en) en el header.</li>
+      <li>La preferencia se guarda en cookie y se recuerda entre sesiones.</li>
+      <li>Detección automática: cookie → Accept-Language → default <code>es</code>.</li>
+    </ul>
+
+    <h2 id="faq">14. Preguntas frecuentes</h2>
+    <table>
+      <tr><th>Pregunta</th><th>Respuesta</th></tr>
+      <tr><td>¿El informe IA se queda en 35% o 100% sin mostrar?</td><td>Está corregido: la barra tope en 90% y llega a 100% solo con informe real. Si persiste, revisa la consola de red (timeout 110s) o configura <code>OPENROUTER_API_KEY</code>.</td></tr>
+      <tr><td>¿Cómo creo un proyecto en la pestaña Adversary?</td><td>Usa el selector de proyectos (igual que en Intelligence). Si no aparece, créalo primero en Overview.</td></tr>
+      <tr><td>¿Cómo veo el historial de cambios de un dominio?</td><td>En IntelligenceTab → pestaña <span class="ui">History</span> o en <code>/security/audit</code> (pestañas WHOIS Alerts / DNS Alerts).</td></tr>
+      <tr><td>¿La sección DNS del scan aparece vacía?</td><td>Era un bug de keys mayúsculas/minúsculas, ya corregido con lecturas tipadas en <code>scan-response.ts</code>.</td></tr>
+      <tr><td>¿Puedo usar mis propios plugins?</td><td>Por ahora el marketplace incluye 8 plugins oficiales. El mecanismo de ejecución soporta plugins custom vía registry.</td></tr>
+      <tr><td>¿Hay límite de escaneos?</td><td>Sí, rate limiting por IP con Upstash Redis (headers <code>RateLimit-*</code> en las respuestas).</td></tr>
+      <tr><td>¿Dónde veo las alertas de seguridad?</td><td>En <code>/security/audit</code>: pestañas Events, SIEM Alerts, WHOIS Alerts y DNS Alerts.</td></tr>
+    </table>
+    <div class="box tip"><b>¿Necesitas ayuda?</b>Consulta el <a href="manual-funcionamiento.html" style="color:var(--primary)">Manual de Funcionamiento Técnico</a> para detalles de arquitectura o revisa <a href="manual-instalacion.html" style="color:var(--primary)">el manual de instalación</a> para despliegues.</div>
+  </main>
+</div>
+</body>
+</html>

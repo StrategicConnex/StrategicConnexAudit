@@ -1,7 +1,7 @@
 # 📊 SCAUDIT — Reporte de Optimización de Base de Datos
 
 > **Fecha:** Julio 2026 · **Alcance:** Índices compuestos, auditoría de consultas raw, análisis de schema, RLS policies y migración base.
-> **Estado:** ✅ Task #1 (índices compuestos) implementado · 🔴 Hallazgos críticos en aislamiento multi-tenant
+> **Estado:** ✅ Task #1 (índices compuestos) implementado · ✅ P1 (benchmarking SQL GROUP BY) implementado · ✅ RLS aplicado en 3 rutas críticas · 🔴 Pendiente: RLS en tablas de inteligencia
 
 ---
 
@@ -58,11 +58,11 @@ Detecté dos gaps contra los patrones de query reales y los agregué:
 
 ### 2.2 🟠 N+1 / escalabilidad — Agregación en JS en vez de SQL
 
-| Ruta | Problema | Fix |
-|---|---|---|
-| **`benchmarking/route.ts`** | Descarga tablas completas a memoria JS (`SELECT * FROM uptime_logs WHERE checked_at >= X`) y agrupa con `Map` en el runtime. Con ~100k logs, cada request escanea la tabla entera. | `GROUP BY project_id` con `count(*) FILTER (WHERE is_up)`, `avg(response_time_ms)` en SQL. |
-| **`live/route.ts`** | 2 queries separadas de `count(*)` para critical/high + 1 SELECT de latest. Son paralelas (`Promise.all`), no N+1, pero se pueden unificar. | Una sola query con `GROUP BY severity` + `FILTER`. |
-| **`anomalies/route.ts`** | Stats con `GROUP BY metric_type, severity` — correcto. La query principal + total son paralelas ✅. | — |
+| Ruta | Problema | Fix | Estado |
+|---|---|---|---|
+| **`benchmarking/route.ts`** | Descargaba tablas completas a memoria JS (`SELECT project_id, is_up, response_time_ms FROM uptime_logs`) y agrupaba con `Map` en el runtime. Con ~100k logs, cada request escaneaba la tabla entera. | **IMPLEMENTADO (Jul 2026):** `GROUP BY project_id` con `count(*) FILTER (WHERE is_up)::int`, `avg(response_time_ms)::float8` en SQL. Una fila por proyecto. Scores: `AVG(score)::float8 ... GROUP BY project_id`. Paridad de comportamiento verificada por code review (mismos cálculos, ahora en DB). Los índices `idx_uptime_logs_checked` y `idx_uptime_logs_project_checked` (migración 0015) cubren el `WHERE checked_at >= since`. | ✅ Completo |
+| **`live/route.ts`** | 2 queries separadas de `count(*)` para critical/high + 1 SELECT de latest. Son paralelas (`Promise.all`), no N+1, pero se pueden unificar. | Una sola query con `GROUP BY severity` + `FILTER`. | ⏳ Pendiente |
+| **`anomalies/route.ts`** | Stats con `GROUP BY metric_type, severity` — correcto. La query principal + total son paralelas ✅. | — | ✅ Correcto |
 
 ### 2.3 🟡 ILIKE con leading wildcard (índices inutilizables)
 
@@ -148,7 +148,7 @@ Las tablas core del producto (SEO/auditoría) tienen constraints FK pero **sin �
 |---|---|---|---|
 | **P0** | Aplicar `withRLS` en `benchmarking`, `live`, `anomalies` (fuga multi-tenant) | 🔴 Crítico — seguridad | ~30 min |
 | **P1** | Migración 0015: FK indexes de tablas core (§3.3) | 🟠 Alto — queries de crawl/reportes | ~20 min |
-| **P1** | Migrar agregaciones de `benchmarking` a SQL `GROUP BY` | 🟠 Alto — escalabilidad | ~45 min |
+| **P1** | Migrar agregaciones de `benchmarking` a SQL `GROUP BY` ✅ IMPLEMENTADO (Jul 2026) | 🟠 Alto — escalabilidad | ~45 min |
 | **P2** | Prefix ILIKE / trigram en `siem-alerts` y `audit-logs` | 🟡 Medio | ~15 min |
 | **P2** | Unificar counts en `live/route.ts` con `GROUP BY severity` | 🟡 Bajo | ~10 min |
 | **P3** | Índices GIN para filtros JSONB frecuentes | 🟢 Bajo | ~10 min |

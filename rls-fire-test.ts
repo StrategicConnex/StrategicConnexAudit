@@ -55,7 +55,7 @@ async function runTest() {
     await db.transaction(async (tx) => {
       const claims = JSON.stringify({ sub: userA_Id, role: 'authenticated' });
       await tx.execute(sql`SELECT set_config('request.jwt.claims', ${claims}, true)`);
-      await tx.execute(sql`SET ROLE authenticated`);
+      await tx.execute(sql`SET LOCAL ROLE authenticated`);
       
       await tx.insert(projects).values({
         id: projectId,
@@ -71,7 +71,7 @@ async function runTest() {
     const resultRead = await db.transaction(async (tx) => {
       const claims = JSON.stringify({ sub: userB_Id, role: 'authenticated' });
       await tx.execute(sql`SELECT set_config('request.jwt.claims', ${claims}, true)`);
-      await tx.execute(sql`SET ROLE authenticated`);
+      await tx.execute(sql`SET LOCAL ROLE authenticated`);
       
       return await tx.select().from(projects).where(eq(projects.id, projectId));
     });
@@ -88,7 +88,7 @@ async function runTest() {
     const resultDelete = await db.transaction(async (tx) => {
       const claims = JSON.stringify({ sub: userB_Id, role: 'authenticated' });
       await tx.execute(sql`SELECT set_config('request.jwt.claims', ${claims}, true)`);
-      await tx.execute(sql`SET ROLE authenticated`);
+      await tx.execute(sql`SET LOCAL ROLE authenticated`);
       
       return await tx.delete(projects).where(eq(projects.id, projectId)).returning();
     });
@@ -103,7 +103,7 @@ async function runTest() {
     const finalCheck = await db.transaction(async (tx) => {
       const claims = JSON.stringify({ sub: userA_Id, role: 'authenticated' });
       await tx.execute(sql`SELECT set_config('request.jwt.claims', ${claims}, true)`);
-      await tx.execute(sql`SET ROLE authenticated`);
+      await tx.execute(sql`SET LOCAL ROLE authenticated`);
       
       return await tx.select().from(projects).where(eq(projects.id, projectId));
     });

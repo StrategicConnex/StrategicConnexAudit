@@ -16,7 +16,6 @@ import { TelemetryTimeline } from "./TelemetryTimeline";
 import { EvidencesList } from "./EvidencesList";
 import { TopologyView } from "./TopologyView";
 import { AiCopilotSidebar } from "./AiCopilotSidebar";
-import { exportIntelligenceToPdf } from "@/shared/utils/exportIntelligencePdf";
 import { Terminal, ArrowLeft, Download, Sparkles, Menu, X, Loader2 } from "lucide-react";
 import { LiveMetricsBar } from "@/app/components/LiveMetricsBar";
 
@@ -85,6 +84,9 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
     if (isExportingPdf) return;
     setIsExportingPdf(true);
     try {
+      // Dynamic import: html2canvas + jsPDF (~412KB) only loads when the user
+      // actually exports — keeps them out of the /intelligence route bundle.
+      const { exportIntelligenceToPdf } = await import("@/shared/utils/exportIntelligencePdf");
       const targetName = investigation?.target || "Onboarding-Demo";
       const filename = `Reporte-Seguridad-${targetName}-${new Date().toISOString().split("T")[0]}.pdf`;
       const success = await exportIntelligenceToPdf("intelligence-report-content", filename, targetName);

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCAUDIT Pro — Centro de Documentación</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "dark", themeVariables: { primaryColor: "#1e1b4b", primaryTextColor: "#e2e8f0", primaryBorderColor: "#6366f1", lineColor: "#6366f1", secondaryColor: "#052e16", tertiaryColor: "#111827" } });
+</script>
+<style>
+  :root {
+    --bg: #060608; --fg: #e8e8f0; --card: #0d0d14; --border: #1e1e2e;
+    --primary: #818cf8; --accent: #a3e635; --muted: #8b8b9e;
+    --destructive: #f87171; --indigo: #6366f1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--fg); font-family: 'Segoe UI', -apple-system, 'Inter', sans-serif; line-height: 1.6; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 2.5rem; }
+  .logo { width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, var(--indigo), var(--primary)); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 18px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.18em; font-size: 11px; color: var(--accent); font-weight: 700; }
+  h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 6px; }
+  .sub { color: var(--muted); font-size: 1.05rem; max-width: 700px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.2rem; margin: 2.5rem 0; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.6rem; text-decoration: none; color: var(--fg); transition: all .2s ease; display: block; }
+  .card:hover { transform: translateY(-3px); border-color: var(--primary); box-shadow: 0 8px 30px rgba(99,102,241,.15); }
+  .card .icon { font-size: 1.7rem; margin-bottom: .7rem; }
+  .card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: .4rem; }
+  .card p { color: var(--muted); font-size: .92rem; }
+  .card .tag { display: inline-block; margin-top: .8rem; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+  h2 { font-size: 1.4rem; margin: 2.5rem 0 1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  h2::before { content: ""; width: 26px; height: 3px; background: var(--indigo); border-radius: 99px; }
+  .diagram { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.2rem; overflow-x: auto; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1.5rem; }
+  .badge { font-size: 12px; padding: 5px 12px; border-radius: 99px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-weight: 600; }
+  .badge.green { color: var(--accent); border-color: rgba(163,230,53,.3); }
+  .badge.indigo { color: var(--primary); border-color: rgba(129,140,248,.3); }
+  footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; text-align: center; }
+  @media (max-width: 640px) { .wrap { padding: 1.5rem 1rem 3rem; } h1 { font-size: 1.8rem; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">S</div>
+    <div>
+      <div class="eyebrow">Documentation Center</div>
+      <div style="font-weight:700">SCAUDIT Pro · StrategicAudit</div>
+    </div>
+  </div>
+
+  <h1>Centro de Documentación</h1>
+  <p class="sub">Documentación completa de la plataforma de inteligencia de red, monitoreo de superficie de ataque, auditoría técnica SEO y ciberseguridad continua. Manuales en formato HTML con diagramas Mermaid y gráficos.</p>
+
+  <div class="badges">
+    <span class="badge green">Roadmap 36/36 · 100%</span>
+    <span class="badge indigo">Next.js 16</span>
+    <span class="badge indigo">TypeScript 5</span>
+    <span class="badge indigo">Supabase + Drizzle</span>
+    <span class="badge indigo">Open Source · No monetizado</span>
+  </div>
+
+  <div class="grid">
+    <a class="card" href="manual-instalacion.html">
+      <div class="icon">🚀</div>
+      <h3>Manual de Instalación</h3>
+      <p>De cero a servidor corriendo: Supabase, Upstash Redis, OpenRouter, Trigger.dev, VAPID, SIEM webhooks y variables de entorno paso a paso.</p>
+      <span class="tag">Guía paso a paso →</span>
+    </a>
+    <a class="card" href="manual-usuario.html">
+      <div class="icon">👤</div>
+      <h3>Manual de Usuario Final</h3>
+      <p>Uso completo del producto: dashboard, proyectos, inteligencia cibernética, reportes IA, adversary simulation, plugins, benchmark, i18n y PWA.</p>
+      <span class="tag">Guía de uso →</span>
+    </a>
+    <a class="card" href="manual-funcionamiento.html">
+      <div class="icon">⚙️</div>
+      <h3>Manual de Funcionamiento Técnico</h3>
+      <p>Arquitectura interna, pipeline de escaneo, motor de executors, history DNS/WHOIS, SIEM, anomalías, plugins, tipos tipados y diagramas de secuencia.</p>
+      <span class="tag">Referencia técnica →</span>
+    </a>
+  </div>
+
+  <h2>Arquitectura de Alto Nivel</h2>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    subgraph Edge["Vercel Edge (proxy.ts)"]
+        CSP["CSP · HSTS · Security Headers"]
+        CORS["CORS · Rate Limit Global"]
+    end
+    subgraph App["Next.js 16 App Router"]
+        UI["Dashboard UI (tabs)"]
+        API["50+ API Routes"]
+        SA["Server Actions"]
+    end
+    subgraph Core["Server Intelligence Core"]
+        REG["Tool Registry (registerTool)"]
+        DISP["Dispatcher"]
+        EXEC["34+ Executors tipados"]
+        SCAN["scan-response.ts tipado"]
+        HIST["History DNS/WHOIS"]
+        ADV["Adversary Scenarios"]
+        PLUG["Plugin Marketplace"]
+        ANOM["Anomaly Detector"]
+    end
+    subgraph Data["Data Layer"]
+        SUP["Supabase Postgres (RLS)"]
+        RED["Upstash Redis"]
+    end
+    subgraph Jobs["Background (Trigger.dev)"]
+        SIEM["SIEM Exporter c/5min"]
+        DISC["Discovery c/6h"]
+        ANOMJ["Anomalies c/15min"]
+        ADVJ["Adversary c/6h"]
+        KEY["API Key Expiry diario"]
+    end
+    subgraph AI["AI Layer (OpenRouter free pool)"]
+        ROUTER["ai-router · callAIWithFallback"]
+    end
+    Edge --> App
+    API --> Core
+    SA --> SUP
+    Core --> SUP
+    Core --> RED
+    API --> ROUTER
+    Jobs --> SUP
+    Jobs --> RED
+    SIEM -->|alertas| Slack["Slack / Email / PagerDuty / Splunk"]
+</pre>
+  </div>
+
+  <footer>© 2026 StrategicConnex — StrategicAudit Pro (SCAUDIT). Documentación generada para el proyecto · <a href="https://scaudit.vercel.app" style="color:var(--primary)">scaudit.vercel.app</a></footer>
+</div>
+</body>
+</html>

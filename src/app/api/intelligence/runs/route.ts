@@ -9,7 +9,7 @@ import {
 } from "@/shared/db/schemas";
 import { runToolSchema } from "@/features/intelligence/validators/intelligence.schema";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
-import { getToolDefinition } from "@/server/intelligence/registry/tool-registry";
+import { getToolDefinition } from "@/server/intelligence/core/tool-registry";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
 
 export const dynamic = "force-dynamic";

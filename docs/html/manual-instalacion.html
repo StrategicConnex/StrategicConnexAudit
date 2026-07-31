@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Instalación — SCAUDIT Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "dark", themeVariables: { primaryColor: "#1e1b4b", primaryTextColor: "#e2e8f0", primaryBorderColor: "#6366f1", lineColor: "#6366f1", secondaryColor: "#052e16", tertiaryColor: "#111827" } });
+</script>
+<style>
+  :root { --bg:#060608; --fg:#e8e8f0; --card:#0d0d14; --border:#1e1e2e; --primary:#818cf8; --accent:#a3e635; --muted:#8b8b9e; --warn:#fbbf24; --danger:#f87171; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--fg); font-family:'Segoe UI',-apple-system,'Inter',sans-serif; line-height:1.65; }
+  .layout { display:flex; min-height:100vh; }
+  nav { width:270px; border-right:1px solid var(--border); background:var(--card); position:sticky; top:0; height:100vh; overflow-y:auto; padding:1.4rem 1rem; flex-shrink:0; }
+  nav .brand { display:flex; align-items:center; gap:10px; margin-bottom:1.4rem; padding:0 .5rem; }
+  nav .brand .logo { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#6366f1,#818cf8); display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; font-size:15px; }
+  nav .brand b { font-size:.95rem; }
+  nav a.toc { display:block; padding:.4rem .6rem; border-radius:8px; color:var(--muted); text-decoration:none; font-size:.85rem; border-left:2px solid transparent; }
+  nav a.toc:hover { color:var(--fg); background:rgba(99,102,241,.08); }
+  nav a.toc.top { border-left-color:var(--primary); color:var(--primary); }
+  nav .sec { font-size:10px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); font-weight:800; padding:.8rem .6rem .3rem; }
+  main { flex:1; padding:2.5rem 3rem 5rem; max-width:980px; }
+  .crumb { color:var(--muted); font-size:.82rem; margin-bottom:1.2rem; }
+  .crumb a { color:var(--primary); text-decoration:none; }
+  h1 { font-size:2rem; font-weight:800; letter-spacing:-.02em; margin-bottom:.4rem; }
+  h2 { font-size:1.4rem; font-weight:700; margin:2.6rem 0 .9rem; padding-bottom:.4rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  h2::before { content:""; width:22px; height:3px; background:var(--indigo,#6366f1); border-radius:99px; flex-shrink:0; }
+  h3 { font-size:1.08rem; font-weight:700; margin:1.6rem 0 .6rem; }
+  p { margin-bottom:.9rem; color:var(--fg); opacity:.92; }
+  ul, ol { margin:0 0 1rem 1.4rem; }
+  li { margin-bottom:.35rem; }
+  code { background:rgba(129,140,248,.12); color:#c7d2fe; padding:1px 6px; border-radius:5px; font-family:'JetBrains Mono','Consolas',monospace; font-size:.86em; }
+  pre { background:#0a0a12; border:1px solid var(--border); border-radius:12px; padding:1rem 1.2rem; overflow-x:auto; margin:1rem 0; font-family:'JetBrains Mono','Consolas',monospace; font-size:.83rem; line-height:1.55; color:#cbd5e1; white-space:pre; }
+  pre code { background:none; padding:0; color:inherit; font-size:inherit; }
+  table { width:100%; border-collapse:collapse; margin:1rem 0 1.4rem; font-size:.88rem; }
+  th { text-align:left; background:rgba(129,140,248,.08); padding:.6rem .8rem; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-bottom:1px solid var(--border); }
+  td { padding:.6rem .8rem; border-bottom:1px solid var(--border); }
+  .box { border-radius:12px; padding:1rem 1.2rem; margin:1.2rem 0; border:1px solid; }
+  .box.tip { background:rgba(163,230,53,.06); border-color:rgba(163,230,53,.25); }
+  .box.warn { background:rgba(251,191,36,.06); border-color:rgba(251,191,36,.3); }
+  .box.danger { background:rgba(248,113,113,.06); border-color:rgba(248,113,113,.3); }
+  .box b { display:block; margin-bottom:.3rem; font-size:.85rem; text-transform:uppercase; letter-spacing:.08em; }
+  .box.tip b { color:var(--accent); } .box.warn b { color:var(--warn); } .box.danger b { color:var(--danger); }
+  .diagram { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1rem; overflow-x:auto; margin:1.2rem 0; }
+  .steps { counter-reset:step; list-style:none; margin-left:0; }
+  .steps > li { counter-increment:step; position:relative; padding-left:2.6rem; margin-bottom:1.2rem; }
+  .steps > li::before { content:counter(step); position:absolute; left:0; top:2px; width:26px; height:26px; border-radius:50%; background:var(--indigo,#6366f1); color:#fff; font-weight:700; font-size:.8rem; display:flex; align-items:center; justify-content:center; }
+  @media (max-width:900px){ .layout{flex-direction:column} nav{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border)} main{padding:1.5rem 1.2rem 3rem} }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav>
+    <div class="brand"><div class="logo">S</div><b>SCAUDIT Pro</b></div>
+    <a class="toc" href="index.html">← Centro de Documentación</a>
+    <div class="sec">Manual de Instalación</div>
+    <a class="toc top" href="#requisitos">1. Requisitos del sistema</a>
+    <a class="toc" href="#cuentas">2. Cuentas requeridas</a>
+    <a class="toc" href="#quickstart">3. Quick Start (5 min)</a>
+    <a class="toc" href="#supabase">4. Supabase (BD + Auth)</a>
+    <a class="toc" href="#upstash">5. Upstash Redis</a>
+    <a class="toc" href="#openrouter">6. OpenRouter (IA)</a>
+    <a class="toc" href="#trigger">7. Trigger.dev (jobs)</a>
+    <a class="toc" href="#vapid">8. VAPID (push)</a>
+    <a class="toc" href="#webhooks">9. SIEM webhooks</a>
+    <a class="toc" href="#env">10. Variables de entorno</a>
+    <a class="toc" href="#dev-bypass">11. Dev Bypass Auth</a>
+    <a class="toc" href="#cicd">12. CI/CD y Deploy</a>
+    <a class="toc" href="#troubleshoot">13. Solución de problemas</a>
+    <a class="toc" href="#postinstall">14. Verificación post-instalación</a>
+  </nav>
+
+  <main>
+    <div class="crumb"><a href="index.html">Documentación</a> / Manual de Instalación</div>
+    <h1>🚀 Manual de Instalación</h1>
+    <p>Esta guía te lleva <strong>desde cero a servidor corriendo</strong> con todos los servicios configurados: Supabase, Upstash Redis, OpenRouter, Trigger.dev, VAPID keys y webhooks SIEM. Cada sección incluye pasos exactos, qué verás en pantalla y resolución de errores comunes.</p>
+
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+    A["git clone + pnpm install"] --> B["Configurar .env.local"]
+    B --> C["Supabase: crear proyecto + credenciales"]
+    B --> D["Upstash: crear Redis + token"]
+    B --> E["OpenRouter: API key gratuita"]
+    C --> F["pnpm db:push (migraciones)"]
+    D --> F
+    F --> G["pnpm dev → localhost:3000"]
+    G --> H["Verificar health + login + AI"]
+    E --> H
+    H --> I["Configurar Trigger.dev + VAPID + SIEM"]
+    I --> J["Deploy a Vercel"]
+</pre>
+    </div>
+
+    <h2 id="requisitos">1. Requisitos del sistema</h2>
+    <table>
+      <tr><th>Requisito</th><th>Versión mínima</th><th>Verificación</th></tr>
+      <tr><td>Node.js</td><td>≥ 20</td><td><code>node --version</code></td></tr>
+      <tr><td>pnpm</td><td>≥ 9</td><td><code>pnpm --version</code></td></tr>
+      <tr><td>Git</td><td>≥ 2.30</td><td><code>git --version</code></td></tr>
+      <tr><td>OS</td><td>macOS 12+ / Win 10+ / Ubuntu 20.04+</td><td>—</td></tr>
+    </table>
+
+    <h2 id="cuentas">2. Cuentas requeridas</h2>
+    <table>
+      <tr><th>Servicio</th><th>Propósito</th><th>Plan gratuito</th><th>Setup</th></tr>
+      <tr><td><a style="color:var(--primary)" href="https://supabase.com">Supabase</a></td><td>PostgreSQL + Auth + RLS</td><td>500 MB, 50k filas</td><td>10 min</td></tr>
+      <tr><td><a style="color:var(--primary)" href="https://upstash.com">Upstash</a></td><td>Redis serverless (rate limit)</td><td>10k commands/día</td><td>5 min</td></tr>
+      <tr><td><a style="color:var(--primary)" href="https://openrouter.ai/keys">OpenRouter</a></td><td>Modelos IA gratuitos</td><td>50 req/día sin tarjeta</td><td>5 min</td></tr>
+      <tr><td><a style="color:var(--primary)" href="https://vercel.com">Vercel</a></td><td>Hosting</td><td>Hobby (100 GB)</td><td>5 min</td></tr>
+      <tr><td><a style="color:var(--primary)" href="https://trigger.dev">Trigger.dev</a></td><td>Background jobs / cron</td><td>3 tasks, 10k runs/mes</td><td>5 min</td></tr>
+    </table>
+    <div class="box tip"><b>Tip</b>Todos los servicios tienen planes gratuitos generosos. No necesitas tarjeta de crédito para empezar.</div>
+
+    <h2 id="quickstart">3. Quick Start (5 minutos)</h2>
+    <pre><code># 1. Clonar
+git clone https://github.com/StrategicConnex/StrategicConnexAudit.git
+cd StrategicConnexAudit
+
+# 2. Instalar dependencias
+pnpm install
+
+# 3. Copiar y configurar variables de entorno
+cp .env.example .env.local
+
+# 4. Migrar base de datos (requiere DIRECT_URL configurada)
+pnpm db:push
+
+# 5. Iniciar servidor de desarrollo
+pnpm dev
+# → Abrir http://localhost:3000</code></pre>
+
+    <h2 id="supabase">4. Supabase — Base de Datos y Autenticación</h2>
+    <h3>4.1 Crear el proyecto</h3>
+    <ol class="steps">
+      <li>Ve a <code>supabase.com</code> → <strong>Start your project</strong>.</li>
+      <li>Inicia sesión con GitHub o email.</li>
+      <li>En el dashboard → <strong>New project</strong> → nombre, contraseña, región y plan Free.</li>
+    </ol>
+    <div class="box warn"><b>Password</b>Guárdala en un gestor de contraseñas: se usa en <code>DATABASE_URL</code> y <code>DIRECT_URL</code>.</div>
+
+    <h3>4.2 Obtener credenciales</h3>
+    <ol class="steps">
+      <li><strong>Project Settings → API</strong>: copia <code>URL</code> → <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>anon public key</code> → <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>, <code>service_role key</code> → <code>SUPABASE_SERVICE_ROLE_KEY</code>.</li>
+      <li><strong>Project Settings → Database → Connection string</strong>: <code>URI</code> (directo :5432) → <code>DIRECT_URL</code>; <code>Pooler URI</code> (:6543) → <code>DATABASE_URL</code>.</li>
+    </ol>
+
+    <h3>4.3 Configurar Magic Link</h3>
+    <ol class="steps">
+      <li><strong>Authentication → Settings</strong> → <em>Site URL</em>: <code>http://localhost:3000</code> (dev) y <code>https://scaudit.vercel.app</code> (prod).</li>
+      <li><strong>Authentication → Providers → Email</strong>: habilitar <em>email signup</em>; <em>Confirm email</em> OFF (usamos Magic Link); <em>Secure email change</em> ON.</li>
+    </ol>
+
+    <h3>4.4 Ejecutar migraciones</h3>
+    <pre><code>pnpm db:push</code></pre>
+    <p>Resultado esperado: listado de tablas (audits, projects, intelligence_*, security_audit_logs, siem_alert_logs, anomaly_detections, adversary_scenarios, plugin_packages, dns_history, whois_history, etc.) y <em>Applied migrations</em>.</p>
+    <div class="box warn"><b>Direct URL</b>Si ves <code>DIRECT_URL is missing</code>, asegúrate de copiar <code>.env.example</code> → <code>.env.local</code> y llenar <code>DIRECT_URL</code>. Si tu password tiene <code>@ # $</code>, usa URL encoding (<code>@</code> → <code>%40</code>).</div>
+
+    <h2 id="upstash">5. Upstash Redis — Rate Limiting</h2>
+    <ol class="steps">
+      <li>upstash.com → <strong>Create database</strong> → nombre <code>scaudit-ratelimit</code>, región cercana, <em>Enable Global</em> recomendado.</li>
+      <li>En la pantalla de detalles copia <code>REST URL</code> → <code>UPSTASH_REDIS_REST_URL</code> y <code>REST Token</code> → <code>UPSTASH_REDIS_REST_TOKEN</code>.</li>
+    </ol>
+    <pre><code>curl -s -X GET "$UPSTASH_REDIS_REST_URL/ping" -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN"
+# → {"result":"PONG"}</code></pre>
+
+    <h2 id="openrouter">6. OpenRouter — Modelos de IA Gratuitos</h2>
+    <ol class="steps">
+      <li>openrouter.ai/keys → <strong>Sign Up</strong> (sin tarjeta) → <strong>Create Key</strong>.</li>
+      <li>Copia la key (solo se muestra una vez) → <code>OPENROUTER_API_KEY</code>.</li>
+    </ol>
+    <p>SCAUDIT usa automáticamente estos modelos gratuitos (en orden de fallback):</p>
+    <table>
+      <tr><th>Modelo</th><th>ID OpenRouter</th><th>Velocidad</th><th>Calidad</th></tr>
+      <tr><td>Gemini 2.0 Flash</td><td><code>google/gemini-2.0-flash-exp:free</code></td><td>⚡</td><td>🏆 Alta</td></tr>
+      <tr><td>DeepSeek V3</td><td><code>deepseek/deepseek-chat:free</code></td><td>⚡</td><td>🏆 Alta</td></tr>
+      <tr><td>Llama 4 Maverick</td><td><code>meta-llama/llama-4-maverick-17b-128e-instruct:free</code></td><td>🟡</td><td>🏆 Alta</td></tr>
+      <tr><td>Mistral 7B</td><td><code>mistralai/mistral-7b-instruct:free</code></td><td>⚡</td><td>🟡 Media</td></tr>
+      <tr><td>Nemotron</td><td><code>nvidia/llama-nemotron-nas-4b-instruct:free</code></td><td>⚡</td><td>🟡 Media</td></tr>
+      <tr><td>Qwen 2.5</td><td><code>qwen/qwen2.5-vl-72b-instruct:free</code></td><td>🐢</td><td>🏆 Alta</td></tr>
+      <tr><td>Gemma 4</td><td><code>google/gemma-4-26b-a4b-it:free</code></td><td>🟡</td><td>🏆 Alta</td></tr>
+    </table>
+    <p>Límites gratuitos: 50 req/día y 5 req/min (sin pago); con $10+ de por vida: 1,000 req/día y 20 req/min.</p>
+
+    <h2 id="trigger">7. Trigger.dev — Background Jobs</h2>
+    <ol class="steps">
+      <li>trigger.dev → <strong>New Project</strong> (Next.js + conectar GitHub).</li>
+      <li><strong>Settings → API Keys</strong> → copia <code>TRIGGER_SECRET_KEY</code>.</li>
+    </ol>
+    <p>Configuración ya incluida en <code>trigger.config.ts</code>. Tasks disponibles:</p>
+    <table>
+      <tr><th>Task</th><th>Schedule</th><th>Descripción</th></tr>
+      <tr><td><code>siem.trigger.ts</code></td><td>Cada 5 min</td><td>Detección de patrones + alertas</td></tr>
+      <tr><td><code>discovery.trigger.ts</code></td><td>Cada 6h</td><td>Descubrimiento de activos (DNS brute, CT)</td></tr>
+      <tr><td><code>anomaly.trigger.ts</code></td><td>Cada 15 min</td><td>Detección de anomalías (Z-score)</td></tr>
+      <tr><td><code>adversary.trigger.ts</code></td><td>Cada 6h</td><td>Simulación de adversarios</td></tr>
+      <tr><td><code>api-key-expiry.trigger.ts</code></td><td>Diario 09:00 UTC</td><td>Alertas de expiración API Keys</td></tr>
+      <tr><td><code>audit / monitoring / uptime / webhook</code></td><td>Bajo demanda / diario</td><td>Auditorías, monitoreo, uptime, webhooks</td></tr>
+    </table>
+    <pre><code>npx trigger.dev deploy</code></pre>
+
+    <h2 id="vapid">8. VAPID Keys — Push Notifications (opcional)</h2>
+    <pre><code>npx web-push generate-vapid-keys</code></pre>
+    <pre><code>VAPID_PUBLIC_KEY=BDFIalj3k...lF7omjaW0z4a3E
+VAPID_PRIVATE_KEY=a1b2c3d4e5...f6g7h8i9j0k</code></pre>
+
+    <h2 id="webhooks">9. SIEM Webhooks (opcional)</h2>
+    <h3>Slack</h3>
+    <ol class="steps"><li>api.slack.com/apps → <strong>Create New App → From scratch</strong> → "SCAUDIT SIEM" → <strong>Incoming Webhooks</strong> → crear webhook → <code>SIEM_WEBHOOK_SLACK</code>.</li></ol>
+    <h3>Email (Resend)</h3>
+    <pre><code>RESEND_API_KEY=re_xxxxxxxxxxxx
+SIEM_EMAIL_FROM=alerts@scaudit.com   # remitente verificado
+SIEM_EMAIL_TO=admin@tuempresa.com</code></pre>
+    <h3>PagerDuty + Splunk</h3>
+    <pre><code>SIEM_WEBHOOK_PAGERDUTY=https://events.pagerduty.com/v2/enqueue/
+SIEM_PAGERDUTY_ROUTING_KEY=xxxxxxxxx
+SIEM_WEBHOOK_SPLUNK=https://http-inputs-mysplunk.splunkcloud.com:8088/services/collector/event</code></pre>
+
+    <h2 id="env">10. Variables de Entorno — Referencia Completa</h2>
+    <h3>Obligatorias</h3>
+    <table>
+      <tr><th>Variable</th><th>Origen</th><th>Propósito</th></tr>
+      <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>Supabase → Settings → API</td><td>URL base</td></tr>
+      <tr><td><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code></td><td>Supabase → Settings → API</td><td>Anon key</td></tr>
+      <tr><td><code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>Supabase → Settings → API</td><td>Service role (bypass RLS)</td></tr>
+      <tr><td><code>DATABASE_URL</code></td><td>Supabase → pooler :6543</td><td>Conexión principal</td></tr>
+      <tr><td><code>DIRECT_URL</code></td><td>Supabase → direct :5432</td><td>Migraciones + workers</td></tr>
+      <tr><td><code>UPSTASH_REDIS_REST_URL</code></td><td>Upstash → REST URL</td><td>Rate limiting API</td></tr>
+      <tr><td><code>UPSTASH_REDIS_REST_TOKEN</code></td><td>Upstash → REST Token</td><td>Auth Redis</td></tr>
+      <tr><td><code>CRON_SECRET</code></td><td>Generada por ti</td><td>Protege endpoints de cron</td></tr>
+    </table>
+    <h3>Opcionales</h3>
+    <table>
+      <tr><th>Variable</th><th>Propósito</th></tr>
+      <tr><td><code>OPENROUTER_API_KEY</code></td><td>Modelos de IA (fallback a texto plano sin esto)</td></tr>
+      <tr><td><code>TRIGGER_SECRET_KEY</code></td><td>Background jobs</td></tr>
+      <tr><td><code>VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY</code></td><td>Push notifications</td></tr>
+      <tr><td><code>SIEM_WEBHOOK_SLACK / _PAGERDUTY / _SPLUNK</code></td><td>Alertas de seguridad</td></tr>
+      <tr><td><code>RESEND_API_KEY / SIEM_EMAIL_FROM / SIEM_EMAIL_TO</code></td><td>Alertas email</td></tr>
+      <tr><td><code>AUTH_EMAIL_ALLOWLIST</code></td><td>Emails (comma-separated) que <strong>saltan el rate limit del login</strong>. El owner (<code>palacios_juan@hotmail.com</code>) ya está incluido por defecto en código</td></tr>
+    </table>
+    <h3>Desarrollo</h3>
+    <table>
+      <tr><th>Variable</th><th>Propósito</th></tr>
+      <tr><td><code>NEXT_PUBLIC_DEV_BYPASS_AUTH=true</code></td><td>Saltea autenticación en dev (guard <code>NODE_ENV === 'development'</code>)</td></tr>
+      <tr><td><code>DB_ALLOW_INSECURE_SSL=true</code></td><td>Permite SSL inseguro en conexiones directas</td></tr>
+    </table>
+    <h3>Legado (compatibilidad)</h3>
+    <p><code>Bearer_API_KEY</code>, <code>GEMINI_API_KEY</code>, <code>XIAOMI_BASE_URL</code> — mantenidas pero reemplazadas por OpenRouter.</p>
+
+    <h2 id="dev-bypass">11. Dev Bypass Auth</h2>
+    <p>Para desarrollo local: <code>NEXT_PUBLIC_DEV_BYPASS_AUTH=true</code> permite navegar el dashboard sin login, crear proyectos con usuario sintético y probar todo sin Magic Links.</p>
+    <div class="box danger"><b>NUNCA en producción</b>El guard <code>NODE_ENV === 'development'</code> lo desactiva automáticamente en Vercel, pero no lo incluyas en las variables de entorno de producción.</div>
+
+    <h2 id="cicd">12. CI/CD y Deploy a Vercel</h2>
+    <h3>Secretos de GitHub Actions</h3>
+    <table>
+      <tr><th>Secreto</th><th>Propósito</th></tr>
+      <tr><td><code>CODECOV_TOKEN</code></td><td>Upload de cobertura</td></tr>
+      <tr><td><code>SCAUDIT_API_KEY</code></td><td>Tests de contrato</td></tr>
+    </table>
+    <h3>Deploy a Vercel</h3>
+    <pre><code>vercel connect
+# configurar env vars en Vercel Dashboard → Settings → Environment Variables
+vercel --prod</code></pre>
+    <p>Método rápido con CLI:</p>
+    <pre><code>vercel env add NEXT_PUBLIC_SUPABASE_URL
+vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+vercel env add SUPABASE_SERVICE_ROLE_KEY
+vercel env add DATABASE_URL
+vercel env add DIRECT_URL
+vercel env add UPSTASH_REDIS_REST_URL
+vercel env add UPSTASH_REDIS_REST_TOKEN
+vercel env add CRON_SECRET
+vercel env add OPENROUTER_API_KEY
+vercel env add AUTH_EMAIL_ALLOWLIST</code></pre>
+    <p><code>vercel.json</code> ya incluye: framework nextjs con standalone output, cron jobs (uptime, SIEM, health check) y headers de seguridad.</p>
+
+    <h2 id="troubleshoot">13. Solución de Problemas</h2>
+    <table>
+      <tr><th>Error</th><th>Solución</th></tr>
+      <tr><td><code>The "middleware" file convention is deprecated</code></td><td>Next.js 16 usa <code>proxy.ts</code>. Elimina <code>src/middleware.ts</code> si existe.</td></tr>
+      <tr><td><code>DIRECT_URL is missing</code></td><td>Copia <code>.env.example</code> → <code>.env.local</code> y llena <code>DIRECT_URL</code>.</td></tr>
+      <tr><td><code>password authentication failed</code></td><td>Password con caracteres especiales → URL encoding; proyecto pausado → reactivar; usar :5432 directo en DIRECT_URL.</td></tr>
+      <tr><td><code>relation "xxx" does not exist</code></td><td>Ejecuta <code>pnpm db:push</code>.</td></tr>
+      <tr><td><code>Failed to fetch</code> en Magic Link</td><td>Verificar URL/anon key; Site URL incluye localhost:3000; env vars en Vercel.</td></tr>
+      <tr><td><code>eval() is not supported</code></td><td>Limpia caché de Turbopack: <code>rm -rf .next && pnpm dev</code>.</td></tr>
+      <tr><td><code>Both middleware and proxy detected</code></td><td>Elimina <code>src/middleware.ts</code>.</td></tr>
+    </table>
+
+    <h2 id="postinstall">14. Verificación Post-Instalación</h2>
+    <pre><code># 1. Health check
+curl http://localhost:3000/api/public/v1/health
+# → {"status":"ok","services":{"redisConfigured":true,"dbConfigured":true}}
+
+# 2. Redis
+curl -s -X GET "$UPSTASH_REDIS_REST_URL/ping" -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN"
+
+# 3. AI
+curl -s -X POST https://openrouter.ai/api/v1/chat/completions \
+  -H "Authorization: Bearer $OPENROUTER_API_KEY" -H "Content-Type: application/json" \
+  -d '{"model":"google/gemini-2.0-flash-exp:free","messages":[{"role":"user","content":"ping"}],"max_tokens":5}'</code></pre>
+    <div class="box tip"><b>¿Todo funcionando?</b>El siguiente paso es crear tu primer proyecto y ejecutar un escaneo de inteligencia. Ve al dashboard → <strong>Nuevo Proyecto</strong> → dominio → <strong>Escanear Infraestructura Cibernética</strong>.</div>
+  </main>
+</div>
+</body>
+</html>

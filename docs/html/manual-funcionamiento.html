@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Funcionamiento Técnico — SCAUDIT Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "dark", themeVariables: { primaryColor: "#1e1b4b", primaryTextColor: "#e2e8f0", primaryBorderColor: "#6366f1", lineColor: "#6366f1", secondaryColor: "#052e16", tertiaryColor: "#111827" } });
+</script>
+<style>
+  :root { --bg:#060608; --fg:#e8e8f0; --card:#0d0d14; --border:#1e1e2e; --primary:#818cf8; --accent:#a3e635; --muted:#8b8b9e; --warn:#fbbf24; --danger:#f87171; --indigo:#6366f1; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--fg); font-family:'Segoe UI',-apple-system,'Inter',sans-serif; line-height:1.65; }
+  .layout { display:flex; min-height:100vh; }
+  nav { width:290px; border-right:1px solid var(--border); background:var(--card); position:sticky; top:0; height:100vh; overflow-y:auto; padding:1.4rem 1rem; flex-shrink:0; }
+  nav .brand { display:flex; align-items:center; gap:10px; margin-bottom:1.4rem; padding:0 .5rem; }
+  nav .brand .logo { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#6366f1,#818cf8); display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; font-size:15px; }
+  nav .brand b { font-size:.95rem; }
+  nav a.toc { display:block; padding:.4rem .6rem; border-radius:8px; color:var(--muted); text-decoration:none; font-size:.85rem; border-left:2px solid transparent; }
+  nav a.toc:hover { color:var(--fg); background:rgba(99,102,241,.08); }
+  nav a.toc.top { border-left-color:var(--primary); color:var(--primary); }
+  nav .sec { font-size:10px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); font-weight:800; padding:.8rem .6rem .3rem; }
+  main { flex:1; padding:2.5rem 3rem 5rem; max-width:1020px; }
+  .crumb { color:var(--muted); font-size:.82rem; margin-bottom:1.2rem; }
+  .crumb a { color:var(--primary); text-decoration:none; }
+  h1 { font-size:2rem; font-weight:800; letter-spacing:-.02em; margin-bottom:.4rem; }
+  h2 { font-size:1.4rem; font-weight:700; margin:2.6rem 0 .9rem; padding-bottom:.4rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  h2::before { content:""; width:22px; height:3px; background:var(--indigo); border-radius:99px; flex-shrink:0; }
+  h3 { font-size:1.08rem; font-weight:700; margin:1.6rem 0 .6rem; }
+  p { margin-bottom:.9rem; opacity:.92; }
+  ul, ol { margin:0 0 1rem 1.4rem; }
+  li { margin-bottom:.35rem; }
+  code { background:rgba(129,140,248,.12); color:#c7d2fe; padding:1px 6px; border-radius:5px; font-family:'JetBrains Mono','Consolas',monospace; font-size:.86em; }
+  pre { background:#0a0a12; border:1px solid var(--border); border-radius:12px; padding:1rem 1.2rem; overflow-x:auto; margin:1rem 0; font-family:'JetBrains Mono','Consolas',monospace; font-size:.83rem; line-height:1.55; color:#cbd5e1; }
+  pre code { background:none; padding:0; color:inherit; font-size:inherit; }
+  table { width:100%; border-collapse:collapse; margin:1rem 0 1.4rem; font-size:.88rem; }
+  th { text-align:left; background:rgba(129,140,248,.08); padding:.6rem .8rem; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-bottom:1px solid var(--border); }
+  td { padding:.6rem .8rem; border-bottom:1px solid var(--border); vertical-align:top; }
+  .box { border-radius:12px; padding:1rem 1.2rem; margin:1.2rem 0; border:1px solid; }
+  .box.tip { background:rgba(163,230,53,.06); border-color:rgba(163,230,53,.25); }
+  .box.warn { background:rgba(251,191,36,.06); border-color:rgba(251,191,36,.3); }
+  .box.info { background:rgba(129,140,248,.06); border-color:rgba(129,140,248,.25); }
+  .box b { display:block; margin-bottom:.3rem; font-size:.85rem; text-transform:uppercase; letter-spacing:.08em; }
+  .box.tip b { color:var(--accent); } .box.warn b { color:var(--warn); } .box.info b { color:var(--primary); }
+  .diagram { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1rem; overflow-x:auto; margin:1.2rem 0; }
+  .skeleton { background:#0a0a12; border:1px solid var(--border); border-radius:12px; padding:1.2rem; margin:1rem 0; font-family:'JetBrains Mono',monospace; font-size:.8rem; line-height:1.6; overflow-x:auto; color:#a5b4fc; }
+  .skeleton .cmt { color:#64748b; }
+  @media (max-width:900px){ .layout{flex-direction:column} nav{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border)} main{padding:1.5rem 1.2rem 3rem} }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav>
+    <div class="brand"><div class="logo">S</div><b>SCAUDIT Pro</b></div>
+    <a class="toc" href="index.html">← Centro de Documentación</a>
+    <div class="sec">Funcionamiento Técnico</div>
+    <a class="toc top" href="#arquitectura">1. Arquitectura general</a>
+    <a class="toc" href="#estructura">2. Estructura de código</a>
+    <a class="toc" href="#pipeline-scan">3. Pipeline de escaneo</a>
+    <a class="toc" href="#registry">4. Tool Registry consolidado</a>
+    <a class="toc" href="#executors">5. Executors tipados</a>
+    <a class="toc" href="#history">6. History DNS/WHOIS</a>
+    <a class="toc" href="#siem">7. SIEM y alertas</a>
+    <a class="toc" href="#anomalies">8. Anomaly Detection</a>
+    <a class="toc" href="#plugins">9. Plugin Marketplace</a>
+    <a class="toc" href="#adversary">10. Adversary Simulation</a>
+    <a class="toc" href="#ai">11. AI Router y reportes</a>
+    <a class="toc" href="#errores">12. Manejo de errores</a>
+    <a class="toc" href="#cron">13. Background jobs</a>
+    <a class="toc" href="#seguridad">14. Seguridad y RLS</a>
+  </nav>
+
+  <main>
+    <div class="crumb"><a href="index.html">Documentación</a> / Manual de Funcionamiento Técnico</div>
+    <h1>⚙️ Manual de Funcionamiento Técnico</h1>
+    <p>Documento detallado del funcionamiento interno de SCAUDIT Pro: arquitectura, skeleton de módulos, pipelines de datos, diagramas de secuencia y decisiones de diseño.</p>
+
+    <h2 id="arquitectura">1. Arquitectura general</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    subgraph Edge["Vercel Edge — src/proxy.ts"]
+        SEC["CSP nonce · HSTS · X-Frame · Permissions-Policy"]
+        RATELIMIT["Rate Limit Global por IP"]
+        CORS["CORS allowlist + preflight"]
+    end
+    subgraph Next["Next.js 16 App Router"]
+        UI["Dashboard tabs (lazy-loaded)"]
+        API["50+ API Routes"]
+        SA["Server Actions"]
+        DOCS["Docs site (markdown)"]
+    end
+    subgraph Intel["Server Intelligence"]
+        REG["core/tool-registry.ts<br/>registerTool() único"]
+        DISP["core/dispatcher.ts"]
+        EXEC["executors/*.ts (tipados)"]
+        SCANRESP["core/scan-response.ts (tipado)"]
+        HIST["history/ (DNS + WHOIS)"]
+        ADV["adversary/ (12 escenarios)"]
+        PLUG["plugins/ (registry + executor)"]
+        ANOM["anomaly/ (Z-score engine)"]
+    end
+    subgraph Data["Data Layer"]
+        PG["Supabase Postgres<br/>RLS + 35+ tablas"]
+        REDIS["Upstash Redis<br/>rate limit + cache"]
+    end
+    subgraph Jobs["Trigger.dev"]
+        T_SIEM["siem c/5min"]
+        T_DISC["discovery c/6h"]
+        T_ANOM["anomalies c/15min"]
+        T_ADV["adversary c/6h"]
+        T_KEY["api-key-expiry diario"]
+    end
+    subgraph AI["OpenRouter free pool"]
+        ROUTER["ai-router.ts<br/>callAIWithFallback"]
+    end
+    Edge --> Next
+    API --> Intel
+    API --> ROUTER
+    Intel --> PG
+    Intel --> REDIS
+    Jobs --> PG
+    Jobs --> REDIS
+    T_SIEM -->|Slack/Email/PagerDuty/Splunk| EXT["Canales externos"]
+</pre>
+    </div>
+
+    <h2 id="estructura">2. Estructura de código</h2>
+    <div class="skeleton">
+<span class="cmt">// Skeleton de alto nivel — src/</span>
+src/
+├── app/                          <span class="cmt"># Next.js App Router</span>
+│   ├── actions/                  <span class="cmt"># Server Actions (audits, projects, reports)</span>
+│   ├── api/                      <span class="cmt"># 50+ API Routes</span>
+│   │   ├── ai/                   <span class="cmt">#   copilot, report, healthcheck</span>
+│   │   ├── intelligence/         <span class="cmt">#   scans, runs, brief, copilot, history,</span>
+│   │   │                         <span class="cmt">#   anomalies, adversary, live, discovery, drift</span>
+│   │   ├── plugins/              <span class="cmt">#   marketplace</span>
+│   │   ├── benchmarking/         <span class="cmt">#   percentiles y radar</span>
+│   │   ├── security/             <span class="cmt">#   audit-logs, siem-*, csp-report</span>
+│   │   ├── public/v1/            <span class="cmt">#   REST API pública (API Key)</span>
+│   │   └── api-keys/             <span class="cmt">#   CRUD + usage</span>
+│   ├── components/tabs/          <span class="cmt"># Overview, Intelligence, Reports, Monitoring,</span>
+│   │                             <span class="cmt">#   Keywords, Performance, Adversary, Marketplace, Settings</span>
+│   └── docs/                     <span class="cmt"># Docs site (react-markdown + sidebar)</span>
+├── features/intelligence/        <span class="cmt"># IntelligenceShell + store zustand</span>
+├── server/
+│   ├── ai/ai-router.ts           <span class="cmt"># Model pool + fallback + cache</span>
+│   ├── intelligence/
+│   │   ├── core/                 <span class="cmt"># dispatcher, tool-registry, scan-response,</span>
+│   │   │                         <span class="cmt">#   cache, circuit-breaker, rate-limiter</span>
+│   │   ├── executors/            <span class="cmt"># dns, network, email, osint, website,</span>
+│   │   │                         <span class="cmt">#   technology-profiler, bucket-detector, dns-advanced</span>
+│   │   ├── history/              <span class="cmt"># dns-history, whois-history, orchestrator</span>
+│   │   ├── adversary/            <span class="cmt"># catalog (12), scenario-runner</span>
+│   │   ├── anomaly/              <span class="cmt"># detector (Z-score)</span>
+│   │   ├── plugins/              <span class="cmt"># registry, plugin-executor</span>
+│   │   ├── security/             <span class="cmt"># egress-guard (SSRF), API auth</span>
+│   │   └── types/                <span class="cmt"># executor.types.ts (interfaces tipadas)</span>
+│   └── security/                 <span class="cmt"># siem-exporter, dns-change-alert, whois-change-alert</span>
+├── shared/
+│   ├── db/schemas/               <span class="cmt"># Drizzle: 35+ tablas</span>
+│   ├── lib/                      <span class="cmt"># ratelimit, auth, audit-log, error-handler, logger</span>
+│   └── config/env.ts             <span class="cmt"># validación de env vars</span>
+├── trigger/                      <span class="cmt"># Trigger.dev tasks</span>
+└── proxy.ts                      <span class="cmt"># Edge middleware (CSP, rate limit, CORS)</span>
+    </div>
+
+    <h2 id="pipeline-scan">3. Pipeline de escaneo</h2>
+    <div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    participant UI as IntelligenceTab
+    participant API as POST /api/intelligence
+    participant REG as Tool Registry
+    participant DIS as Dispatcher
+    participant EX as Executor (tipado)
+    participant DB as Supabase
+    UI->>API: tools[] + target
+    API->>REG: getExecutor(toolId)
+    REG-->>API: Executor
+    API->>DIS: executeTool(ctx, input)
+    DIS->>DIS: lazy-init plugins si toolId=plugin.*
+    DIS->>EX: execute(ctx, input)
+    EX->>EX: egress-guard (assertPublicHostname)
+    EX-->>DIS: ExecutionResult{output, findings}
+    DIS-->>API: resultados crudos
+    API->>API: buildResultMap + getPrimaryIp
+    API->>API: buildScanResponse (lecturas tipadas)
+    API->>DB: persist investigation + findings
+    API-->>UI: response tipado {dns, ssl, email, headers, ...}
+</pre>
+    </div>
+    <h3>Flujo de hallazgos</h3>
+    <ol>
+      <li><strong>Ejecución</strong>: cada executor devuelve <code>{ success, output, findings, error? }</code>.</li>
+      <li><strong>Mapeo</strong>: <code>buildResultMap()</code> arma un <code>Map&lt;toolId, output&gt;</code>.</li>
+      <li><strong>Lectura tipada</strong>: <code>scan-response.ts</code> lee con accessors tipados (ej. <code>DnsLookupOutput</code> → claves <code>a/aaaa/mx/ns/txt/soa</code> en minúscula).</li>
+      <li><strong>Score</strong>: risk-engine agrega severidad/confianza → score 0-100.</li>
+      <li><strong>Persistencia</strong>: investigation + findings + asset changes en Supabase.</li>
+    </ol>
+    <div class="box info"><b>Nota de keys</b>Los executors devuelven claves en <strong>minúscula</strong> (<code>a</code>, <code>aaaa</code>). El scan-response tipado lee esas claves exactas — un bug histórico leía mayúsculas (<code>.A</code>) y dejaba la sección DNS vacía; quedó corregido y con test de contrato.</div>
+
+    <h2 id="registry">4. Tool Registry consolidado</h2>
+    <p>El registro de herramientas se consolidó (C05) en un único módulo con <code>registerTool()</code> como entry point:</p>
+    <table>
+      <tr><th>Función</th><th>Propósito</th></tr>
+      <tr><td><code>registerTool({executor, definition})</code></td><td>Registra plugins dinámicos con guard de colisión contra tools nativas</td></tr>
+      <tr><td><code>unregisterTool(id)</code></td><td>Desregistra plugins al desinstalar</td></tr>
+      <tr><td><code>getExecutor(id)</code></td><td>Resuelve nativo → plugin dinámico</td></tr>
+      <tr><td><code>listToolDefinitions()</code></td><td>Devuelve 34 nativos + 9 orphans + dinámicos</td></tr>
+      <tr><td><code>isKnownTool(id)</code></td><td>Guarda contra colisiones nativas</td></tr>
+    </table>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    NATIVE["NATIVE_TOOLS (34)\ncon executor real"] --> LIST["listToolDefinitions()"]
+    ORPHAN["ORPHAN_DEFINITIONS (9)\nsin executor"] --> LIST
+    PLUG["dynamicToolDefinitions (plugins)"] --> LIST
+    LIST --> RUN["Runnable filter (34)"]
+    EXEC["executorStore Map"] --> RES["getExecutor()"]
+    PREG["pluginExecutorRegistry"] --> RES
+    RES --> DISP["dispatcher"]
+</pre>
+    </div>
+    <p><strong>Orphans (9)</strong>: definidos en el registry pero sin executor propio — se ejecutan con fallbacks o se marcan como "no implementado". Son: dns.dnssec, dns.propagation, dns.zone, website.redirects, website.cookies, website.csp (implementados en la fase de consolidación) y 3 adicionales de catálogo.</p>
+
+    <h2 id="executors">5. Executors tipados</h2>
+    <p>Los executors se tiparon con <code>ToolExecutor&lt;TInput, TOutput&gt;</code> (C06/C07), eliminando el <code>any</code>:</p>
+    <div class="skeleton">
+<span class="cmt">// src/server/intelligence/types/executor.types.ts</span>
+interface DnsLookupOutput {
+  domain: string;
+  a: string[];           <span class="cmt">// IPv4</span>
+  aaaa: string[];        <span class="cmt">// IPv6</span>
+  mx: MxRecord[];        <span class="cmt">// {priority, exchange}</span>
+  ns: string[];
+  txt: string[];
+  soa: { nsname; hostmaster; serial; refresh; retry; expire; minttl } | null;
+}
+
+interface TlsScanOutput {
+  host: string;
+  subject: string;
+  issuer: string;
+  validFrom: string;
+  validTo: string;
+  daysRemaining: number;
+  protocol: string | undefined;
+  cipher: string;
+}
+
+interface ExecutionResult&lt;TOutput&gt; {
+  success: boolean;
+  output: TOutput;
+  findings: Finding[];
+  error?: string;
+}
+    </div>
+    <table>
+      <tr><th>Grupo</th><th>Tipados</th><th>Estado</th></tr>
+      <tr><td>DNS</td><td>dns.lookup, dns.mx, dns.txt, dns.ns</td><td>✅ Interfaces concretas</td></tr>
+      <tr><td>TLS</td><td>tls.scan</td><td>✅ TlsScanOutput (subject/issuer/daysRemaining)</td></tr>
+      <tr><td>Red</td><td>ping, reverse_dns, geoip, traceroute, asn, cdn, waf, reverse_ip, reputation</td><td>✅ Interfaces concretas</td></tr>
+      <tr><td>Resto</td><td>headers, security_headers, robots, email.*, osint.*</td><td>🟡 ToolExecutor&lt;T, any&gt; (fase siguiente)</td></tr>
+    </table>
+
+    <h2 id="history">6. History DNS/WHOIS</h2>
+    <div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    participant EX as Executor (dns/whois)
+    participant ORC as history/orchestrator.ts
+    participant DET as detectDnsChanges / detectWhoisChanges
+    participant DB as Supabase
+    participant AL as dns-change-alert / whois-change-alert
+    EX->>ORC: processDnsResults() / persistWhoisSnapshot()
+    ORC->>DB: INSERT dns_history / whois_history
+    ORC->>DET: diff vs último snapshot
+    DET-->>ORC: cambios detectados
+    ORC->>DB: INSERT asset_change
+    ORC->>AL: cambios de registrador / expiración / NS
+    AL->>DB: INSERT siem_alert_logs
+    AL->>EXT: Slack / Email / PagerDuty
+</pre>
+    </div>
+    <p><strong>Detección de cambios:</strong></p>
+    <ul>
+      <li><strong>DNS</strong>: nameservers, registros MX que desaparecen, SOA serial, TTL.</li>
+      <li><strong>WHOIS</strong>: cambio de registrador, fecha de expiración próxima (impulso de alerta), nameservers anteriores.</li>
+    </ul>
+    <p><strong>UI</strong>: HistoryPanel en IntelligenceTab (timeline con diff visual) y pestañas "WHOIS Alerts" / "DNS Alerts" en <code>/security/audit</code> con diff previousValue → currentValue y canal de entrega.</p>
+
+    <h2 id="siem">7. SIEM y alertas multi-canal</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    EV["Security Event"] -->|logSecurityEvent| AUD["security_audit_logs"]
+    AUD --> EXP["SIEM Exporter c/5min"]
+    EXP --> PAT{"Pattern match?"}
+    PAT -->|Open Redirect Attack| FMT["WEBHOOK_FORMATTERS"]
+    PAT -->|Rate Limit Bypass| FMT
+    PAT -->|AI Model Failure| FMT
+    PAT -->|CSP Spike| FMT
+    PAT -->|Auth Failure Burst| FMT
+    PAT -->|API Key Expiry| FMT
+    PAT -->|DNS/WHOIS Change| FMT
+    FMT --> SL["Slack"]
+    FMT --> EM["Email (Resend)"]
+    FMT --> PD["PagerDuty"]
+    FMT --> SP["Splunk HEC"]
+    FMT --> PU["Push Notification"]
+    SL --> DEL["siem_alert_logs (delivery status)"]
+</pre>
+    </div>
+
+    <h2 id="anomalies">8. Anomaly Detection</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+    CRON["Trigger.dev c/15min"] --> RUN["runAllDetections()"]
+    RUN --> LAT["detectLatencyAnomalies (24h window)"]
+    RUN --> ERR["detectErrorRateAnomalies (por hora)"]
+    LAT --> Z["calculateZScore"]
+    ERR --> Z
+    Z --> T{"|Z| umbral"}
+    T -->|">2"| INFO["severity info"]
+    T -->|">3"| WARN["severity warning"]
+    T -->|">5"| CRIT["severity critical"]
+    INFO --> P["persistAnomaly → anomaly_detections"]
+    WARN --> P
+    CRIT --> P
+    P --> API["GET /api/intelligence/anomalies"]
+</pre>
+    </div>
+
+    <h2 id="plugins">9. Plugin Marketplace</h2>
+    <div class="skeleton">
+<span class="cmt">// Integración con el dispatcher — plugin-executor.ts</span>
+PluginPackage (DB)
+  ├── createPluginExecutor() → ToolExecutor
+  │     ├── buildZodSchema(): JSONB → Zod
+  │     ├── PLUGIN_TO_NATIVE_MAP (5 plugins → executors nativos)
+  │     └── BUILTIN_PLUGIN_RUNNERS (3 runners custom)
+  ├── createPluginToolDefinition() → IntelligenceToolDefinition
+  ├── registerTool({executor, definition})   <span class="cmt">// entry point único (C05)</span>
+  └── dispatcher.executeTool() — lazy init si toolId = "plugin.*"
+    </div>
+    <table>
+      <tr><th>Nivel</th><th>Mecanismo</th><th>Cobertura</th></tr>
+      <tr><td>1</td><td><code>PLUGIN_TO_NATIVE_MAP</code></td><td>tech-stack-detector, whois-enricher, port-scanner, certificate-monitor, email-reputation</td></tr>
+      <tr><td>2</td><td><code>BUILTIN_PLUGIN_RUNNERS</code></td><td>subdomain-enumerator, threat-intel-feed, compliance-scanner</td></tr>
+      <tr><td>3</td><td>Mensaje informativo</td><td>Plugins sin mapping</td></tr>
+    </table>
+
+    <h2 id="adversary">10. Adversary Simulation</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    UI["AdversaryTab"] --> API["POST /api/intelligence/adversary"]
+    CRON2["Trigger.dev c/6h"] --> RUN2["runScenario()"]
+    API --> RUN2
+    RUN2 --> CAT["catalog.ts (12 escenarios)"]
+    CAT --> SC["scenario-runner.ts"]
+    SC --> RES2["reportScenarioResult()"]
+    RES2 --> DB2["adversary_runs"]
+    DB2 --> UI2["cards + filtros + badges"]
+</pre>
+    </div>
+    <p><strong>12 escenarios</strong> MITRE ATT&CK cubriendo 8 tácticas (TA0001, TA0002, TA0003, TA0006, TA0007, TA0008, TA0009, TA0040).</p>
+
+    <h2 id="ai">11. AI Router y reportes</h2>
+    <div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    participant UI as ReportsTab
+    participant API as POST /api/ai/report
+    participant AR as ai-router.ts
+    participant OR as OpenRouter
+    UI->>API: projectId + periodo
+    API->>API: fetch GSC/GA4 + health score
+    API->>AR: callAIWithFallback({taskType:'seo-report'})
+    loop hasta 3 modelos (20s c/u)
+        AR->>OR: chat/completions (modelo :free)
+        OR-->>AR: respuesta o error
+    end
+    AR-->>API: content + modelUsed
+    API-->>UI: report (markdown + mermaid + datos)
+    Note over UI: barra de progreso tope 90%<br/>100% solo con informe real
+    alt fallback
+        API-->>UI: generateResilientReport (isFallback:true)
+    end
+</pre>
+    </div>
+    <ul>
+      <li><strong>Timeout</strong>: 20s por modelo × 3 = 60s peor caso &lt; <code>maxDuration=120</code>.</li>
+      <li><strong>Reporte</strong>: el prompt pide un <code>mermaid flowchart</code> en el Plan de Acción; el UI extrae bloques con <code>extractMermaidBlocks()</code> y los renderiza con <code>MermaidBlock</code> (dynamic import).</li>
+      <li><strong>Gráficos</strong>: <code>tableRowsToChartData()</code> convierte la tabla de rendimiento en datos para el bar chart recharts.</li>
+      <li><strong>Fallback resiliente</strong>: sin API key o error, genera reporte precompilado con métricas reales.</li>
+    </ul>
+
+    <h2 id="errores">12. Manejo de errores centralizado</h2>
+    <div class="skeleton">
+<span class="cmt">// src/shared/lib/error-handler.ts</span>
+class AppError extends Error { statusCode; code; details? }
+class NotFoundError extends AppError {}       <span class="cmt">// 404</span>
+class ValidationError extends AppError {}     <span class="cmt">// 400</span>
+class AuthError extends AppError {}           <span class="cmt">// 401/403</span>
+class RateLimitError extends AppError {}      <span class="cmt">// 429</span>
+
+const withErrorHandler = (handler) => async (req) =&gt; {
+  try { return await handler(req); }
+  catch (err) {
+    const appErr = toAppError(err);
+    logError(appErr, req);          <span class="cmt">// logger estructurado</span>
+    return NextResponse.json({ error: appErr.message, code: appErr.code },
+                             { status: appErr.statusCode });
+  }
+};
+    </div>
+    <p>Combinable con <code>withRateLimit(config, handler)</code> para proteger rutas con rate limiting + errores tipados (headers <code>RateLimit-*</code>).</p>
+
+    <h2 id="cron">13. Background jobs (Trigger.dev)</h2>
+    <table>
+      <tr><th>Task</th><th>Schedule</th><th>Qué hace</th></tr>
+      <tr><td>siem.trigger.ts</td><td>c/5 min</td><td>Exporter SIEM + heartbeat</td></tr>
+      <tr><td>discovery.trigger.ts</td><td>c/6h</td><td>DNS brute + CT logs + shadow assets</td></tr>
+      <tr><td>anomaly.trigger.ts</td><td>c/15 min</td><td>Detección Z-score</td></tr>
+      <tr><td>adversary.trigger.ts</td><td>c/6h</td><td>Simulación de adversarios</td></tr>
+      <tr><td>api-key-expiry.trigger.ts</td><td>diario 09:00 UTC</td><td>Alertas de expiración de keys</td></tr>
+      <tr><td>audit / monitoring / uptime / webhook</td><td>bajo demanda / diario</td><td>Auditorías, monitoreo, uptime, webhooks</td></tr>
+    </table>
+
+    <h2 id="seguridad">14. Seguridad y RLS</h2>
+    <ul>
+      <li><strong>Row Level Security</strong>: políticas en todas las tablas con <code>withRLS()</code>; defensa en profundidad contra fugas entre tenants.</li>
+      <li><strong>Egress Guard</strong>: validación CIDR matemática IPv4/IPv6 (16 rangos privados + 7 IPv6), <code>assertPublicHostname()</code> y <code>safeFetch()</code> con timeout y redirect validado.</li>
+      <li><strong>Rate limiting</strong>: decorator genérico con Upstash Redis, headers estándar, fail-closed en prod.</li>
+      <li><strong>CSP</strong>: nonce por request + strict-dynamic + report endpoint.</li>
+      <li><strong>Índices compuestos</strong>: migraciones 0014/0015 con índices en FK y consultas agregadas (GROUP BY en SQL, sin descargar tablas completas a JS).</li>
+    </ul>
+    <div class="box tip"><b>Más detalles</b>Consulta <a href="manual-instalacion.html" style="color:var(--primary)">el manual de instalación</a> para despliegue y <a href="manual-usuario.html" style="color:var(--primary)">el manual de usuario</a> para el uso del producto.</div>
+  </main>
+</div>
+</body>
+</html>

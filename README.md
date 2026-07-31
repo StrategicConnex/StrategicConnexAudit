@@ -47,6 +47,14 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
   - [Security Audit Dashboard](#-security-audit-dashboard)
   - [AI Health Dashboard](#-ai-health-dashboard)
   - [Push Notifications](#-push-notifications)
+  - [PWA Instalable (P3.1)](#-pwa-instalable-p31)
+  - [Anomaly Detection (P3.2)](#-anomaly-detection-p32)
+  - [Adversary Simulation (P3.3)](#-adversary-simulation-p33)
+  - [Plugin Marketplace (P3.4)](#-plugin-marketplace-p34)
+  - [Multi-language (P3.5)](#-multi-language-p35)
+  - [Benchmarking (P3.6)](#-benchmarking-p36)
+  - [Calidad & Arquitectura](#-calidad--arquitectura)
+- [Documentación HTML](#-documentación-html)
 - [Instalación](#-instalación)
 - [Configuración](#-configuración)
 - [Scripts](#-scripts)
@@ -78,7 +86,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **OSINT**: shodan queries, email breach detection, reverse DNS
 - **Análisis de drift**: detección de cambios en la postura de seguridad a lo largo del tiempo
 - **Risk Engine**: scoring de vulnerabilidades con severidad y confianza
-- **Tool Registry**: 25+ herramientas de inteligencia disponibles con rate limiting y caching
+- **Tool Registry**: 34+ herramientas de inteligencia disponibles con rate limiting y caching
 - **Protección SSRF**: `egress-guard` con validación CIDR matemática IPv4/IPv6
 - **Mapa Geo interactivo**: visualización GeoIP de activos con Leaflet.js
 
@@ -131,6 +139,27 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Uptime monitoring**: checks periódicos con Vercel Cron + Trigger.dev
 - **Alertas de drift**: detección de cambios en infraestructura
 - **AI Health Dashboard**: gráficos de salud por modelo, latencia promedio diaria, eventos de fallo
+- **Live Streaming Metrics** 🆕: barra flotante con uptime %, latencia y findings en vivo (polling 15s)
+- **Benchmarking** 🆕: percentiles P25/P75/P95 vs industria con radar chart recharts
+- **Anomaly Detection** 🆕: moving Z-score sobre latencia y error rate (|Z|>2/3/5), cron cada 15 min
+
+### 📱 PWA & Multi-language (NUEVO)
+- **PWA instalable**: manifest.json, service worker con estrategias de caché, offline page, push notifications
+- **Botón de instalación nativa**: `beforeinstallprompt` + `appinstalled` en el dashboard header
+- **i18n completo**: `next-intl` con `es`/`en`, 650+ keys, 11/11 tabs migrados + prompts de IA bilingües
+- **LanguageSwitcher**: toggle es/en con detección por cookie → Accept-Language → default `es`
+
+### 🛡️ Adversary Simulation (NUEVO)
+- **12 escenarios MITRE ATT&CK** (Atomic Red Team style): Default Credentials, SQLi/WAF Probe, PowerShell Bypass, Web Shell, Password Spray, LSASS Dump, LLMNR Poison, Port Scan, RDP Brute Force, Cloud Exfiltration, Backup Deletion
+- **Engine**: `scenario-runner.ts` con `runScenario()` + `reportScenarioResult()`
+- **AdversaryTab**: dashboard con filtros, cards de escenarios y ejecución
+- **Cron automático**: ejecución cada 6h via Trigger.dev
+
+### 🔌 Plugin Marketplace (NUEVO)
+- **8 plugins oficiales**: subdomain-enumerator, port-scanner, tech-stack-detector, threat-intel-feed, email-reputation, compliance-scanner, whois-enricher, certificate-monitor
+- **ToolExecutor adapter**: los plugins se ejecutan como herramientas nativas desde IntelligenceTab
+- **3 niveles de fallback**: executor nativo → built-in runner → mensaje informativo
+- **Lazy init**: `dispatcher.executeTool()` inicializa plugins bajo demanda, 0 overhead para tools nativas
 
 ### 🔐 Autenticación
 - **Magic Link**: login sin contraseña via Supabase Auth
@@ -149,14 +178,29 @@ Basado en análisis competitivo de 10 herramientas (Shodan, Censys, SecurityTrai
 |------|-------|------------|---|
 | Fase 0 — Cimientos | 15 | 15 | ✅ 100% |
 | Fase 1 — P0 Fundación | 3 | 3 | ✅ **100%** |
-| Fase 2 — P1 Core Features | 6 | 3 | 🟡 50% |
-| Fase 3 — P2 UX/Dashboard | 6 | 1 | 🟢 17% |
-| Fase 4 — P3 Deseable | 4 | 0 | ⬜ 0% |
-| **Total** | **34** | **22** | **65%** |
+| Fase 2 — P1 Core Features | 6 | 6 | ✅ **100%** |
+| Fase 3 — P2 UX/Dashboard | 6 | 6 | ✅ **100%** |
+| Fase 4 — P3 Deseable | 6 | 6 | 🟢 **100%** |
+| **Total** | **36** | **36** | **✅ 100%** |
 
-**Próximo:** P1.4 Webhooks por proyecto · P1.5 Scheduled Scanning · P2.2 Custom Dashboards
+> 🎉 **Todas las fases del roadmap están completadas (36/36 items).** SCAUDIT Pro es **open source y no se monetizará** — los planes free/pro/business/enterprise son exclusivamente para rate limiting interno, sin Stripe ni facturación.
 
 > 📖 Ver plan completo: [`docs/improvements/ROADMAP.md`](./docs/improvements/ROADMAP.md) · Análisis competitivo: [`docs/improvements/COMPETITIVE-ANALYSIS.md`](./docs/improvements/COMPETITIVE-ANALYSIS.md) · Changelog: [`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
+
+---
+
+## 📚 Documentación HTML
+
+Documentación completa en formato **HTML** con diagramas Mermaid, skeletons de código y gráficos (abre cada archivo en cualquier navegador):
+
+| Documento | Descripción |
+|-----------|-------------|
+| [Centro de Documentación](docs/html/index.html) | Hub con navegación y diagrama de arquitectura de alto nivel |
+| [Manual de Instalación](docs/html/manual-instalacion.html) | De cero a servidor corriendo: Supabase, Upstash, OpenRouter, Trigger.dev, VAPID, SIEM |
+| [Manual de Usuario Final](docs/html/manual-usuario.html) | Guía de uso completa: dashboard, inteligencia, reportes IA, adversary, plugins, PWA |
+| [Manual de Funcionamiento Técnico](docs/html/manual-funcionamiento.html) | Arquitectura, pipeline de escaneo, executors tipados, history DNS/WHOIS, SIEM |
+
+> ℹ️ **Nota:** estos archivos se abren localmente desde el repositorio. El sitio `scaudit.vercel.app/docs` renderiza los Markdown de `docs/` (instalación, API, seguridad, roadmap).
 
 ---
 
@@ -212,8 +256,7 @@ src/server/
 │   └── public-router.ts          #   withPublicApi middleware (API Key auth)
 ├── intelligence/
 │   ├── core/                     #   Dispatcher, cache, circuit-breaker, rate-limiter
-│   ├── discovery/                #   🆕 DNS brute force, CT monitor, shadow detection
-│   ├── executors/                #   DNS, network, email, OSINT, website (25+ tools)
+│   ├── discovery/                #   🆕 DNS brute force, CT monitor, shadow detection│   ├── executors/                 #   DNS, network, email, OSINT, website (34+ tools)
 │   ├── mitre/                    #   🆕 MITRE ATT&CK mapping + coverage
 │   ├── registry/                 #   Tool registry + policies
 │   └── security/                 #   Egress guard (SSRF protection)
@@ -316,7 +359,7 @@ src/
 │   ├── intelligence/
 │   │   ├── core/                 #     Dispatcher, cache, circuit-breaker
 │   │   ├── discovery/            #     🆕 DNS brute, CT monitor, shadow detector
-│   │   ├── executors/            #     25+ intelligence tools
+│   │   ├── executors/            #     34+ intelligence tools
 │   │   ├── mitre/                #     🆕 MITRE ATT&CK mapping
 │   │   └── security/             #     Egress guard
 │   └── security/                 #     SIEM exporter, API key expiry alerts 🆕
@@ -605,6 +648,160 @@ Sistema de notificaciones push al navegador:
 
 ---
 
+### 📱 PWA Instalable (P3.1)
+
+```mermaid
+flowchart LR
+    A[manifest.json] --> B[Service Worker sw.js]
+    B --> C{Cache Strategy}
+    C -->|API| D[Network-first]
+    C -->|Assets| E[Cache-first]
+    C -->|Offline| F[offline page]
+    A --> G[InstallPwaButton]
+    G -->|beforeinstallprompt| H[Instalación nativa]
+    B --> I[Push events]
+```
+
+App instalable con modo standalone, soporte offline y push notifications:
+- **manifest.json**: `display: standalone`, shortcuts, launch_handler
+- **sw.js**: network-first para APIs, cache-first para assets, offline fallback
+- **InstallPwaButton**: captura `beforeinstallprompt` + `appinstalled` + dismiss
+- **Offline page**: ruta `/offline` con diseño SCAUDIT dark
+
+---
+
+### 🕵️ Anomaly Detection (P3.2)
+
+```mermaid
+flowchart LR
+    A[Trigger.dev cada 15 min] --> B[runAllDetections]
+    B --> C[Latencia 24h]
+    B --> D[Error rate/hora]
+    C --> E[calculateZScore]
+    D --> E
+    E -->|Z>2| F[info]
+    E -->|Z>3| G[warning]
+    E -->|Z>5| H[critical]
+    F --> I[persistAnomaly → anomaly_detections]
+    G --> I
+    H --> I
+```
+
+Detección estadística de anomalías (sin dependencias ML externas) sobre métricas de uptime:
+- **Moving Z-score** con ventana de 24h
+- **Métricas**: latencia (`uptime_logs.responseTimeMs`) y error rate (`intelligence_run_events`)
+- **Severidad**: |Z|>2 info · |Z|>3 warning · |Z|>5 critical
+- **API**: `GET /api/intelligence/anomalies` con filtros por proyecto/métrica/severidad
+
+---
+
+### ⚔️ Adversary Simulation (P3.3)
+
+```mermaid
+flowchart LR
+    A[AdversaryTab] --> B[POST /api/intelligence/adversary]
+    B --> C[scenario-runner.ts]
+    C --> D{12 escenarios MITRE}
+    D --> E[Default Credentials]
+    D --> F[Password Spray]
+    D --> G[RDP Brute Force]
+    D --> H[Web Shell]
+    D --> I[SQLi / WAF Probe]
+    C --> J[reportScenarioResult]
+    J --> K[adversary_runs table]
+    A --> L[Trigger.dev c/6h]
+```
+
+Simulación de adversarios estilo Atomic Red Team:
+- **12 escenarios** MITRE ATT&CK cubriendo 8 tácticas
+- **Ejecución on-demand** desde el dashboard + **cron cada 6h**
+- **Resultados** persistidos en `adversary_runs` con status y findings
+
+---
+
+### 🔌 Plugin Marketplace (P3.4)
+
+```mermaid
+flowchart LR
+    A[MarketplaceTab] --> B[GET /api/plugins]
+    B --> C[plugin_packages table]
+    A --> D[POST /api/plugins → install]
+    D --> E[registerSinglePluginExecutor]
+    E --> F[ToolExecutor adapter]
+    F --> G{3 fallback levels}
+    G -->|1| H[PLUGIN_TO_NATIVE_MAP]
+    G -->|2| I[BUILTIN_PLUGIN_RUNNERS]
+    G -->|3| J[Mensaje informativo]
+    A --> K[IntelligenceTab ejecuta plugin.*]
+```
+
+Marketplace de plugins con ejecución real como herramientas nativas:
+- **8 plugins oficiales**: subdomain-enumerator, port-scanner, tech-stack-detector, threat-intel-feed, email-reputation, compliance-scanner, whois-enricher, certificate-monitor
+- **3 niveles de fallback** + lazy init en el dispatcher (0 overhead para tools nativas)
+- **withRLS** en todas las operaciones de `plugin_instances`
+
+---
+
+### 🌐 Multi-language (P3.5)
+
+```mermaid
+flowchart LR
+    A[Request] --> B[i18n/request.ts]
+    B --> C{Cookie scaudit-lang?}
+    C -->|sí| D[idioma elegido]
+    C -->|no| E{Accept-Language}
+    E -->|en| F[en]
+    E -->|otro| G[es default]
+    D --> H[NextIntlClientProvider]
+    F --> H
+    G --> H
+    H --> I[11/11 tabs traducidos]
+```
+
+Internacionalización completa con `next-intl` v4 (cookie-based, sin restructuring de URLs):
+- **es + en**, 650+ keys en `messages/`
+- **11/11 tabs migrados**: login, sidebar, IntelligenceTab, OverviewTab, ProjectsTab, ReportsTab, SettingsTab, PerformanceTab, MonitoringTab, KeywordsTab, AdversaryTab
+- **Prompts de IA bilingües** en `ai-router.ts` (4 task types)
+- **LanguageSwitcher** en el header del dashboard
+
+---
+
+### 📊 Benchmarking (P3.6)
+
+```mermaid
+flowchart LR
+    A[GET /api/benchmarking] --> B[Aggregations SQL]
+    B --> C[Uptime stats]
+    B --> D[Latencia stats]
+    B --> E[Health score stats]
+    C --> F[Percentiles P25/P75/P95]
+    D --> F
+    E --> F
+    F --> G[ScoreGauge con badge]
+    F --> H[BenchmarkingSection radar chart]
+    G --> I[OverviewTab]
+    H --> I
+```
+
+Comparación de tu proyecto vs la industria:
+- **Aggregations en SQL** (GROUP BY, sin descargar tablas completas a JS)
+- **Radar chart** recharts con 3 dimensiones normalizadas (uptime, latencia invertida, health score)
+- **Percentiles** P25/P75/P95 + badge en ScoreGauge
+
+---
+
+### 🛠️ Calidad & Arquitectura
+
+Refactorizaciones de la fase de consolidación (C-series + best practices):
+- **Tool registry consolidado** (C05): `registerTool()` como entry point único, 34 natives + 9 orphans + plugins dinámicos con guard de colisión
+- **Tipado fuerte de executors** (C06/C07): `ToolExecutor<TInput, TOutput>` con interfaces concretas (`DnsLookupOutput`, `TlsScanOutput`, etc.), sin `ToolExecutor<any>` en DNS/TLS/red
+- **scan-response.ts tipado**: lecturas con accessors tipados — corrigió el bug de keys DNS mayúsculas/minúsculas
+- **Error handling centralizado**: `AppError`, `NotFoundError`, `ValidationError`, `AuthError`, `RateLimitError` + `withErrorHandler` en las rutas
+- **Rate limiting global + CORS** en `proxy.ts`
+- **Reportes IA robustos**: timeout 110s alineado a `maxDuration=120`, barra de progreso con tope 90%, reportes con **gráficos recharts + diagramas mermaid**
+
+---
+
 ## 💻 Instalación
 
 ### Requisitos
@@ -706,7 +903,9 @@ Las migraciones se almacenan en `drizzle/` (11 migrations hasta la fecha, incluy
 | `pnpm lint` | Ejecutar ESLint |
 | `pnpm test` | Tests unitarios (Vitest) |
 | `pnpm test:coverage` | Tests con reporte de cobertura |
+| `pnpm test:contract` | Tests de contrato API |
 | `pnpm test:e2e` | Tests E2E con Playwright |
+| `pnpm generate:collection` | Generar colección Postman/API |
 | `pnpm db:generate` | Generar migración Drizzle |
 | `pnpm db:push` | Aplicar migraciones a la BD |
 | `pnpm setup-admin` | Crear usuario administrador |
@@ -866,6 +1065,23 @@ El pipeline de GitHub Actions ejecuta:
 | `/api/intelligence/drift` | GET/POST | Análisis de drift de seguridad |
 | `/api/intelligence/assets/graph` | GET | Graph de activos descubiertos |
 | `/api/intelligence/discovery` | 🆕 GET/POST | Descubrimiento continuo de activos |
+| `/api/intelligence/history` | 🆕 GET | Historial DNS/WHOIS con diff y timeline |
+| `/api/intelligence/anomalies` | 🆕 GET | Detección de anomalías (filtros, paginación) |
+| `/api/intelligence/adversary` | 🆕 GET/POST/PATCH | Escenarios MITRE + ejecución |
+| `/api/intelligence/live` | 🆕 GET | Métricas en vivo (uptime, latencia, findings) |
+| `/api/intelligence/graph` | 🆕 GET | Traversal del graph de activos |
+
+### Plugins / Marketplace
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/plugins` | 🆕 GET/POST | Catálogo + instalación de plugins |
+
+### Benchmarking
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/benchmarking` | 🆕 GET | Aggregations SQL + percentiles por proyecto |
 
 ### API Pública (REST)
 

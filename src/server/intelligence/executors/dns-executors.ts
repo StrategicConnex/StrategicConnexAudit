@@ -1,7 +1,10 @@
 import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import {
+  ToolExecutor, ExecutionContext, ExecutionResult, Finding,
+  DnsLookupOutput, DnsMxOutput, DnsTxtOutput, DnsNsOutput,
+} from "../types/executor.types";
 import { processDnsResults } from "../history/orchestrator";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
@@ -18,14 +21,14 @@ async function safeResolve<T>(promise: Promise<T>): Promise<T | null> {
 /**
  * 1. DNS Lookup Executor
  */
-export const dnsLookupExecutor: ToolExecutor<{ domain: string }, any> = {
+export const dnsLookupExecutor: ToolExecutor<{ domain: string }, DnsLookupOutput> = {
   id: "dns.lookup",
   timeoutMs: 8000,
   category: "dns",
   validate(input: unknown) {
     return domainSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<DnsLookupOutput>> {
     ctx.log(`Iniciando DNS Lookup seguro para: ${domain}`);
     await assertPublicHostname(domain);
 
@@ -38,7 +41,7 @@ export const dnsLookupExecutor: ToolExecutor<{ domain: string }, any> = {
       safeResolve(dns.resolveSoa(domain)),
     ]);
 
-    const output = {
+    const output: DnsLookupOutput = {
       domain,
       a: a || [],
       aaaa: aaaa || [],
@@ -103,19 +106,19 @@ export const dnsLookupExecutor: ToolExecutor<{ domain: string }, any> = {
 /**
  * 2. DNS MX Executor
  */
-export const dnsMxExecutor: ToolExecutor<{ domain: string }, any> = {
+export const dnsMxExecutor: ToolExecutor<{ domain: string }, DnsMxOutput> = {
   id: "dns.mx",
   timeoutMs: 8000,
   category: "dns",
   validate(input: unknown) {
     return domainSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<DnsMxOutput>> {
     ctx.log(`Iniciando DNS MX Lookup seguro para: ${domain}`);
     await assertPublicHostname(domain);
 
     const mxRecords = await safeResolve(dns.resolveMx(domain));
-    const output = {
+    const output: DnsMxOutput = {
       domain,
       records: mxRecords || [],
     };
@@ -151,21 +154,21 @@ export const dnsMxExecutor: ToolExecutor<{ domain: string }, any> = {
 /**
  * 3. DNS TXT Executor
  */
-export const dnsTxtExecutor: ToolExecutor<{ domain: string }, any> = {
+export const dnsTxtExecutor: ToolExecutor<{ domain: string }, DnsTxtOutput> = {
   id: "dns.txt",
   timeoutMs: 8000,
   category: "dns",
   validate(input: unknown) {
     return domainSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<DnsTxtOutput>> {
     ctx.log(`Iniciando DNS TXT Lookup seguro para: ${domain}`);
     await assertPublicHostname(domain);
 
     const txtRecords = await safeResolve(dns.resolveTxt(domain));
     const flatRecords = txtRecords ? txtRecords.map((t) => t.join(" ")) : [];
 
-    const output = {
+    const output: DnsTxtOutput = {
       domain,
       records: flatRecords,
     };
@@ -203,19 +206,19 @@ export const dnsTxtExecutor: ToolExecutor<{ domain: string }, any> = {
 /**
  * 4. DNS NS Executor
  */
-export const dnsNsExecutor: ToolExecutor<{ domain: string }, any> = {
+export const dnsNsExecutor: ToolExecutor<{ domain: string }, DnsNsOutput> = {
   id: "dns.ns",
   timeoutMs: 8000,
   category: "dns",
   validate(input: unknown) {
     return domainSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<DnsNsOutput>> {
     ctx.log(`Iniciando DNS NS Lookup seguro para: ${domain}`);
     await assertPublicHostname(domain);
 
     const nsRecords = await safeResolve(dns.resolveNs(domain));
-    const output = {
+    const output: DnsNsOutput = {
       domain,
       servers: nsRecords || [],
     };

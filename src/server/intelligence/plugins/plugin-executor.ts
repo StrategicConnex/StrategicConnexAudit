@@ -7,7 +7,7 @@
  * Pipeline:
  *   PluginPackage → createPluginExecutor() → ToolExecutor
  *                                   ↓
- *   registerDynamicExecutor() + registerDynamicToolDefinition()
+ *   registerTool({ executor, definition })
  *                                   ↓
  *   Dispatcher puede ejecutar plugins como herramientas nativas
  *                                   ↓
@@ -22,8 +22,7 @@
 import { z } from "zod";
 import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
 import { ToolCategory, IntelligenceToolDefinition } from "../registry/tool-registry";
-import { getExecutor, registerDynamicExecutor, unregisterDynamicExecutor } from "../core/executor-registry";
-import { registerDynamicToolDefinition, unregisterDynamicToolDefinition } from "../registry/tool-registry";
+import { getExecutor, registerTool, unregisterTool } from "../core/tool-registry";
 import type { PluginPackage } from "@/shared/db/schemas";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -399,12 +398,8 @@ export async function initializePluginExecutors(): Promise<void> {
     let registeredCount = 0;
     for (const pkg of pkgs) {
       const executor = createPluginExecutor(pkg);
-      const toolId = `plugin.${pkg.name}`;
-      registerDynamicExecutor(toolId, executor);
-
       const toolDef = createPluginToolDefinition(pkg);
-      registerDynamicToolDefinition(toolDef);
-
+      registerTool({ executor, definition: toolDef });
       registeredCount++;
     }
 
@@ -440,9 +435,7 @@ export async function registerSinglePluginExecutor(pluginName: string): Promise<
     if (!pkg) return false;
 
     const executor = createPluginExecutor(pkg);
-    const toolId = `plugin.${pkg.name}`;
-    registerDynamicExecutor(toolId, executor);
-    registerDynamicToolDefinition(createPluginToolDefinition(pkg));
+    registerTool({ executor, definition: createPluginToolDefinition(pkg) });
     return true;
   } catch (err) {
     console.error(`[PluginExecutor] Error registrando plugin '${pluginName}':`, err);
@@ -454,7 +447,5 @@ export async function registerSinglePluginExecutor(pluginName: string): Promise<
  * Desregistra un plugin individual.
  */
 export function unregisterSinglePluginExecutor(pluginName: string): void {
-  const toolId = `plugin.${pluginName}`;
-  unregisterDynamicExecutor(toolId);
-  unregisterDynamicToolDefinition(toolId);
+  unregisterTool(`plugin.${pluginName}`);
 }
