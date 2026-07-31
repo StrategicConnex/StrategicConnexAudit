@@ -88,7 +88,13 @@ export async function executeTool(
   const cacheKey = IntelligenceCache.buildKey(toolId, target);
   const cached = executionCache.get<ExecutionResult<any>>(cacheKey);
   if (cached) {
-    return { ...cached, output: { ...cached.output, _fromCache: true } };
+    return {
+      ...cached,
+      output: {
+        ...(cached.output as Record<string, unknown>),
+        _fromCache: true,
+      },
+    };
   }
 
   // 3. Preparar el ExecutionContext con soporte de timeouts controlados
@@ -122,10 +128,10 @@ export async function executeTool(
 
     clearTimeout(timeoutId);
 
-    const finalResult: ExecutionResult<any> = {
+    const finalResult: ExecutionResult<Record<string, unknown>> = {
       ...result,
       output: {
-        ...result.output,
+        ...(result.output as Record<string, unknown>),
         _logs: logs,
         _fromCache: false,
       },
@@ -133,7 +139,7 @@ export async function executeTool(
 
     // 5. Cachear resultado exitoso para evitar re-ejecuciones innecesarias
     if (result.success) {
-      executionCache.set(cacheKey, { ...finalResult, output: { ...result.output } });
+      executionCache.set(cacheKey, { ...finalResult, output: { ...(result.output as Record<string, unknown>) } });
     }
 
     return finalResult;

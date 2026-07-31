@@ -43,6 +43,14 @@ export interface ExecutionContext {
   log: (message: string, payload?: Record<string, any>) => void;
 }
 
+export type ToolInputs = Record<string, unknown>;
+export type ToolOutputs = Record<string, unknown>;
+
+export type InferExecutorInput<T extends ToolExecutor<any, any>> =
+  T extends ToolExecutor<infer TInput, any> ? TInput : never;
+export type InferExecutorOutput<T extends ToolExecutor<any, any>> =
+  T extends ToolExecutor<any, infer TOutput> ? TOutput : never;
+
 export interface ExecutionResult<TOutput> {
   success: boolean;
   output: TOutput;
@@ -50,7 +58,7 @@ export interface ExecutionResult<TOutput> {
   error?: string;
 }
 
-export interface ToolExecutor<TInput = any, TOutput = any> {
+export interface ToolExecutor<TInput = unknown, TOutput = unknown> {
   id: string;
   timeoutMs: number;
   category: ToolCategory;

@@ -42,6 +42,7 @@ export const intelligenceInvestigations = pgTable("intelligence_investigations",
   completedAt: timestamp("completed_at", { withTimezone: true }),
 }, (t) => [
   index("idx_intel_investigations_project_created").on(t.projectId, t.createdAt),
+  index("idx_intel_investigations_project_status").on(t.projectId, t.status),
   index("idx_intel_investigations_target").on(t.normalizedTarget),
 ]);
 
@@ -64,7 +65,10 @@ export const intelligenceToolRuns = pgTable("intelligence_tool_runs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   index("idx_intel_tool_runs_investigation").on(t.investigationId),
+  index("idx_intel_tool_runs_investigation_created").on(t.investigationId, t.createdAt),
+  index("idx_intel_tool_runs_tool_investigation").on(t.toolId, t.investigationId),
   index("idx_intel_tool_runs_tool_created").on(t.toolId, t.createdAt),
+  index("idx_intel_tool_runs_project_created").on(t.projectId, t.createdAt),
 ]);
 
 // 3. Hallazgos y Vulnerabilidades Detectadas
@@ -83,6 +87,8 @@ export const intelligenceFindings = pgTable("intelligence_findings", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   index("idx_intel_findings_project_severity").on(t.projectId, t.severity),
+  index("idx_intel_findings_investigation_severity").on(t.investigationId, t.severity),
+  index("idx_intel_findings_investigation_created").on(t.investigationId, t.createdAt),
 ]);
 
 // 4. Activos Descubiertos (Subdominios, IPs, etc.)
@@ -98,6 +104,8 @@ export const intelligenceAssets = pgTable("intelligence_assets", {
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
 }, (t) => [
   unique("uniq_intel_asset_project_type_value").on(t.projectId, t.assetType, t.value),
+  index("idx_intel_assets_investigation").on(t.investigationId),
+  index("idx_intel_assets_project_last_seen").on(t.projectId, t.lastSeenAt),
 ]);
 
 // 5. Eventos de Ejecución (Logs para streaming interactivo)
@@ -109,7 +117,9 @@ export const intelligenceRunEvents = pgTable("intelligence_run_events", {
   message: text("message").notNull(),
   payload: jsonb("payload").$type<Record<string, unknown>>().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_intel_run_events_investigation_created").on(t.investigationId, t.createdAt),
+]);
 
 // 6. Registro de Métricas de Uso de la API (Quota Billing)
 export const intelligenceUsageEvents = pgTable("intelligence_usage_events", {

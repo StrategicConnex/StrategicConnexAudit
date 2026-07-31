@@ -10,10 +10,15 @@ import { PerformanceTab } from './tabs/PerformanceTab';
 import { KeywordsTab, type KeywordItem } from './tabs/KeywordsTab';
 import { ReportsTab } from './tabs/ReportsTab';
 import { SettingsTab } from './tabs/SettingsTab';
-import { IntelligenceTab } from './tabs/IntelligenceTab';
 import { MonitoringTab } from './tabs/MonitoringTab';
 import { AdversaryTab } from './tabs/AdversaryTab';
 import { MarketplaceTab } from './tabs/MarketplaceTab';
+import { IntelligenceTabSkeleton } from './IntelligenceTabSkeleton';
+
+const IntelligenceTab = dynamic(() => import('./tabs/IntelligenceTab').then(mod => ({ default: mod.IntelligenceTab })), {
+  loading: () => <IntelligenceTabSkeleton />,
+});
+
 import { useAiReport } from './useAiReport';
 
 const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mod.NewProjectModal), {

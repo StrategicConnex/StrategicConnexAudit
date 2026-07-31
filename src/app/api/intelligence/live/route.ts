@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/shared/lib/supabase/server";
-import { db } from "@/shared/db";
+import { withRLS } from "@/shared/db/rls";
 import { uptimeLogs } from "@/shared/db/schemas";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 
@@ -17,107 +17,113 @@ export const dynamic = "force-dynamic";
  * Designed for clientside polling (every 15s) — works on Vercel serverless
  * where SSE streams would time out (10s Hobby, 60s Pro).
  */
-async function getUptimeSnapshot(projectId?: string | null) {
+async function getUptimeSnapshot(userId: string, projectId?: string | null) {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   const whereClause = projectId
     ? and(eq(uptimeLogs.projectId, projectId), gte(uptimeLogs.checkedAt, since))
     : gte(uptimeLogs.checkedAt, since);
 
-  const recent = await db
-    .select()
-    .from(uptimeLogs)
-    .where(whereClause)
-    .orderBy(desc(uptimeLogs.checkedAt))
-    .limit(5);
+  return withRLS(userId, async (tx) => {
+    const recent = await tx
+      .select()
+      .from(uptimeLogs)
+      .where(whereClause)
+      .orderBy(desc(uptimeLogs.checkedAt))
+      .limit(5);
 
-  if (recent.length === 0) {
-    return { checks: [], uptimePercent: null, avgLatencyMs: null };
-  }
+    if (recent.length === 0) {
+      return { checks: [], uptimePercent: null, avgLatencyMs: null };
+    }
 
-  const upCount = recent.filter((r) => r.isUp).length;
-  const latencyValues = recent
-    .filter((r) => r.responseTimeMs != null)
-    .map((r) => r.responseTimeMs as number);
+    const upCount = recent.filter((r) => r.isUp).length;
+    const latencyValues = recent
+      .filter((r) => r.responseTimeMs != null)
+      .map((r) => r.responseTimeMs as number);
 
-  return {
-    checks: recent,
-    uptimePercent: upCount / recent.length,
-    avgLatencyMs:
-      latencyValues.length > 0
-        ? Math.round(latencyValues.reduce((a, b) => a + b, 0) / latencyValues.length)
-        : null,
-  };
+    return {
+      checks: recent,
+      uptimePercent: upCount / recent.length,
+      avgLatencyMs:
+        latencyValues.length > 0
+          ? Math.round(latencyValues.reduce((a, b) => a + b, 0) / latencyValues.length)
+          : null,
+    };
+  });
 }
 
-async function getFindingsSnapshot(investigationId?: string | null) {
+async function getFindingsSnapshot(userId: string, investigationId?: string | null) {
   if (!investigationId) return { total: 0, critical: 0, high: 0, latest: [] };
 
-  const [criticalCount, highCount, latest] = await Promise.all([
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(sql`intelligence_findings`)
-      .where(
-        and(
-          sql`investigation_id = ${investigationId}`,
-          sql`severity = 'critical'`
-        )
+  return withRLS(userId, async (tx) => {
+    const [criticalCount, highCount, latest] = await Promise.all([
+      tx
+        .select({ count: sql<number>`count(*)` })
+        .from(sql`intelligence_findings`)
+        .where(
+          and(
+            sql`investigation_id = ${investigationId}`,
+            sql`severity = 'critical'`
+          )
+        ),
+      tx
+        .select({ count: sql<number>`count(*)` })
+        .from(sql`intelligence_findings`)
+        .where(
+          and(
+            sql`investigation_id = ${investigationId}`,
+            sql`severity = 'high'`
+          )
+        ),
+      tx.execute(
+        sql`
+          SELECT id, severity, title, created_at
+          FROM intelligence_findings
+          WHERE investigation_id = ${investigationId}
+            AND severity IN ('critical', 'high')
+          ORDER BY created_at DESC
+          LIMIT 3
+        `
       ),
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(sql`intelligence_findings`)
-      .where(
-        and(
-          sql`investigation_id = ${investigationId}`,
-          sql`severity = 'high'`
-        )
-      ),
-    db.execute(
-      sql`
-        SELECT id, severity, title, created_at
-        FROM intelligence_findings
-        WHERE investigation_id = ${investigationId}
-          AND severity IN ('critical', 'high')
-        ORDER BY created_at DESC
-        LIMIT 3
-      `
-    ),
-  ]);
+    ]);
 
-  return {
-    total: (criticalCount[0]?.count ?? 0) + (highCount[0]?.count ?? 0),
-    critical: criticalCount[0]?.count ?? 0,
-    high: highCount[0]?.count ?? 0,
-    latest: latest.rows ?? [],
-  };
+    return {
+      total: (criticalCount[0]?.count ?? 0) + (highCount[0]?.count ?? 0),
+      critical: criticalCount[0]?.count ?? 0,
+      high: highCount[0]?.count ?? 0,
+      latest: latest.rows ?? [],
+    };
+  });
 }
 
-async function getEventsSnapshot(investigationId?: string | null) {
+async function getEventsSnapshot(userId: string, investigationId?: string | null) {
   if (!investigationId) return { total: 0, latest: [] };
 
-  const [totalRows, latestRows] = await Promise.all([
-    db.execute(
-      sql`
-        SELECT count(*) as cnt
-        FROM intelligence_run_events
-        WHERE investigation_id = ${investigationId}
-      `
-    ),
-    db.execute(
-      sql`
-        SELECT id, event_type, message, created_at
-        FROM intelligence_run_events
-        WHERE investigation_id = ${investigationId}
-        ORDER BY created_at DESC
-        LIMIT 5
-      `
-    ),
-  ]);
+  return withRLS(userId, async (tx) => {
+    const [totalRows, latestRows] = await Promise.all([
+      tx.execute(
+        sql`
+          SELECT count(*) as cnt
+          FROM intelligence_run_events
+          WHERE investigation_id = ${investigationId}
+        `
+      ),
+      tx.execute(
+        sql`
+          SELECT id, event_type, message, created_at
+          FROM intelligence_run_events
+          WHERE investigation_id = ${investigationId}
+          ORDER BY created_at DESC
+          LIMIT 5
+        `
+      ),
+    ]);
 
-  return {
-    total: Number(totalRows.rows?.[0]?.cnt ?? 0),
-    latest: latestRows.rows ?? [],
-  };
+    return {
+      total: Number(totalRows.rows?.[0]?.cnt ?? 0),
+      latest: latestRows.rows ?? [],
+    };
+  });
 }
 
 export async function GET(req: NextRequest) {
@@ -133,9 +139,9 @@ export async function GET(req: NextRequest) {
     const investigationId = searchParams.get("investigationId");
 
     const [uptime, findings, events] = await Promise.all([
-      getUptimeSnapshot(projectId),
-      getFindingsSnapshot(investigationId),
-      getEventsSnapshot(investigationId),
+      getUptimeSnapshot(user.id, projectId),
+      getFindingsSnapshot(user.id, investigationId),
+      getEventsSnapshot(user.id, investigationId),
     ]);
 
     return NextResponse.json({

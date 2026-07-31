@@ -16,9 +16,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/shared/lib/supabase/server";
-import { db } from "@/shared/db";
+import { withRLS } from "@/shared/db/rls";
 import { anomalyDetections } from "@/shared/db/schemas/anomaly";
-import { projects } from "@/shared/db/schemas";
 import { eq, and, desc, isNull, gte, count, sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -60,41 +59,49 @@ export async function GET(req: NextRequest) {
       conditions.push(gte(anomalyDetections.detectedAt, new Date(since)));
     }
 
-    const [anomalies, totalResult] = await Promise.all([
-      db
-        .select()
-        .from(anomalyDetections)
-        .where(and(...conditions))
-        .orderBy(desc(anomalyDetections.detectedAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ total: count() })
-        .from(anomalyDetections)
-        .where(and(...conditions)),
-    ]);
+    const { anomalies, total, stats } = await withRLS(user.id, async (tx) => {
+      const [anomaliesResult, totalResult] = await Promise.all([
+        tx
+          .select()
+          .from(anomalyDetections)
+          .where(and(...conditions))
+          .orderBy(desc(anomalyDetections.detectedAt))
+          .limit(limit)
+          .offset(offset),
+        tx
+          .select({ total: count() })
+          .from(anomalyDetections)
+          .where(and(...conditions)),
+      ]);
 
-    // Obtener estadísticas agregadas por tipo de métrica
-    const stats = await db.execute(
-      sql`
-        SELECT
-          metric_type,
-          severity,
-          count(*) as cnt,
-          max(z_score) as max_z
-        FROM anomaly_detections
-        WHERE project_id = ${projectId}
-          AND detected_at >= ${new Date(since)}
-        GROUP BY metric_type, severity
-        ORDER BY metric_type, severity
-      `
-    );
+      // Obtener estadísticas agregadas por tipo de métrica
+      const statsResult = await tx.execute(
+        sql`
+          SELECT
+            metric_type,
+            severity,
+            count(*) as cnt,
+            max(z_score) as max_z
+          FROM anomaly_detections
+          WHERE project_id = ${projectId}
+            AND detected_at >= ${new Date(since)}
+          GROUP BY metric_type, severity
+          ORDER BY metric_type, severity
+        `
+      );
+
+      return {
+        anomalies: anomaliesResult,
+        total: Number(totalResult[0]?.total ?? 0),
+        stats: statsResult.rows ?? [],
+      };
+    });
 
     return NextResponse.json({
       success: true,
       anomalies,
-      total: Number(totalResult[0]?.total ?? 0),
-      stats: stats.rows ?? [],
+      total,
+      stats,
     });
   } catch (error: any) {
     console.error("[AnomaliesAPI] Error:", error);

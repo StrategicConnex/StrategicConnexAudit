@@ -314,10 +314,13 @@ export function createPluginExecutor(pkg: PluginPackage): ToolExecutor {
       const runner = BUILTIN_PLUGIN_RUNNERS[pkg.name];
       if (runner) {
         ctx.log(`[Plugin] Usando runner incorporado para '${pkg.name}'`);
-        return runner(ctx, input, pkg);
+        const normalizedInput =
+          typeof input === "object" && input !== null
+            ? (input as Record<string, unknown>)
+            : {};
+        return runner(ctx, normalizedInput, pkg);
       }
 
-      // 3. Fallback: no implementation available
       ctx.log(`[Plugin] '${pkg.name}' no tiene ejecutor implementado.`);
       return {
         success: false,
@@ -346,7 +349,7 @@ export function createPluginToolDefinition(pkg: PluginPackage): IntelligenceTool
     name: formatPluginName(pkg.name),
     category: mapCategory(pkg.category),
     description: pkg.description || `Plugin Marketplace: ${pkg.name}`,
-    inputSchema: schema as any,
+    inputSchema: schema,
     requiredPlan: "free",
     risk: mapRisk(pkg.riskLevel),
     costUnits: 2,
