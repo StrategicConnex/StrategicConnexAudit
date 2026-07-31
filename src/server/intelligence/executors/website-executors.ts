@@ -345,10 +345,7 @@ export const websiteRedirectsExecutor: ToolExecutor<{ url: string }, any> = {
 
     for (let i = 0; i < maxFollow; i++) {
       try {
-        const res = await safeFetch(currentUrl, {
-          method: "HEAD",
-          redirect: "manual",
-        });
+        const res = await safeFetch(currentUrl, { method: "HEAD" });
         const location = res.headers.get("location");
         chain.push({ url: currentUrl, status: res.status, location });
 

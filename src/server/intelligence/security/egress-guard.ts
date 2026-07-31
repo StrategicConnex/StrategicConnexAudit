@@ -168,20 +168,26 @@ export async function safeFetch(url: string, init: RequestInit = {}): Promise<Re
 
   await assertPublicHostname(parsed.hostname);
 
+  const redirectMode = init.redirect ?? "manual";
+
   const response = await fetch(parsed.toString(), {
     ...init,
-    redirect: "manual",
-    signal: AbortSignal.timeout(15_000),
+    redirect: redirectMode,
+    signal: init.signal ?? AbortSignal.timeout(15_000),
     headers: {
       "User-Agent": "SCAuditIntelligenceBot/1.0 (+https://scaudit.app/security)",
       ...init.headers,
     },
   });
 
-  const location = response.headers.get("location");
-  if (location && response.status >= 300 && response.status < 400) {
-    const next = new URL(location, parsed);
-    await assertPublicHostname(next.hostname);
+  // Solo validamos SSRF en redirecciones cuando el modo es manual
+  // (modo "follow" delega la seguridad al caller que eligió explícitamente)
+  if (redirectMode === "manual") {
+    const location = response.headers.get("location");
+    if (location && response.status >= 300 && response.status < 400) {
+      const next = new URL(location, parsed);
+      await assertPublicHostname(next.hostname);
+    }
   }
 
   return response;

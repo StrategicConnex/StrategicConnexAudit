@@ -10,6 +10,7 @@
  * dinámicamente por el loader.
  */
 
+import { z } from "zod";
 import { ToolExecutor } from "../types/executor.types";
 import { IntelligenceToolDefinition, ToolCategory } from "../registry/tool-registry";
 import { registerDynamicExecutor } from "./executor-registry";
@@ -50,7 +51,7 @@ export function registerExecutor(
       .join(" "),
     category: executor.category as ToolCategory,
     description: `Auto-registrado: ${executor.id}`,
-    inputSchema: undefined as any,
+    inputSchema: z.object({ target: z.string().min(1).max(2048).optional() }).passthrough(),
     requiredPlan: "free" as const,
     risk: "passive" as const,
     costUnits: 1,

@@ -54,9 +54,10 @@ export const tlsAdvancedExecutor: ToolExecutor<{ host: string }, any> = {
     const tls13 = await tlsHandshake(host, { servername: host, rejectUnauthorized: false, minVersion: "TLSv1.3", maxVersion: "TLSv1.3" });
 
     // Weak protocols check
+    const weakVersions = ["TLSv1", "TLSv1.1"] as const;
     const weakResults = await Promise.all(
-      ["TLSv1", "TLSv1.1"].map(async (v) => {
-        const r = await tlsHandshake(host, { servername: host, rejectUnauthorized: false, minVersion: v as any, maxVersion: v as any });
+      weakVersions.map(async (v) => {
+        const r = await tlsHandshake(host, { servername: host, rejectUnauthorized: false, minVersion: v, maxVersion: v });
         return { version: v, supported: !!r.protocol };
       })
     );

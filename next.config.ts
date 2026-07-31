@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["lucide-react"],
+    /**
+     * Enables View Transitions API for client-side <Link> navigations.
+     * Every navigation is wrapped in document.startViewTransition, so the
+     * ::view-transition-old/new(root) CSS in globals.css plays the page
+     * enter + exit animations on route changes.
+     */
+    viewTransition: true,
   },
   async headers() {
     return [

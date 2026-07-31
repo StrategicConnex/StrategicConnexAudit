@@ -117,6 +117,7 @@ ALTER TABLE "intelligence_usage_events" ADD CONSTRAINT "intelligence_usage_event
 ALTER TABLE "intelligence_usage_events" ADD CONSTRAINT "intelligence_usage_events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "idx_intel_findings_project_severity" ON "intelligence_findings" USING btree ("project_id","severity");--> statement-breakpoint
 CREATE INDEX "idx_intel_investigations_project_created" ON "intelligence_investigations" USING btree ("project_id","created_at");--> statement-breakpoint
+CREATE INDEX "idx_intel_investigations_project_status" ON "intelligence_investigations" USING btree ("project_id","status");--> statement-breakpoint
 CREATE INDEX "idx_intel_investigations_target" ON "intelligence_investigations" USING btree ("normalized_target");--> statement-breakpoint
 CREATE INDEX "idx_intel_tool_runs_investigation" ON "intelligence_tool_runs" USING btree ("investigation_id");--> statement-breakpoint
 CREATE INDEX "idx_intel_tool_runs_tool_created" ON "intelligence_tool_runs" USING btree ("tool_id","created_at");

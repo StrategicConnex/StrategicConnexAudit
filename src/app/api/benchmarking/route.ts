@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/shared/lib/supabase/server";
-import { db } from "@/shared/db";
-import { uptimeLogs, intelligenceInvestigations, issues } from "@/shared/db/schemas";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { withRLS } from "@/shared/db/rls";
+import { sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -49,19 +48,34 @@ interface ProjectMetric {
   score: number | null;
 }
 
-async function computeAggregates(projectId?: string | null) {
+async function computeAggregates(userId: string, projectId?: string | null) {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days
 
-  // 1. Uptime % per project (last 30 days)
-  interface UptimeRow extends Record<string, unknown> { projectId: string; isUp: boolean; responseTimeMs: number | null }
-  const uptimeRows = await db.execute<UptimeRow>(
-    sql`
-      SELECT project_id as "projectId", is_up as "isUp", response_time_ms as "responseTimeMs"
-      FROM uptime_logs
-      WHERE checked_at >= ${since}
-      ORDER BY checked_at DESC
-    `
-  );
+  const { uptimeRows, scoreRows } = await withRLS(userId, async (tx) => {
+    // 1. Uptime % per project (last 30 days)
+    interface UptimeRow extends Record<string, unknown> { projectId: string; isUp: boolean; responseTimeMs: number | null }
+    const uptimeResult = await tx.execute<UptimeRow>(
+      sql`
+        SELECT project_id as "projectId", is_up as "isUp", response_time_ms as "responseTimeMs"
+        FROM uptime_logs
+        WHERE checked_at >= ${since}
+        ORDER BY checked_at DESC
+      `
+    );
+
+    // 2. Health scores from intelligence_investigations
+    interface ScoreRow extends Record<string, unknown> { projectId: string; score: number }
+    const scoreResult = await tx.execute<ScoreRow>(
+      sql`
+        SELECT project_id as "projectId", score
+        FROM intelligence_investigations
+        WHERE score IS NOT NULL
+        ORDER BY created_at DESC
+      `
+    );
+
+    return { uptimeRows: uptimeResult, scoreRows: scoreResult };
+  });
 
   // Group by project and compute uptime %
   const projectUptimes = new Map<string, { up: number; total: number; latencies: number[] }>();
@@ -77,17 +91,6 @@ async function computeAggregates(projectId?: string | null) {
       entry.latencies.push(row.responseTimeMs);
     }
   }
-
-  // 2. Health scores from intelligence_investigations
-  interface ScoreRow extends Record<string, unknown> { projectId: string; score: number }
-  const scoreRows = await db.execute<ScoreRow>(
-    sql`
-      SELECT project_id as "projectId", score
-      FROM intelligence_investigations
-      WHERE score IS NOT NULL
-      ORDER BY created_at DESC
-    `
-  );
 
   // Latest score per project
   const projectScores = new Map<string, number[]>();
@@ -190,7 +193,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
 
-    const data = await computeAggregates(projectId);
+    const data = await computeAggregates(user.id, projectId);
 
     return NextResponse.json({ success: true, ...data });
   } catch (error: any) {

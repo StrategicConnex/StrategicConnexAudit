@@ -18,6 +18,7 @@ import { executorRegistry } from "@/server/intelligence/core/executor-registry";
 import { toolRegistry } from "@/server/intelligence/registry/tool-registry";
 import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
 import { Finding } from "@/server/intelligence/types/executor.types";
+import { buildResultMap, getPrimaryIp, buildScanResponse, buildScanMetadata } from "@/server/intelligence/core/scan-response";
 
 export const dynamic = "force-dynamic";
 
@@ -299,29 +300,9 @@ export async function POST(req: NextRequest) {
 
     logEvent("success", `Auditoría completada. Puntuación Postura Global: ${score}/100. Infraestructura: ${infraScore}/100. Correo: ${mailHealthScore}/100.`);
 
-    // 9. Extraer datos individuales para mantener compatibilidad visual estricta con el Frontend anterior
-    const dnsLookupResult = executionResults.find(r => r.toolId === "dns.lookup")?.output || {};
-    const dnsMxResult = executionResults.find(r => r.toolId === "dns.mx")?.output || {};
-    const dnsTxtResult = executionResults.find(r => r.toolId === "dns.txt")?.output || {};
-    const dnsNsResult = executionResults.find(r => r.toolId === "dns.ns")?.output || {};
-    const emailSpfResult = executionResults.find(r => r.toolId === "email.spf")?.output || {};
-    const emailDmarcResult = executionResults.find(r => r.toolId === "email.dmarc")?.output || {};
-    const emailDkimResult = executionResults.find(r => r.toolId === "email.dkim")?.output || {};
-    const tlsScanResult = executionResults.find(r => r.toolId === "tls.scan")?.output || {};
-    const headersResult = executionResults.find(r => r.toolId === "website.headers")?.output || {};
-    const securityHeadersResult = executionResults.find(r => r.toolId === "website.security_headers")?.output || {};
-    const whoisResult = executionResults.find(r => r.toolId === "osint.whois")?.output || {};
-    const geoIpResult = executionResults.find(r => r.toolId === "network.geoip")?.output || {};
-    const pingResult = executionResults.find(r => r.toolId === "network.ping")?.output || {};
-    const reverseDnsResult = executionResults.find(r => r.toolId === "network.reverse_dns")?.output || {};
-    const tracerouteResult = executionResults.find(r => r.toolId === "network.traceroute")?.output || {};
-    const asnResult = executionResults.find(r => r.toolId === "network.asn")?.output || {};
-    const cdnResult = executionResults.find(r => r.toolId === "network.cdn")?.output || {};
-    const wafResult = executionResults.find(r => r.toolId === "network.waf")?.output || {};
-    const reverseIpResult = executionResults.find(r => r.toolId === "network.reverse_ip")?.output || {};
-    const reputationResult = executionResults.find(r => r.toolId === "threat.ip_reputation")?.output || {};
-
-    const primaryIp = dnsLookupResult.A?.[0] || null;
+    // 9. Construir mapa dinámico de resultados — evita 20+ extracciones individuales
+    const R = buildResultMap(executionResults);
+    const primaryIp = getPrimaryIp(R);
 
     // 10. Persistencia atómica de todos los registros en base de datos mediante RLS
     await withRLS(user.id, async (tx) => {
@@ -379,82 +360,26 @@ export async function POST(req: NextRequest) {
       }
 
       // E. Finalizar investigación principal con metadata enriquecida
+      const metadata = buildScanMetadata({ R, mailHealthScore, infraScore });
       await tx.update(intelligenceInvestigations).set({
         status: "completed",
         score,
         summary: `Auditoría finalizada. Se detectaron ${aggregatedFindings.length} hallazgos. Puntuación de Postura: ${score}/100 (Correo: ${mailHealthScore}, Servidor: ${infraScore}).`,
-        metadata: {
-          mailHealthCompositeScore: mailHealthScore,
-          infrastructureScore: infraScore,
-          spfParsed: emailSpfResult.spfParsed || null,
-          dmarcParsed: emailDmarcResult.dmarcParsed || null,
-          dkimCount: emailDkimResult.count || 0,
-          bimiSuccess: false,
-          redirectsToHttps: securityHeadersResult.securityHeaders?.hsts ? true : false,
-          // Datos de red e infraestructura geolocalizada
-          whois: whoisResult,
-          asnGeo: { ...geoIpResult, ...asnResult },
-          reverseDns: reverseDnsResult.ptr || [],
-          ping: pingResult,
-          cdnWaf: {
-            detected: cdnResult.detected || wafResult.detected || false,
-            cdnProvider: cdnResult.provider || null,
-            wafProvider: wafResult.wafProvider || null,
-            cdnMethod: cdnResult.method || null,
-            wafConfidence: wafResult.confidence || 0
-          },
-          reverseIp: reverseIpResult.domains || [],
-          dnsbl: reputationResult.blacklistsListed || [],
-          reputation: reputationResult,
-          traceroute: tracerouteResult.hops || []
-        },
+        metadata,
         completedAt: new Date(),
         updatedAt: new Date()
       }).where(eq(intelligenceInvestigations.id, investigation.id));
     });
 
-    // 11. Responder estructuradamente con mapeo de compatibilidad UI
-    return NextResponse.json({
-      success: true,
-      investigation: {
-        id: investigation.id,
-        title: investigation.title,
-        target,
-        normalizedTarget,
-        targetType,
-        score,
-        status: "completed",
-        summary: `Puntuación de Seguridad de Infraestructura: ${score}/100. Correo: ${mailHealthScore}/100. Servidor: ${infraScore}/100.`,
-        metadata: {
-          mailHealthCompositeScore: mailHealthScore,
-          infrastructureScore: infraScore
-        }
-      },
-      dns: {
-        A: dnsLookupResult.A || [],
-        AAAA: dnsLookupResult.AAAA || [],
-        MX: dnsMxResult.MX || [],
-        NS: dnsNsResult.NS || [],
-        TXT: dnsTxtResult.TXT || []
-      },
-      ssl: tlsScanResult,
-      email: {
-        spf: emailSpfResult.record || null,
-        spfParsed: emailSpfResult.spfParsed || null,
-        dmarc: emailDmarcResult.record || null,
-        dmarcParsed: emailDmarcResult.dmarcParsed || null,
-        dkim: emailDkimResult,
-        bimi: { success: false, error: "No configurado" }
-      },
-      headers: headersResult,
-      redirect: { success: true, redirectsToHttps: securityHeadersResult.securityHeaders?.hsts ? true : false },
-      findings: aggregatedFindings,
-      asn: asnResult,
-      cdn: cdnResult,
-      waf: wafResult,
-      reverseIp: reverseIpResult,
-      reputation: reputationResult
-    });
+    // 11. Responder estructuradamente con mapeo dinámico de compatibilidad UI
+    return NextResponse.json(
+      buildScanResponse({
+        R, investigation,
+        target, normalizedTarget, targetType,
+        score, mailHealthScore, infraScore,
+        aggregatedFindings,
+      })
+    );
 
   } catch (error: any) {
     console.error("[Orchestrator Failure] Diagnostic engine execution failure:", error);

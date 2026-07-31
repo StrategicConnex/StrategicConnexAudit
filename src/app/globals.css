@@ -117,6 +117,64 @@
   50% { opacity: 1; transform: scale(1.03); }
 }
 
+/* ─── View Transitions API — route enter/exit ──────────────────────────
+   Next.js wraps <Link> navigations in document.startViewTransition when
+   experimental.viewTransition is enabled (next.config.ts). The root
+   pseudo-elements below animate the outgoing page (exit) and the incoming
+   page (enter) on every route change. */
+
+@keyframes vt-enter {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes vt-exit {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-6px) scale(0.995); }
+}
+
+::view-transition-old(root) {
+  animation: vt-exit 0.18s ease-in both;
+}
+
+::view-transition-new(root) {
+  animation: vt-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Fallback — browsers without View Transitions API support (Firefox < 144,
+   Safari < 18.2) get a plain CSS enter animation instead. The @supports
+   guard ensures VT-supporting browsers never double-animate. */
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@supports not (view-transition-name: root) {
+  .vt-fallback-enter {
+    animation: page-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* ─── Reduced motion — disable all view transitions ─────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation: none !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+
+  /* Fallback enter animation must also respect reduced motion */
+  .vt-fallback-enter {
+    animation: none !important;
+  }
+}
+
+
+
 /* ─── Glass utilities ─────────────────────────────────────────────────── */
 
 @utility glass-panel {

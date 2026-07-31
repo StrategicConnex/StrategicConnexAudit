@@ -1,4 +1,8 @@
-import { ToolExecutor } from "../types/executor.types";
+import {
+  ToolExecutor,
+  InferExecutorInput,
+  InferExecutorOutput,
+} from "../types/executor.types";
 
 // ─── Static (Manual) Executor Registry ───────────────────────────────────
 // Los executors manuales se definen AQUÍ y tienen prioridad sobre los
@@ -30,7 +34,7 @@ import { tlsAdvancedExecutor } from "../executors/tls-advanced";
 import { subdomainTakeoverExecutor } from "../executors/subdomain-takeover";
 import { cveLookupExecutor } from "../executors/cve-lookup";
 
-export const executorRegistry: Record<string, ToolExecutor> = {
+export const executorRegistry = {
   "dns.lookup": dnsLookupExecutor,
   "dns.mx": dnsMxExecutor,
   "dns.txt": dnsTxtExecutor,
@@ -65,7 +69,22 @@ export const executorRegistry: Record<string, ToolExecutor> = {
   "tls.advanced": tlsAdvancedExecutor,
   "network.subdomain_takeover": subdomainTakeoverExecutor,
   "threat.cve_lookup": cveLookupExecutor,
-};
+} as const;
+
+export type ExecutorRegistry = typeof executorRegistry;
+export type ToolId = keyof ExecutorRegistry;
+export type ToolInputMap = { [K in ToolId]: InferExecutorInput<ExecutorRegistry[K]> };
+export type ToolOutputMap = { [K in ToolId]: InferExecutorOutput<ExecutorRegistry[K]> };
+export type ToolInputs = ToolInputMap[ToolId];
+export type ToolOutputs = ToolOutputMap[ToolId];
+
+/**
+ * Type guard: verifica si un toolId arbitrario (ej. del toolRegistry o de
+ * entrada de usuario) corresponde a un executor nativo registrado.
+ */
+export function isKnownTool(toolId: string): toolId is ToolId {
+  return Object.hasOwn(executorRegistry, toolId);
+}
 
 // ─── Dynamic (Plugin & Auto-discovered) Executor Registry ─────────────────
 
@@ -89,7 +108,7 @@ async function ensureAutoExecutorsInitialized(): Promise<void> {
     const discovered = await discoverExecutors();
     for (const entry of discovered) {
       // Solo registrar si NO existe ya en el registro manual
-      if (!executorRegistry[entry.executor.id]) {
+      if (!isKnownTool(entry.executor.id)) {
         registerExecutor(entry.executor, entry.definition);
       }
     }
@@ -138,7 +157,7 @@ let pendingInit: Promise<void> | null = null;
  */
 export function getExecutor(toolId: string): ToolExecutor | undefined {
   // 1. Static (nativo) registry — más rápido para herramientas core
-  if (executorRegistry[toolId]) return executorRegistry[toolId];
+  if (isKnownTool(toolId)) return executorRegistry[toolId];
   // 2. Inicializar auto-descubrimiento lazy en background si no se hizo aún
   if (!autoInitDone) {
     if (!pendingInit) {
