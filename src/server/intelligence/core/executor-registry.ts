@@ -18,10 +18,12 @@ import {
 } from "../executors/network-executors";
 import {
   websiteHeadersExecutor, websiteSecurityHeadersExecutor,
-  websiteTlsExecutor, websiteRobotsExecutor
+  websiteTlsExecutor, websiteRobotsExecutor,
+  websiteRedirectsExecutor, websiteCookiesExecutor, websiteCspExecutor
 } from "../executors/website-executors";
 import { osintWhoisExecutor } from "../executors/osint-executors";
 import { technologyProfilerExecutor } from "../executors/technology-profiler";
+import { dnsDnssecExecutor, dnsPropagationExecutor, dnsZoneExecutor } from "../executors/dns-advanced";
 import { networkBgpExecutor, threatCustomIntelExecutor } from "../executors/advanced-executors";
 import { whoisFullExecutor } from "../executors/whois-executors";
 import { tlsAdvancedExecutor } from "../executors/tls-advanced";
@@ -49,11 +51,17 @@ export const executorRegistry: Record<string, ToolExecutor> = {
   "website.security_headers": websiteSecurityHeadersExecutor,
   "tls.scan": websiteTlsExecutor,
   "website.robots": websiteRobotsExecutor,
+  "website.redirects": websiteRedirectsExecutor,
+  "website.cookies": websiteCookiesExecutor,
+  "website.csp": websiteCspExecutor,
   "website.tech_stack": technologyProfilerExecutor,
   "osint.whois": osintWhoisExecutor,
   "whois.full": whoisFullExecutor,
   "network.bgp": networkBgpExecutor,
   "threat.custom_intel": threatCustomIntelExecutor,
+  "dns.dnssec": dnsDnssecExecutor,
+  "dns.propagation": dnsPropagationExecutor,
+  "dns.zone": dnsZoneExecutor,
   "tls.advanced": tlsAdvancedExecutor,
   "network.subdomain_takeover": subdomainTakeoverExecutor,
   "threat.cve_lookup": cveLookupExecutor,
