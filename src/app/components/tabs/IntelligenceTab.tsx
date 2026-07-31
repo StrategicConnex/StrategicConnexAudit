@@ -16,6 +16,8 @@ import { AutoMitreBadge } from '@/app/components/MitreBadge';
 import { GeoMap } from '@/app/components/GeoMap';
 import { DownloadPdfButton } from '@/app/components/DownloadPdfButton';
 import { HistoryPanel } from '@/app/components/HistoryPanel';
+import { parseMarkdown, splitInlineMarkdown } from '@/features/intelligence/lib/rendering/markdown';
+import { getScoreRating, getSeverityBadge } from '@/features/intelligence/lib/rendering/severity';
 
 interface Project {
   id: string;
@@ -207,130 +209,27 @@ export function IntelligenceTab({
 
   const consoleEndRef = useRef<HTMLDivElement>(null);
 
-  interface RenderedBlock {
-    type: 'h1' | 'h2' | 'h3' | 'code' | 'ul' | 'ol' | 'p';
-    content?: string;
-    items?: string[];
-    language?: string;
-  }
-
-  const parseMarkdown = (md: string): RenderedBlock[] => {
-    const lines = md.split('\n');
-    const blocks: RenderedBlock[] = [];
-    let currentBlock: RenderedBlock | null = null;
-    let codeLines: string[] = [];
-    let inCode = false;
-    let codeLang = '';
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-
-      if (line.trim().startsWith('```')) {
-        if (inCode) {
-          blocks.push({
-            type: 'code',
-            content: codeLines.join('\n'),
-            language: codeLang || 'code'
-          });
-          codeLines = [];
-          inCode = false;
-          codeLang = '';
-        } else {
-          inCode = true;
-          codeLang = line.trim().substring(3).trim();
-        }
-        continue;
-      }
-
-      if (inCode) {
-        codeLines.push(line);
-        continue;
-      }
-
-      const trimmed = line.trim();
-
-      if (trimmed.startsWith('### ')) {
-        blocks.push({ type: 'h3', content: trimmed.substring(4) });
-        currentBlock = null;
-        continue;
-      }
-      if (trimmed.startsWith('## ')) {
-        blocks.push({ type: 'h2', content: trimmed.substring(3) });
-        currentBlock = null;
-        continue;
-      }
-      if (trimmed.startsWith('# ')) {
-        blocks.push({ type: 'h1', content: trimmed.substring(2) });
-        currentBlock = null;
-        continue;
-      }
-
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        const itemContent = trimmed.substring(2);
-        if (currentBlock && currentBlock.type === 'ul') {
-          currentBlock.items?.push(itemContent);
-        } else {
-          currentBlock = { type: 'ul', items: [itemContent] };
-          blocks.push(currentBlock);
-        }
-        continue;
-      }
-
-      const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
-      if (olMatch) {
-        const itemContent = olMatch[2];
-        if (currentBlock && currentBlock.type === 'ol') {
-          currentBlock.items?.push(itemContent);
-        } else {
-          currentBlock = { type: 'ol', items: [itemContent] };
-          blocks.push(currentBlock);
-        }
-        continue;
-      }
-
-      if (trimmed === '') {
-        currentBlock = null;
-        continue;
-      }
-
-      if (currentBlock && currentBlock.type === 'p') {
-        currentBlock.content += '\n' + line;
-      } else {
-        currentBlock = { type: 'p', content: line };
-        blocks.push(currentBlock);
-      }
-    }
-
-    if (inCode && codeLines.length > 0) {
-      blocks.push({
-        type: 'code',
-        content: codeLines.join('\n'),
-        language: codeLang || 'code'
-      });
-    }
-
-    return blocks;
-  };
-
+  // Renderizador inline delegado al paquete puro de rendering (C01).
+  // La tokenización vive en lib/rendering/markdown.ts (testable); aquí solo
+  // se mapean los tokens a JSX con las clases del design system.
   const renderInlineMarkdown = (text: string) => {
     if (!text) return '';
-    const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
-    return parts.map((part, idx) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
+    return splitInlineMarkdown(text).map((token, idx) => {
+      if (token.type === 'bold') {
         return (
           <strong key={idx} className="font-extrabold text-foreground">
-            {part.slice(2, -2)}
+            {token.content}
           </strong>
         );
       }
-      if (part.startsWith('`') && part.endsWith('`')) {
+      if (token.type === 'code') {
         return (
           <code key={idx} className="font-mono text-primary bg-primary/10 border-primary/20 px-1.5 py-0.5 rounded text-[11px] font-semibold">
-            {part.slice(1, -1)}
+            {token.content}
           </code>
         );
       }
-      return part;
+      return token.content;
     });
   };
 
@@ -581,28 +480,6 @@ export function IntelligenceTab({
     }
   };
 
-  const getScoreRating = (score: number) => {
-    if (score >= 90) return { label: 'A - Excelente', color: 'text-chartreuse border-chartreuse/20 bg-chartreuse/10' };
-    if (score >= 80) return { label: 'B - Bueno', color: 'text-primary border-primary/20 bg-primary/10' };
-    if (score >= 70) return { label: 'C - Advertencia', color: 'text-[oklch(75% 0.13 80)] border-[oklch(75% 0.13 80)]/20 bg-[oklch(75% 0.13 80)]/10' };
-    if (score >= 50) return { label: 'D - Alto Riesgo', color: 'text-destructive/80 border-destructive/20 bg-destructive/10' };
-    return { label: 'F - Crítico', color: 'text-destructive border-destructive/20 bg-destructive/10' };
-  };
-
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return 'text-destructive bg-destructive/10 border-destructive/20';
-      case 'high':
-        return 'text-destructive/80 bg-destructive/10 border-destructive/20';
-      case 'medium':
-        return 'text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/10 border-[oklch(75% 0.13 80)]/20';
-      case 'low':
-        return 'text-primary bg-primary/10 border-primary/20';
-      default:
-        return 'text-muted-fg bg-muted/10 border-border/50';
-    }
-  };
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 relative z-10 font-sans text-foreground min-h-[calc(100vh-140px)]">

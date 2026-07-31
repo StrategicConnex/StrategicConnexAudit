@@ -12,7 +12,7 @@
 import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, SubdomainTakeoverOutput } from "../types/executor.types";
 
 const hostSchema = z.object({ host: z.string().min(3).max(253) });
 
@@ -60,12 +60,12 @@ const HTTP_FINGERPRINTS: Array<{ pattern: RegExp; service: string; description: 
   { pattern: /does not exist\. Check for mispell/i, service: "Zendesk", description: "Zendesk no existe" },
 ];
 
-export const subdomainTakeoverExecutor: ToolExecutor<{ host: string }, any> = {
+export const subdomainTakeoverExecutor: ToolExecutor<{ host: string }, SubdomainTakeoverOutput> = {
   id: "network.subdomain_takeover",
   timeoutMs: 20000,
   category: "network",
   validate(input: unknown) { return hostSchema.parse(input); },
-  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<SubdomainTakeoverOutput>> {
     ctx.log(`[Subdomain Takeover] Analizando: ${host}`);
     await assertPublicHostname(host);
 

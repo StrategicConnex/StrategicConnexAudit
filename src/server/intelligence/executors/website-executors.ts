@@ -1,7 +1,11 @@
 import { z } from "zod";
 import tls from "node:tls";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, TlsScanOutput } from "../types/executor.types";
+import {
+  ToolExecutor, ExecutionContext, ExecutionResult, Finding, TlsScanOutput,
+  WebsiteHeadersOutput, WebsiteSecurityHeadersOutput, WebsiteRobotsOutput,
+  WebsiteRedirectsOutput, WebsiteCookiesOutput, WebsiteCspOutput,
+} from "../types/executor.types";
 
 const urlSchema = z.object({ url: z.string().url() });
 const hostSchema = z.object({ host: z.string().min(3).max(253) });
@@ -9,14 +13,14 @@ const hostSchema = z.object({ host: z.string().min(3).max(253) });
 /**
  * 1. HTTP Headers Executor
  */
-export const websiteHeadersExecutor: ToolExecutor<{ url: string }, any> = {
+export const websiteHeadersExecutor: ToolExecutor<{ url: string }, WebsiteHeadersOutput> = {
   id: "website.headers",
   timeoutMs: 12000,
   category: "website",
   validate(input: unknown) {
     return urlSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<WebsiteHeadersOutput>> {
     ctx.log(`Iniciando descarga segura de cabeceras HTTP para: ${url}`);
     const parsed = new URL(url);
     await assertPublicHostname(parsed.hostname);
@@ -36,7 +40,7 @@ export const websiteHeadersExecutor: ToolExecutor<{ url: string }, any> = {
       ctx.log(`Error al descargar cabeceras: ${e.message}`);
       return {
         success: false,
-        output: { url },
+        output: { url, status: 0, statusText: "Error", headers: {} },
         findings: [],
         error: `Fallo al recuperar las cabeceras HTTP: ${e.message}`,
       };
@@ -71,14 +75,14 @@ export const websiteHeadersExecutor: ToolExecutor<{ url: string }, any> = {
 /**
  * 2. Security Headers Evaluator
  */
-export const websiteSecurityHeadersExecutor: ToolExecutor<{ url: string }, any> = {
+export const websiteSecurityHeadersExecutor: ToolExecutor<{ url: string }, WebsiteSecurityHeadersOutput> = {
   id: "website.security_headers",
   timeoutMs: 12000,
   category: "website",
   validate(input: unknown) {
     return urlSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<WebsiteSecurityHeadersOutput>> {
     ctx.log(`Evaluando postura de cabeceras de seguridad para: ${url}`);
     const parsed = new URL(url);
     await assertPublicHostname(parsed.hostname);
@@ -99,7 +103,7 @@ export const websiteSecurityHeadersExecutor: ToolExecutor<{ url: string }, any> 
       } catch (e: any) {
         return {
           success: false,
-          output: { url },
+          output: { url, hsts: null, csp: null, xfo: null, xcto: null, rp: null },
           findings: [],
           error: `Error al conectar para analizar cabeceras de seguridad: ${e.message}`,
         };
@@ -278,14 +282,14 @@ export const websiteTlsExecutor: ToolExecutor<{ host: string }, TlsScanOutput> =
 /**
  * 4. Robots.txt Analysis Executor
  */
-export const websiteRobotsExecutor: ToolExecutor<{ url: string }, any> = {
+export const websiteRobotsExecutor: ToolExecutor<{ url: string }, WebsiteRobotsOutput> = {
   id: "website.robots",
   timeoutMs: 12000,
   category: "website",
   validate(input: unknown) {
     return urlSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<WebsiteRobotsOutput>> {
     ctx.log(`Analizando robots.txt para: ${url}`);
     const parsed = new URL(url);
     await assertPublicHostname(parsed.hostname);
@@ -342,12 +346,12 @@ export const websiteRobotsExecutor: ToolExecutor<{ url: string }, any> = {
 
 // ─── 5. Redirect Analysis ──────────────────────────────────────────────────
 
-export const websiteRedirectsExecutor: ToolExecutor<{ url: string }, any> = {
+export const websiteRedirectsExecutor: ToolExecutor<{ url: string }, WebsiteRedirectsOutput> = {
   id: "website.redirects",
   timeoutMs: 15000,
   category: "website",
   validate(input: unknown) { return urlSchema.parse(input); },
-  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<WebsiteRedirectsOutput>> {
     ctx.log(`[Redirects] Analizando cadena de redirecciones para: ${url}`);
     const parsed = new URL(url);
     await assertPublicHostname(parsed.hostname);
@@ -427,12 +431,12 @@ export const websiteRedirectsExecutor: ToolExecutor<{ url: string }, any> = {
 
 // ─── 6. Cookie Analysis ────────────────────────────────────────────────────
 
-export const websiteCookiesExecutor: ToolExecutor<{ url: string }, any> = {
+export const websiteCookiesExecutor: ToolExecutor<{ url: string }, WebsiteCookiesOutput> = {
   id: "website.cookies",
   timeoutMs: 12000,
   category: "website",
   validate(input: unknown) { return urlSchema.parse(input); },
-  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<WebsiteCookiesOutput>> {
     ctx.log(`[Cookies] Analizando cookies para: ${url}`);
     const parsed = new URL(url);
     await assertPublicHostname(parsed.hostname);
@@ -448,7 +452,7 @@ export const websiteCookiesExecutor: ToolExecutor<{ url: string }, any> = {
       }
     } catch (e: any) {
       ctx.log(`Error fetching cookies: ${e.message}`);
-      return { success: false, output: { url }, findings: [], error: `Error al analizar cookies: ${e.message}` };
+      return { success: false, output: { url, cookies: [], cookieCount: 0 }, findings: [], error: `Error al analizar cookies: ${e.message}` };
     }
 
     interface CookieInfo {
@@ -523,12 +527,12 @@ export const websiteCookiesExecutor: ToolExecutor<{ url: string }, any> = {
 
 // ─── 7. CSP Analysis ───────────────────────────────────────────────────────
 
-export const websiteCspExecutor: ToolExecutor<{ url: string }, any> = {
+export const websiteCspExecutor: ToolExecutor<{ url: string }, WebsiteCspOutput> = {
   id: "website.csp",
   timeoutMs: 12000,
   category: "website",
   validate(input: unknown) { return urlSchema.parse(input); },
-  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<WebsiteCspOutput>> {
     ctx.log(`[CSP] Analizando Content-Security-Policy para: ${url}`);
     const parsed = new URL(url);
     await assertPublicHostname(parsed.hostname);
@@ -547,7 +551,12 @@ export const websiteCspExecutor: ToolExecutor<{ url: string }, any> = {
       }
     } catch (e: any) {
       ctx.log(`Error fetching CSP: ${e.message}`);
-      return { success: false, output: { url, csp: null }, findings: [], error: `Error al obtener CSP: ${e.message}` };
+      return {
+        success: false,
+        output: { url, csp: null, directives: {}, score: 0, hasUnsafeInline: false, hasUnsafeEval: false, hasWildcardSrc: false, hasStrictDynamic: false, directiveCount: 0 },
+        findings: [],
+        error: `Error al obtener CSP: ${e.message}`,
+      };
     }
 
     const directives: Record<string, string[]> = {};

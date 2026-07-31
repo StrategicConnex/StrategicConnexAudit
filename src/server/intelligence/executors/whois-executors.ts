@@ -13,7 +13,7 @@
 import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, WhoisFullOutput } from "../types/executor.types";
 import { persistWhoisSnapshot } from "../history/whois-history";
 import { whoisCircuit, CircuitOpenError } from "../core/circuit-breaker";
 import { geoipCache, IntelligenceCache } from "../core/cache";
@@ -34,7 +34,7 @@ const domainSchema = z.object({ domain: z.string().min(3).max(253) });
  *   6. persistWhoisSnapshot() → guarda en whois_history
  *   7. Generar findings
  */
-export const whoisFullExecutor: ToolExecutor<{ domain: string }, any> = {
+export const whoisFullExecutor: ToolExecutor<{ domain: string }, WhoisFullOutput> = {
   id: "whois.full",
   timeoutMs: 25000,
   category: "osint",
@@ -43,7 +43,7 @@ export const whoisFullExecutor: ToolExecutor<{ domain: string }, any> = {
     return domainSchema.parse(input);
   },
 
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<WhoisFullOutput>> {
     ctx.log(`[WHOIS Full] Iniciando consulta RDAP para: ${domain}`);
     await assertPublicHostname(domain);
 
@@ -145,7 +145,10 @@ function parseRdapToSnapshot(domain: string, rdapData: any): WhoisSnapshot {
   if (!updatedDate) updatedDate = createdDate;
 
   const entities = rdapData.entities || [];
-  let registrar: string | null = null;
+  // registrar nunca es null en runtime: se garantiza "Desconocido" como fallback.
+  // Tiparlo como string desde el inicio evita el `string | null` que TS no puede
+  // estrechar cuando la variable se asigna dentro de un bucle.
+  let registrar: string = "Desconocido";
   let abuseContact: string | null = null;
   let registrantOrg: string | null = null;
 
@@ -156,14 +159,12 @@ function parseRdapToSnapshot(domain: string, rdapData: any): WhoisSnapshot {
     const orgEntry = vcard.find((item: any) => item[0] === "org");
     const emailEntry = vcard.find((item: any) => item[0] === "email");
 
-    if (entity.roles?.includes("registrar") && fnEntry) registrar = fnEntry[3] || null;
+    if (entity.roles?.includes("registrar") && fnEntry) registrar = fnEntry[3] || "Desconocido";
     if (entity.roles?.includes("abuse") && emailEntry) abuseContact = emailEntry[3] || null;
     if (entity.roles?.includes("registrant") && (orgEntry || fnEntry)) {
       registrantOrg = orgEntry?.[3] || fnEntry?.[3] || null;
     }
   }
-
-  if (!registrar) registrar = "Desconocido";
 
   const status = rdapData.status || [];
   const nameservers: string[] = [];
@@ -192,7 +193,7 @@ function buildSuccessResponse(
   snapshot: ReturnType<typeof parseRdapToSnapshot>,
   ctx: ExecutionContext,
   fromCache: boolean,
-): ExecutionResult<any> {
+): ExecutionResult<WhoisFullOutput> {
   const expiresMs = snapshot.expiresDate?.getTime() ?? null;
   const daysRemaining = expiresMs !== null
     ? Math.round((expiresMs - Date.now()) / (1000 * 60 * 60 * 24))
@@ -202,7 +203,10 @@ function buildSuccessResponse(
     success: true,
     domain,
     fromCache,
-    registrar: snapshot.registrar,
+    // WhoisSnapshot tipa registrar como string|null; el parser garantiza no-null
+    // en runtime (fallback "Desconocido"), así que el boundary lo asegura también
+    // para cumplir el contrato WhoisFullOutput.registrar: string.
+    registrar: snapshot.registrar ?? "Desconocido",
     createdDate: snapshot.createdDate?.toISOString() ?? null,
     updatedDate: snapshot.updatedDate?.toISOString() ?? null,
     expiresDate: snapshot.expiresDate?.toISOString() ?? null,
@@ -276,7 +280,7 @@ function buildSuccessResponse(
 async function buildFallbackResponse(
   domain: string,
   ctx: ExecutionContext,
-): Promise<ExecutionResult<any>> {
+): Promise<ExecutionResult<WhoisFullOutput>> {
   ctx.log(`[WHOIS Full] Generando fallback para ${domain}`);
 
   let nsList: string[] = [];

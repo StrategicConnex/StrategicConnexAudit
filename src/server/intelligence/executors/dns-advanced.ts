@@ -10,7 +10,10 @@
 import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import {
+  ToolExecutor, ExecutionContext, ExecutionResult, Finding,
+  DnsDnssecOutput, DnsPropagationOutput, ResolverResult, DnsZoneOutput,
+} from "../types/executor.types";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 
@@ -20,12 +23,12 @@ async function safeResolve<T>(promise: Promise<T>): Promise<T | null> {
 
 // ─── 1. DNSSEC Validation ─────────────────────────────────────────────────
 
-export const dnsDnssecExecutor: ToolExecutor<{ domain: string }, any> = {
+export const dnsDnssecExecutor: ToolExecutor<{ domain: string }, DnsDnssecOutput> = {
   id: "dns.dnssec",
   timeoutMs: 15000,
   category: "dns",
   validate(input: unknown) { return domainSchema.parse(input); },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<DnsDnssecOutput>> {
     ctx.log(`[DNSSEC] Validando cadena DNSSEC para: ${domain}`);
     await assertPublicHostname(domain);
 
@@ -88,20 +91,12 @@ const PUBLIC_RESOLVERS = [
   "9.9.9.9",   // Quad9
 ];
 
-interface ResolverResult {
-  resolver: string;
-  a: string[];
-  mx: string[];
-  success: boolean;
-  latencyMs: number;
-}
-
-export const dnsPropagationExecutor: ToolExecutor<{ domain: string }, any> = {
+export const dnsPropagationExecutor: ToolExecutor<{ domain: string }, DnsPropagationOutput> = {
   id: "dns.propagation",
   timeoutMs: 25000,
   category: "dns",
   validate(input: unknown) { return domainSchema.parse(input); },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<DnsPropagationOutput>> {
     ctx.log(`[DNS Propagation] Consultando propagación DNS para: ${domain}`);
     await assertPublicHostname(domain);
 
@@ -164,12 +159,12 @@ export const dnsPropagationExecutor: ToolExecutor<{ domain: string }, any> = {
 
 // ─── 3. Zone Analysis ─────────────────────────────────────────────────────
 
-export const dnsZoneExecutor: ToolExecutor<{ domain: string }, any> = {
+export const dnsZoneExecutor: ToolExecutor<{ domain: string }, DnsZoneOutput> = {
   id: "dns.zone",
   timeoutMs: 25000,
   category: "dns",
   validate(input: unknown) { return domainSchema.parse(input); },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<DnsZoneOutput>> {
     ctx.log(`[Zone Analysis] Analizando zona DNS para: ${domain}`);
     await assertPublicHostname(domain);
 

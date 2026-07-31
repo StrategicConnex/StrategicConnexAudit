@@ -9,7 +9,7 @@
 import { z } from "zod";
 import tls from "node:tls";
 import { assertPublicHostname } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, TlsAdvancedOutput } from "../types/executor.types";
 
 const hostSchema = z.object({ host: z.string().min(3).max(253) });
 
@@ -38,12 +38,12 @@ function tlsHandshake(
   });
 }
 
-export const tlsAdvancedExecutor: ToolExecutor<{ host: string }, any> = {
+export const tlsAdvancedExecutor: ToolExecutor<{ host: string }, TlsAdvancedOutput> = {
   id: "tls.advanced",
   timeoutMs: 25000,
   category: "ssl-tls",
   validate(input: unknown) { return hostSchema.parse(input); },
-  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<TlsAdvancedOutput>> {
     ctx.log(`[TLS Advanced] Análisis profundo TLS para: ${host}`);
     await assertPublicHostname(host);
 

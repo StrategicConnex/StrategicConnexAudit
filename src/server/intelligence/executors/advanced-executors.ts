@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { assertPublicHostname } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import {
+  ToolExecutor, ExecutionContext, ExecutionResult, Finding,
+  NetworkBgpOutput, ThreatCustomIntelOutput,
+} from "../types/executor.types";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 const hostSchema = z.object({ host: z.string().min(3).max(253) });
@@ -9,14 +12,14 @@ const hostSchema = z.object({ host: z.string().min(3).max(253) });
  * P1: BGP Analysis Executor
  * Simula la extracción y validación de rutas BGP buscando anomalías
  */
-export const networkBgpExecutor: ToolExecutor<{ host: string }, any> = {
+export const networkBgpExecutor: ToolExecutor<{ host: string }, NetworkBgpOutput> = {
   id: "network.bgp",
   timeoutMs: 15000,
   category: "network",
   validate(input: unknown) {
     return hostSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { host }): Promise<ExecutionResult<NetworkBgpOutput>> {
     ctx.log(`Iniciando análisis de enrutamiento BGP para: ${host}`);
     await assertPublicHostname(host);
 
@@ -62,14 +65,14 @@ export const networkBgpExecutor: ToolExecutor<{ host: string }, any> = {
  * P2: Custom Threat Intel Feeds Executor
  * Cruza el host contra feeds de inteligencia personalizados (simulado)
  */
-export const threatCustomIntelExecutor: ToolExecutor<{ domain: string }, any> = {
+export const threatCustomIntelExecutor: ToolExecutor<{ domain: string }, ThreatCustomIntelOutput> = {
   id: "threat.custom_intel",
   timeoutMs: 10000,
   category: "threat",
   validate(input: unknown) {
     return domainSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<ThreatCustomIntelOutput>> {
     ctx.log(`Cruzando el dominio ${domain} con Threat Intel Feeds privados`);
     await assertPublicHostname(domain);
 
