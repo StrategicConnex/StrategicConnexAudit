@@ -49,6 +49,13 @@ Detecté dos gaps contra los patrones de query reales y los agregué:
 
 > ⚠️ **Nota de verificación:** es una corrección fail-closed. Si alguna tabla (`uptime_logs`, `anomaly_detections`) no tiene policy SELECT para rol `authenticated` en Supabase, el endpoint devolverá 42501. Verificar con `SELECT * FROM pg_policies WHERE tablename IN ('uptime_logs','anomaly_detections');` antes/después del deploy.
 
+> **✅ ESTADO FINAL DE RLS (verificado contra Supabase, Jul 2026):**
+> - `drizzle-kit push` materializó los índices 0014 definidos en el schema TypeScript (5 confirmados).
+> - Migración **0015** aplicada manualmente (21/21 + 2 de uptime_logs = **23 índices** confirmados) — `drizzle-kit push` NO procesa archivos SQL manuales, se aplicaron con script.
+> - Migración **0016** (idempotente, 9/9): grants `SELECT` a `authenticated` en `uptime_logs`, `anomaly_detections` y `project_members` (necesario para subquery de membresía), `ENABLE ROW LEVEL SECURITY` en ambas tablas, y policies `*_select_member_or_owner` que verifican `request.jwt.claims->>'sub'` contra `projects.owner_id` y `project_members`.
+> - **Test funcional de aislamiento PASS**: un usuario sin proyectos ve **0 filas** en `uptime_logs` y `anomaly_detections` bajo `SET ROLE authenticated` (mismo mecanismo de `withRLS`).
+> - 🔴 **Hallazgo pendiente:** RLS sigue deshabilitado en las tablas de inteligencia (`intelligence_findings`, `intelligence_investigations`, `intelligence_tool_runs`, `intelligence_run_events`, `intelligence_assets`) y en `projects` — la fuga multi-tenant persiste ahí. Se recomienda extender el patrón 0016 a esas tablas (próximo sprint).
+
 ### 2.2 🟠 N+1 / escalabilidad — Agregación en JS en vez de SQL
 
 | Ruta | Problema | Fix |
