@@ -1,17 +1,9 @@
 import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, TechnologyProfileOutput, DetectedTechnology } from "../types/executor.types";
 
 const urlSchema = z.object({ url: z.string().url() });
-
-interface DetectedTechnology {
-  name: string;
-  category: "web-server" | "framework" | "cms" | "cdn" | "analytics" | "js-library" | "css-library" | "hosting" | "runtime";
-  version?: string;
-  confidence: number;
-  evidence: string;
-}
 
 type SigH = { header: string; pattern: RegExp; tech: Omit<DetectedTechnology, "evidence">; };
 type SigM = { name: string; pattern?: RegExp; tech: Omit<DetectedTechnology, "evidence">; };
@@ -112,12 +104,12 @@ const GA_RE = /(?:ga\(|gtag\(|dataLayer\s*=|GoogleAnalyticsObject|gaGlobal)/i;
 const GTM_RE = /googletagmanager/i;
 const FBQ_RE = /fbq\s*\(/i;
 
-export const technologyProfilerExecutor: ToolExecutor<{ url: string }, any> = {
+export const technologyProfilerExecutor: ToolExecutor<{ url: string }, TechnologyProfileOutput> = {
   id: "website.tech_stack",
   timeoutMs: 20000,
   category: "website",
   validate(input: unknown) { return urlSchema.parse(input); },
-  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { url }): Promise<ExecutionResult<TechnologyProfileOutput>> {
     ctx.log("Analyzing tech stack: " + url);
     const host = new URL(url).hostname;
     await assertPublicHostname(host);

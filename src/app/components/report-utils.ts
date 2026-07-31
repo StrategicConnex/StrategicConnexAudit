@@ -151,6 +151,8 @@ export function parseMarkdownReport(text: string): ParsedReport {
  * renderizarlos como diagramas SVG con el componente MermaidBlock.
  * Devuelve un array de { code } en orden de aparición.
  */
+// TODO(C01): unificar este fence-scanning con parseMarkdown() de
+// lib/rendering/markdown.ts para evitar que ambos parsers deriven.
 export function extractMermaidBlocks(text: string): { code: string }[] {
   const blocks: { code: string }[] = [];
   const regex = /```mermaid\s*\n([\s\S]*?)```/g;

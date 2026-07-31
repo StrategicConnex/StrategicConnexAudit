@@ -1,7 +1,10 @@
 import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import {
+  ToolExecutor, ExecutionContext, ExecutionResult, Finding,
+  EmailSpfOutput, EmailDmarcOutput, EmailDkimOutput,
+} from "../types/executor.types";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 const dkimSchema = domainSchema.extend({ selector: z.string().default("default") });
@@ -48,14 +51,14 @@ function countSpfDnsLookups(spfRecord: string): { count: number; nestedIncludes:
 /**
  * 1. SPF Analyzer Executor
  */
-export const emailSpfExecutor: ToolExecutor<{ domain: string }, any> = {
+export const emailSpfExecutor: ToolExecutor<{ domain: string }, EmailSpfOutput> = {
   id: "email.spf",
   timeoutMs: 12000,
   category: "email-security",
   validate(input: unknown) {
     return domainSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<EmailSpfOutput>> {
     ctx.log(`Iniciando análisis SPF seguro para: ${domain}`);
     await assertPublicHostname(domain);
 
@@ -77,7 +80,7 @@ export const emailSpfExecutor: ToolExecutor<{ domain: string }, any> = {
 
       return {
         success: true,
-        output: { domain, hasSpf: false, raw: null, lookups: 0 },
+        output: { domain, hasSpf: false, raw: null, policy: "none", lookups: 0, nestedIncludes: [] },
         findings,
       };
     }
@@ -145,14 +148,14 @@ export const emailSpfExecutor: ToolExecutor<{ domain: string }, any> = {
 /**
  * 2. DMARC Analyzer Executor
  */
-export const emailDmarcExecutor: ToolExecutor<{ domain: string }, any> = {
+export const emailDmarcExecutor: ToolExecutor<{ domain: string }, EmailDmarcOutput> = {
   id: "email.dmarc",
   timeoutMs: 12000,
   category: "email-security",
   validate(input: unknown) {
     return domainSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<EmailDmarcOutput>> {
     ctx.log(`Iniciando análisis DMARC seguro para: ${domain}`);
     await assertPublicHostname(domain);
 
@@ -175,7 +178,7 @@ export const emailDmarcExecutor: ToolExecutor<{ domain: string }, any> = {
 
       return {
         success: true,
-        output: { domain, hasDmarc: false, raw: null, policy: "none" },
+        output: { domain, hasDmarc: false, raw: null, policy: "none", rua: null, pct: 100 },
         findings,
       };
     }
@@ -237,14 +240,14 @@ export const emailDmarcExecutor: ToolExecutor<{ domain: string }, any> = {
 /**
  * 3. DKIM Analyzer Executor
  */
-export const emailDkimExecutor: ToolExecutor<{ domain: string; selector: string }, any> = {
+export const emailDkimExecutor: ToolExecutor<{ domain: string; selector: string }, EmailDkimOutput> = {
   id: "email.dkim",
   timeoutMs: 12000,
   category: "email-security",
   validate(input: unknown) {
     return dkimSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain, selector }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain, selector }): Promise<ExecutionResult<EmailDkimOutput>> {
     const sel = selector || "default";
     ctx.log(`Iniciando análisis DKIM seguro para: ${domain} con selector: ${sel}`);
     await assertPublicHostname(domain);

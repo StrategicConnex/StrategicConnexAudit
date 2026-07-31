@@ -1,7 +1,7 @@
 import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../types/executor.types";
+import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, OsintWhoisOutput } from "../types/executor.types";
 import { whoisCircuit, CircuitOpenError } from "../core/circuit-breaker";
 import { geoipCache, IntelligenceCache } from "../core/cache";
 import { persistWhoisSnapshot } from "../history/whois-history";
@@ -12,14 +12,14 @@ const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 /**
  * OSINT WHOIS / RDAP Executor
  */
-export const osintWhoisExecutor: ToolExecutor<{ domain: string }, any> = {
+export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutput> = {
   id: "osint.whois",
   timeoutMs: 20000,
   category: "osint",
   validate(input: unknown) {
     return domainSchema.parse(input);
   },
-  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<any>> {
+  async execute(ctx: ExecutionContext, { domain }): Promise<ExecutionResult<OsintWhoisOutput>> {
     ctx.log(`Iniciando consulta OSINT RDAP para: ${domain}`);
     await assertPublicHostname(domain);
 
