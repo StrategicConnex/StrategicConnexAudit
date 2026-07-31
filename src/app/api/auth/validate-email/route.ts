@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateEmail } from "@/lib/email-validation";
-import { checkEmailRateLimit, extractClientIp, buildRateLimitHeaders } from "@/shared/lib/ratelimit";
+import { checkEmailRateLimit, extractClientIp, buildRateLimitHeaders, isEmailAllowlisted } from "@/shared/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * Valida un correo electrónico antes de enviar el magic link.
  * Incluye rate limiting por IP para prevenir enumeración de emails.
  *
- * Rate limit: 20 solicitudes / 60s por IP (sliding window)
+ * Rate limit: 40 solicitudes / 60s por IP (sliding window)
  *
  * Body: { email: string }
  * Response (200): { valid: boolean, reason?: string, suggestion?: string }
@@ -19,9 +19,32 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    // ── 1. Rate limiting por IP ──────────────────────────────────────
+    // ── 1. Parsear body (necesario para evaluar allowlist de email) ──
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { valid: false, reason: "El cuerpo de la solicitud no es JSON válido." },
+        { status: 400 }
+      );
+    }
+
+    const { email } = body as { email?: string };
+
+    if (!email || typeof email !== "string") {
+      return NextResponse.json(
+        { valid: false, reason: "El correo electrónico es requerido." },
+        { status: 400 }
+      );
+    }
+
+    // ── 2. Rate limiting por IP (cuentas allowlist no se bloquean) ──
     const clientIp = extractClientIp(req);
-    const rateResult = await checkEmailRateLimit(clientIp);
+    const allowlisted = isEmailAllowlisted(email.trim());
+    let rateResult = allowlisted
+      ? { success: true, limit: 40, remaining: 40, reset: 0, retryAfter: 0 }
+      : await checkEmailRateLimit(clientIp);
 
     if (!rateResult.success) {
       return NextResponse.json(
@@ -39,26 +62,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             "X-RateLimit-Reset": String(rateResult.reset),
           },
         }
-      );
-    }
-
-    // ── 2. Validar body ──────────────────────────────────────────────
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { valid: false, reason: "El cuerpo de la solicitud no es JSON válido." },
-        { status: 400 }
-      );
-    }
-
-    const { email } = body as { email?: string };
-
-    if (!email || typeof email !== "string") {
-      return NextResponse.json(
-        { valid: false, reason: "El correo electrónico es requerido." },
-        { status: 400 }
       );
     }
 

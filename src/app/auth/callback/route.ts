@@ -2,14 +2,20 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { env } from '@/shared/config/env'
-import { withRateLimit } from '@/shared/lib/ratelimit'
+import { extractClientIp, checkCallbackRateLimit, rateLimitResponse, isEmailAllowlisted } from '@/shared/lib/ratelimit'
 import { logSecurityEvent, eventFromRequest } from '@/shared/lib/audit-log'
 
 /**
- * Handler interno del auth callback (sin rate limiting).
- * El rate limiting se aplica via withRateLimit wrapper.
+ * Auth callback (code exchange) con rate limiting por IP.
+ *
+ * El rate limit se evalúa DESPUÉS de intercambiar el `code` por sesión porque
+ * el email del usuario solo se conoce una vez autenticado. Las cuentas en la
+ * allowlist (isEmailAllowlisted — ej: palacios_juan@hotmail.com) saltan el
+ * límite para que nunca queden bloqueadas al clickear magic links repetidos.
+ *
+ * Rate limit: 10 req / 60s por IP (aplicado a usuarios no-allowlist).
  */
-async function handleCallback(request: Request): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/'
@@ -50,8 +56,38 @@ async function handleCallback(request: Request): Promise<Response> {
         },
       }
     )
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
+    const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code)
+
+    // Rate limit por IP — aplica a TODOS los intentos (incluidos exchanges
+    // fallidos, el vector real de brute-force). Las cuentas allowlist nunca
+    // se bloquean: el email solo es conocido tras un exchange exitoso.
+    const clientIp = extractClientIp(request)
+    const allowlisted = !error && user ? isEmailAllowlisted(user.email) : false
+
+    if (!allowlisted) {
+      const rateResult = await checkCallbackRateLimit(clientIp)
+      if (!rateResult.success) {
+        // Auditar evento de rate limit excedido (mismo patrón que withRateLimit)
+        logSecurityEvent("rate_limit_hit", {
+          ip: clientIp,
+          userId: user?.id,
+          path: request.url || "/",
+          method: "GET",
+          userAgent: request.headers?.get("user-agent") || undefined,
+          metadata: {
+            prefix: "callback_limit",
+            limit: rateResult.limit,
+            window: 60,
+            remaining: rateResult.remaining,
+            reset: rateResult.reset,
+            retryAfter: rateResult.retryAfter,
+          },
+        });
+        return rateLimitResponse(rateResult)
+      }
+    }
+
+    if (!error && user) {
       return NextResponse.redirect(`${origin}${safeNext}`)
     }
   }
@@ -59,9 +95,3 @@ async function handleCallback(request: Request): Promise<Response> {
   // Retornar al login con error si algo falla
   return NextResponse.redirect(`${origin}/login?error=auth-code-error`)
 }
-
-// Envuelto con withRateLimit genérico (10 req / 60s por IP)
-export const GET = withRateLimit(
-  { limit: 10, window: 60, prefix: "callback" },
-  handleCallback
-);

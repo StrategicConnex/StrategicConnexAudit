@@ -550,6 +550,7 @@ SIEM_WEBHOOK_SPLUNK=https://http-inputs-mysplunk.splunkcloud.com:8088/services/c
 | `RESEND_API_KEY` | — | Email alerts |
 | `SIEM_EMAIL_FROM` | — | Remitente de alertas email |
 | `SIEM_EMAIL_TO` | — | Destinatario de alertas email |
+| `AUTH_EMAIL_ALLOWLIST` | — | Emails que **saltan el rate limit del login** (comma-separated). El email del owner (`palacios_juan@hotmail.com`) ya está incluido por defecto en código; agrega cuentas adicionales aquí sin modificar código |
 
 ### Desarrollo (solo local)
 
@@ -615,6 +616,7 @@ vercel env add UPSTASH_REDIS_REST_URL
 vercel env add UPSTASH_REDIS_REST_TOKEN
 vercel env add CRON_SECRET
 vercel env add OPENROUTER_API_KEY
+vercel env add AUTH_EMAIL_ALLOWLIST   # opcional — emails con bypass de rate limit del login
 # ... y las opcionales que necesites
 ```
 

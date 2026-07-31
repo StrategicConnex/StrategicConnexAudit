@@ -115,7 +115,7 @@ El orden de precedencia para extraer la IP real del cliente:
 
 ```typescript
 export const POST = withRateLimit(
-  { limit: 20, window: 60, prefix: "validate_email" },
+  { limit: 40, window: 60, prefix: "email_limit" },
   async (req, identifier) => {
     return NextResponse.json({ success: true });
   }
@@ -255,7 +255,7 @@ Usuario ingresa email → POST /api/auth/validate-email
 
 - **Anti-spam:** 400+ dominios temporales/desechables bloqueados
 - **Anti-typosquatting:** Patrones sospechosos detectados
-- **Rate limiting:** 20 intentos/minuto por IP
+- **Rate limiting:** 40 intentos/minuto por IP
 - **Fail-safe:** Si la API de validación falla, se usa validación local básica
 
 ### Protección anti-open-redirect

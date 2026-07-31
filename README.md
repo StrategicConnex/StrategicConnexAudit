@@ -135,7 +135,8 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 ### 🔐 Autenticación
 - **Magic Link**: login sin contraseña via Supabase Auth
 - **Validación de email en tiempo real**: detecta correos desechables, temporales, typosquatting
-- **Rate limiting por IP**: 20 intentos/min en validate-email, 10 intentos/min en callback
+- **Rate limiting por IP**: 40 intentos/min en validate-email, 10 intentos/min en callback
+- **Email allowlist**: cuentas en `AUTH_EMAIL_ALLOWLIST` saltean el rate limit del login (el email del owner ya está incluido por defecto)
 - **Protección anti-open-redirect**: validación estricta del parámetro `next`
 
 ---
@@ -671,6 +672,12 @@ SIEM_EMAIL_TO=admin@company.com      # Destinatario de alertas SIEM
 VAPID_PUBLIC_KEY=xxx               # npx web-push generate-vapid-keys
 VAPID_PRIVATE_KEY=xxx
 
+# ─── Auth / Login (opcional) ────────────────────────────────────
+# Emails que saltean el rate limit del login (validate-email + callback).
+# Comma-separated. Palacios_Juan@hotmail.com ya está incluido por defecto
+# en código; agrega aquí cuentas adicionales sin tocar el código.
+AUTH_EMAIL_ALLOWLIST=admin@empresa.com,dev@empresa.com
+
 # ─── Desarrollo (opcional) ──────────────────────────────────────
 NEXT_PUBLIC_DEV_BYPASS_AUTH=true   # Saltea auth en dev
 CRON_SECRET=xxx                    # Para endpoints de cron
@@ -779,7 +786,8 @@ SCAUDIT Pro usa un **design system propietario** definido en OKLCH, inspirado en
 - Magic Link sin contraseña
 - Validación de email anti-spam/anti-desechables (400+ dominios bloqueados)
 - Protección anti-open-redirect en callback
-- Rate limiting dedicado por endpoint (20/min validate-email, 10/min callback)
+- Rate limiting dedicado por endpoint (40/min validate-email, 10/min callback)
+- **Email allowlist**: cuentas en `AUTH_EMAIL_ALLOWLIST` (env var, comma-separated) saltean el rate limit del login — el email del owner ya está incluido por defecto
 
 ### API Keys Security
 - Keys generadas con criptografía segura (`crypto.randomBytes(64)`)

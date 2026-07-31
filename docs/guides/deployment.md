@@ -114,6 +114,7 @@ En la pantalla de configuración del proyecto, expande la sección **Environment
 | `RESEND_API_KEY` | Email alerts |
 | `SIEM_EMAIL_FROM` | Remitente de alertas email |
 | `SIEM_EMAIL_TO` | Destinatario de alertas email |
+| `AUTH_EMAIL_ALLOWLIST` | Emails que saltean el rate limit del login (comma-separated; el del owner ya está por defecto) |
 
 ```
 ┌─────────────────────────────────────────────────────────┐
