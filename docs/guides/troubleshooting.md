@@ -248,7 +248,7 @@ Error: Email rate limit exceeded. Please try again later.
 
 **Causa:** Superaste el límite de intentos de Magic Link.
 
-**Solución:** Espera 60 segundos antes de reintentar. El rate limit de SCAUDIT es **20 intentos por IP cada 60 segundos**.
+**Solución:** Espera 60 segundos antes de reintentar. El rate limit de SCAUDIT es **40 intentos por IP cada 60 segundos** en validate-email.
 
 ---
 

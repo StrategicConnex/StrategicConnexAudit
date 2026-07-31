@@ -31,6 +31,31 @@ export const redis = new Proxy({} as Redis, {
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
+// Email allowlist (bypass de rate limit para cuentas autorizadas)
+// ═════════════════════════════════════════════════════════════════════════════
+
+const EMAIL_ALLOWLIST = new Set([
+  "palacios_juan@hotmail.com",
+]);
+
+/**
+ * Devuelve true si el email está en la allowlist de cuentas que NO deben
+ * quedar bloqueadas por el rate limiting del flujo de autenticación.
+ * Extensible vía env var AUTH_EMAIL_ALLOWLIST (comma-separated).
+ */
+export function isEmailAllowlisted(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  if (EMAIL_ALLOWLIST.has(normalized)) return true;
+
+  const extra = (process.env.AUTH_EMAIL_ALLOWLIST || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return extra.includes(normalized);
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 // IP Extraction
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -229,7 +254,7 @@ async function checkRateLimitInternal(identifier: string, config: RateLimitConfi
  * Ejemplo (IP-based, sin autenticación):
  *
  *   export const POST = withRateLimit(
- *     { limit: 20, window: 60, prefix: "validate_email" },
+ *     { limit: 40, window: 60, prefix: "email_limit" },
  *     async (req, _identifier) => {
  *       return NextResponse.json({ success: true });
  *     }
@@ -336,10 +361,11 @@ export async function checkAiRateLimit(userId: string) {
   return checkRateLimitInternal(userId, { limit: 5, window: 60, prefix: "ai_limit" });
 }
 
-// ─── Email Validation (20 req / 60s por IP) ─────────────────────────
+// ─── Email Validation (40 req / 60s por IP) ─────────────────────────
+// Límite alto porque el login valida en tiempo real (debounce 400ms) al tipear.
 
 export async function checkEmailRateLimit(ip: string) {
-  return checkRateLimitInternal(ip, { limit: 20, window: 60, prefix: "email_limit" });
+  return checkRateLimitInternal(ip, { limit: 40, window: 60, prefix: "email_limit" });
 }
 
 // ─── Auth Callback (10 req / 60s por IP) ────────────────────────────
