@@ -15,9 +15,12 @@ interface Props {
 
 const DOCS_DIR = path.join(process.cwd(), "docs");
 
+// Nota: `api` NO está en el SLUG_MAP a propósito. /docs/api es una ruta estática
+// dedicada (src/app/docs/api/page.tsx — API Reference interactiva con playground
+// y Swagger). Incluirla aquí generaría un static param duplicado para /docs/api,
+// rompiendo el build de lambdas de Vercel con "Unable to find lambda for route".
 const SLUG_MAP: Record<string, string> = {
   installation: "installation.md",
-  api: "api.md",
   security: "security.md",
   changelog: "CHANGELOG.md",
   "architecture/pipeline-history": "architecture/PIPELINE-HISTORY.md",
