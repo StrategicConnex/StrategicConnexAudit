@@ -7,6 +7,7 @@ import {
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher';
+import { loadIntelligenceTab } from './tab-loaders';
 
 
 const AiCoreVisual = dynamic(() => import('./AiCoreVisual'), { ssr: false });
@@ -31,13 +32,16 @@ interface NavButtonProps {
   label: string;
   badge?: React.ReactNode;
   onClick: () => void;
+  /** Optional — fires on mouse enter, used to warm up a lazy chunk (hover preload). */
+  onHover?: () => void;
 }
 
-function NavButton({ tab, activeTab, icon, label, badge, onClick }: NavButtonProps) {
+function NavButton({ tab, activeTab, icon, label, badge, onClick, onHover }: NavButtonProps) {
   const isActive = activeTab === tab;
   return (
     <button
       onClick={onClick}
+      onMouseEnter={onHover}
       className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 group border cursor-pointer ${
         isActive
           ? 'bg-primary/5 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
@@ -134,6 +138,12 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           label={t('tabs.intelligence')}
           badge={<span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('beta')}</span>}
           onClick={() => onTabChange('intelligence')}
+          onHover={() => {
+            // Warm up the IntelligenceTab chunk on hover so it starts
+            // downloading before the click. Uses the same loader function as
+            // DashboardContainer's dynamic() → shared chunk + module cache.
+            void loadIntelligenceTab();
+          }}
         />
 
         <NavButton

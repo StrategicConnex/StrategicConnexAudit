@@ -1,14 +1,58 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Globe, ChevronRight, Activity,
   Terminal, CheckCircle2, Zap,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ProjectCard } from '../ProjectCard';
-import { BenchmarkingSection } from '../BenchmarkingSection';
 import { projects } from '@/shared/db/schemas';
+
+/**
+ * BenchmarkingSection pulls in recharts (~570KB) — defer the chunk until the
+ * section scrolls into view so the default tab's first paint stays light.
+ */
+const BenchmarkingSection = dynamic(
+  () => import('../BenchmarkingSection').then((m) => ({ default: m.BenchmarkingSection })),
+  { loading: () => <div className="glass-card rounded-2xl p-6 min-h-[200px] animate-pulse" aria-busy="true" /> }
+);
+
+function LazyBenchmarkingSection({ projectId }: { projectId?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          obs.disconnect();
+        }
+      },
+      { rootMargin: '300px' } // start loading just before it scrolls into view
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref}>
+      {inView ? (
+        <BenchmarkingSection projectId={projectId} />
+      ) : (
+        <div className="glass-card rounded-2xl p-6 min-h-[200px] animate-pulse" aria-hidden="true" />
+      )}
+    </div>
+  );
+}
 
 export type ProjectWithNested = typeof projects.$inferSelect & {
   latestAudit?: {
@@ -191,8 +235,8 @@ export function OverviewTab({ initialProjects, dashboardData, setActiveTab, proj
         </div>
       </div>
 
-      {/* ═══ 3. BENCHMARKING ═══ */}
-      <BenchmarkingSection projectId={projectId} />
+      {/* ═══ 3. BENCHMARKING (lazy — recharts loads on scroll into view) ═══ */}
+      <LazyBenchmarkingSection projectId={projectId} />
 
       {/* ═══ 4. COMPLIANCE & TRUST BANNER ═══ */}
       <div className="glass-card rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">

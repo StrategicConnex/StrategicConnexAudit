@@ -5,19 +5,56 @@ import dynamic from 'next/dynamic';
 import { DashboardSidebar, type DashboardTab } from './DashboardSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { OverviewTab } from './tabs/OverviewTab';
-import { ProjectsTab } from './tabs/ProjectsTab';
-import { PerformanceTab } from './tabs/PerformanceTab';
-import { KeywordsTab, type KeywordItem } from './tabs/KeywordsTab';
-import { ReportsTab } from './tabs/ReportsTab';
-import { SettingsTab } from './tabs/SettingsTab';
-import { MonitoringTab } from './tabs/MonitoringTab';
-import { AdversaryTab } from './tabs/AdversaryTab';
-import { MarketplaceTab } from './tabs/MarketplaceTab';
-import { IntelligenceTabSkeleton } from './IntelligenceTabSkeleton';
+import { TabSkeleton } from './TabSkeleton';
+import { loadIntelligenceTab } from './tab-loaders';
+import type { KeywordItem } from './tabs/KeywordsTab';
 
-const IntelligenceTab = dynamic(() => import('./tabs/IntelligenceTab').then(mod => ({ default: mod.IntelligenceTab })), {
+/**
+ * Only OverviewTab (the default, above-the-fold view) is eagerly imported.
+ * Every other tab is code-split behind next/dynamic so its chunk — and any
+ * heavy chart library it pulls (recharts, reactflow, leaflet, etc.) — only
+ * downloads when the user actually opens that tab.
+ */
+const IntelligenceTab = dynamic(loadIntelligenceTab, {
   loading: () => <IntelligenceTabSkeleton />,
 });
+
+const ProjectsTab = dynamic(() => import('./tabs/ProjectsTab').then(mod => ({ default: mod.ProjectsTab })), {
+  loading: () => <TabSkeleton />,
+});
+
+const PerformanceTab = dynamic(() => import('./tabs/PerformanceTab').then(mod => ({ default: mod.PerformanceTab })), {
+  loading: () => <TabSkeleton />,
+});
+
+const KeywordsTab = dynamic(() => import('./tabs/KeywordsTab').then(mod => ({ default: mod.KeywordsTab })), {
+  loading: () => <TabSkeleton />,
+});
+
+const ReportsTab = dynamic(() => import('./tabs/ReportsTab').then(mod => ({ default: mod.ReportsTab })), {
+  loading: () => <TabSkeleton />,
+});
+
+const SettingsTab = dynamic(() => import('./tabs/SettingsTab').then(mod => ({ default: mod.SettingsTab })), {
+  loading: () => <TabSkeleton />,
+});
+
+const MonitoringTab = dynamic(() => import('./tabs/MonitoringTab').then(mod => ({ default: mod.MonitoringTab })), {
+  loading: () => <TabSkeleton />,
+});
+
+const AdversaryTab = dynamic(() => import('./tabs/AdversaryTab').then(mod => ({ default: mod.AdversaryTab })), {
+  loading: () => <TabSkeleton />,
+});
+
+const MarketplaceTab = dynamic(() => import('./tabs/MarketplaceTab').then(mod => ({ default: mod.MarketplaceTab })), {
+  loading: () => <TabSkeleton />,
+});
+
+// Note: `IntelligenceTabSkeleton` is referenced by the dynamic() definition
+// above — ESM hoists imports, so this stays valid. Keep the import in this
+// file (do not delete when reordering).
+import { IntelligenceTabSkeleton } from './IntelligenceTabSkeleton';
 
 import { useAiReport } from './useAiReport';
 
