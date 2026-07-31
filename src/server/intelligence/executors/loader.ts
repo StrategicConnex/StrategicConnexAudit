@@ -1,22 +1,30 @@
 /**
  * loader.ts — Executor Auto-Discovery Loader
  *
- * Escanea el directorio executors/ en busca de archivos que exporten `executor`
+ * Escanea los módulos de executors en busca de archivos que exporten `executor`
  * (ToolExecutor) y opcionalmente `definition` (IntelligenceToolDefinition).
  *
  * Convención:
- *   - Cualquier archivo .ts en executors/ (excepto .test.ts, loader.ts, index.ts)
- *     que exporte `export const executor: ToolExecutor = { ... }` es auto-descubierto.
+ *   - Cualquier módulo en este mapa que exporte `export const executor: ToolExecutor`
+ *     es auto-descubierto.
  *   - Si también exporta `definition: IntelligenceToolDefinition`, se registra también.
  *   - Si solo exporta executor, se genera una definition mínima desde sus metadatos.
  *
+ * IMPORTANTE (build de producción):
+ *   Antes se usaba readdirSync(__dirname) + import(join(dir, file)) — un import
+ *   dinámico no analizable estáticamente que ROMPÍA `next build` en Turbopack
+ *   (Vercel): "Module not found: Can't resolve './ROOT/src/server/intelligence/
+ *   executors' <dynamic>". Se reemplazó por un mapa estático de módulos que
+ *   Turbopack puede rastrear en build time.
+ *
+ *   Para agregar un nuevo executor: crear el archivo en executors/ con
+ *   `export const executor: ToolExecutor` y AGREGARLO a EXECUTOR_MODULES.
+ *
  * La caché de resultados evita escaneos repetidos. El fallback manual en
- * executor-registry.ts y tool-registry.ts sirve cuando FS no está disponible
- * (entorno empaquetado como Vercel serverless).
+ * executor-registry.ts y tool-registry.ts sirve cuando el entorno no permite
+ * import dinámico (entorno empaquetado como Vercel serverless).
  */
 
-import { readdirSync } from "fs";
-import { join } from "path";
 import { ToolExecutor } from "../types/executor.types";
 import { IntelligenceToolDefinition, ToolCategory, ToolRisk } from "../registry/tool-registry";
 
@@ -26,52 +34,52 @@ export interface DiscoveredEntry {
   sourceFile: string;
 }
 
+/**
+ * Mapa estático de módulos de executors.
+ * Las import() con ruta literal son trazables por Turbopack en build time.
+ * Nuevos executors: agregar la entrada aquí.
+ */
+const EXECUTOR_MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
+  "advanced-executors": () => import("./advanced-executors"),
+  "cve-lookup": () => import("./cve-lookup"),
+  "dns-advanced": () => import("./dns-advanced"),
+  "dns-executors": () => import("./dns-executors"),
+  "email-executors": () => import("./email-executors"),
+  "network-executors": () => import("./network-executors"),
+  "osint-executors": () => import("./osint-executors"),
+  "subdomain-takeover": () => import("./subdomain-takeover"),
+  "technology-profiler": () => import("./technology-profiler"),
+  "tls-advanced": () => import("./tls-advanced"),
+  "website-executors": () => import("./website-executors"),
+  "whois-executors": () => import("./whois-executors"),
+};
+
 let cachedResults: DiscoveredEntry[] | null = null;
 
-/** Archivos que NO deben escanearse como executors */
-const EXCLUDED_FILES = new Set([
-  "loader.ts", "loader.js",
-  "index.ts", "index.js",
-  "executors.test.ts", "executors.test.js",
-]);
-
 /**
- * Descubre todos los executors en el directorio actual.
- * Escanea el FS una sola vez y cachea los resultados.
+ * Descubre todos los executors registrados en el mapa estático.
+ * Escanea una sola vez y cachea los resultados.
  */
 export async function discoverExecutors(): Promise<DiscoveredEntry[]> {
   if (cachedResults) return cachedResults;
 
-  const dir = __dirname;
   const results: DiscoveredEntry[] = [];
 
-  let files: string[];
-  try {
-    files = readdirSync(dir).filter((f) => {
-      const ext = f.endsWith(".ts") || f.endsWith(".js");
-      return ext && !EXCLUDED_FILES.has(f) && !f.startsWith("_");
-    });
-  } catch {
-    // FS no disponible (Vercel serverless, entorno empaquetado)
-    cachedResults = [];
-    return cachedResults;
-  }
-
-  for (const file of files) {
+  for (const [sourceFile, loadModule] of Object.entries(EXECUTOR_MODULES)) {
     try {
-      const mod = await import(join(dir, file));
-      const executor: ToolExecutor | undefined = mod.executor;
-      const definition: IntelligenceToolDefinition | undefined = mod.definition;
+      const mod = await loadModule();
+      const executor = mod["executor"] as ToolExecutor | undefined;
+      const definition = mod["definition"] as IntelligenceToolDefinition | undefined;
 
       if (executor && executor.id) {
         results.push({
           executor,
           definition,
-          sourceFile: file,
+          sourceFile: `${sourceFile}.ts`,
         });
       }
     } catch {
-      // Ignorar archivos que no exportan executor
+      // Ignorar módulos que no exportan executor
     }
   }
 
