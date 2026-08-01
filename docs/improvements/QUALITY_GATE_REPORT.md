@@ -14,9 +14,9 @@ permalink: /docs/improvements/quality-gate-report
 | Métrica | Valor |
 |---|---|
 | Documentos evaluados | 17 |
-| **PASS** (≥ 80) | ✅ 3 |
-| **FAIL** (< 80) | ❌ 14 |
-| Score promedio | 37.4/100 |
+| **PASS** (≥ 80) | ✅ 4 |
+| **FAIL** (< 80) | ❌ 13 |
+| Score promedio | 41.8/100 |
 | Mejor documento | docs/architecture/AI-ROUTER-TDD.md (100/100) |
 | Peor documento | docs/index.md (5/100) |
 
@@ -30,7 +30,7 @@ permalink: /docs/improvements/quality-gate-report
 | 2 | `docs/api.md` | 30/100 | ❌ FAIL |
 | 3 | `docs/architecture/AI-ROUTER-TDD.md` | 100/100 | ✅ **PASS** |
 | 4 | `docs/architecture/ENTERPRISE-ARCHITECTURE.md` | 100/100 | ✅ **PASS** |
-| 5 | `docs/architecture/PIPELINE-HISTORY.md` | 25/100 | ❌ FAIL |
+| 5 | `docs/architecture/PIPELINE-HISTORY.md` | 100/100 | ✅ **PASS** |
 | 6 | `docs/guides/alerting-setup.md` | 30/100 | ❌ FAIL |
 | 7 | `docs/guides/deployment.md` | 25/100 | ❌ FAIL |
 | 8 | `docs/guides/troubleshooting.md` | 35/100 | ❌ FAIL |
@@ -95,25 +95,9 @@ Todas las 20 secciones del template están presentes. 🎉
 
 Todas las 20 secciones del template están presentes. 🎉
 
-### ❌ `docs/architecture/PIPELINE-HISTORY.md` — 25/100
+### ✅ `docs/architecture/PIPELINE-HISTORY.md` — 100/100
 
-Faltan **15/20** secciones:
-
-- [ ] **01. Scope y objetivos definidos**
-- [ ] **02. Requisitos documentados**
-- [ ] **04. Datos documentados (ERD + dictionary, sin columnas inventadas)**
-- [ ] **08. Testing documentado (estrategia + casos + cobertura)**
-- [ ] **09. Deployment documentado (ambientes, CI/CD, rollout)**
-- [ ] **10. Operaciones documentadas (monitoring, runbooks, recovery)**
-- [ ] **11. Mermaid proporcionado y válido en los diagramas clave**
-- [ ] **12. Inventario visual creado (FIG/MAT/FLOW con metadatos)**
-- [ ] **13. Trazabilidad establecida (REQ → COMP → TEST → DEP)**
-- [ ] **14. Inconsistencias detectadas y resueltas (cross-check)**
-- [ ] **15. Unknowns y assumptions identificados**
-- [ ] **17. Diagramas legibles (sin densidad excesiva)**
-- [ ] **18. Diagramas no redundantes (IDs únicos)**
-- [ ] **19. Terminología consistente (glosario si aplica)**
-- [ ] **20. Documento versionado (versión, fecha, autor, estado)**
+Todas las 20 secciones del template están presentes. 🎉
 
 ### ❌ `docs/guides/alerting-setup.md` — 30/100
 
@@ -349,26 +333,26 @@ Faltan **15/20** secciones:
 
 | Check | Título | Cumplimiento |
 |-------|--------|--------------|
-| 01 | Scope y objetivos definidos | 5/17 ███░░░░░░░ |
-| 02 | Requisitos documentados | 7/17 ████░░░░░░ |
+| 01 | Scope y objetivos definidos | 6/17 ████░░░░░░ |
+| 02 | Requisitos documentados | 8/17 █████░░░░░ |
 | 03 | Arquitectura documentada (contexto → componentes → dependencias) | 8/17 █████░░░░░ |
-| 04 | Datos documentados (ERD + dictionary, sin columnas inventadas) | 9/17 █████░░░░░ |
+| 04 | Datos documentados (ERD + dictionary, sin columnas inventadas) | 10/17 ██████░░░░ |
 | 05 | Flujos documentados (request/response, procesos) | 7/17 ████░░░░░░ |
 | 06 | APIs documentadas (método, auth, request, response, errores, rate limit) | 11/17 ██████░░░░ |
 | 07 | Seguridad documentada (trust boundaries, controles, amenazas) | 13/17 ████████░░ |
-| 08 | Testing documentado (estrategia + casos + cobertura) | 9/17 █████░░░░░ |
-| 09 | Deployment documentado (ambientes, CI/CD, rollout) | 14/17 ████████░░ |
-| 10 | Operaciones documentadas (monitoring, runbooks, recovery) | 5/17 ███░░░░░░░ |
-| 11 | Mermaid proporcionado y válido en los diagramas clave | 4/17 ██░░░░░░░░ |
-| 12 | Inventario visual creado (FIG/MAT/FLOW con metadatos) | 3/17 ██░░░░░░░░ |
-| 13 | Trazabilidad establecida (REQ → COMP → TEST → DEP) | 2/17 █░░░░░░░░░ |
-| 14 | Inconsistencias detectadas y resueltas (cross-check) | 3/17 ██░░░░░░░░ |
-| 15 | Unknowns y assumptions identificados | 3/17 ██░░░░░░░░ |
+| 08 | Testing documentado (estrategia + casos + cobertura) | 10/17 ██████░░░░ |
+| 09 | Deployment documentado (ambientes, CI/CD, rollout) | 15/17 █████████░ |
+| 10 | Operaciones documentadas (monitoring, runbooks, recovery) | 6/17 ████░░░░░░ |
+| 11 | Mermaid proporcionado y válido en los diagramas clave | 5/17 ███░░░░░░░ |
+| 12 | Inventario visual creado (FIG/MAT/FLOW con metadatos) | 4/17 ██░░░░░░░░ |
+| 13 | Trazabilidad establecida (REQ → COMP → TEST → DEP) | 3/17 ██░░░░░░░░ |
+| 14 | Inconsistencias detectadas y resueltas (cross-check) | 4/17 ██░░░░░░░░ |
+| 15 | Unknowns y assumptions identificados | 4/17 ██░░░░░░░░ |
 | 16 | Cero datos inventados (datos con fuente) | 6/17 ████░░░░░░ |
-| 17 | Diagramas legibles (sin densidad excesiva) | 4/17 ██░░░░░░░░ |
-| 18 | Diagramas no redundantes (IDs únicos) | 3/17 ██░░░░░░░░ |
-| 19 | Terminología consistente (glosario si aplica) | 3/17 ██░░░░░░░░ |
-| 20 | Documento versionado (versión, fecha, autor, estado) | 8/17 █████░░░░░ |
+| 17 | Diagramas legibles (sin densidad excesiva) | 5/17 ███░░░░░░░ |
+| 18 | Diagramas no redundantes (IDs únicos) | 4/17 ██░░░░░░░░ |
+| 19 | Terminología consistente (glosario si aplica) | 4/17 ██░░░░░░░░ |
+| 20 | Documento versionado (versión, fecha, autor, estado) | 9/17 █████░░░░░ |
 
 ## Distribución de scores
 
@@ -377,7 +361,7 @@ Faltan **15/20** secciones:
 ███░░░░░░░  30  docs/api.md
 ██████████ 100  docs/architecture/AI-ROUTER-TDD.md
 ██████████ 100  docs/architecture/ENTERPRISE-ARCHITECTURE.md
-███░░░░░░░  25  docs/architecture/PIPELINE-HISTORY.md
+██████████ 100  docs/architecture/PIPELINE-HISTORY.md
 ███░░░░░░░  30  docs/guides/alerting-setup.md
 ███░░░░░░░  25  docs/guides/deployment.md
 ████░░░░░░  35  docs/guides/troubleshooting.md
