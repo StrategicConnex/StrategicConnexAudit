@@ -18,6 +18,8 @@
     {"idx": 13,"version": "7","when": 1785520000000,"tag": "0013_plugin_marketplace","breakpoints": true},
     {"idx": 14,"version": "7","when": 1785580000000,"tag": "0014_intelligence_indexes","breakpoints": true},
     {"idx": 15,"version": "7","when": 1785640000000,"tag": "0015_core_fk_indexes","breakpoints": true},
-    {"idx": 16,"version": "7","when": 1785700000000,"tag": "0016_rls_policies","breakpoints": true}
+    {"idx": 16,"version": "7","when": 1785700000000,"tag": "0016_rls_policies","breakpoints": true},
+    {"idx": 17,"version": "7","when": 1785760000000,"tag": "0017_adversary_ptt","breakpoints": true},
+    {"idx": 18,"version": "7","when": 1785820000000,"tag": "0018_unique_mitre_id","breakpoints": true}
   ]
 }

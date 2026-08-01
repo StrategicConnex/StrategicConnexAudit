@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
       "src/app/components/tabs/IntelligenceTab.tsx",
       "src/app/components/tabs/MonitoringTab.tsx",
       "src/app/components/tabs/SettingsTab.tsx",
+      "src/app/components/tabs/AdversaryTab.tsx",
       "src/features/intelligence/hooks/**/*.ts"
     ],
     rules: {

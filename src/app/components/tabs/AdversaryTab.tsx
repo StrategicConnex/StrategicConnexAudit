@@ -50,6 +50,8 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
   const [error, setError] = useState<string | null>(null);
   const [runningScenario, setRunningScenario] = useState<string | null>(null);
   const [runOutput, setRunOutput] = useState<string | null>(null);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const [reportingResult, setReportingResult] = useState(false);
   const [expandedScenario, setExpandedScenario] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('all');
 
@@ -79,6 +81,8 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
   const handleRunScenario = async (mitreId: string) => {
     setRunningScenario(mitreId);
     setRunOutput(null);
+    // Run nuevo → descartar el runId pendiente de reporte anterior
+    setActiveRunId(null);
     setError(null);
     try {
       const res = await fetch('/api/intelligence/adversary', {
@@ -89,6 +93,8 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
       const data = await res.json();
       if (data.success) {
         setRunOutput(data.output);
+        // Guardar el runId para poder reportar el resultado vía PATCH
+        setActiveRunId(data.runId ?? null);
         fetchScenarios();
       } else {
         setError(t('runError', { error: data.error || '' }));
@@ -99,6 +105,42 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
       setRunningScenario(null);
     }
   };
+
+  /**
+   * Reporta el resultado real de la simulación al servidor (PATCH),
+   * cerrando el loop de detección que antes quedaba solo en el estado local
+   * (fix P0: los botones no persistían detectado/missed en la BD).
+   */
+  const handleReportResult = useCallback(async (result: 'detected' | 'missed') => {
+    if (!activeRunId) return;
+    setReportingResult(true);
+    let reported = false;
+    try {
+      const res = await fetch('/api/intelligence/adversary', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId: activeRunId, result }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success === true) {
+        reported = true;
+      } else {
+        setError(t('runError', { error: data.error || t('patchFailed') }));
+      }
+    } catch (err: unknown) {
+      setError(t('networkError', { error: err instanceof Error ? err.message : String(err) }));
+    } finally {
+      setReportingResult(false);
+      // Solo limpiar el panel si el PATCH fue exitoso; si falló, se conserva
+      // activeRunId/runOutput para que el usuario pueda reintentar sin
+      // volver a ejecutar el escenario (el run quedaría 'missed' si no).
+      if (reported) {
+        setRunOutput(null);
+        setActiveRunId(null);
+        fetchScenarios();
+      }
+    }
+  }, [activeRunId, fetchScenarios, t]);
 
   const filteredScenarios = activeFilter === 'all'
     ? scenarios
@@ -193,14 +235,16 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-chartreuse/10 bg-muted/10">
             <span className="text-[10px] text-muted-fg">{t('reportResult')}</span>
             <button
-              onClick={() => { setRunOutput(null); fetchScenarios(); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-chartreuse/10 border border-chartreuse/20 text-chartreuse text-[10px] font-bold hover:bg-chartreuse/20 transition-all cursor-pointer"
+              onClick={() => handleReportResult('detected')}
+              disabled={reportingResult}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-chartreuse/10 border border-chartreuse/20 text-chartreuse text-[10px] font-bold hover:bg-chartreuse/20 transition-all cursor-pointer disabled:opacity-50"
             >
               <ShieldCheck className="w-3 h-3" /> {t('btnDetected')}
             </button>
             <button
-              onClick={() => { setRunOutput(null); fetchScenarios(); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold hover:bg-destructive/20 transition-all cursor-pointer"
+              onClick={() => handleReportResult('missed')}
+              disabled={reportingResult}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold hover:bg-destructive/20 transition-all cursor-pointer disabled:opacity-50"
             >
               <ShieldOff className="w-3 h-3" /> {t('btnNotDetected')}
             </button>
