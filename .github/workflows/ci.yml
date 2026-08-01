@@ -22,6 +22,44 @@ jobs:
       - run: pnpm lint
       - run: pnpm build
 
+  docs-quality-gate:
+    name: Docs Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Validador de documentación Enterprise (MASTER_PROMPT-v2.md §4.1):
+      # corre sobre todos los TDD de docs/architecture/ y FALLA el build si
+      # alguno baja del umbral (default 60). Script Node puro, zero-deps —
+      # no requiere pnpm install.
+      - name: Docs Quality Gate (docs/architecture/*.md, min 60)
+        run: |
+          set -e
+          echo "📚 Corriendo Quality Gate sobre docs/architecture/*.md (umbral 60/100)"
+          for f in docs/architecture/*.md; do
+            echo "→ $f"
+            node scripts/quality-gate.mjs "$f" --min 60 --quiet
+          done
+          echo "✅ Todos los TDDs de docs/architecture/ cumplen el umbral 60."
+
+      - name: Report quality gate in PR
+        if: always()
+        run: |
+          {
+            echo '## 📚 Docs Quality Gate'
+            echo ''
+            echo 'Umbral: 60/100 · `docs/architecture/*.md` · [scripts/quality-gate.mjs](scripts/quality-gate.mjs)'
+            echo ''
+            echo '```'
+            for f in docs/architecture/*.md; do
+              node scripts/quality-gate.mjs "$f" --min 60 --quiet || true
+            done
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   test-and-coverage:
     name: Tests & Coverage
     runs-on: ubuntu-latest

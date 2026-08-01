@@ -336,7 +336,56 @@ Para evitar deploys accidentales, puedes configurar **Git Protection** en Vercel
 
 ---
 
-## 7. Cron Jobs en Vercel
+## 7. Docs Quality Gate (CI)
+
+El pipeline de CI incluye un job `docs-quality-gate` que valida la **documentación Enterprise** de `docs/architecture/` contra el template obligatorio del [MASTER PROMPT v2](../improvements/MASTER_PROMPT-v2.md) (§4.1 — Quality Gate, 20 items × 5 pts = 100).
+
+### Qué hace
+
+Cada push/PR ejecuta `scripts/quality-gate.mjs` sobre **todos** los `docs/architecture/*.md` con un umbral de **60/100** y **falla el build** si algún TDD baja de ese puntaje:
+
+```bash
+# Equivalente local al step de CI
+set -e
+for f in docs/architecture/*.md; do
+  node scripts/quality-gate.mjs "$f" --min 60 --quiet
+done
+```
+
+> El job `docs-quality-gate` corre en **paralelo** a lint/build/tests y **no requiere `pnpm install`** — el validador es un script Node puro (zero-deps), por lo que solo necesita `actions/checkout` + `actions/setup-node`.
+
+{: .warning }
+**Estado actual:** `docs/architecture/PIPELINE-HISTORY.md` puntúa 25/100 y no alcanza el umbral 60 — el primer push después de activar el gate fallará CI hasta que ese documento se eleve (usá el checklist del [QUALITY_GATE_REPORT](../improvements/quality-gate-report) para cerrar las secciones que faltan).
+
+### Cómo correrlo localmente
+
+```bash
+# Un solo documento (exit 0 = PASS, exit 1 = FAIL)
+node scripts/quality-gate.mjs docs/architecture/AI-ROUTER-TDD.md --min 60
+
+# Todos los TDDs de arquitectura (mismo loop que CI)
+for f in docs/architecture/*.md; do
+  node scripts/quality-gate.mjs "$f" --min 60 --quiet
+done
+
+# Reporte global de todos los docs de docs/ (publica QUALITY_GATE_REPORT.md)
+node .freebuff/quality-gate-report.mjs
+```
+
+### Cambiar el umbral o el alcance
+
+| Cambio | Dónde |
+|--------|-------|
+| Umbral (p.ej. 70) | `.github/workflows/ci.yml` → job `docs-quality-gate` → reemplazar `--min 60` por `--min 70` |
+| Alcance (p.ej. `docs/**/*.md`) | Mismo job → cambiar el glob del `for f in ...` |
+| Umbral por defecto del validador | `scripts/quality-gate.mjs` → `let min = 80` (default cuando no se pasa `--min`) |
+
+{: .tip }
+**¿Tu PR falla por el quality gate?** El job imprime en los logs (y en el PR summary) cada documento con su score y las secciones faltantes (`- [ ] 01. Scope y objetivos...`). Cierra esas secciones en el documento y vuelve a pushear — el reporte completo con el checklist por doc está en [QUALITY_GATE_REPORT](../improvements/quality-gate-report).
+
+---
+
+## 8. Cron Jobs en Vercel
 
 Los cron jobs se configuran en `vercel.json`:
 
@@ -380,7 +429,7 @@ Si necesitas más de 2 cron jobs o ventanas más cortas, considera usar **Trigge
 
 ---
 
-## 8. Serverless Functions: Límites y consideraciones
+## 9. Serverless Functions: Límites y consideraciones
 
 ### Timeouts
 
@@ -407,7 +456,7 @@ Si necesitas más de 2 cron jobs o ventanas más cortas, considera usar **Trigge
 
 ---
 
-## 9. Post-deploy: Verificación
+## 10. Post-deploy: Verificación
 
 ### Checklist
 
@@ -438,7 +487,7 @@ curl -s -o /dev/null -w "%{http_code}" https://strategicaudit-pro.vercel.app/doc
 
 ---
 
-## 10. Rollback
+## 11. Rollback
 
 Si un deploy falla o introduce un bug:
 
@@ -469,7 +518,7 @@ git push origin main
 
 ---
 
-## 11. Troubleshooting de deploys
+## 12. Troubleshooting de deploys
 
 ### Error: Build timeout
 
@@ -524,7 +573,7 @@ Error: {
 
 ---
 
-## 12. Monitoreo post-deploy
+## 13. Monitoreo post-deploy
 
 ### Vercel Analytics (gratuito)
 
@@ -552,7 +601,7 @@ En Vercel → **Settings → Notifications**, configura notificaciones para:
 
 ---
 
-## 13. Preguntas frecuentes
+## 14. Preguntas frecuentes
 
 ### ¿Vercel es gratuito para SCAUDIT?
 
@@ -599,7 +648,8 @@ Si necesitas migrar a otro hosting, el proyecto está construido con Next.js `st
 | `vercel.json` | Configuración de build, cron jobs, regions |
 | `next.config.ts` | Configuración de Next.js (output standalone, images) |
 | `.env.example` | Template de variables de entorno |
-| `.github/workflows/ci.yml` | Pipeline CI/CD con lint, tests, coverage |
+| `.github/workflows/ci.yml` | Pipeline CI/CD con lint, tests, coverage y **Docs Quality Gate** |
+| `scripts/quality-gate.mjs` | Validador de documentación Enterprise (20 checks, 0–100) |
 | `trigger.config.ts` | Configuración de Trigger.dev |
 
 ---
