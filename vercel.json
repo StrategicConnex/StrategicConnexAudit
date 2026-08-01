@@ -15,7 +15,6 @@
     }
   ],
   "regions": ["iad1"],
-  "public": true,
   "github": {
     "silent": true,
     "autoJobCancelation": true
