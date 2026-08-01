@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 /* --- Docs sidebar navigation ------------------------------------------- */
 
@@ -45,7 +46,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
       {/* Sidebar */}
       <aside className="w-64 shrink-0 border-r border-border bg-card/50 backdrop-blur-2xl flex flex-col h-screen sticky top-0 overflow-y-auto">
         <div className="h-16 flex items-center px-6 border-b border-border/50 shrink-0">
-          <a href="/docs" className="flex items-center gap-2.5">
+          <Link href="/docs" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
@@ -53,7 +54,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
               </svg>
             </div>
             <span className="font-bold text-sm tracking-tight">Documentación</span>
-          </a>
+          </Link>
         </div>
 
         <nav className="flex-1 p-4 space-y-6">
@@ -65,12 +66,12 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
               <ul className="space-y-0.5">
                 {section.links.map((link) => (
                   <li key={link.href}>
-                    <a
+                    <Link
                       href={link.href}
                       className="block px-2 py-2 text-[13px] font-medium text-muted-fg hover:text-foreground hover:bg-primary/5 rounded-lg transition-all duration-200"
                     >
                       {link.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -79,7 +80,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         </nav>
 
         <div className="p-4 border-t border-border/50 shrink-0">
-          <a
+          <Link
             href="/"
             className="flex items-center gap-2 text-[12px] text-muted-fg hover:text-foreground transition-colors"
           >
@@ -88,7 +89,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
               <path d="M19 12H5" />
             </svg>
             Volver al Dashboard
-          </a>
+          </Link>
         </div>
       </aside>
 

@@ -2,8 +2,9 @@
 
 import {
   LayoutDashboard, Globe, Activity, Search, BarChart3, Settings,
-  ShieldCheck, Sliders, HeartPulse,  Crosshair, BookOpen, Zap, Key, Skull, Package, Puzzle
+  ShieldCheck, Sliders, HeartPulse,  Crosshair, BookOpen, Zap, Key, Skull, Package
 } from 'lucide-react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher';
@@ -194,54 +195,54 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
 
       {/* External Links */}
       <div className="px-4 mb-1 z-10 space-y-1">
-        <a
+        <Link
           href="/docs"
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.docs')}</span>
           <span className="ml-auto text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.docsBadge')}</span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/ai/health"
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <HeartPulse size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.aiHealth')}</span>
           <span className="ml-auto text-[9px] bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.aiHealthBadge')}</span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/mitre-coverage"
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <Crosshair size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.mitre')}</span>
           <span className="ml-auto text-[9px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.mitreBadge')}</span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/docs/api"
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.apiReference')}</span>
           <span className="ml-auto text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.docsBadge')}</span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/settings/api-keys"
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <Key size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.apiKeys')}</span>
           <span className="ml-auto text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.apiKeysBadge')}</span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/swagger"
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <Zap size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.apiPlayground')}</span>
           <span className="ml-auto text-[9px] bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.apiPlaygroundBadge')}</span>
-        </a>
+        </Link>
       </div>
 
       {/* Settings Footer */}

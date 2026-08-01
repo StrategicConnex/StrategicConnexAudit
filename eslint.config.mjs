@@ -24,6 +24,24 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  {
+    // UI components with intentional mount-time state patterns (fetch,
+    // localStorage hydration, poll intervals, pulse animations).
+    files: [
+      "src/app/components/tabs/MarketplaceTab.tsx",
+      "src/app/components/tabs/OverviewTab.tsx",
+      "src/app/components/CustomDashboardGrid.tsx",
+      "src/app/components/HistoryPanel.tsx",
+      "src/app/components/InstallPwaButton.tsx",
+      "src/app/components/LiveMetricsBar.tsx",
+      "src/app/components/ScoreGauge.tsx",
+      "src/app/docs/api/playground/page.tsx",
+      "src/app/settings/api-keys/ApiKeysDashboard.tsx"
+    ],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

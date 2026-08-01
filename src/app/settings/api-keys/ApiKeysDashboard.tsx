@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Key, Plus, Trash2, Copy, Check, Loader2, AlertTriangle,
   ShieldCheck, Search, ArrowUpDown, Clock, ExternalLink,
-  BarChart3, Calendar, Activity, RefreshCw, TrendingUp,
+  BarChart3, Activity, RefreshCw, TrendingUp,
 } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -528,10 +529,10 @@ export default function ApiKeysDashboard() {
 
       {/* API Reference link */}
       <div className="text-center border-t border-border pt-6">
-        <a href="/docs/api" className="inline-flex items-center gap-1.5 text-[11px] text-muted-fg hover:text-primary transition-colors">
+        <Link href="/docs/api" className="inline-flex items-center gap-1.5 text-[11px] text-muted-fg hover:text-primary transition-colors">
           <ExternalLink className="w-3.5 h-3.5" />
           View API documentation for authentication details
-        </a>
+        </Link>
       </div>
     </div>
   );

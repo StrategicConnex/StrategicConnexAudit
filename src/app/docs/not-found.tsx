@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { FileQuestion, Home, BookOpen } from "lucide-react";
 
 export default function DocsNotFound() {
@@ -35,7 +36,7 @@ export default function DocsNotFound() {
 
       {/* Quick links */}
       <div className="flex items-center gap-3">
-        <a
+        <Link
           href="/docs"
           className="glass-card rounded-xl px-5 py-3 flex items-center gap-2.5 text-[13px] font-semibold text-foreground hover:bg-primary/5 hover:border-primary/20 transition-all duration-200 group"
         >
@@ -44,8 +45,8 @@ export default function DocsNotFound() {
             className="group-hover:text-primary transition-colors"
           />
           Documentación
-        </a>
-        <a
+        </Link>
+        <Link
           href="/"
           className="glass-card rounded-xl px-5 py-3 flex items-center gap-2.5 text-[13px] font-semibold text-foreground hover:bg-primary/5 hover:border-primary/20 transition-all duration-200 group"
         >
@@ -54,7 +55,7 @@ export default function DocsNotFound() {
             className="group-hover:text-primary transition-colors"
           />
           Dashboard
-        </a>
+        </Link>
       </div>
 
       {/* Subtle search hint */}

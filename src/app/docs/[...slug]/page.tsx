@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -108,7 +109,7 @@ export default async function DocPage({ params }: Props) {
     <article className="prose-custom animate-fade-in">
       {/* Mobile breadcrumb */}
       <div className="flex items-center gap-2 text-[12px] text-muted-fg mb-6 md:hidden">
-        <a href="/docs" className="hover:text-primary transition-colors">Docs</a>
+        <Link href="/docs" className="hover:text-primary transition-colors">Docs</Link>
         <span>/</span>
         <span className="truncate max-w-[200px]">{title}</span>
       </div>

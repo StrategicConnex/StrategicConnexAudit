@@ -42,7 +42,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // ── 2. Rate limiting por IP (cuentas allowlist no se bloquean) ──
     const clientIp = extractClientIp(req);
     const allowlisted = isEmailAllowlisted(email.trim());
-    let rateResult = allowlisted
+    const rateResult = allowlisted
       ? { success: true, limit: 40, remaining: 40, reset: 0, retryAfter: 0 }
       : await checkEmailRateLimit(clientIp);
 
