@@ -8,9 +8,10 @@ import { callAIWithFallback, AIMessage } from '@/server/ai/ai-router';
 
 export const dynamic = 'force-dynamic';
 
-// Vercel serverless: el router IA prueba varios modelos en cadena (hasta 30s
-// por intento). Sin maxDuration, la plataforma mata la función a los 10s (Hobby)
-// o 60s (Pro) y el cliente ve la barra colgada al 35%/90% sin informe.
+// Vercel serverless: el router IA prueba la cadena seo-report (2 modelos x
+// 50s = 100s peor caso + overhead ≈ 113s). Sin maxDuration, la plataforma mata
+// la función a los 10s (Hobby) o 60s (Pro) y el cliente ve la barra colgada
+// al 35%/90% sin informe.
 export const maxDuration = 120;
 
 interface ResilientReportData {
@@ -143,7 +144,10 @@ export const POST = withRateLimit(
         taskType: "seo-report",
         messages: [systemMsg, userMsg],
         temperature: 0.3,
-        maxTokens: 4096,
+        // 3000 tokens (no 4096): el reporte (resumen + tabla KPIs + mermaid)
+        // necesita ~1500-2500. Generar menos es más rápido y cabe holgado en
+        // el timeout de 50s de los modelos :free, evitando el truncado.
+        maxTokens: 3000,
       });
 
       if (aiResult.success) {

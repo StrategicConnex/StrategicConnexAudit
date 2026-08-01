@@ -102,13 +102,35 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
     "nvidia/nemotron-3-super-120b-a12b:free",
     "nvidia/nemotron-3-nano-30b-a3b:free",
   ],
-  // Acotada a 3 modelos (peor caso 3×20s=60s) para que el reporte resiliente
-  // llegue al cliente antes del timeout de 110s y de maxDuration=120s en Vercel.
+  // Acotada a 2 modelos con timeout largo (ver MODEL_TIMEOUTS): un reporte
+  // ejecutivo de 4096 tokens NO termina en 20s en modelos :free (verificado
+  // en producción: 3×20s de timeout → fallback resiliente sin mermaid).
+  // Peor caso 2×50s = 100s < maxDuration=120s en Vercel.
   "seo-report": [
     FREE_META_MODEL,
     "google/gemma-4-26b-a4b-it:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
   ],
+};
+
+/**
+ * Timeout por intento de modelo según tarea (ms).
+ *
+ * Las tareas generativas largas (seo-report: tabla + mermaid, hasta 4096
+ * tokens) necesitan mucho más que los 20s de chat corto: en modelos :free
+ * la generación de un reporte completo toma 30-70s. Con 20s los 3 intentos
+ * se abortaban y el usuario recibía el reporte resiliente sin IA.
+ */
+export const MODEL_TIMEOUTS: Record<AITaskType, number> = {
+  // Cadenas de 5 modelos: 5×20s=100s < maxDuration=120s declarado en cada
+  // ruta. Subir el timeout por modelo sin declarar maxDuration rompería el
+  // presupuesto de Vercel (Hobby 10s / Pro 60s por defecto).
+  "copilot-remediation": 20_000,
+  "incident-brief": 20_000,
+  "general-chat": 20_000,
+  // Reporte largo (tabla + mermaid, hasta 3000 tokens): los modelos :free
+  // tardan 30-70s en generarlo. Cadena acotada a 2 modelos → peor caso
+  // 2×50s=100s + overhead ≈ 113s < maxDuration=120s.
+  "seo-report": 50_000,
 };
 
 // ─── Simple In-Memory Response Cache ────────────────────────────────────────
@@ -165,7 +187,8 @@ async function callModel(
   modelId: string,
   messages: AIMessage[],
   temperature: number,
-  maxTokens: number
+  maxTokens: number,
+  timeoutMs: number
 ): Promise<string> {
   const baseUrl = env.openRouterBaseUrl || "https://openrouter.ai/api/v1";
   const apiKey = env.openRouterApiKey;
@@ -190,9 +213,10 @@ async function callModel(
       temperature,
       max_tokens: maxTokens,
     }),
-    // 20s por modelo: mantiene el peor caso (5 modelos) dentro de maxDuration=120s
-    // en Vercel, en vez de colgar la función 150s y que la plataforma la mate.
-    signal: AbortSignal.timeout(20000),
+    // Timeout por tarea (MODEL_TIMEOUTS): los reportes largos necesitan más
+    // tiempo que el chat corto. El peor caso por cadena queda dentro de
+    // maxDuration=120s en Vercel.
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!response.ok) {
@@ -281,12 +305,15 @@ export async function callAIWithFallback(
 
   // 4. Try each model in chain (with circuit breaker protection)
   const errors: string[] = [];
+  // Fallback defensivo por si se agrega un AITaskType nuevo sin actualizar
+  // MODEL_TIMEOUTS (Record cubre las 4 actuales, pero no cuesta nada).
+  const timeoutMs = MODEL_TIMEOUTS[taskType] ?? 20_000;
 
   for (let i = 0; i < modelChain.length; i++) {
     const modelId = modelChain[i];
     try {
       const content = await openRouterCircuitBreaker.execute(async () => {
-        return await callModel(modelId, messages, temperature, maxTokens);
+        return await callModel(modelId, messages, temperature, maxTokens, timeoutMs);
       });
 
       const latencyMs = Date.now() - startTime;
