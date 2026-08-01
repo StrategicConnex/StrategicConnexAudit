@@ -3,6 +3,10 @@ layout: default
 title: Despliegue en Vercel
 nav_order: 10
 permalink: /docs/guides/deployment
+version: 2.1
+fecha: 2026-08-01
+autor: Equipo SCAUDIT
+estado: Aprobado
 ---
 
 # Guía de Despliegue — StrategicAudit Pro (SCAUDIT) en Vercel
@@ -342,43 +346,65 @@ El pipeline de CI incluye un job `docs-quality-gate` que valida la **documentaci
 
 ### Qué hace
 
-Cada push/PR ejecuta `scripts/quality-gate.mjs` sobre **todos** los `docs/architecture/*.md` con un umbral de **60/100** y **falla el build** si algún TDD baja de ese puntaje:
+Cada push/PR ejecuta `scripts/quality-gate.mjs` sobre **todos** los `docs/architecture/*.md` con un umbral de **80/100** (el estándar "no entregar" del MASTER PROMPT v2) y **falla el build** si algún TDD baja de ese puntaje:
 
 ```bash
 # Equivalente local al step de CI
 set -e
 for f in docs/architecture/*.md; do
-  node scripts/quality-gate.mjs "$f" --min 60 --quiet
+  node scripts/quality-gate.mjs "$f" --min 80 --quiet
 done
 ```
 
 > El job `docs-quality-gate` corre en **paralelo** a lint/build/tests y **no requiere `pnpm install`** — el validador es un script Node puro (zero-deps), por lo que solo necesita `actions/checkout` + `actions/setup-node`.
 
-{: .warning }
-**Estado actual:** `docs/architecture/PIPELINE-HISTORY.md` puntúa 25/100 y no alcanza el umbral 60 — el primer push después de activar el gate fallará CI hasta que ese documento se eleve (usá el checklist del [QUALITY_GATE_REPORT](../improvements/quality-gate-report) para cerrar las secciones que faltan).
+{: .note }
+**Estado actual (ago 2026):** los tres TDDs de `docs/architecture/` — `AI-ROUTER-TDD.md`, `ENTERPRISE-ARCHITECTURE.md` y `PIPELINE-HISTORY.md` — puntúan **100/100** y pasan el umbral 80. Si un futuro PR agrega un TDD nuevo o degrada uno existente, el job `docs-quality-gate` lo marcará en rojo (usá el checklist del [QUALITY_GATE_REPORT](../improvements/quality-gate-report) para cerrar las secciones que faltan).
 
 ### Cómo correrlo localmente
 
 ```bash
 # Un solo documento (exit 0 = PASS, exit 1 = FAIL)
-node scripts/quality-gate.mjs docs/architecture/AI-ROUTER-TDD.md --min 60
+node scripts/quality-gate.mjs docs/architecture/AI-ROUTER-TDD.md --min 80
 
 # Todos los TDDs de arquitectura (mismo loop que CI)
 for f in docs/architecture/*.md; do
-  node scripts/quality-gate.mjs "$f" --min 60 --quiet
+  node scripts/quality-gate.mjs "$f" --min 80 --quiet
 done
 
 # Reporte global de todos los docs de docs/ (publica QUALITY_GATE_REPORT.md)
-node .freebuff/quality-gate-report.mjs
+node scripts/quality-gate-report.mjs
+```
+
+### Pre-commit hook local (git)
+
+Además del gate en CI, el repo incluye un **pre-commit hook local** (`.githooks/pre-commit`) que corre el mismo validador con `--min 80` sobre `docs/architecture/*.md` **antes de cada commit**, para que ningún TDD baje del umbral sin detectarse.
+
+**Instalación automática**: el script `prepare` de `package.json` ejecuta `git config core.hooksPath .githooks` en cada `pnpm install`, así que el hook se activa solo al instalar dependencias. Para activarlo manualmente en un clon existente:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+**Comportamiento**:
+
+- Solo corre cuando el commit incluye archivos staged de `docs/architecture/` o cambios en el propio validador (`scripts/quality-gate.mjs`) — si no hay cambios relevantes, no bloquea nada.
+- Si algún TDD puntúa < 80, el commit se **bloquea** con el detalle de qué documento falló (salida del validador con los checks pendientes).
+- El hook valida el **working tree** (los archivos en disco). Si el contenido staged difiere del working tree, la red de seguridad final sigue siendo el job `docs-quality-gate` de CI, que valida la versión commiteada.
+- Si `node` o `scripts/quality-gate.mjs` faltan, el hook **no bloquea** (degradación graciosa — CI sigue siendo la red de seguridad).
+
+```bash
+# Bypass de emergencia (solo si es intencional y vas a arreglarlo enseguida)
+git commit --no-verify
 ```
 
 ### Cambiar el umbral o el alcance
 
 | Cambio | Dónde |
 |--------|-------|
-| Umbral (p.ej. 70) | `.github/workflows/ci.yml` → job `docs-quality-gate` → reemplazar `--min 60` por `--min 70` |
-| Alcance (p.ej. `docs/**/*.md`) | Mismo job → cambiar el glob del `for f in ...` |
-| Umbral por defecto del validador | `scripts/quality-gate.mjs` → `let min = 80` (default cuando no se pasa `--min`) |
+| Umbral (p.ej. 85) | `.github/workflows/ci.yml` → job `docs-quality-gate` → reemplazar `--min 80` por `--min 85` (y `.githooks/pre-commit` si querés que el hook local use el mismo) |
+| Alcance (p.ej. `docs/**/*.md`) | Mismo job → cambiar el glob del `for f in ...` (y el `grep` del hook local) |
+| Umbral por defecto del validador | `scripts/quality-gate.mjs` → `let min = 80` (default cuando no se pasa `--min`) — ya coincide con el umbral de CI |
 
 {: .tip }
 **¿Tu PR falla por el quality gate?** El job imprime en los logs (y en el PR summary) cada documento con su score y las secciones faltantes (`- [ ] 01. Scope y objetivos...`). Cierra esas secciones en el documento y vuelve a pushear — el reporte completo con el checklist por doc está en [QUALITY_GATE_REPORT](../improvements/quality-gate-report).
@@ -651,6 +677,143 @@ Si necesitas migrar a otro hosting, el proyecto está construido con Next.js `st
 | `.github/workflows/ci.yml` | Pipeline CI/CD con lint, tests, coverage y **Docs Quality Gate** |
 | `scripts/quality-gate.mjs` | Validador de documentación Enterprise (20 checks, 0–100) |
 | `trigger.config.ts` | Configuración de Trigger.dev |
+
+---
+
+---
+
+## 15. Modelo de datos desplegado
+
+| Entidad | Tabla | Propósito | Fuente |
+|---------|-------|-----------|--------|
+| Proyecto | `projects` | Contexto multi-tenant | [VERIFIED] `src/shared/db/schemas` |
+| Auditoría | `audits` | Ejecuciones de auditoría | [VERIFIED] `src/shared/db/schemas` |
+| Investigación | `intelligence_investigations` | Objetivos de inteligencia | [VERIFIED] `src/shared/db/schemas` |
+| Hallazgos | `intelligence_findings` | Resultados de herramientas | [VERIFIED] `src/shared/db/schemas` |
+| History | `dns_history` / `whois_history` | Snapshots y diffs | [VERIFIED] `src/shared/db/schemas/history.ts` |
+
+---
+
+## 16. Flujos de deployment
+
+### FLOW-001 — Pipeline de deploy en Vercel
+
+```mermaid
+flowchart LR
+  A[Push a main] --> B[GitHub Actions CI]
+  B --> C[lint-and-build]
+  B --> D[test-and-coverage]
+  B --> E[api-contract-test]
+  B --> F[docs-quality-gate]
+  A --> G[Vercel deploy automático]
+  G --> H[Build pnpm]
+  H --> I[Production scaudit.vercel.app]
+```
+
+### FLOW-002 — Rollback
+
+```mermaid
+flowchart LR
+  A[Deploy fallido] --> B{Promover deploy anterior}
+  B -->|Dashboard| C[Deployments → Promote to Production]
+  B -->|CLI| D[vercel promote <deploy-url>]
+  B -->|Git| E[git revert HEAD && push]
+```
+
+---
+
+## 17. APIs involucradas en el deploy
+
+| Método | Endpoint | Auth | Propósito |
+|--------|----------|------|-----------|
+| GET | `/api/public/v1/health` | Público | Verificación post-deploy |
+| GET | `/api/monitoring` | Sesión | Estado de monitoreo |
+| GET | `/api/intelligence/health` | Sesión | Health del engine |
+| POST | `/api/cron/uptime` | `x-cron-secret` | Cron diario |
+
+---
+
+## 18. Testing del deployment
+
+| Caso | Comando | Resultado |
+|------|---------|-----------|
+| Health check | `curl .../api/public/v1/health` | `{"status":"ok"}` |
+| Security headers | `curl -sI /login | grep -i csp` | CSP presente |
+| Rate limit headers | `curl -sD - /api/intelligence/health` | `x-ratelimit-*` |
+| Docs | `curl -s -o /dev/null -w "%{http_code}" /docs` | `200` |
+| Swagger | `curl .../swagger` | `200` |
+| CI | GitHub Actions | Jobs verdes (o gate de docs esperado) |
+
+---
+
+## 19. Operaciones y monitoreo post-deploy
+
+**Monitoreo:** Vercel Analytics (Web Analytics + Speed Insights), Function Logs, y alertas de deploy (Deploy failed / Deploy ready) en Settings → Notifications.
+
+**Runbook — deploy fallido:**
+
+1. Revisar el log del build en Vercel (los 4 errores más comunes están en §12)
+2. Verificar variables de entorno en Settings → Environment Variables
+3. Rollback: Promote to Production del deploy anterior (§11)
+4. Abrir issue con el mensaje de error completo
+
+---
+
+## 20. Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FLOW-001 | Flowchart | Pipeline CI/CD + deploy | DevOps | L2 |
+| FLOW-002 | Flowchart | Opciones de rollback | DevOps | L2 |
+
+---
+
+## 21. Trazabilidad del deployment
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-001 CI verde | `.github/workflows/ci.yml` | Jobs de CI | GitHub Actions |
+| REQ-002 Build OK | `next.config.ts` + `vercel.json` | `pnpm build` | Vercel |
+| REQ-003 Env vars | Settings → Environment Variables | §10 checklist | Vercel |
+| REQ-004 Docs gate | `scripts/quality-gate.mjs` | `docs-quality-gate` job | CI |
+
+---
+
+## 22. Validación cruzada (inconsistencias resueltas)
+
+- **Umbral del quality gate**: esta guía documentaba el gate con umbral 60 y la distinción de dos umbrales (CI 60 / local 80); el job `docs-quality-gate` ahora usa `--min 80` y el hook local `.githooks/pre-commit` el mismo. Actualizado y consistente [VERIFIED].
+- **Health endpoint**: el checklist §10 y §17 usan `/api/public/v1/health` con la misma forma de respuesta (`status`, `services`) [VERIFIED].
+
+---
+
+## 23. Unknowns y supuestos
+
+- [VERIFIED] Vercel hace deploy automático en cada push a `main` (Git Integration).
+- [ASSUMPTION] El plan Hobby (45s build timeout, 2 crons) aplica salvo upgrade a Pro.
+- [UNKNOWN] El tiempo exacto del build depende del estado de la red de Vercel en cada deploy.
+
+---
+
+## 24. Glosario
+
+| Término | Definición |
+|---------|-----------|
+| ISR | Incremental Static Regeneration de Next.js |
+| Promote | Promover un deploy anterior a producción |
+| Preview Deploy | Deploy temporal por branch/PR con URL única |
+| Speed Insights | Métricas Core Web Vitals de Vercel |
+| Function Logs | Logs de las serverless functions en Vercel |
+
+---
+
+## 25. Versionado
+
+| Campo | Valor |
+|-------|-------|
+| Versión | 2.1 |
+| Fecha | 2026-08-01 |
+| Autor | Equipo SCAUDIT |
+| Estado | Aprobado |
 
 ---
 
