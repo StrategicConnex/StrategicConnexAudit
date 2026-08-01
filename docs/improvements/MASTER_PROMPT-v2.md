@@ -3,6 +3,10 @@ layout: default
 title: MASTER PROMPT v2.0 (Documentation Engine)
 nav_order: 5
 permalink: /docs/improvements/master-prompt-v2
+version: 2.0
+date: 2026-08-01
+author: Equipo SCAUDIT
+status: Aprobado
 ---
 
 # MASTER PROMPT v2.0 — ENTERPRISE DOCUMENTATION ENGINE
@@ -58,6 +62,18 @@ flowchart TB
 | **VALIDATION** | Cómo se garantiza | Checklist, cross-check, calidad | Omita inconsistencias o contradicciones |
 
 **Regla de invocación:** cada capítulo debe pasar por las tres capas **en orden**. Un capítulo "texto solamente" que podría beneficiarse de un diagrama es un fallo del proceso.
+
+## 1.1 Arquitectura del motor — componentes y dependencias
+
+La arquitectura del **MASTER DOCUMENTATION ENGINE** se compone de tres capas y sus componentes internos, con dependencias estrictas entre ellos (la tabla de responsabilidades por capa está arriba; esta vista aporta los componentes, sus entradas/salidas y las dependencias):
+
+| Componente | Capa | Depende de | Entrada | Salida |
+|------------|------|------------|---------|--------|
+| **Content Engine** | CONTENT | Fuente de datos verificada `[VERIFIED]` | Código, config, requisitos | Texto, tablas, requisitos |
+| **Visual Engine** | VISUAL | Content Engine + catálogo §3.1 | Contenido estructurado | Diagramas, Mermaid, matrices |
+| **Validation Engine** | VALIDATION | Content + Visual (feedback loop) | Borrador completo | Checklist, cross-check, gate §4.1 |
+
+**Dependencias clave:** `INPUT → CONTENT → VISUAL → VALIDATION → OUTPUT`, con `VALIDATION -.->|feedback| CONTENT` como bucle de corrección. Cada capa **depende** de la anterior: un visual sin contenido verificado es decoración; un contenido sin validación es deuda.
 
 ---
 
@@ -306,6 +322,18 @@ Mantener consistencia terminológica en todo el documento (regla 19 del Quality 
 2. **Un solo nombre por concepto:** el primer uso define el término canónico; los demás capítulos usan el mismo (nunca alternar inglés/español para el mismo concepto).
 3. **Proyectos bilingües (es/en):** mantener el glosario en ambos idiomas y traducir SOLO el término canónico al idioma del documento; las siglas (API, RLS, SSO) no se traducen.
 4. **Trazabilidad terminológica:** si un término aparece en 3+ capítulos, se agrega al glosario del proyecto.
+
+## 5.6 Trazabilidad (REQ → COMP → TEST → DEP)
+
+Cada requisito se rastrea hasta su implementación, test y deploy (regla 13 del Quality Gate, §4.1). Nada se declara "done" sin su cadena completa:
+
+| Trazabilidad | Requisito | Componente | Test | Deploy |
+|--------------|-----------|------------|------|--------|
+| REQ-001 → COMP-001 → TEST-001 → DEP-001 | Funcionalidad core | Módulo correspondiente | Unit + integration | Pipeline CI/CD |
+| REQ-002 → COMP-002 → TEST-002 → DEP-002 | Seguridad / auth | Guard de autenticación | Security tests | Release con quality gate |
+| REQ-003 → COMP-003 → TEST-003 → DEP-003 | Observabilidad | Instrumentación | Contract + e2e | Deploy automático |
+
+**Regla:** ningún `REQ-###` sin su `COMP-###`, `TEST-###` y `DEP-###`; la matriz se actualiza en cada release y se valida con el cross-check (§4.2).
 
 ---
 
