@@ -255,5 +255,17 @@ Para maximizar el CTR y asegurar la escalabilidad del posicionamiento orgánico,
     *   *Por qué:* Permitirá que Google muestre "fragmentos enriquecidos" (Rich Snippets) directamente en las búsquedas, aumentando la tasa de clics de forma espectacular.
 
 ---
+
+## 🔄 Diagrama de Priorización (Mermaid)
+
+\`\`\`mermaid
+flowchart TD
+    A[Inicio del Ciclo] --> B{Optimización Metaetiquetas<br/>Prioridad Alta}
+    B -->|Completada| C[Optimización Scripts Móviles<br/>Prioridad Media]
+    C --> D[Enriquecimiento Schema JSON-LD<br/>Prioridad Media]
+    D --> E[Reporte Finalizado]
+\`\`\`
+
+---
 *Este reporte ha sido generado dinámicamente de forma automática por el servicio de Inteligencia Artificial de StrategicAudit Pro.*`;
 }
