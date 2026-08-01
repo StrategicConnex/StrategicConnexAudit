@@ -12,6 +12,37 @@ interface CircuitConfig {
   successThreshold: number;
 }
 
+/**
+ * Timeout corto para operaciones de bookkeeping de Redis. Cuando Redis está
+ * caído (p.ej. DB de Upstash eliminada), el SDK de @upstash/redis reintenta
+ * contra el host muerto durante 5-15s POR operación. En el flujo del router
+ * IA esto sumaba latencia crítica (504 de Vercel a los 120s) y —peor— podía
+ * DESECHAR un resultado de modelo exitoso: si onSuccess() lanzaba por Redis,
+ * el try/catch de execute() lo trataba como fallo del servicio.
+ */
+const REDIS_OP_TIMEOUT_MS = 1_500;
+
+async function safeRedis<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      fn(),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Redis op timeout')), REDIS_OP_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (e) {
+    // Fail-open: un outage de Redis jamás debe bloquear ni falsear el
+    // estado del circuit breaker ni descartar resultados del servicio.
+    console.warn('[CircuitBreaker] Redis op failed (fail-open):', e);
+    return fallback;
+  } finally {
+    // Evitar timers colgados cuando Redis responde rápido (mantiene la
+    // instancia viva innecesariamente y rompe los open-handle checks)
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export class RedisCircuitBreaker {
   private key: string;
   private config: CircuitConfig;
@@ -26,25 +57,26 @@ export class RedisCircuitBreaker {
   }
 
   async getState(): Promise<CircuitState> {
-    try {
-      const state = await redis.get<CircuitState>(`${this.key}:state`);
-      return state || CircuitState.CLOSED;
-    } catch (e) {
-      console.warn(`[CircuitBreaker] Error conectando a Redis para ${this.key}, asumiendo CLOSED:`, e);
-      return CircuitState.CLOSED;
-    }
+    const state = await safeRedis(
+      () => redis.get<CircuitState>(`${this.key}:state`),
+      CircuitState.CLOSED
+    );
+    return state || CircuitState.CLOSED;
   }
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
     const state = await this.getState();
 
     if (state === CircuitState.OPEN) {
-      const lastFailureTime = await redis.get<number>(`${this.key}:last_failure`);
+      const lastFailureTime = await safeRedis<number | null>(
+        () => redis.get<number>(`${this.key}:last_failure`),
+        null
+      );
       const now = Date.now();
 
       if (lastFailureTime && now - lastFailureTime > this.config.recoveryTimeout) {
         // Transition to HALF_OPEN
-        await redis.set(`${this.key}:state`, CircuitState.HALF_OPEN);
+        await safeRedis(() => redis.set(`${this.key}:state`, CircuitState.HALF_OPEN), null);
         return this.executeHalfOpen(fn);
       }
 
@@ -69,8 +101,8 @@ export class RedisCircuitBreaker {
   private async executeHalfOpen<T>(fn: () => Promise<T>): Promise<T> {
     try {
       const result = await fn();
-      const successes = await redis.incr(`${this.key}:successes`);
-      
+      const successes = await safeRedis<number>(() => redis.incr(`${this.key}:successes`), 1);
+
       if (successes >= this.config.successThreshold) {
         await this.reset();
       }
@@ -82,27 +114,25 @@ export class RedisCircuitBreaker {
   }
 
   private async onFailure() {
-    const failures = await redis.incr(`${this.key}:failures`);
-    
+    const failures = await safeRedis<number>(() => redis.incr(`${this.key}:failures`), 1);
+
     if (failures >= this.config.failureThreshold) {
-      await redis.set(`${this.key}:state`, CircuitState.OPEN);
-      await redis.set(`${this.key}:last_failure`, Date.now());
-      await redis.del(`${this.key}:successes`);
+      await safeRedis(() => redis.set(`${this.key}:state`, CircuitState.OPEN), null);
+      await safeRedis(() => redis.set(`${this.key}:last_failure`, Date.now()), null);
+      await safeRedis(() => redis.del(`${this.key}:successes`), null);
       console.warn(`[CircuitBreaker] Service ${this.key} is now OPEN`);
     }
   }
 
   async onSuccess() {
-    // Optionally reset failures on success if in CLOSED state
-    // For now, we only care about transitions
-    await redis.del(`${this.key}:failures`);
+    await safeRedis(() => redis.del(`${this.key}:failures`), null);
   }
 
   async reset() {
-    await redis.set(`${this.key}:state`, CircuitState.CLOSED);
-    await redis.del(`${this.key}:failures`);
-    await redis.del(`${this.key}:successes`);
-    await redis.del(`${this.key}:last_failure`);
+    await safeRedis(() => redis.set(`${this.key}:state`, CircuitState.CLOSED), null);
+    await safeRedis(() => redis.del(`${this.key}:failures`), null);
+    await safeRedis(() => redis.del(`${this.key}:successes`), null);
+    await safeRedis(() => redis.del(`${this.key}:last_failure`), null);
     console.log(`[CircuitBreaker] Service ${this.key} is now CLOSED`);
   }
 }
