@@ -3,6 +3,10 @@ layout: default
 title: API Reference
 nav_order: 3
 permalink: /docs/api
+version: 1.1
+fecha: 2026-08-01
+autor: Equipo SCAUDIT
+estado: Aprobado
 ---
 
 # API Reference
@@ -290,3 +294,132 @@ Todas las respuestas de error incluyen un objeto con `error` y `retryAfter` (cua
   "retryAfter": 45
 }
 ```
+
+---
+
+## Alcance y objetivos
+
+Este documento referencia la API pública e interna de SCAUDIT Pro organizada por dominio funcional (AI & Copilot, Inteligencia Cibernética, Seguridad, Autenticación, Monitoreo). Objetivos: documentar método, autenticación, request, response y rate limit de cada endpoint, y servir de contrato para los tests de API (`tests/api-contract`).
+
+---
+
+## Requisitos de la API
+
+| REQ | Requisito | Verificación |
+|-----|-----------|--------------|
+| REQ-001 | Endpoints autenticados con sesión Supabase | `createClient` + cookies |
+| REQ-002 | Rate limit distribuido en endpoints sensibles | `checkAiRateLimit` / `withRateLimit` |
+| REQ-003 | Errores con formato uniforme (`error`, `retryAfter`) | Sección de códigos de error |
+| REQ-004 | CORS/CSP compatibles | `src/proxy.ts` |
+| REQ-005 | Cron protegido con `CRON_SECRET` | Header `x-cron-secret` |
+
+---
+
+## Arquitectura de la API
+
+### FIG-001 — Flujo request/response autenticado
+
+```mermaid
+sequenceDiagram
+  participant C as Cliente
+  participant P as proxy.ts (Edge)
+  participant H as API Handler
+  participant A as Supabase Auth
+  participant D as Base de datos
+  C->>P: Request + cookies de sesión
+  P->>P: CSP headers + rate limit check
+  P->>A: Validar sesión
+  A-->>P: OK / 401
+  P->>H: Handler ejecuta
+  H->>D: Query (RLS)
+  D-->>H: Resultado
+  H-->>P: Response JSON
+  P-->>C: 200 / 400 / 429 / 500
+```
+
+---
+
+## Modelo de datos consumido por la API
+
+| Entidad | Tabla | Propósito | Fuente |
+|---------|-------|-----------|--------|
+| Proyecto | `projects` | Contexto de escaneos | [VERIFIED] `src/shared/db/schemas` |
+| Investigación | `intelligence_investigations` | Objetivos de inteligencia | [VERIFIED] `src/shared/db/schemas` |
+| Hallazgos | `intelligence_findings` | Resultados de herramientas | [VERIFIED] `src/shared/db/schemas` |
+| Tool runs | `intelligence_tool_runs` | Ejecuciones de herramientas | [VERIFIED] `src/shared/db/schemas` |
+| Activos | `intelligence_assets` | Subdominios, IPs, certificados | [VERIFIED] `src/shared/db/schemas` |
+
+---
+
+## Diagramas y flujos
+
+### FLOW-001 — Flujo de generación de reporte IA
+
+```mermaid
+flowchart LR
+  A[POST /api/ai/report] --> B[Leer projectId + GSC/GA4]
+  B --> C[callAIWithFallback]
+  C -->|éxito| D[Reporte markdown]
+  C -->|fallo| E[generateResilientReport]
+  D --> F[Response isFallback: false]
+  E --> G[Response isFallback: true]
+```
+
+---
+
+## Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FIG-001 | Diagrama de secuencia | Flujo request/response autenticado | Desarrollador | L2 |
+| FLOW-001 | Flowchart | Flujo de generación de reporte IA | Desarrollador | L2 |
+
+---
+
+## Trazabilidad de la API
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-001 | `src/shared/lib/supabase/server.ts` | `route.test.ts` | Vercel |
+| REQ-002 | `src/shared/lib/ratelimit.ts` | `ratelimit.test.ts` | Vercel |
+| REQ-003 | Handlers de rutas | `tests/api-contract` | Vercel |
+| REQ-004 | `src/proxy.ts` | e2e `home.spec.ts` | Vercel Edge |
+| REQ-005 | `/api/cron/*` | `route.ts` de cada cron | `vercel.json` |
+
+---
+
+## Validación cruzada (inconsistencias resueltas)
+
+- **Formato de respuesta de `/api/ai/report`**: la sección de reporte documentaba `isFallback` + `modelUsed`; el contrato real del endpoint (`src/app/api/ai/report/route.ts`) responde `{ success, report, isFallback, modelUsed, fromCache }`. Alineado [VERIFIED].
+- **Códigos de error**: el rate limit devuelve 429 con `retryAfter` en segundos; verificado contra la implementación de `withRateLimit` [VERIFIED].
+
+---
+
+## Unknowns y supuestos
+
+- [VERIFIED] Todos los endpoints bajo `/api/ai/*` y `/api/intelligence/*` usan fallback resiliente cuando el modelo IA falla.
+- [ASSUMPTION] Los límites de rate limit pueden ajustarse por entorno sin cambiar el contrato del endpoint.
+- [UNKNOWN] Los planes gratuitos de los proveedores IA pueden cambiar los límites diarios sin aviso.
+
+---
+
+## Glosario
+
+| Término | Definición |
+|---------|-----------|
+| RLS | Row Level Security de Supabase |
+| CRON_SECRET | Secreto que protege los endpoints de cron |
+| HMAC | Hash-based Message Authentication Code |
+| RUM | Real User Monitoring (Core Web Vitals) |
+| Fallback resiliente | Respuesta pre-compilada cuando la IA no responde |
+
+---
+
+## Versionado
+
+| Campo | Valor |
+|-------|-------|
+| Versión | 1.1 |
+| Fecha | 2026-08-01 |
+| Autor | Equipo SCAUDIT |
+| Estado | Aprobado |

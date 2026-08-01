@@ -64,6 +64,15 @@ kramdown:
     block:
       line_numbers: true
 
+# ── Mermaid Diagrams (bloques ```mermaid) ───────
+mermaid:
+  version: "11.16.0"  # alineada con la versión del proyecto (node_modules/mermaid)
+  config:
+    theme: dark
+    flowchart:
+      curve: basis
+    securityLevel: loose
+
 # ── Exclude ───────────────────────────────────
 exclude:
   - Gemfile

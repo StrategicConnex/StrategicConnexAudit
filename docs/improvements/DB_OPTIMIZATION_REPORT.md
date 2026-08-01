@@ -224,3 +224,138 @@ ORDER BY created_at DESC;
 ---
 
 *Generado por el equipo SCAUDIT — estrategia de optimización continua. Los ítems P0 (RLS) se recomiendan para el próximo sprint antes de escalar usuarios.*
+
+---
+
+## Alcance y objetivos
+
+Este reporte documenta la optimización de la base de datos de SCAUDIT: índices compuestos, auditoría de consultas raw SQL, análisis de schema, RLS policies y migración base. Objetivos: reducir latencia de queries críticas, cerrar las fugas de datos entre tenants (RLS) y dejar la base migrada y verificada.
+
+---
+
+## Requisitos del reporte
+
+| REQ | Requisito | Estado |
+|-----|-----------|--------|
+| REQ-001 | Índices compuestos para queries críticas | ✅ Implementado (Task #1) |
+| REQ-002 | Auditoría de 29 usos de SQL raw | ✅ Completada |
+| REQ-003 | RLS aplicado en rutas críticas | ✅ 3 rutas |
+| REQ-004 | RLS en tablas de inteligencia | 🔴 Pendiente |
+| REQ-005 | Migración materializada en producción | 🔴 Pendiente (`drizzle-kit push`) |
+
+---
+
+## Arquitectura involucrada
+
+| Componente | Contexto | Dependencia |
+|-----------|----------|-------------|
+| `drizzle/0014_intelligence_indexes.sql` | Migración de índices | `src/shared/db/schemas/intelligence.ts` |
+| `src/shared/db/rls.ts` (`withRLS`) | Envoltorio RLS | Supabase policies |
+| Rutas `/api/benchmarking`, `/api/intelligence/live`, `/api/intelligence/anomalies` | Consumidores | `withRLS(user.id, ...)` |
+| `drizzle/meta/_journal.json` | Registro de migraciones | Drizzle Kit |
+
+## Flujos
+
+### FLOW-001 — Ciclo de optimización de base de datos
+
+```mermaid
+flowchart LR
+  A[Detectar query lenta] --> B[EXPLAIN ANALYZE]
+  B --> C[Crear índice compuesto]
+  C --> D[Migración 0014/0015]
+  D --> E[pnpm db:push]
+  E --> F[Verificar EXPLAIN de nuevo]
+```
+
+---
+
+## Seguridad (RLS)
+
+| Ruta | Problema original | Fix | Estado |
+|------|-------------------|-----|--------|
+| `/api/benchmarking` | Fuga entre tenants | `computeAggregates` con `withRLS` | ✅ |
+| `/api/intelligence/live` | Query por ID arbitrario | 3 helpers con `withRLS` | ✅ |
+| `/api/intelligence/anomalies` | Query por projectId arbitrario | `withRLS(user.id, ...)` | ✅ |
+| Tablas de inteligencia | Sin policy para `authenticated` | Pendiente | 🔴 |
+
+---
+
+## APIs afectadas
+
+| Método | Endpoint | Cambio |
+|--------|----------|--------|
+| GET | `/api/benchmarking` | `withRLS` envuelve queries raw |
+| GET | `/api/intelligence/live` | Snapshots con `userId` |
+| GET | `/api/intelligence/anomalies` | Stats con `withRLS` |
+
+---
+
+## Testing del reporte
+
+| Caso | Cobertura | Estado |
+|------|-----------|--------|
+| `EXPLAIN ANALYZE` de índices | §6.1–6.4 | ✅ |
+| Verificación de policies RLS | `SELECT * FROM pg_policies` | ✅ |
+| Migración journal | 0011–0014 registradas | ✅ |
+
+---
+
+## Deployment y operaciones
+
+**Deployment:** aplicar la migración con `npx drizzle-kit push` (camino canónico del proyecto) o aplicar SQL de 0014/0015 manualmente. **Operaciones:** verificar `pg_policies` antes/después del deploy y monitorear queries con `EXPLAIN ANALYZE`.
+
+---
+
+## Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FLOW-001 | Flowchart | Ciclo de optimización | DBA/Backend | L2 |
+
+---
+
+## Trazabilidad
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-001 | `drizzle/0014_intelligence_indexes.sql` | `EXPLAIN` | `db:push` |
+| REQ-003 | `src/shared/db/rls.ts` (`withRLS`) | Rutas auditadas | Vercel |
+| REQ-005 | `drizzle/meta/_journal.json` | `drizzle-kit push` | Supabase |
+
+---
+
+## Validación cruzada (inconsistencias resueltas)
+
+- **Journal de migraciones**: las migraciones 0011–0014 existían como SQL pero no estaban registradas en el journal, rompiendo `drizzle-kit migrate`. Registradas y documentado el caveat migrate-vs-push [VERIFIED].
+- **Índices**: los 2 índices adicionales (`idx_intel_findings_investigation_created`, `idx_intel_assets_project_last_seen`) justificados contra queries reales de las rutas [VERIFIED].
+
+---
+
+## Unknowns y supuestos
+
+- [VERIFIED] El método de acceso de las queries depende de las estadísticas del planificador (`ANALYZE`).
+- [ASSUMPTION] `drizzle-kit push` es el camino canónico (las tablas 0011–0013 ya existen vía push).
+- [UNKNOWN] El impacto exacto de rendimiento tras materializar los índices en producción.
+
+---
+
+## Glosario
+
+| Término | Definición |
+|---------|-----------|
+| RLS | Row Level Security |
+| Index Scan | Escaneo de tabla usando índice |
+| Seq Scan | Escaneo secuencial (lento) |
+| Journal | Registro de migraciones de Drizzle |
+| Tenant | Cliente/proyecto aislado por RLS |
+
+---
+
+## Versionado
+
+| Campo | Valor |
+|-------|-------|
+| Versión | 1.1 |
+| Fecha | 2026-08-01 |
+| Autor | Equipo SCAUDIT |
+| Estado | Aprobado |

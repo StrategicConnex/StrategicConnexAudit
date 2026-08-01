@@ -1,0 +1,58 @@
+#!/bin/sh
+# ─────────────────────────────────────────────────────────────────────────────
+# pre-commit — Docs Quality Gate (docs/architecture/*.md)
+#
+# Corre el MISMO validador que el job `docs-quality-gate` de CI
+# (scripts/quality-gate.mjs --min 80) para que ningún TDD de arquitectura
+# baje del umbral 80/100 sin detectarse localmente, antes de llegar al push.
+#
+# Solo se ejecuta cuando hay archivos STAGED de docs/architecture/ o cambios
+# en el propio validador (scripts/quality-gate.mjs) — si no hay cambios
+# relevantes, sale inmediatamente sin bloquear el commit.
+#
+# Referencia: docs/guides/deployment.md §7 · docs/improvements/QUALITY_GATE_REPORT.md
+# ─────────────────────────────────────────────────────────────────────────────
+
+set -u
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$ROOT" || exit 0
+
+# ¿Hay cambios staged relevantes? (docs de arquitectura o el propio validador)
+if ! git diff --cached --name-only | grep -qE '(^docs/architecture/.*\.md$|^scripts/quality-gate\.mjs$)'; then
+  exit 0
+fi
+
+# Guardas: si falta node o el validador, no bloquear el commit — CI lo cubre.
+if ! command -v node >/dev/null 2>&1; then
+  echo "⚠️  [docs-quality-gate] node no encontrado — saltando validación local (CI la cubre)."
+  exit 0
+fi
+
+if [ ! -f scripts/quality-gate.mjs ]; then
+  echo "⚠️  [docs-quality-gate] scripts/quality-gate.mjs no existe — saltando validación local."
+  exit 0
+fi
+
+echo "📚 [docs-quality-gate] Validando docs/architecture/*.md (umbral 80/100)..."
+fail=0
+for f in docs/architecture/*.md; do
+  [ -e "$f" ] || continue
+  if node scripts/quality-gate.mjs "$f" --min 80 --quiet >/dev/null 2>&1; then
+    echo "  ✅ PASS  $f"
+  else
+    echo "  ❌ FAIL  $f (score < 80/100)"
+    fail=1
+  fi
+done
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "❌ [docs-quality-gate] Commit bloqueado: algún TDD de docs/architecture/ bajó del umbral 80."
+  echo "   Corré: node scripts/quality-gate.mjs <archivo> --min 80   (para ver los checks que fallan)"
+  echo "   Checklist por documento: docs/improvements/QUALITY_GATE_REPORT.md"
+  exit 1
+fi
+
+echo "✅ [docs-quality-gate] Todos los TDDs de docs/architecture/ cumplen el umbral 80."
+exit 0
