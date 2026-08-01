@@ -155,7 +155,7 @@ export default async function DocPage({ params }: Props) {
               {children}
             </a>
           ),
-          code: ({ children, className, ...props }: any) => {
+          code: ({ children, className, ...props }) => {
             const isInline = !className;
             return isInline ? (
               <code

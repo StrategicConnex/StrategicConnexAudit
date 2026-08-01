@@ -194,7 +194,7 @@ export async function GET(req: NextRequest) {
     const data = await computeAggregates(user.id, projectId);
 
     return NextResponse.json({ success: true, ...data });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[Benchmarking] Error:", error);
     return NextResponse.json({
       success: false,

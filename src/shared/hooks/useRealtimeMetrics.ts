@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export function useRealtimeMetrics(projectId?: string) {
   const [latestFinding, setLatestFinding] = useState<{ severity: string; title: string; createdAt: string } | null>(null);
@@ -19,11 +20,12 @@ export function useRealtimeMetrics(projectId?: string) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'intelligence_findings', filter: `project_id=eq.${projectId}` },
-        (payload: any) => {
+        (payload) => {
+          const row = payload.new as { severity: string; title: string; created_at: string };
           setLatestFinding({
-            severity: payload.new.severity,
-            title: payload.new.title,
-            createdAt: payload.new.created_at,
+            severity: row.severity,
+            title: row.title,
+            createdAt: row.created_at,
           });
         }
       )
@@ -34,7 +36,8 @@ export function useRealtimeMetrics(projectId?: string) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'intelligence_assets', filter: `project_id=eq.${projectId}` },
-        (payload: any) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          void payload;
           setAssetsDiscovered((prev) => prev + 1);
         }
       )

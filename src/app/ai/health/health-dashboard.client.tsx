@@ -93,13 +93,18 @@ function StatCard({
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Recharts tooltip props
-function ChartTooltip({ active, payload, label }: any) {
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number | string; color?: string }>;
+  label?: string | number;
+}
+
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload) return null;
   return (
     <div className="bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-xs shadow-2xl">
       <p className="text-white/60 mb-1">{label}</p>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i: number) => (
         <p key={i} style={{ color: p.color }} className="font-medium">
           {p.name}: {typeof p.value === "number" ? p.value.toFixed(1) : p.value}
         </p>

@@ -9,7 +9,7 @@ export interface AuthenticatedRequest extends NextRequest {
 
 export type RouteHandler = (
   req: AuthenticatedRequest,
-  params?: any,
+  params?: unknown,
 ) => Promise<NextResponse> | NextResponse;
 
 interface ApiErrorResponse {
@@ -27,7 +27,7 @@ interface ApiErrorResponse {
  * The handler receives an AuthenticatedRequest with `apiKeyAuth` attached.
  */
 export function withPublicApi(handler: RouteHandler) {
-  return async (req: NextRequest, params?: any): Promise<NextResponse> => {
+  return async (req: NextRequest, params?: unknown): Promise<NextResponse> => {
     const authResult = await authenticateApiKey(req);
 
     if (!authResult.authenticated) {

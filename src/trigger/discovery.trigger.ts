@@ -56,12 +56,13 @@ export const continuousDiscovery = schedules.task({
           `[Discovery] ${project.domain}: ${result.totalNewAssets} new, ` +
           `${result.totalChanges} changes.`
         );
-      } catch (err: any) {
-        console.error(`[Discovery] Error in ${project.name}:`, err.message);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[Discovery] Error in ${project.name}:`, msg);
         results.push({
           projectId: project.id,
           domain: project.domain,
-          error: err.message,
+          error: msg,
           newAssets: 0,
           totalChanges: 0,
           modules: [],

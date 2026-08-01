@@ -122,8 +122,8 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
       } else {
         setError('Error al cargar historial');
       }
-    } catch (err: any) {
-      setError(`Error de conexión: ${err.message}`);
+    } catch (err) {
+      setError(`Error de conexión: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -145,7 +145,19 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
   const totalDns = data?.dns?.totalCount || 0;
   const totalWhois = data?.whois?.totalCount || 0;
   const timeline = data?.timeline;
-  const allChanges = [...(timeline?.dnsChanges || []), ...(timeline?.whoisChanges || [])];
+  interface TimelineDisplay {
+    source: 'dns' | 'whois';
+    severity?: string;
+    recordType?: string;
+    query?: string;
+    domain?: string;
+    detectedAt?: string;
+    previousValue: string | null;
+    currentValue: string | null;
+    type?: string;
+    label?: string;
+  }
+  const allChanges: TimelineDisplay[] = [...(timeline?.dnsChanges || []), ...(timeline?.whoisChanges || [])];
 
   return (
     <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-400">
@@ -264,11 +276,11 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
             </div>
           ) : (
             <div className="divide-y divide-white/[0.04]">
-              {allChanges.map((change: any, idx) => {
+              {allChanges.map((change, idx) => {
                 const isDns = change.source === 'dns';
                 const sev = isDns ? 'info' : (change.severity || 'info');
                 const sevStyle = SEVERITY_STYLES[sev] || SEVERITY_STYLES.info;
-                const colors = isDns ? getRecordColor(change.recordType) : null;
+                const colors = isDns ? getRecordColor(change.recordType || '') : null;
                 return (
                   <div key={`tl-${idx}`} className="p-4 hover:bg-muted/5 transition-colors">
                     <div className="flex items-start gap-3">

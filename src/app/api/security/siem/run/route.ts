@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       ...result,
       durationMs: Date.now(),
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("POST /api/security/siem/run failure:", error);
     return NextResponse.json({
       success: false,

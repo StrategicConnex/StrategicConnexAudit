@@ -120,9 +120,9 @@ export async function listApiKeys(userId: string): Promise<ApiKeyRecord[]> {
   try {
     const records = await directDb.query.developerApiKeys.findMany({
       where: eq(developerApiKeys.userId, userId),
-      orderBy: (fields: any) => [fields.createdAt],
+      orderBy: (fields) => [fields.createdAt],
     });
-    return records.map((r: any) => ({
+    return records.map((r) => ({
       id: r.id, userId: r.userId, name: r.name,
       keyPrefix: r.keyPrefix, scope: r.scope || [],
       expiresAt: r.expiresAt, lastUsedAt: r.lastUsedAt,        createdAt: r.createdAt!,

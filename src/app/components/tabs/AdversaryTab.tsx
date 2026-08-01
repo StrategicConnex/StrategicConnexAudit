@@ -65,8 +65,8 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
       } else {
         setError(t('fetchError', { error: data.error || '' }));
       }
-    } catch (err: any) {
-      setError(t('networkError', { error: err.message || err }));
+    } catch (err: unknown) {
+      setError(t('networkError', { error: err instanceof Error ? err.message : String(err) }));
     } finally {
       setLoading(false);
     }
@@ -93,8 +93,8 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
       } else {
         setError(t('runError', { error: data.error || '' }));
       }
-    } catch (err: any) {
-      setError(t('networkError', { error: err.message || err }));
+    } catch (err: unknown) {
+      setError(t('networkError', { error: err instanceof Error ? err.message : String(err) }));
     } finally {
       setRunningScenario(null);
     }

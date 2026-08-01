@@ -146,8 +146,8 @@ export default function ApiKeysDashboard() {
         }
       }
       setUsageMap(nextUsage);
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error de conexión');
     } finally {
       setLoading(false);
     }
@@ -183,8 +183,8 @@ export default function ApiKeysDashboard() {
       } else {
         setError(data.error || 'Error al crear llave');
       }
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error de conexión');
     } finally {
       setCreating(false);
     }
@@ -198,8 +198,8 @@ export default function ApiKeysDashboard() {
       const data = await res.json();
       if (data.success) fetchKeys();
       else alert(`Error: ${data.error}`);
-    } catch (err: any) {
-      alert(`Error de red: ${err.message}`);
+    } catch (err: unknown) {
+      alert(`Error de red: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 

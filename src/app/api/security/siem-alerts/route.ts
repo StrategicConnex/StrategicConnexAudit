@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq, and, gte, lte, sql } from "drizzle-orm";
+import { desc, eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { siemAlertLogs } from "@/shared/db/schemas";
 import { directDb } from "@/shared/db";
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
 
     // 3. Build conditions
-    const conditions: any[] = [];
+    const conditions: SQL[] = [];
 
     if (severity && severity !== "all") {
       conditions.push(eq(siemAlertLogs.severity, severity));
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
         failed: breakdown.failed ?? 0,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("GET /api/security/siem-alerts failure:", error);
     return NextResponse.json({
       success: false,

@@ -138,11 +138,11 @@ export function DownloadPdfButton({
           duration: 5000,
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (!abortedRef.current && toastIdRef.current) {
         toast.error('Error al generar PDF', {
           id: toastIdRef.current,
-          description: err.message || 'Error desconocido. Intenta de nuevo.',
+          description: err instanceof Error ? err.message : 'Error desconocido. Intenta de nuevo.',
           duration: 8000,
         });
       }

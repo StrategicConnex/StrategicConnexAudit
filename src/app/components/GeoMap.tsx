@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useMemo } from 'react';
 import { MapPin } from 'lucide-react';
+import type { Map as LeafletMap } from 'leaflet';
 
 interface GeoLocation {
   lat: number;
@@ -15,15 +16,42 @@ interface GeoLocation {
   asn?: string;
 }
 
+interface GeoMetadata {
+  asnGeo?: {
+    latitude?: number;
+    longitude?: number;
+    ipAddress?: string;
+    cityName?: string;
+    countryName?: string;
+    countryCode?: string;
+    asn?: string;
+  } | null;
+  traceroute?: Array<{
+    hop?: number;
+    ip?: string;
+    hostname?: string;
+    countryCode?: string;
+    cityName?: string;
+    latencyMs?: number;
+  }> | null;
+  cdnWaf?: {
+    detected?: boolean;
+    name?: string;
+    provider?: string;
+  } | null;
+}
+
 interface GeoMapProps {
-  metadata?: Record<string, any> | null;
+  metadata?: GeoMetadata | null;
   target?: string;
 }
 
+type LeafletNS = typeof import('leaflet');
+
 export function GeoMap({ metadata, target }: GeoMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const layersRef = useRef<any[]>([]);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const layersRef = useRef<Array<{ remove: () => void }>>([]);
 
   const geoPoints = useMemo((): GeoLocation[] => {
     const points: GeoLocation[] = [];
@@ -113,7 +141,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
         const L = leafletModule.default || leafletModule;
         await import('leaflet/dist/leaflet.css');
 
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
           iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -170,7 +198,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
     reverse: '#71717A',
   };
 
-  function createIcon(L: any, type: string, isTarget: boolean) {
+  function createIcon(L: LeafletNS, type: string, isTarget: boolean) {
     const color = TYPE_COLORS[type] || '#71717A';
     const size = isTarget ? 14 : 10;
     return L.divIcon({
@@ -190,7 +218,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
     });
   }
 
-  function addMarkersAndLines(L: any, map: any, points: GeoLocation[]) {
+  function addMarkersAndLines(L: LeafletNS, map: LeafletMap, points: GeoLocation[]) {
     const markerGroup = L.layerGroup().addTo(map);
     const lineGroup = L.layerGroup().addTo(map);
     const latlngs: [number, number][] = [];
@@ -246,7 +274,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
             dashArray: '6 8',
           }
         ).addTo(lineGroup);
-        polyline._path.style.animation = 'scahudit-dash-flow 3s linear infinite';
+        (polyline as unknown as { _path: HTMLElement })._path.style.animation = 'scahudit-dash-flow 3s linear infinite';
       }
     }
 

@@ -15,7 +15,7 @@ import { runSiemExport, sendTestAlert } from "./siem-exporter";
 // vitest hoista vi.mock al tope del archivo. Usamos variables compartidas
 // para que cada test pueda controlar lo que devuelven las queries.
 
-let mockDbResult: any = [];           // Resultado de directDb.select().then()
+let mockDbResult: Record<string, unknown>[] = [];           // Resultado de directDb.select().then()
 const mockInsertValues = vi.fn();     // Spy para directDb.insert().values()
 const mockLogEvent = vi.fn();         // Spy para logSecurityEvent
 
@@ -34,7 +34,7 @@ vi.mock("@/shared/db", () => {
     {},
     {
       get(_t, prop) {
-        if (prop === "then") return (r: any) => r(mockDbResult);
+        if (prop === "then") return (r: (v: Record<string, unknown>[]) => unknown) => r(mockDbResult);
         if (prop === "catch") return () => undefined;
         return () => builder;
       },
@@ -53,7 +53,7 @@ vi.mock("@/shared/db", () => {
 
 // Mock audit-log
 vi.mock("@/shared/lib/audit-log", () => ({
-  logSecurityEvent: (...args: any[]) => mockLogEvent(...args),
+  logSecurityEvent: (...args: unknown[]) => mockLogEvent(...args),
 }));
 
 // ─── Test Suite ──────────────────────────────────────────────────────────────
@@ -178,7 +178,7 @@ describe("SIEM Exporter — Heartbeat Integration", () => {
 
     // Buscar la llamada con ruleEventType === "heartbeat"
     const hbCalls = mockInsertValues.mock.calls.filter(
-      (c: any) => c[0]?.ruleEventType === "heartbeat"
+      (c) => (c[0] as { ruleEventType?: string } | undefined)?.ruleEventType === "heartbeat"
     );
     expect(hbCalls.length).toBeGreaterThanOrEqual(1);
 

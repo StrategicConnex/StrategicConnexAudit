@@ -4,12 +4,22 @@ import React from "react";
 import { BookOpen } from "lucide-react";
 import type { FindingData } from "../hooks/useInvestigationRealtime";
 
+interface EvidenceItem {
+  id: string;
+  title: string;
+  severity: string;
+  source?: string;
+  description?: string;
+  desc?: string;
+  recommendation?: string | null;
+}
+
 interface EvidencesListProps {
   findings: FindingData[];
   selectedEvidenceId: string | null;
   onSelectEvidence: (id: string | null) => void;
   isDemo?: boolean;
-  demoFindings?: Array<{ id: string; title: string; severity: string; source: string; desc: string }>;
+  demoFindings?: EvidenceItem[];
 }
 
 const SEVERITY_CLASSES: Record<string, string> = {
@@ -21,7 +31,7 @@ const SEVERITY_CLASSES: Record<string, string> = {
 };
 
 export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, isDemo, demoFindings }: EvidencesListProps) {
-  const items = isDemo && demoFindings ? demoFindings : findings;
+  const items: EvidenceItem[] = isDemo && demoFindings ? demoFindings : findings;
   const isEmpty = items.length === 0;
 
   return (
@@ -44,7 +54,7 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, 
             No se han reportado hallazgos aún. Deja que el escaneo avance o ingresa un host válido.
           </div>
         ) : (
-          items.map((item: any) => {
+          items.map((item) => {
             const isSelected = selectedEvidenceId === item.id;
             const severity = item.severity;
             return (
