@@ -215,32 +215,107 @@ function getOrCreateLimiter(config: RateLimitConfig): Ratelimit {
   return instance;
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// In-Memory Fallback (sliding window por instancia)
+//
+// Cuando Redis está caído (o no configurado) la app NO debe quedar bloqueada:
+// un outage de Upstash no puede convertir todos los endpoints rate-limited
+// en 429 masivos. Este fallback mantiene un sliding window en memoria por
+// instancia serverless. Tradeoff aceptado: el límite es por instancia, no
+// global (Vercel puede tener N instancias calientes), pero garantiza
+// disponibilidad y una protección razonable contra abuso básico.
+// ═════════════════════════════════════════════════════════════════════════════
+
+const memoryWindows = new Map<string, number[]>();
+
+function checkRateLimitInMemory(identifier: string, config: RateLimitConfig): RateLimitResult {
+  const now = Date.now();
+  const windowMs = config.window * 1000;
+  const key = `${config.prefix}:${identifier}`;
+
+  let timestamps = memoryWindows.get(key);
+  if (!timestamps) {
+    timestamps = [];
+    memoryWindows.set(key, timestamps);
+  }
+
+  // Podar timestamps fuera de la ventana
+  const cutoff = now - windowMs;
+  while (timestamps.length > 0 && timestamps[0] <= cutoff) {
+    timestamps.shift();
+  }
+
+  // Acotar crecimiento del Map: barrido periódico cuando crece demasiado
+  // (no borrar por llamada — eso perdería la ventana del identificador)
+  if (memoryWindows.size > 10_000) {
+    for (const [k, v] of memoryWindows) {
+      if (v.length === 0) memoryWindows.delete(k);
+    }
+    // Re-vincular la clave actual si el sweep la dejó huérfana
+    if (!memoryWindows.has(key)) memoryWindows.set(key, timestamps);
+  }
+
+  if (timestamps.length >= config.limit) {
+    const reset = timestamps[0] + windowMs;
+    return {
+      success: false,
+      limit: config.limit,
+      remaining: 0,
+      reset,
+      retryAfter: Math.max(1, Math.ceil((reset - now) / 1000)),
+    };
+  }
+
+  timestamps.push(now);
+  return {
+    success: true,
+    limit: config.limit,
+    remaining: config.limit - timestamps.length,
+    reset: now + windowMs,
+    retryAfter: 0,
+  };
+}
+
 /**
  * Verifica rate limit para un identificador con la configuración dada.
- * Fail-closed en producción si no hay Redis configurado.
+ *
+ * Estrategia de resiliencia (fail-open degradado, nunca fail-closed):
+ * 1. Redis configurado y sano → limiter distribuido de Upstash.
+ * 2. Redis configurado pero caído (timeout/error) → fallback en memoria.
+ * 3. Redis no configurado → fallback en memoria (igual en prod y dev).
+ *
+ * La disponibilidad de la app nunca depende de la salud de Redis.
  */
 async function checkRateLimitInternal(identifier: string, config: RateLimitConfig): Promise<RateLimitResult> {
   if (!process.env.UPSTASH_REDIS_REST_URL) {
-    if (process.env.NODE_ENV === "production") {
-      console.error(`[RateLimit] UPSTASH_REDIS_REST_URL no configurado. Denegando ${config.prefix} en producción.`);
-      return { success: false, limit: config.limit, remaining: 0, reset: Date.now() + 60000, retryAfter: 60 };
-    }
-    console.warn(`[RateLimit] UPSTASH_REDIS_REST_URL no configurado. Rate limit ${config.prefix} desactivado en desarrollo.`);
-    return { success: true, limit: config.limit, remaining: config.limit, reset: 0, retryAfter: 0 };
+    console.warn(`[RateLimit] UPSTASH_REDIS_REST_URL no configurado. Usando fallback en memoria para ${config.prefix}.`);
+    return checkRateLimitInMemory(identifier, config);
   }
 
   try {
     const limiter = getOrCreateLimiter(config);
-    const result = await limiter.limit(identifier);
-    const retryAfter = result.reset ? Math.max(1, Math.ceil((result.reset - Date.now()) / 1000)) : 60;
-    return { ...result, retryAfter };
-  } catch (err) {
-    // Redis unreachable — fail open en desarrollo, fail closed en producción
-    console.error(`[RateLimit] Redis unreachable for ${config.prefix}:`, err);
-    if (process.env.NODE_ENV === "production") {
-      return { success: false, limit: config.limit, remaining: 0, reset: Date.now() + 60000, retryAfter: 60 };
+    // Timeout corto: si Redis no responde, degradar rápido al fallback en
+    // memoria en vez de colgar el request (los 5.8s vistos en prod eran los
+    // reintentos del SDK contra un host eliminado).
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result = await Promise.race([
+        limiter.limit(identifier),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error("Redis rate limit timeout")), 3000);
+        }),
+      ]);
+      const retryAfter = result.reset ? Math.max(1, Math.ceil((result.reset - Date.now()) / 1000)) : 60;
+      return { ...result, retryAfter };
+    } finally {
+      // Evitar timers colgados cuando Redis responde rápido (mantiene la
+      // instancia viva innecesariamente y rompe los open-handle checks)
+      if (timeoutId) clearTimeout(timeoutId);
     }
-    return { success: true, limit: config.limit, remaining: config.limit, reset: 0, retryAfter: 0 };
+  } catch (err) {
+    // Redis unreachable — degradación graciosa, nunca 429 masivos
+    console.error(`[RateLimit] Redis unreachable for ${config.prefix}. Usando fallback en memoria.`, err);
+    return checkRateLimitInMemory(identifier, config);
   }
 }
 
