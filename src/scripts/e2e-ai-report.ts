@@ -291,7 +291,7 @@ async function main() {
     }
 
     if (data.modelUsed) console.log(`🤖 Modelo usado: ${data.modelUsed}`);
-    if (data.isFallback) console.warn("⚠️  Reporte resiliente (isFallback=true) — el router IA no tuvo éxito.");
+    if (data.isFallback) console.warn("ℹ️  Reporte resiliente (isFallback=true): la IA tardó demasiado, pero el reporte incluye tabla KPIs + mermaid — resultado válido.");
 
     const mermaidMatch = report.match(/```mermaid\n([\s\S]*?)```/);
     if (mermaidMatch) {

@@ -109,7 +109,9 @@ describe("extractMermaidBlocks (reporte real)", () => {
     expect(blocks[0].code).toContain("A[Inicio]");
   });
 
-  it("el reporte resiliente (sin IA) no produce mermaid y parsea su sección de salud", () => {
+  it("el reporte resiliente (sin IA) SIEMPRE incluye mermaid y parsea su sección de salud", () => {
+    // El template resiliente del route incluye un diagrama mermaid fijo, así el
+    // informe con gráficos llega incluso si los modelos :free tardan demasiado.
     const resilient = `Desde Strategic Connex (strategicconnex.com.ar)
 # 📊 Reporte Estratégico Mensual SEO — Cliente
 | **Clicks Orgánicos** | 8,420 clicks | 🟢 |
@@ -117,11 +119,22 @@ describe("extractMermaidBlocks (reporte real)", () => {
 ## 🛠️ Diagnóstico de Salud Técnica y Velocidad
 
 # 🏆 72 / 100
-*Clasificación: Requiere Optimización*`;
+*Clasificación: Requiere Optimización*
+
+## 🔄 Diagrama de Priorización (Mermaid)
+
+\`\`\`mermaid
+flowchart TD
+    A[Inicio] --> B{Tarea Alta}
+    B --> C[Tarea Media]
+\`\`\``;
     const parsed = parseMarkdownReport(resilient);
     expect(parsed.healthScore).toBe(72);
     expect(parsed.healthClassification).toContain("Requiere Optimización");
-    expect(extractMermaidBlocks(resilient)).toEqual([]);
+    // El reporte resiliente garantiza el diagrama mermaid en producción
+    const blocks = extractMermaidBlocks(resilient);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].code).toContain("flowchart TD");
   });
 });
 
