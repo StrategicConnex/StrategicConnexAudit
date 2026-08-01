@@ -35,23 +35,58 @@ describe("checkAiRateLimit", () => {
     vi.stubEnv("NODE_ENV", "development");
     const mod = await import("./ratelimit");
     const result = await mod.checkAiRateLimit("user-1");
-    // En desarrollo sin Redis retorna success con el limit configurado
+    // En desarrollo sin Redis retorna success vía fallback en memoria
     expect(result.success).toBe(true);
     expect(result.limit).toBe(5);
-    expect(result.remaining).toBe(5);
+    expect(result.remaining).toBe(4); // la llamada actual se registra en memoria
     // Constructor should NOT be called (no Redis configured)
     expect(mockLimit).not.toHaveBeenCalled();
   }, 10000);
 
-  it("fail-closed en produccion sin Redis", async () => {
+  it("fallback en memoria en produccion sin Redis (nunca fail-closed masivo)", async () => {
     vi.stubEnv("NODE_ENV", "production");
     const mod = await import("./ratelimit");
+    // Sin Redis configurado: la app NO debe bloquearse con 429 masivos
     const result = await mod.checkAiRateLimit("user-2");
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
     expect(result.limit).toBe(5);
-    expect(result.remaining).toBe(0);
+    expect(result.remaining).toBe(4); // primera llamada registrada en memoria
     // Constructor should NOT be called (no Redis configured)
     expect(mockLimit).not.toHaveBeenCalled();
+  });
+
+  it("fallback en memoria aplica el limite por identificador cuando se agota", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const mod = await import("./ratelimit");
+    // Consumir el límite de 5 del usuario user-mem
+    for (let i = 0; i < 5; i++) {
+      const ok = await mod.checkAiRateLimit("user-mem");
+      expect(ok.success).toBe(true);
+    }
+    // La sexta llamada en la misma ventana debe ser rechazada
+    const blocked = await mod.checkAiRateLimit("user-mem");
+    expect(blocked.success).toBe(false);
+    expect(blocked.remaining).toBe(0);
+    expect(blocked.retryAfter).toBeGreaterThan(0);
+    // Otro identificador NO debe verse afectado (ventanas separadas)
+    const other = await mod.checkAiRateLimit("user-mem-2");
+    expect(other.success).toBe(true);
+  });
+
+  it("fallback en memoria degrada cuando Redis esta caido (catch path)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://dead-redis.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
+    // Simular Redis caído: el limiter lanza
+    mockLimit.mockRejectedValue(new Error("ENOTFOUND dead-redis.upstash.io"));
+
+    const mod = await import("./ratelimit");
+    const result = await mod.checkAiRateLimit("user-redis-down");
+
+    // Degradación graciosa: success=true vía fallback en memoria
+    expect(result.success).toBe(true);
+    expect(result.limit).toBe(5);
+    expect(result.remaining).toBe(4);
   });
 
   it("success=true con Redis y rate limit no excedido", async () => {
