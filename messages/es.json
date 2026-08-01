@@ -427,6 +427,7 @@
     "fetchError": "Error al cargar escenarios: {error}",
     "networkError": "Error de conexión: {error}",
     "runError": "Error al ejecutar escenario: {error}",
+    "patchFailed": "No se pudo guardar el resultado de la simulación.",
     "outputTitle": "Output de Simulación",
     "reportResult": "Reportar resultado:",
     "btnDetected": "Detectado",

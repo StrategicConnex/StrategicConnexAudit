@@ -56,7 +56,9 @@ export const periodicAdversarySimulation = schedules.task({
         for (const mitreId of SCHEDULED_SCENARIOS) {
           const def = ADVERSARY_CATALOG.find((s) => s.mitreId === mitreId);
           if (!def) continue;
-          if (def.executorType === "powershell" || def.executorType === "bash") continue;
+          // Solo se omiten los escenarios manuales: bash/powershell se ejecutan
+          // de forma segura dentro del sandbox (allowlist + egress-guard).
+          if (def.executorType === "manual") continue;
 
           console.log(`[AdversaryTrigger] Running ${mitreId} for ${project.domain}`);
 

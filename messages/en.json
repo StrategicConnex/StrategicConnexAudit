@@ -427,6 +427,7 @@
     "fetchError": "Error loading scenarios: {error}",
     "networkError": "Connection error: {error}",
     "runError": "Error running scenario: {error}",
+    "patchFailed": "Could not save the simulation result.",
     "outputTitle": "Simulation Output",
     "reportResult": "Report result:",
     "btnDetected": "Detected",

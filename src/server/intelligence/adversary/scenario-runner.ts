@@ -7,10 +7,12 @@
  */
 
 import { db } from "@/shared/db";
-import { adversaryRuns } from "@/shared/db/schemas/adversary";
+import { adversaryRuns, adversaryScenarios } from "@/shared/db/schemas/adversary";
 import { intelligenceFindings } from "@/shared/db/schemas/intelligence";
-import { eq } from "drizzle-orm";
+import { projects } from "@/shared/db/schemas";
+import { eq, desc } from "drizzle-orm";
 import { ADVERSARY_CATALOG, type AdversaryScenarioDefinition } from "./catalog";
+import { runSandboxedCommand, type SandboxExecutionResult } from "./sandbox-executor";
 
 export type ScenarioResult = "detected" | "missed" | "error";
 
@@ -32,6 +34,71 @@ export interface RunScenarioOutput {
 }
 
 /**
+ * Devuelve el id de la fila en adversary_scenarios para un escenario del
+ * catálogo, creándola si no existe (el catálogo vive en código, la tabla
+ * persiste el template para poder atribuir runs por scenario_id).
+ *
+ * Fix P0: antes runScenario insertaba runs sin scenario_id (NULL), por lo
+ * que las estadísticas por escenario se atribuían a todos (bug del filtro
+ * `return true` en listScenariosWithRuns / GET).
+ *
+ * Fix race condition: el select-then-insert original permitía filas
+ * duplicadas cuando dos POSTs concurrentes (o POST+cron) colisionaban.
+ * Con el índice ÚNICO uniq_adversary_mitre_id (migración 0018) + insert
+ * con onConflictDoNothing({ target: mitreId }), la segunda escritura
+ * concurrente es un no-op y se re-lee el id canónico — la unicidad queda
+ * garantizada a nivel de base de datos.
+ */
+export async function getOrCreateScenarioId(
+  scenario: AdversaryScenarioDefinition
+): Promise<string> {
+  // 1. Fast path: leer el id existente.
+  const existing = await db
+    .select({ id: adversaryScenarios.id })
+    .from(adversaryScenarios)
+    .where(eq(adversaryScenarios.mitreId, scenario.mitreId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return existing[0].id;
+  }
+
+  // 2. Insert con ON CONFLICT DO NOTHING: si otra escritura concurrente
+  //    ganó la carrera (índice único 0018), este insert es un no-op.
+  await db
+    .insert(adversaryScenarios)
+    .values({
+      mitreId: scenario.mitreId,
+      mitreTactic: scenario.mitreTactic,
+      mitreTechnique: scenario.mitreTechnique,
+      name: scenario.name,
+      description: scenario.description,
+      detectionAdvice: scenario.detectionAdvice,
+      executorType: scenario.executorType,
+      executorCommand: scenario.executorCommand,
+      severity: scenario.severity,
+      prerequisites: scenario.prerequisites,
+      tags: scenario.tags,
+    })
+    .onConflictDoNothing({ target: adversaryScenarios.mitreId });
+
+  // 3. Re-leer: el id existe garantizado (insertado por nosotros o por la
+  //    escritura concurrente ganadora). Devuelve siempre el canónico.
+  const [row] = await db
+    .select({ id: adversaryScenarios.id })
+    .from(adversaryScenarios)
+    .where(eq(adversaryScenarios.mitreId, scenario.mitreId))
+    .limit(1);
+
+  if (!row) {
+    throw new Error(
+      `getOrCreateScenarioId: no se pudo resolver/crear el escenario ${scenario.mitreId}`
+    );
+  }
+  return row.id;
+}
+
+/**
  * Ejecuta un escenario de simulación de adversario.
  *
  * Fase 1 (MVP): Simulación informativa — registra el intento y crea
@@ -41,7 +108,7 @@ export interface RunScenarioOutput {
  * Fase 2 (futuro): Ejecución remota via SSH/API contra el objetivo.
  */
 export async function runScenario(input: RunScenarioInput): Promise<RunScenarioOutput> {
-  const { scenarioMitreId, projectId, investigationId, detectedBy, notes } = input;
+  const { scenarioMitreId, projectId, investigationId, detectedBy } = input;
 
   // 1. Find scenario in catalog
   const scenarioDef = ADVERSARY_CATALOG.find((s) => s.mitreId === scenarioMitreId);
@@ -55,20 +122,56 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
   const startTime = new Date();
 
   try {
+    // 1.5 Resolve (or create) the scenario template row so the run can be
+    //     attributed to its scenario (fix P0: scenario_id ya no queda NULL).
+    const scenarioId = await getOrCreateScenarioId(scenarioDef);
+
     // 2. Create a new run record
     const [run] = await db
       .insert(adversaryRuns)
       .values({
+        scenarioId,
         projectId,
         status: "running",
         startedAt: startTime,
       })
       .returning();
 
-    // 3. Generate simulated output
-    const simulatedOutput = generateSimulatedOutput(scenarioDef, input);
+    // 2.5 Resolve the target (project domain) to substitute $TARGET in the
+    //     executor command, and run the command inside the sandbox.
+    const [project] = await db
+      .select({ domain: projects.domain })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
 
-    // 4. Create a finding in intelligence_findings (for dashboard visibility)
+    let sandboxResult: SandboxExecutionResult | null = null;
+    // Gate de seguridad operativa: ADVERSARY_SANDBOX_ENABLED=false desactiva
+    // la ejecución real (fallback al output simulado). Default: habilitado.
+    const sandboxEnabled = process.env.ADVERSARY_SANDBOX_ENABLED !== "false";
+    if (sandboxEnabled && project?.domain && scenarioDef.executorType !== "manual") {
+      sandboxResult = await runSandboxedCommand({
+        executorType: scenarioDef.executorType,
+        executorCommand: scenarioDef.executorCommand,
+        target: project.domain,
+        timeoutMs: 15_000,
+      });
+    }
+
+    // 3. Output: usa el transcript real del sandbox cuando hubo ejecución
+    //    real; de lo contrario cae al output simulado informativo. Cuando el
+    //    sandbox devuelve unsupported (powershell/manual), surfacea el
+    //    advisory en vez de descartarlo silenciosamente.
+    const simulatedOutput = generateSimulatedOutput(scenarioDef);
+    const output =
+      sandboxResult && sandboxResult.executed
+        ? sandboxResult.output
+        : sandboxResult && sandboxResult.status === "unsupported"
+          ? `${sandboxResult.output}\n\n${simulatedOutput}`
+          : simulatedOutput;
+
+    // 4. Findings: el hallazgo base [SIM] (visibilidad en dashboard) + los
+    //    hallazgos parseados del output real del sandbox.
     if (investigationId) {
       await db.insert(intelligenceFindings).values({
         investigationId,
@@ -87,18 +190,40 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
           detectionAdvice: scenarioDef.detectionAdvice,
           prerequisites: scenarioDef.prerequisites,
           tags: scenarioDef.tags,
+          sandbox: sandboxResult
+            ? {
+                executed: sandboxResult.executed,
+                status: sandboxResult.status,
+                durationMs: sandboxResult.durationMs,
+                findingsCount: sandboxResult.findings.length,
+              }
+            : null,
         },
-        affectedAsset: "simulation",
+        affectedAsset: project?.domain ?? "simulation",
       });
-    }
-    const severityMap: Record<string, "info" | "low" | "medium" | "high" | "critical"> = {
-      info: "info",
-      low: "low",
-      medium: "medium",
-      high: "high",
-      critical: "critical",
-    };
 
+      // Hallazgos parseados del output real (puertos abiertos, endpoints
+      // expuestos, etc.) — solo cuando el sandbox produjo evidencia real.
+      if (sandboxResult && sandboxResult.findings.length > 0) {
+        for (const finding of sandboxResult.findings.slice(0, 5)) {
+          await db.insert(intelligenceFindings).values({
+            investigationId,
+            projectId,
+            severity: finding.severity,
+            confidence: "0.700",
+            title: `[ADV-SANDBOX] ${finding.title}`,
+            description: finding.description,
+            evidence: {
+              ...finding.evidence,
+              mitreId: scenarioDef.mitreId,
+              sandboxStatus: sandboxResult.status,
+              sandboxDurationMs: sandboxResult.durationMs,
+            },
+            affectedAsset: project?.domain ?? "simulation",
+          });
+        }
+      }
+    }
 
     // 5. Update run with result
     const result: ScenarioResult = "missed";
@@ -112,7 +237,7 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
       .set({
         status: "completed",
         result,
-        output: simulatedOutput,
+        output,
         detectedBy: detectedBy || null,
         scoreImpact,
         completedAt: new Date(),
@@ -124,7 +249,7 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
       runId: run.id,
       result,
       scoreImpact,
-      output: simulatedOutput,
+      output,
     };
   } catch (err: any) {
     console.error(`[AdversaryRunner] Error ejecutando ${scenarioMitreId}:`, err.message);
@@ -141,8 +266,7 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
  * En Fase 1 (MVP), esto es texto informativo.
  */
 function generateSimulatedOutput(
-  scenario: AdversaryScenarioDefinition,
-  input: RunScenarioInput
+  scenario: AdversaryScenarioDefinition
 ): string {
   const lines: string[] = [
     `╔══════════════════════════════════════════════════════════╗`,
@@ -174,51 +298,41 @@ function generateSimulatedOutput(
 }
 
 /**
- * Reporta el resultado de una simulación (detectado o no detectado).
- * Usado por el usuario para cerrar el loop después de revisar sus logs.
- */
-export async function reportScenarioResult(
-  runId: string,
-  result: ScenarioResult,
-  detectedBy?: string
-): Promise<boolean> {
-  try {
-    await db
-      .update(adversaryRuns)
-      .set({
-        result,
-        detectedBy: detectedBy || null,
-        completedAt: new Date(),
-      })
-      .where(eq(adversaryRuns.id, runId));
-
-    return true;
-  } catch (err: any) {
-    console.error(`[AdversaryRunner] Error reporting result for ${runId}:`, err.message);
-    return false;
-  }
-}
-
-/**
  * Lista los escenarios disponibles para un proyecto, incluyendo
- * el historial de ejecuciones previas.
+ * el historial de ejecuciones previas, atribuyendo cada run a su
+ * escenario vía scenario_id (fix P0: antes el filtro era `return true`
+ * y TODOS los runs se contaban para TODOS los escenarios).
+ *
+ * Devuelve { catalog, runs } para que el GET no duplique la consulta.
  */
 export async function listScenariosWithRuns(projectId: string) {
-  const runs = await db
-    .select()
-    .from(adversaryRuns)
-    .where(eq(adversaryRuns.projectId, projectId))
-    .orderBy(adversaryRuns.createdAt);
+  const [runs, scenarioRows] = await Promise.all([
+    db
+      .select()
+      .from(adversaryRuns)
+      .where(eq(adversaryRuns.projectId, projectId))
+      .orderBy(desc(adversaryRuns.createdAt))
+      // Ventana acotada: el cron inserta runs cada 6h; stats sobre las
+      // últimas 1000 ejecuciones siguen siendo representativas sin
+      // payloads sin límite en la respuesta del GET.
+      .limit(1000),
+    db.select().from(adversaryScenarios),
+  ]);
+
+  // Map mitreId → DB id (scenario_id) para atribuir runs correctamente.
+  const scenarioIdByMitre = new Map(
+    scenarioRows.map((s) => [s.mitreId, s.id])
+  );
 
   const catalogWithStatus = ADVERSARY_CATALOG.map((scenario) => {
-    const scenarioRuns = runs.filter((r) => {
-      // Match by mitreId (runs store scenarioId but we match from catalog)
-      return true; // Simplified for MVP
-    });
+    const scenarioDbId = scenarioIdByMitre.get(scenario.mitreId);
+    const scenarioRuns = scenarioDbId
+      ? runs.filter((r) => r.scenarioId === scenarioDbId)
+      : [];
 
-    const lastRun = runs.length > 0 ? runs[runs.length - 1] : null;
-    const totalRuns = runs.length;
-    const detectedCount = runs.filter((r) => r.result === "detected").length;
+    const lastRun = scenarioRuns.length > 0 ? scenarioRuns[0] : null;
+    const totalRuns = scenarioRuns.length;
+    const detectedCount = scenarioRuns.filter((r) => r.result === "detected").length;
 
     return {
       ...scenario,
@@ -229,5 +343,5 @@ export async function listScenariosWithRuns(projectId: string) {
     };
   });
 
-  return catalogWithStatus;
+  return { catalog: catalogWithStatus, runs };
 }
