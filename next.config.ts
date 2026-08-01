@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
+// NOTE: `output: "standalone"` removed deliberately — deploying to Vercel.
+// Vercel's lambda builder (Next.js Build Output API) natively emits per-route
+// serverless functions; `standalone` is only needed for Docker/self-hosting
+// and can conflict with Vercel's lambda tracing (intermittent
+// "Unable to find lambda for route" build failures observed on this project).
 const nextConfig: NextConfig = {
-  output: "standalone",
   images: {
     remotePatterns: [
       {

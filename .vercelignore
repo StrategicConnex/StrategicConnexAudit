@@ -21,14 +21,19 @@ playwright.config.ts
 vitest.config.ts
 
 # ─── Documentation & assets ─────────────────────────────────────
-docs/
+# NOTE: `docs/` must NOT be ignored. The root docs/*.md files are read at
+# build time by the /docs/[...slug] catch-all, and src/app/docs/ provides the
+# /docs routes. Ignoring `docs/` silently dropped /docs from production builds
+# (gitignore semantics: a bare `docs/` matches the dir at ANY depth, including
+# src/app/docs/). Media patterns are root-anchored so public/ assets (PWA
+# manifest icons like logo-dark.svg, etc.) still get uploaded.
 README.md
-*.png
-*.jpg
-*.jpeg
-*.webp
-*.svg
-*.md
+/*.md
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.svg
 .github/
 drizzle/
 
