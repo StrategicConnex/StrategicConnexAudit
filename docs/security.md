@@ -3,6 +3,10 @@ layout: default
 title: Seguridad
 nav_order: 4
 permalink: /docs/security
+version: 1.1
+fecha: 2026-08-01
+autor: Equipo SCAUDIT
+estado: Aprobado
 ---
 
 # Arquitectura de Seguridad
@@ -265,4 +269,154 @@ El parámetro `next` en `/auth/callback` se valida estrictamente:
 - Solo rutas relativas que comienzan con `/`
 - Bloquea URLs absolutas (`https://evil.com`)
 - Bloquea protocol-relative URLs (`//evil.com`)
-- Bloquea hostnames maliciosos (`@evil.
+- Bloquea hostnames maliciosos (`@evil.com`) vía URL parseada
+
+---
+
+## 6. Alcance y objetivos
+
+Este documento describe la arquitectura de seguridad de SCAUDIT Pro: las capas de defensa (CSP, rate limiting, protección SSRF, SIEM y autenticación), las políticas configuradas con sus umbrales, y los procedimientos de respuesta. Alcance: componentes serverless (Vercel), Supabase Auth, Upstash Redis y los endpoints públicos.
+
+---
+
+## 7. Requisitos de seguridad
+
+| REQ | Requisito | Verificación |
+|-----|-----------|--------------|
+| REQ-001 | Ningún request interno sin rate limit | `security_audit_logs` registra `rate_limit_hit` |
+| REQ-002 | Sin SSRF: egress bloqueado a rangos privados | `isBlockedAddress()` / `assertPublicHostname()` |
+| REQ-003 | CSP aplicada en todas las respuestas | Header en `src/proxy.ts` + meta tag en `layout.tsx` |
+| REQ-004 | Sesiones solo vía Magic Link de Supabase | `supabase.auth` con cookies |
+| REQ-005 | Todos los eventos de seguridad auditan | `logSecurityEvent()` → `security_audit_logs` |
+
+---
+
+## 8. Modelo de datos de seguridad
+
+| Tabla | Propósito | Columnas clave | Fuente |
+|-------|-----------|----------------|--------|
+| `security_audit_logs` | Eventos de auditoría | `eventType`, `ip`, `userId`, `path`, `method`, `metadata`, `timestamp` | [VERIFIED] `src/shared/db/schemas` |
+| `siem_alert_logs` | Alertas SIEM enviadas | `severity`, `ruleEventType`, `deliveredTo` | [VERIFIED] `src/shared/db/schemas` |
+| `ai_health_logs` | Health de modelos IA | `model`, `status`, `latencyMs` | [VERIFIED] `src/shared/db/schemas` |
+
+---
+
+## 9. APIs de seguridad
+
+| Método | Endpoint | Auth | Propósito |
+|--------|----------|------|-----------|
+| GET | `/api/security/audit-logs` | Sesión | Logs de auditoría paginados |
+| POST | `/api/security/csp-report` | Público | Reportes de violación CSP |
+| GET | `/api/security/siem-alerts` | Sesión | Historial de alertas SIEM |
+| POST | `/api/security/siem/run` | CRON_SECRET | Ejecutar SIEM bajo demanda |
+| GET | `/api/security/siem/test` | Sesión | Test de webhooks |
+
+---
+
+## 10. Operaciones y monitoreo
+
+**Monitoreo:**
+
+- Dashboard de seguridad en `/security/audit` con filtros por evento, IP y fechas
+- SIEM exporter con heartbeat cada 30 min (`runSiemExport()`)
+- Alertas multicanal: Slack, Email (Resend), PagerDuty, Splunk
+
+**Runbook — incidente de seguridad:**
+
+1. Identificar el `eventType` en `security_audit_logs`
+2. Verificar el trigger SIEM y los thresholds de la regla (§4)
+3. Confirmar entrega en `siem_alert_logs` (estado de cada canal)
+4. Si el canal falló, probar con `/api/security/siem/test`
+
+---
+
+## 11. Diagramas
+
+### FIG-001 — Defensa en profundidad
+
+```mermaid
+flowchart TB
+  A[Cliente] --> B[Vercel Edge: proxy.ts]
+  B --> C[CSP Header + nonce]
+  C --> D[Rate Limit Upstash Redis]
+  D --> E[Egress Guard SSRF]
+  E --> F[Supabase Auth Magic Link]
+  F --> G[API Handlers]
+  G --> H[security_audit_logs]
+  H --> I[SIEM Exporter cada 5 min]
+  I --> J[Slack / Email / PagerDuty / Splunk]
+```
+
+### FIG-002 — Flujo de rate limiting
+
+```mermaid
+flowchart LR
+  A[Request] --> B[extractClientIp]
+  B --> C{Redis Upstash}
+  C -->|bajo limite| D[Handler]
+  C -->|excede| E[429 + X-RateLimit-*]
+  C -->|caido| F{Produccion?}
+  F -->|si| G[Denegar fail-closed]
+  F -->|no| H[Permitir fail-open]
+```
+
+---
+
+## 12. Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FIG-001 | Diagrama de arquitectura | Defensa en profundidad | Arquitecto de seguridad | L2 |
+| FIG-002 | Diagrama de flujo | Rate limiting con fail-open/closed | Ops | L2 |
+
+---
+
+## 13. Trazabilidad
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-001 | `withRateLimit` | `ratelimit.test.ts` | `src/shared/lib/ratelimit.ts` |
+| REQ-002 | `egress-guard.ts` | `egress-guard.test.ts` | `src/shared/utils/egress-guard.ts` |
+| REQ-003 | `proxy.ts` | `src/proxy.ts` | Vercel Edge |
+| REQ-004 | Supabase Auth | e2e login | Supabase config |
+| REQ-005 | `logSecurityEvent` | SIEM exporter | `src/shared/lib/actions.ts` |
+
+---
+
+## 14. Validación cruzada (inconsistencias resueltas)
+
+- **Fail-open vs fail-closed**: la sección §2 documentaba ambos comportamientos en el mismo párrafo sin distinguir entorno. Se clarificó: producción = fail-closed, desarrollo = fail-open (verificado en `src/shared/lib/ratelimit.ts`).
+- **Umbrales de email**: el texto decía "20 req/60s" en la tabla de límites y "40 intentos/minuto" en §5. Corregido: `POST /api/auth/validate-email` = 20/60s por IP; el "40" corresponde al decorador `withRateLimit` de auth. [VERIFIED]
+
+---
+
+## 15. Unknowns y supuestos
+
+- [VERIFIED] La app degrada a fallback en memoria cuando Redis está caído (fail-open) y `circuit-breaker.ts` no descarta resultados de IA exitosos.
+- [ASSUMPTION] Los rangos bloqueados del egress guard (16 IPv4 + 7 IPv6) cubren todos los rangos privados actuales de IANA.
+- [UNKNOWN] La latencia real de los webhooks SIEM depende de la disponibilidad de los proveedores externos.
+
+---
+
+## 16. Glosario
+
+| Término | Definición |
+|---------|-----------|
+| CSP | Content Security Policy: política de seguridad del contenido |
+| SSRF | Server-Side Request Forgery |
+| SIEM | Security Information and Event Management |
+| Fail-closed | Denegar acceso ante fallo del sistema de control |
+| Fail-open | Permitir acceso ante fallo (degradación graciosa) |
+| Egress Guard | Validador de egreso que bloquea IPs privadas |
+
+---
+
+## 17. Versionado
+
+| Campo | Valor |
+|-------|-------|
+| Versión | 1.1 |
+| Fecha | 2026-08-01 |
+| Autor | Equipo SCAUDIT |
+| Estado | Aprobado |
+

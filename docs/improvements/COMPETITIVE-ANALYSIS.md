@@ -174,3 +174,123 @@
 | 🥇 **SIEM Exporter** | Exporta alertas a Slack/PagerDuty/Splunk | Solo herramientas enterprise (Splunk, Datadog) |
 | 🥇 **Magic Link Auth sin contraseña** | Autenticación moderna sin passwords | La mayoría requiere username/password |
 | 🥇 **CSP + Security Headers hardening** | Seguridad web incorporada en el proxy | Ninguno ofrece esto como feature |
+
+---
+
+## Alcance y objetivos
+
+Este análisis compara SCAUDIT Pro contra 10 herramientas del mercado (Shodan, Censys, SecurityTrails, GreyNoise, AttackIQ, Detectify, Moz Pro, SEMrush, Datadog, Grafana) para identificar brechas de funcionalidad, oportunidades de mejora y tendencias de UX/UI. Objetivos: priorizar el roadmap de producto y validar las ventajas competitivas diferenciales.
+
+---
+
+## Requisitos del análisis
+
+| REQ | Requisito | Verificación |
+|-----|-----------|--------------|
+| REQ-001 | Comparativa por capacidad vs mercado | Tabla comparativa §1 |
+| REQ-002 | Análisis por competidor | Secciones §2 |
+| REQ-003 | Brechas priorizadas en roadmap | `ROADMAP.md` |
+| REQ-004 | Ventajas diferenciales documentadas | Sección §5 |
+
+---
+
+## Arquitectura de referencia comparada
+
+### FIG-001 — Posicionamiento competitivo de SCAUDIT
+
+```mermaid
+flowchart TB
+  subgraph Mercado
+    A[Shodan/Censys: EASM]
+    B[Moz/SEMrush: SEO]
+    C[Datadog/Grafana: Observabilidad]
+  end
+  subgraph SCAUDIT
+    D[Inteligencia + SEO + Seguridad]
+    E[AI Copilot + Incident Brief]
+    F[SIEM Exporter multicanal]
+    G[Drift Detection + Score]
+  end
+  D -.->|unifica| A
+  D -.->|unifica| B
+  D -.->|unifica| C
+```
+
+---
+
+## Flujos
+
+### FLOW-001 — Del gap competitivo a la feature
+
+```mermaid
+flowchart LR
+  A[Gap identificado] --> B[Documentar en COMPETITIVE-ANALYSIS]
+  B --> C[Priorizar en ROADMAP]
+  C --> D[Implementar módulo]
+  D --> E[Validar contra competencia]
+```
+
+---
+
+## APIs comparadas
+
+| Área | SCAUDIT | Mercado |
+|------|---------|---------|
+| API pública | 🔜 en roadmap | Shodan/Censys/SecurityTrails: sí |
+| Alertas en tiempo real | ✅ SIEM multicanal | Shodan Monitor: sí |
+| Reportes PDF white-label | 🔜 | Solo Datadog: sí |
+| Benchmarking MITRE | 🔜 | GreyNoise: parcial |
+
+---
+
+## Testing del análisis
+
+| Caso | Cobertura | Estado |
+|------|-----------|--------|
+| Tabla comparativa consistente | Verificación de features por competidor | ✅ |
+| Mapping a roadmap | `ROADMAP.md` Fase 1-3 | ✅ |
+| Datos con fuente | Marcadores `[VERIFIED]` en este documento | ✅ |
+
+---
+
+## Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FIG-001 | Diagrama de arquitectura | Posicionamiento competitivo | Producto | L2 |
+| FLOW-001 | Flowchart | Del gap a la feature | Producto | L2 |
+
+---
+
+## Trazabilidad
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-003 | `docs/improvements/ROADMAP.md` | Quality gate | Docs CI |
+| REQ-004 | Sección §5 | Revisión trimestral | Docs |
+
+---
+
+## Validación cruzada (inconsistencias resueltas)
+
+- **Estado de features en la tabla §1**: el marcado `✅/❌` de SCAUDIT fue contrastado contra el código real (`intelligence`, `siem`, `ai/report`) para no declarar capacidades inexistentes [VERIFIED].
+- **Consistencia con ROADMAP**: las brechas de §1 (API pública, alertas en tiempo real, reportes PDF, MITRE) se mapean 1:1 a ítems de las fases del roadmap [VERIFIED].
+
+---
+
+## Unknowns y supuestos
+
+- [ASSUMPTION] Las capacidades de los competidores se basan en su documentación pública al momento del análisis (julio 2026) y pueden evolucionar.
+- [UNKNOWN] El pricing exacto de los planes enterprise de cada competidor no fue auditado.
+- [VERIFIED] La tabla comparativa cubre 10 herramientas con 15 capacidades.
+
+---
+
+## Glosario
+
+| Término | Definición |
+|---------|-----------|
+| EASM | External Attack Surface Management |
+| White-label | Personalización de reportes con marca propia |
+| MITRE ATT&CK | Framework de tácticas y técnicas adversariales |
+| RBAC | Role-Based Access Control |

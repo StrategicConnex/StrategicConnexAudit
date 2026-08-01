@@ -195,3 +195,143 @@ por ruta** (409 KB en `/intelligence` + 409 KB en `/audits` + 11 KB en
 ---
 
 *Reporte generado con Lighthouse 13.4.1 y análisis de manifests de build de Turbopack (Next.js 16).*
+
+---
+
+## Alcance y objetivos
+
+Este reporte documenta el rendimiento de SCAUDIT Pro medido con Lighthouse contra producción (`/login` y `/`) y la verificación a nivel de build de la reducción de JavaScript inicial (chunks de `html2canvas`+`jsPDF` y `swagger-ui-react` movidos a carga bajo demanda; `/swagger` convertido a Server Component). Objetivos: registrar los Core Web Vitals actuales, cuantificar el ahorro de bundle y fijar metas de rendimiento medibles.
+
+---
+
+## Requisitos de rendimiento
+
+| REQ | Requisito | Estado |
+|-----|-----------|--------|
+| REQ-001 | LCP < 2.5s en `/login` | 🔴 3.6s actual |
+| REQ-002 | CLS = 0 | ✅ 0 en ambas rutas |
+| REQ-003 | TBT < 200ms | 🔴 1020ms actual |
+| REQ-004 | Ahorro de bundle verificado | ✅ 584KB (sección 5) |
+| REQ-005 | Carga bajo demanda de librerías pesadas | ✅ html2canvas/jsPDF/swagger |
+
+---
+
+## Arquitectura de carga
+
+### FIG-001 — Carga diferida de librerías pesadas
+
+```mermaid
+flowchart TB
+  A[Bundle principal] --> B[Chunks bajo demanda]
+  B --> C[html2canvas + jsPDF]
+  B --> D[swagger-ui-react ~3MB]
+  B --> E[recharts en PerformanceTab]
+  A --> F[Server Components]
+  F --> G[/swagger página estática]
+```
+
+---
+
+## Modelo de datos de métricas
+
+| Métrica | Tabla/Origen | Fuente |
+|---------|-------------|--------|
+| Core Web Vitals | `telemetry` (RUM) | [VERIFIED] `src/shared/utils/rum.ts` |
+| Web Vitals del navegador | `POST /api/telemetry/vitals` | [VERIFIED] `src/app/api/telemetry/vitals/route.ts` |
+| Lighthouse | JSON de auditoría | [VERIFIED] Lighthouse 13.4.1 |
+
+---
+
+## Flujos
+
+### FLOW-001 — Medición y verificación
+
+```mermaid
+flowchart LR
+  A[npx lighthouse URL] --> B[Score por ruta]
+  B --> C[Comparar vs meta]
+  C --> D[Optimizar bundle]
+  D --> E[Verificar client-reference-manifest]
+  E --> F[Actualizar reporte]
+```
+
+---
+
+## APIs y telemetría
+
+| Método | Endpoint | Propósito |
+|--------|----------|-----------|
+| POST | `/api/telemetry/vitals` | Recibir CWV desde el navegador |
+| GET | `/api/monitoring` | Estado de monitoreo |
+| GET | `/api/ai/healthcheck` | Health de modelos |
+
+---
+
+## Seguridad de la medición
+
+- Las mediciones se toman sobre HTTPS con CSP activa (misma política que producción).
+- El endpoint de telemetría valida el payload antes de persistir (evita inyección de métricas falsas). [VERIFIED]
+
+---
+
+## Testing de rendimiento
+
+| Caso | Herramienta | Estado |
+|------|-------------|--------|
+| Lighthouse `/login` | Lighthouse 13.4.1 | ✅ 63 |
+| Lighthouse `/` | Lighthouse 13.4.1 | ✅ 49 |
+| RUM en navegador | `rum.ts` | ✅ |
+| Análisis de manifests | Turbopack build | ✅ |
+
+---
+
+## Operaciones y monitoreo continuo
+
+**Monitoreo:** Vercel Speed Insights provee CWV en vivo; el RUM envía métricas por usuario a `/api/telemetry/vitals`. **Runbook:** ante una regresión de bundle, correr Lighthouse en CI, comparar con la tabla de §1 y re-aplicar el patrón de `next/dynamic` + `ssr: false`.
+
+---
+
+## Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FIG-001 | Diagrama de arquitectura | Carga diferida de librerías | Frontend | L2 |
+| FLOW-001 | Flowchart | Ciclo de medición | Frontend/DevOps | L2 |
+
+---
+
+## Trazabilidad
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-004 | `next.config.ts` (`next/dynamic`) | Build manifests | Vercel |
+| REQ-005 | `PerformanceTab.tsx` | Lighthouse | Vercel |
+| REQ-001 | `/login` (layout) | Lighthouse CI | Vercel |
+
+---
+
+## Validación cruzada (inconsistencias resueltas)
+
+- **Ahorro de bundle**: el dato de 584KB de la sección 5 fue verificado contra el `client-reference-manifest` del build antes y después del refactor [VERIFIED].
+- **Métricas de ambas rutas**: la tabla §1 separa `/login` y `/` (con redirect) porque los valores difieren significativamente (LCP 3.6s vs 5.2s) [VERIFIED].
+
+---
+
+## Unknowns y supuestos
+
+- [VERIFIED] CLS es 0 en ambas rutas (sin layout shift medible).
+- [ASSUMPTION] Las mediciones Lighthouse pueden variar ±10% según red y máquina.
+- [UNKNOWN] El impacto de usuarios reales en entornos variados (medido por RUM, no en este reporte).
+
+---
+
+## Glosario
+
+| Término | Definición |
+|---------|-----------|
+| LCP | Largest Contentful Paint |
+| CLS | Cumulative Layout Shift |
+| TBT | Total Blocking Time |
+| TTI | Time to Interactive |
+| RUM | Real User Monitoring |
+| CWV | Core Web Vitals |

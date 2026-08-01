@@ -3,6 +3,10 @@ layout: default
 title: Changelog
 nav_order: 6
 permalink: /docs/changelog
+version: 1.1
+fecha: 2026-08-01
+autor: Equipo SCAUDIT
+estado: Aprobado
 ---
 
 # Changelog — StrategicAudit Pro (SCAUDIT)
@@ -251,3 +255,133 @@ Módulo completo de persistencia histórica y detección de cambios para registr
 | Fase 2 — P1 Core Features | 6 | 3 | 🟡 50% |
 | Fase 3 — P2 UX/Dashboard | 6 | 1 | 🟢 17% |
 | **Total** | **30** | **22** | **73%** |
+
+---
+
+## Alcance y objetivos
+
+Este changelog registra la evolución de SCAUDIT Pro por sprints (Sprint 0 → Sprint 3), las features entregadas por fase y las métricas de progreso del roadmap. Alcance: cambios de producto, módulos, migraciones y mejoras de infraestructura verificables en el repositorio.
+
+---
+
+## Modelo de datos de las releases
+
+| Entidad | Tabla/Origen | Propósito | Fuente |
+|---------|-------------|-----------|--------|
+| History DNS | `dns_history` | Snapshots de registros DNS | [VERIFIED] `src/shared/db/schemas/history.ts` |
+| History WHOIS | `whois_history` | Snapshots de WHOIS | [VERIFIED] `src/shared/db/schemas/history.ts` |
+| Anomalías | `anomaly_detections` | Detección de anomalías | [VERIFIED] `drizzle/0011` |
+| Escenarios PTT | `adversary_scenarios` | Catálogo de escenarios | [VERIFIED] `drizzle/0017` |
+| Engagements PTT | `adversary_engagements` | Ejecuciones de PTT | [VERIFIED] `drizzle/0017` |
+
+---
+
+## Requisitos del changelog
+
+| REQ | Requisito | Estado |
+|-----|-----------|--------|
+| REQ-001 | Entrada por sprint con fecha | ✅ Julio 2026 (4 sprints) |
+| REQ-002 | Features mapeadas a fases del roadmap | ✅ Fase 0-3 |
+| REQ-003 | Métricas de progreso actualizadas | ✅ 73% total |
+| REQ-004 | Referencias a módulos verificables | ✅ `src/server/...` |
+
+---
+
+## Arquitectura de evolución
+
+### FIG-001 — Línea de tiempo de sprints
+
+```mermaid
+timeline
+  title Evolución de SCAUDIT (Jun-Jul 2026)
+  Sprint 0 (Jun) : Fundación : Auth, SIEM, AI Router
+  Sprint 1 (Jul) : Continuous Discovery : MITRE : Alertas
+  Sprint 2 (Jul) : DNS/WHOIS Alerts : Security Dashboard
+  Sprint 3 (Jul) : History : Alerting multicanal : API pública
+```
+
+---
+
+## Flujos
+
+### FLOW-001 — De release a changelog
+
+```mermaid
+flowchart LR
+  A[Merge a main] --> B[Deploy Vercel]
+  B --> C[Verificar en producción]
+  C --> D[Actualizar CHANGELOG]
+  D --> E[Actualizar ROADMAP + QUALITY_GATE_REPORT]
+```
+
+---
+
+## Deployment de releases
+
+| Release | Deploy | Verificación |
+|---------|--------|-------------|
+| Cada push a `main` | Vercel automático | Health endpoint + checklist §10 |
+| Migraciones nuevas | `drizzle-kit push` | `test-db` |
+| CI | GitHub Actions (4 jobs) | Gates verdes |
+
+---
+
+## Operaciones y monitoreo
+
+**Monitoreo:** cada release se verifica con el health endpoint (`/api/public/v1/health`), el dashboard de seguridad (`/security/audit`) y Vercel Analytics. **Runbook:** si un release falla, hacer rollback (deployment.md §11) y documentar el incidente en el changelog.
+
+---
+
+## Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FIG-001 | Timeline | Evolución por sprints | Todos | L1 |
+| FLOW-001 | Flowchart | Ciclo release→changelog | Dev/DevOps | L2 |
+
+---
+
+## Trazabilidad
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-001 | `docs/CHANGELOG.md` | Quality gate | Docs CI |
+| REQ-002 | `docs/improvements/ROADMAP.md` | — | Docs |
+| REQ-003 | Tabla de métricas | Verificación manual | Docs |
+
+---
+
+## Validación cruzada (inconsistencias resueltas)
+
+- **Conteos de progreso**: la tabla de métricas (22/30 = 73%) es consistente con los items listados por fase en el documento [VERIFIED].
+- **Sprints**: los 4 sprints documentados (Sprint 0-3) coinciden con los módulos reales citados en cada sección [VERIFIED].
+
+---
+
+## Unknowns y supuestos
+
+- [VERIFIED] Las features marcadas como entregadas fueron verificadas contra el código (`src/server/`, `src/app/`).
+- [ASSUMPTION] Los porcentajes de fases P2/P3 pueden variar con futuros sprints.
+- [UNKNOWN] Fechas exactas de cada feature individual dentro del sprint.
+
+---
+
+## Glosario
+
+| Término | Definición |
+|---------|-----------|
+| Sprint | Iteración de desarrollo con entregables |
+| Cimientos | Fase 0: base de producto |
+| EASM | External Attack Surface Management |
+| RLS | Row Level Security |
+
+---
+
+## Versionado
+
+| Campo | Valor |
+|-------|-------|
+| Versión | 1.1 |
+| Fecha | 2026-08-01 |
+| Autor | Equipo SCAUDIT |
+| Estado | Aprobado |

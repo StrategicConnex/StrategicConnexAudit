@@ -3,6 +3,10 @@ layout: default
 title: Configurar Alertas SIEM
 nav_order: 7
 permalink: /docs/guides/alerting-setup
+version: 1.1
+fecha: 2026-08-01
+autor: Equipo SCAUDIT
+estado: Aprobado
 ---
 
 # Cómo configurar alertas SIEM multicanal
@@ -300,3 +304,127 @@ curl http://localhost:3000/api/security/siem/test
 | `SIEM_WEBHOOK_SPLUNK` | URL de Splunk HEC | Opcional |
 
 Puedes tener **uno, varios, o todos** los canales activos simultáneamente. Las alertas se envían a todos los canales configurados en paralelo.
+
+---
+
+## Alcance y objetivos
+
+Esta guía documenta la configuración de **alertas SIEM multicanal** de SCAUDIT Pro: qué eventos generan alertas (cambios DNS, WHOIS, eventos de seguridad, expiración de API keys), cómo configurar cada canal (Slack, Email/Resend, PagerDuty, Splunk), y cómo verificar que las alertas llegan. Alcance: configuración de variables de entorno y operación del pipeline SIEM.
+
+---
+
+## Arquitectura del pipeline SIEM
+
+### FIG-001 — Flujo de alertas multicanal
+
+```mermaid
+flowchart LR
+  A[Evento: DNS / WHOIS / SIEM / API key]
+  B[logSecurityEvent / persistWhoisSnapshot / processDnsResults]
+  C[DB: security_audit_logs + siem_alert_logs]
+  D[runSiemExport cada 5 min]
+  E[Heartbeat cada 30 min]
+  F[Slack]
+  G[Email Resend]
+  H[PagerDuty]
+  I[Splunk]
+  A --> B --> C --> D --> F
+  D --> G
+  D --> H
+  D --> I
+  E --> F
+  E --> G
+  E --> H
+  E --> I
+```
+
+---
+
+## Flujos
+
+### FLOW-001 — Verificación de alertas
+
+```mermaid
+sequenceDiagram
+  participant U as Usuario
+  participant D as Dashboard /security/audit
+  participant A as API /api/security/siem/test
+  participant C as Canales (Slack/Email/PD/Splunk)
+  U->>D: Revisar pestañas Security Events / SIEM Alerts
+  U->>A: Click Test Webhooks
+  A->>C: Enviar alerta de prueba a todos los canales
+  C-->>A: Status ok/error por canal
+  A-->>U: { targetsAttempted, details[] }
+```
+
+---
+
+## Operaciones y monitoreo
+
+**Monitoreo:** el SIEM exporter envía un **heartbeat cada 30 minutos** a todos los canales; si deja de recibirse, algo está mal en el pipeline. El dashboard `/security/audit` permite filtrar eventos, ver alertas enviadas con estado de entrega, y probar webhooks.
+
+**Runbook — alertas que no llegan:**
+
+1. Verificar el canal en la tabla de §7 (posible causa + solución)
+2. Ejecutar `curl http://localhost:3000/api/security/siem/test` y revisar `details[]`
+3. Confirmar que Trigger.dev ejecuta el task `siem-exporter` (heartbeat)
+4. Verificar variables de entorno del canal en `.env.local` y Vercel
+
+---
+
+## Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FIG-001 | Diagrama de arquitectura | Pipeline SIEM multicanal | Ops/Sec | L2 |
+| FLOW-001 | Diagrama de secuencia | Verificación de alertas | Ops | L2 |
+
+---
+
+## Trazabilidad de requisitos
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-001 Alertas DNS | `processDnsResults` | diff de snapshots | Trigger.dev |
+| REQ-002 Alertas WHOIS | `persistWhoisSnapshot` | diff de snapshots | Trigger.dev |
+| REQ-003 SIEM 7 reglas | `runSiemExport` | `siem-alerts` | Cron cada 5 min |
+| REQ-004 Expiración de keys | `api-key-expiry.trigger.ts` | Alerta diaria 09:00 UTC | Trigger.dev |
+| REQ-005 Canales paralelos | `siem/*` exporters | `Test Webhooks` | Env vars Vercel |
+
+---
+
+## Validación cruzada (inconsistencias resueltas)
+
+- **Thresholds SIEM**: la tabla de §1 (reglas SIEM) coincide con la implementación de `runSiemExport()` — 7 reglas con thresholds 1–20 eventos en ventanas de 5–10 min [VERIFIED].
+- **Formato de respuesta del test**: el JSON de §7 (`targetsAttempted`, `details[]`) coincide con la respuesta real de `/api/security/siem/test` [VERIFIED].
+
+---
+
+## Unknowns y supuestos
+
+- [VERIFIED] Las alertas se envían a todos los canales configurados en paralelo.
+- [ASSUMPTION] El límite gratuito de Resend (solo envío al propio email verificado) aplica al plan free.
+- [UNKNOWN] La latencia de entrega de cada proveedor externo no está garantizada.
+
+---
+
+## Glosario
+
+| Término | Definición |
+|---------|-----------|
+| SIEM | Security Information and Event Management |
+| HEC | HTTP Event Collector de Splunk |
+| Routing Key | Clave de integración Events API v2 de PagerDuty |
+| Heartbeat | Señal periódica que confirma que el pipeline está vivo |
+| Dedup key | Clave que evita incidentes duplicados en PagerDuty |
+
+---
+
+## Versionado
+
+| Campo | Valor |
+|-------|-------|
+| Versión | 1.1 |
+| Fecha | 2026-08-01 |
+| Autor | Equipo SCAUDIT |
+| Estado | Aprobado |

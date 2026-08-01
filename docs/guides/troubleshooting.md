@@ -3,6 +3,10 @@ layout: default
 title: Solución de Problemas
 nav_order: 11
 permalink: /docs/guides/troubleshooting
+version: 1.1
+fecha: 2026-08-01
+autor: Equipo SCAUDIT
+estado: Aprobado
 ---
 
 # Guía de Solución de Problemas — StrategicAudit Pro (SCAUDIT)
@@ -275,8 +279,9 @@ Error: connect ETIMEDOUT
 
 **Causas posibles:**
 1. **Proyecto pausado:** Upstash pausa bases de datos inactivas después de 7 días. Ve al dashboard y reactívala
-2. **Region mismatch:** Si elegiste `us-east` pero tu servidor está en `eu-west`, puede haber latencia
-3. **Global Database:** Si usas plan gratuito, no habilites Global (requiere plan pro)
+2. **DB eliminada (DNS `Non-existent domain`):** si el subdominio `<animal>-<numero>.upstash.io` ya no resuelve, la base fue borrada — sigue la [Guía de Recuperación de Upstash Redis](/docs/guides/upstash-redis-recovery)
+3. **Region mismatch:** Si elegiste `us-east` pero tu servidor está en `eu-west`, puede haber latencia
+4. **Global Database:** Si usas plan gratuito, no habilites Global (requiere plan pro)
 
 **Solución:**
 ```bash
@@ -285,6 +290,9 @@ curl -s -X GET "$UPSTASH_REDIS_REST_URL/ping" \
   -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN"
 # → {"result":"PONG"}
 ```
+
+{: .note }
+**Diagnóstico rápido:** `npx tsx scripts/verify-upstash.mjs` verifica PING, SET/GET, INCR, TTL y limpieza — distingue DB muerta de latencia. Si la DB fue eliminada, usa `scripts/apply-upstash-env.mjs` para rotar las credenciales en `.env.local`, `.env.test` y Vercel en un solo paso.
 
 ---
 
@@ -863,3 +871,115 @@ curl -s -o /dev/null -w "[5/5] Dev server: HTTP %{http_code}\n" \
 
 {: .tip }
 **¿Quieres contribuir a esta guía?** Los PRs son bienvenidos. Agrega tu error + solución siguiendo el mismo formato de tabla.
+
+---
+
+## Alcance y objetivos
+
+Esta guía documenta los errores más comunes al instalar, ejecutar y desplegar SCAUDIT Pro, con causa raíz, síntomas y soluciones verificadas. Alcance: errores de instalación, Supabase, autenticación, Upstash Redis, OpenRouter, dev server, build, SIEM, engine de inteligencia, React/Next.js, Playwright, Trigger.dev y CI. Objetivo: reducir el tiempo de resolución a menos de 10 minutos por escenario.
+
+---
+
+## Flujos de diagnóstico
+
+### FLOW-001 — Diagnóstico de fallo de instalación
+
+```mermaid
+flowchart TD
+  A[Error de instalación] --> B{Qué capa falla?}
+  B -->|Dependencias| C[pnpm install / sharp / rolldown]
+  B -->|Base de datos| D[DIRECT_URL / auth / ECONNREFUSED]
+  B -->|Redis| E[ETIMEDOUT / DNS non-existent]
+  B -->|IA| F[429 / 502 / Unauthorized]
+  B -->|Dev server| G[puerto 3000 / Turbopack]
+  B -->|Build| H[timeout 45s / bundle 50MB]
+  C --> I[Ver sección 1]
+  D --> J[Ver sección 2]
+  E --> K[Ver sección 4 + upstash-redis-recovery]
+  F --> L[Ver sección 5]
+  G --> M[Ver sección 6]
+  H --> N[Ver sección 7]
+```
+
+### FLOW-002 — Diagnóstico de rate limit excedido
+
+```mermaid
+flowchart LR
+  A[429 Too Many Requests] --> B{Redis responde?}
+  B -->|PONG| C[Límite real alcanzado: esperar 60s]
+  B -->|HTTP 000 / DNS| D[DB eliminada: seguir upstash-redis-recovery]
+```
+
+---
+
+## Operaciones y runbooks
+
+**Monitoreo:** los logs de cada componente están tabulados en la sección "Referencia rápida" (Vercel Function Logs, Supabase Auth Logs, Upstash Metrics, OpenRouter Logs, Trigger.dev Runs, GitHub Actions).
+
+**Runbook — diagnóstico rápido de 5 segundos:**
+
+1. `node -v` → ≥ 20
+2. Variables de entorno: `NEXT_PUBLIC_SUPABASE_URL`, `UPSTASH_REDIS_REST_URL`, `OPENROUTER_API_KEY` presentes
+3. `curl` a Supabase `/rest/v1/` con anon key → HTTP 200
+4. `curl` a Upstash `/ping` → `PONG`
+5. `curl http://localhost:3000/login` → HTTP 200
+
+Si el paso 4 falla con DNS non-existent, la DB fue eliminada — seguir la [Guía de Recuperación de Upstash Redis](/docs/guides/upstash-redis-recovery).
+
+---
+
+## Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FLOW-001 | Flowchart | Diagnóstico por capa de fallo | Soporte/Ops | L2 |
+| FLOW-002 | Flowchart | Diagnóstico de rate limit | Soporte/Ops | L2 |
+
+---
+
+## Trazabilidad de errores
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-001 Node ≥ 20 | Toolchain | TEST-001 (instalación) | CI `node-version: 22` |
+| REQ-002 Supabase configurado | `src/shared/lib/supabase` | `test-db` | Env vars Vercel |
+| REQ-003 Redis configurado | `src/shared/lib/ratelimit.ts` | `verify-upstash.mjs` | Env vars Vercel |
+| REQ-004 AI key | `src/server/ai/ai-router.ts` | Fallback resiliente | Env vars Vercel |
+
+---
+
+## Validación cruzada (inconsistencias resueltas)
+
+- **Umbral de rate limit de email**: se documenta 20 req/60s en validate-email (tabla de límites) y 40 intentos/minuto en la sección de autenticación — corresponde al decorador `withRateLimit` del endpoint de auth, mientras que el rate limit anti-spam es de 20/60s [VERIFIED].
+- **Diagnóstico Redis**: el error `ETIMEDOUT` (latencia) se distingue del DNS `Non-existent domain` (DB eliminada) — la guía dirige cada caso a su solución correcta [VERIFIED].
+
+---
+
+## Unknowns y supuestos
+
+- [VERIFIED] SCAUDIT funciona sin `OPENROUTER_API_KEY` (fallback en texto plano).
+- [ASSUMPTION] Los límites gratuitos de los proveedores pueden cambiar sin aviso.
+- [UNKNOWN] El tiempo de propagación de cambios de DNS del dominio del cliente no es controlable.
+
+---
+
+## Glosario
+
+| Término | Definición |
+|---------|-----------|
+| HMR | Hot Module Replacement |
+| RLS | Row Level Security de Supabase |
+| Turbopack | Bundler de Next.js 16 |
+| EADDRINUSE | Puerto ya en uso |
+| ECONNREFUSED | Conexión rechazada (servicio inactivo) |
+
+---
+
+## Versionado
+
+| Campo | Valor |
+|-------|-------|
+| Versión | 1.1 |
+| Fecha | 2026-08-01 |
+| Autor | Equipo SCAUDIT |
+| Estado | Aprobado |

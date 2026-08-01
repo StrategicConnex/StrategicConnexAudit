@@ -295,6 +295,9 @@ En Vercel Dashboard → Settings → Environment Variables, agrega:
 | `UPSTASH_REDIS_REST_URL` | `https://xxxx.upstash.io` |
 | `UPSTASH_REDIS_REST_TOKEN` | `AXNkAAIjcDE0NTY3ODkw...` |
 
+{: .warning }
+**¿La DB fue eliminada?** Si el ping responde `HTTP 000` y el subdominio no resuelve DNS, la base de datos fue borrada (no pausada). No intentes reutilizar la URL vieja — sigue la [Guía de Recuperación de Upstash Redis](/docs/guides/upstash-redis-recovery) para recrearla y rotar las credenciales en `.env.local`, `.env.test` y Vercel.
+
 ---
 
 ## 3. OpenRouter — Modelos de IA Gratuitos
@@ -793,6 +796,141 @@ curl -s -D - http://localhost:3000/api/intelligence/health 2>&1 | grep -i rate-l
 | `next.config.ts` | Configuración de Next.js |
 | `vercel.json` | Configuración de deploy en Vercel |
 | `.github/workflows/ci.yml` | Pipeline CI/CD |
+
+---
+
+## Alcance y objetivos
+
+Esta guía documenta la instalación de SCAUDIT Pro de **cero a servidor corriendo**, cubriendo: provisión de los servicios externos (Supabase, Upstash Redis, OpenRouter, Trigger.dev), configuración de las variables de entorno, migraciones de base de datos y verificación post-instalación en desarrollo y producción.
+
+**Objetivos:**
+
+1. Llevar un entorno local funcional en ≤ 30 minutos (Quick Start §Quick Start)
+2. Documentar cada variable de entorno con su fuente y propósito (§7)
+3. Permitir verificar cada servicio de forma aislada antes de arrancar la app (§1.5, §2.3, §3.4)
+4. Dejar producción desplegada en Vercel con autenticación y rate limiting funcionales
+
+---
+
+## Flujos
+
+### FLOW-001 — Secuencia de instalación end-to-end
+
+```mermaid
+sequenceDiagram
+  participant Dev as Desarrollador
+  participant SB as Supabase
+  participant US as Upstash
+  participant OR as OpenRouter
+  participant TD as Trigger.dev
+  participant VC as Vercel
+  Dev->>SB: Crear proyecto + credenciales
+  SB-->>Dev: URL + anon key + service_role
+  Dev->>US: Crear DB Redis
+  US-->>Dev: REST URL + REST Token
+  Dev->>OR: Crear API Key
+  OR-->>Dev: OPENROUTER_API_KEY
+  Dev->>TD: Crear proyecto
+  TD-->>Dev: TRIGGER_SECRET_KEY
+  Dev->>Dev: pnpm db:push (migraciones Drizzle)
+  Dev->>VC: Deploy (pnpm build)
+  VC-->>Dev: https://scaudit.vercel.app
+```
+
+### FLOW-002 — Login con Magic Link
+
+```mermaid
+flowchart LR
+  A[Ingresar email] --> B[POST /api/auth/validate-email]
+  B --> C{Validación anti-spam}
+  C -->|400+ dominios bloqueados| D[400 error]
+  C -->|OK| E[Rate limit 20/60s]
+  E --> F[Supabase envía Magic Link]
+  F --> G[Click en link]
+  G --> H[/auth/callback]
+  H --> I[Anti-open-redirect]
+  I --> J[Dashboard]
+```
+
+---
+
+## Testing de la instalación
+
+### TEST-001 — Verificación post-instalación
+
+| Caso | Comando | Resultado esperado |
+|------|---------|--------------------|
+| Conexión a Supabase | `pnpm test-db` | `[DB Test] ✅ Conectado a Supabase` |
+| Tablas presentes | `pnpm test-db` | `Tablas encontradas: 22` |
+| RLS habilitado | `pnpm test-db` | `RLS habilitado en tablas principales` |
+| Redis conectividad | `curl -X GET $UPSTASH_REDIS_REST_URL/ping` | `{"result":"PONG"}` |
+| AI conectividad | `curl POST openrouter.ai/api/v1/chat/completions` | `choices[0].message.content` |
+| Health local | `curl http://localhost:3000/api/public/v1/health` | `{"status":"ok"}` |
+| Login page | Navegar a `/login` | Formulario + botón Magic Link |
+
+---
+
+## Operaciones y runbooks
+
+### RUNBOOK-001 — Diagnóstico rápido de una instalación fallida
+
+1. Verificar versiones: `node --version` (≥ 20), `pnpm --version` (≥ 9)
+2. Verificar `.env.local`: `grep -c '=' .env.local` (todas las obligatorias presentes)
+3. Ping a Redis: `curl -X GET "$UPSTASH_REDIS_REST_URL/ping"` → `PONG`
+4. Consulta a Supabase: `curl "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/"` con anon key → HTTP 200
+5. Migraciones: `pnpm db:push` → `[✓] Applied migrations (10 files)`
+6. Si el ping de Redis responde `HTTP 000` y el subdominio no resuelve DNS, la DB fue **eliminada** → seguir la [Guía de Recuperación de Upstash Redis](/docs/guides/upstash-redis-recovery)
+
+**Monitoreo:** tras el deploy, verificar headers de rate limit en `/api/intelligence/health` (`x-ratelimit-*`) y el health endpoint público (`redisConfigured`, `dbConfigured`).
+
+---
+
+## Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FLOW-001 | Diagrama de secuencia | Secuencia de instalación end-to-end | Ops / DevOps | L2 |
+| FLOW-002 | Flowchart | Flujo de login Magic Link | Desarrollador | L2 |
+
+---
+
+## Trazabilidad de requisitos
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-001 Node.js ≥ 20 | Toolchain | TEST-001 | `.github/workflows/ci.yml` (node-version: 22) |
+| REQ-002 Supabase configurado | `src/shared/lib/supabase` | TEST-001 | Env vars de Vercel |
+| REQ-003 Upstash configurado | `src/shared/lib/ratelimit.ts` | TEST-001 | Env vars de Vercel |
+| REQ-004 OpenRouter key | `src/server/ai/ai-router.ts` | TEST-001 | Env vars de Vercel |
+| REQ-005 Migraciones aplicadas | `drizzle/` (0017, 0018) | TEST-001 | `pnpm db:push` en deploy |
+
+---
+
+## Validación cruzada (inconsistencias resueltas)
+
+- **Modelos gratuitos de OpenRouter**: la tabla §3.2 (gemini-2.0-flash-exp, deepseek-chat, llama-4-maverick, mistral-7b, nemotron, qwen2.5, gemma-4) coincide con el pool configurado en `src/server/ai/ai-router.ts` [VERIFIED].
+- **Variables de entorno**: las obligatorias documentadas en §7 coinciden con las requeridas por `src/shared/config/env.ts` [VERIFIED].
+- **Tablas de la BD**: el listado de 22 tablas en §1.4 corresponde a la salida real de `drizzle-kit push` [VERIFIED].
+
+---
+
+## Unknowns y supuestos
+
+- [ASSUMPTION] Los límites gratuitos de los servicios (OpenRouter 50 req/día, Supabase ~2 emails/hora) pueden cambiar sin previo aviso por política de cada proveedor.
+- [UNKNOWN] El tiempo exacto de propagación de un dominio personalizado no está garantizado (5–30 min típico).
+- [VERIFIED] SCAUDIT funciona sin `OPENROUTER_API_KEY`: los endpoints de IA degradan a respuestas de fallback en texto plano.
+
+---
+
+## Glosario
+
+| Término | Definición |
+|---------|-----------|
+| RLS | Row Level Security de Supabase: restringe filas por usuario |
+| Pooler | Proxy de conexión de Supabase (puerto 6543) para serverless |
+| `:free` | Sufijo de modelos gratuitos de OpenRouter |
+| Magic Link | Login sin contraseña vía link enviado por email |
+| VAPID | Par de claves para Web Push notifications |
 
 ---
 

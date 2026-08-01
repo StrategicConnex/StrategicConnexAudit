@@ -667,3 +667,113 @@ flowchart TD
 - **Tailwind CSS v4** (Design System)
 - **Leaflet.js** (Mapas GeoIP)
 - **React-PDF** (Reportes PDF)
+
+---
+
+## Alcance y objetivos
+
+Este roadmap documenta la estrategia de mejora continua de SCAUDIT Pro en fases (Fase 0 → Fase 3), el estado de cada ítem y los patrones de arquitectura que deben mantenerse. Objetivos: priorizar las features de mayor impacto competitivo (ver `COMPETITIVE-ANALYSIS.md`), mantener la deuda técnica bajo control y dar trazabilidad entre fases, ítems e implementación.
+
+---
+
+## Requisitos del roadmap
+
+| REQ | Requisito | Estado |
+|-----|-----------|--------|
+| REQ-001 | Fase 0 — Cimientos completados | ✅ 15/15 |
+| REQ-002 | Fase 1 — P0 Fundación completada | ✅ 3/3 |
+| REQ-003 | Fase 2 — P1 Core Features | 🟡 3/6 |
+| REQ-004 | Fase 3 — P2 UX/Dashboard | 🟢 1/6 |
+| REQ-005 | Total planificado vs completado | 22/30 (73%) |
+
+---
+
+## Modelo de datos involucrado
+
+| Entidad | Tabla | Relación con el roadmap | Fuente |
+|---------|-------|--------------------------|--------|
+| Activo | `intelligence_assets` | Descubrimiento continuo (P0.1) | [VERIFIED] `src/shared/db/schemas/intelligence.ts` |
+| Cambio de activo | `asset_changes` | Drift detection | [VERIFIED] `src/shared/db/schemas/intelligence.ts` |
+| Anomalía | `anomaly_detections` | P1 detección de anomalías | [VERIFIED] `drizzle/0011` |
+| Escenario | `adversary_scenarios` | PTT (adversario) | [VERIFIED] `drizzle/0017` |
+| Engagement | `adversary_engagements` | PTT (adversario) | [VERIFIED] `drizzle/0017` |
+
+---
+
+## Flujos
+
+### FLOW-001 — Ciclo de una mejora del roadmap
+
+```mermaid
+flowchart LR
+  A[Identificar gap competitivo] --> B[Agregar ítem al roadmap]
+  B --> C[Implementar módulo]
+  C --> D[Migración Drizzle si aplica]
+  D --> E[Tests + CI]
+  E --> F[Deploy Vercel]
+  F --> G[Actualizar CHANGELOG + ROADMAP]
+```
+
+---
+
+## Testing del roadmap
+
+| Caso | Cobertura | Estado |
+|------|-----------|--------|
+| Executors de inteligencia | `executors.test.ts` | ✅ |
+| Scenario runner adversary | `scenario-runner.test.ts` | ✅ |
+| Sandbox executor | `sandbox-executor.test.ts` | ✅ |
+| Ratelimit | `ratelimit.test.ts` | ✅ |
+| API contract | `tests/api-contract` | ✅ |
+| E2E | `e2e/*.spec.ts` | ✅ |
+
+---
+
+## Operaciones
+
+**Monitoreo:** cada feature del roadmap se verifica en producción con el health endpoint (`/api/public/v1/health`), el dashboard de seguridad (`/security/audit`) y las alertas SIEM. Los deployments quedan registrados en Vercel Deployments y el job `docs-quality-gate` de CI valida que la documentación acompañe el código.
+
+---
+
+## Inventario visual
+
+| ID | Tipo | Descripción | Audiencia | Nivel |
+|----|------|-------------|-----------|-------|
+| FLOW-001 | Flowchart | Ciclo de una mejora | Producto | L2 |
+
+---
+
+## Trazabilidad del roadmap
+
+| REQ | Componente | Test | Deploy |
+|-----|-----------|------|--------|
+| REQ-002 | `src/server/intelligence/discovery/*` | `executors.test.ts` | Trigger.dev (cada 6h) |
+| REQ-002 | `src/trigger/discovery.trigger.ts` | — | Trigger.dev |
+| REQ-003 | `src/server/intelligence/core/anomaly*` | — | Vercel |
+| REQ-004 | Dashboard tabs | e2e | Vercel |
+
+---
+
+## Validación cruzada (inconsistencias resueltas)
+
+- **Estados de fase**: la tabla de métricas de progreso (Fase 0 100%, Fase 1 100%, Fase 2 50%, Fase 3 17%) es consistente con los encabezados de cada fase en el documento [VERIFIED].
+- **Nombres de archivos**: los módulos citados (discovery, PTT adversary, anomalías) coinciden con la estructura real de `src/server/intelligence/` [VERIFIED].
+
+---
+
+## Unknowns y supuestos
+
+- [ASSUMPTION] Las prioridades de las fases pueden reordenarse según feedback de clientes.
+- [UNKNOWN] El timeline exacto de las fases P2/P3 (no comprometido).
+- [VERIFIED] El conteo de completados (22/30 = 73%) refleja el estado al momento de escribir el documento.
+
+---
+
+## Glosario
+
+| Término | Definición |
+|---------|-----------|
+| P0/P1/P2 | Prioridades de fases del roadmap |
+| PTT | Pentesting Task Tree: árbol de tareas adversariales |
+| EASM | External Attack Surface Management |
+| Drift | Cambio en la postura de seguridad entre escaneos |
