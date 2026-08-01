@@ -45,10 +45,10 @@ export function parseMarkdownReport(text: string): ParsedReport {
   const sections = text.split(/##\s+/);
   for (const section of sections) {
     if (section.startsWith("🏢 Resumen Ejecutivo") || section.toLowerCase().includes("resumen ejecutivo")) {
-      summary = section.replace(/^(🏢\s*)?Resumen Ejecutivo\s*/i, "").trim().split("---")[0].trim();
+      summary = section.replace(/^(🏢\s*)?Resumen Ejecutivo\s*/i, "").trim().split(/^---\s*$/m)[0].trim();
 
     } else if (section.startsWith("📈 Análisis de Rendimiento") || section.toLowerCase().includes("rendimiento y visibilidad")) {
-      const perfSection = section.replace(/^(📈\s*)?Análisis de Rendimiento y Visibilidad\s*/i, "").trim().split("---")[0].trim();
+      const perfSection = section.replace(/^(📈\s*)?Análisis de Rendimiento y Visibilidad\s*/i, "").trim().split(/^---\s*$/m)[0].trim();
 
       const tableLines = perfSection.match(/\|([^|\n]+)\|([^|\n]+)\|([^|\n]+)\|/g);
       if (tableLines) {
@@ -69,7 +69,7 @@ export function parseMarkdownReport(text: string): ParsedReport {
       performanceIntro = perfSection.split(/\|/)[0].trim();
 
     } else if (section.startsWith("🛠️ Diagnóstico de Salud") || section.toLowerCase().includes("salud técnica y velocidad")) {
-      const healthPart = section.replace(/^(🛠️\s*)?Diagnóstico de Salud Técnica y Velocidad\s*/i, "").trim().split("---")[0].trim();
+      const healthPart = section.replace(/^(🛠️\s*)?Diagnóstico de Salud Técnica y Velocidad\s*/i, "").trim().split(/^---\s*$/m)[0].trim();
 
       const scoreMatch = healthPart.match(/(?:#+\s*)?🏆\s*(\d+)\s*\/\s*100/i);
       if (scoreMatch) healthScore = parseInt(scoreMatch[1], 10);
@@ -87,7 +87,7 @@ export function parseMarkdownReport(text: string): ParsedReport {
       if (clsMatch) cls = clsMatch[1].trim();
 
     } else if (section.startsWith("🎯 Plan de Acción") || section.toLowerCase().includes("plan de acción")) {
-      const planPart = section.replace(/^(🎯\s*)?Plan de Acción Priorizado[^]*?\n/i, "").trim().split("---")[0].trim();
+      const planPart = section.replace(/^(🎯\s*)?Plan de Acción Priorizado[^]*?\n/i, "").trim().split(/^---\s*$/m)[0].trim();
 
       const lines = planPart.split("\n");
       let currentItem: ParsedReport['planItems'][number] | null = null;
