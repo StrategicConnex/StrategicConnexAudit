@@ -5,6 +5,11 @@ import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from '@/server/ai/
 
 export const dynamic = 'force-dynamic';
 
+// Cadena de hasta 5 modelos × 20s = 100s peor caso. Sin maxDuration, Vercel
+// mata la función a los 10s (Hobby) o 60s (Pro) y el copilot se queda sin
+// respuesta.
+export const maxDuration = 120;
+
 export const POST = withRateLimit(
   {
     limit: 5,

@@ -10,6 +10,10 @@ import { withErrorHandler } from "@/server/lib/error-handler";
 
 export const dynamic = "force-dynamic";
 
+// Cadena de hasta 5 modelos × 20s = 100s peor caso. Sin maxDuration, Vercel
+// mata la función a los 10s (Hobby) o 60s (Pro) y el brief no se genera.
+export const maxDuration = 120;
+
 const handler = withErrorHandler(async (req: NextRequest, _userId: string) => {
   const { investigationId } = await req.json();
   if (!investigationId) throw new ValidationError("Falta ID de investigación");

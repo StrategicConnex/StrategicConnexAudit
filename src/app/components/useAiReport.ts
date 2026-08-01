@@ -29,7 +29,9 @@ const PROGRESS_STEPS = [
 // Timeout global del fetch: alineado con maxDuration=120s del route. El router
 // IA prueba hasta 3 modelos de 20s (cadena acotada en ai-router) + queries DB,
 // así que 110s da margen para recibir el reporte resiliente sin cortar antes.
-const FETCH_TIMEOUT_MS = 110_000;
+// 125s > maxDuration=120s del route: el cliente debe aguantar hasta que el
+// servidor responda (éxito o fallback resiliente) sin cortar antes.
+const FETCH_TIMEOUT_MS = 125_000;
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
