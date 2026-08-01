@@ -15,7 +15,7 @@ import { NextRequest } from "next/server";
 const mockUpdateSession = vi.fn();
 
 vi.mock("@/shared/lib/supabase/middleware", () => ({
-  updateSession: (...args: any[]) => mockUpdateSession(...args),
+  updateSession: (...args: unknown[]) => mockUpdateSession(...args),
 }));
 
 // ─── Helper ──────────────────────────────────────────────────────────────────

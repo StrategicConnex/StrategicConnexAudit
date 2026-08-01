@@ -523,11 +523,11 @@ export default function ApiPlaygroundPage() {
       };
       setHistory((prev) => [entry, ...prev].slice(0, 50));
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       const duration = Math.round(performance.now() - startTime);
       setResponseDuration(duration);
       // Handle CORS / network errors gracefully
-      const msg = err.message || 'Request failed';
+      const msg = err instanceof Error ? err.message : 'Request failed';
       if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
         setErrorMsg('Network error — this might be a CORS issue. The playground works best when served from the same origin as the API (scaudit.vercel.app). In development, make sure the dev server is running on localhost:3000.');
       } else {

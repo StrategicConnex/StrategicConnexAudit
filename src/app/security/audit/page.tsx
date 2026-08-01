@@ -352,8 +352,8 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
   // Heartbeat has a unique glowing/pulsing style
   if (isHeartbeat) {
     const metadata = entry.metadata ?? {};
-    const uptime = (metadata as any).uptime || "—";
-    const nodeEnv = (metadata as any).nodeEnv || "—";
+    const uptime = typeof metadata.uptime === "string" ? metadata.uptime : "—";
+    const nodeEnv = typeof metadata.nodeEnv === "string" ? metadata.nodeEnv : "—";
     return (
       <div className={`rounded-lg border px-5 py-4 transition-all duration-300 ${
         isFailed
@@ -595,7 +595,7 @@ function DnsAlertsSection({
   }
 
   const totalChanges = alerts.reduce((sum, a) => {
-    const meta: any = a.metadata?.metadataSamples;
+    const meta = a.metadata?.metadataSamples;
     return sum + (Array.isArray(meta) ? meta.length : 1);
   }, 0);
 
@@ -801,7 +801,7 @@ function WhoisAlertsSection({
   }
 
   const totalChanges = alerts.reduce((sum, a) => {
-    const meta: any = a.metadata?.metadataSamples;
+    const meta = a.metadata?.metadataSamples;
     return sum + (Array.isArray(meta) ? meta.length : 1);
   }, 0);
 

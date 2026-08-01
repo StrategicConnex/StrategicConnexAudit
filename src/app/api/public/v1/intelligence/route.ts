@@ -10,6 +10,7 @@ import {
 } from '@/shared/db/schemas';
 import { checkIntelScanRateLimit } from '@/shared/lib/ratelimit';
 import { withPublicApi, apiError, apiSuccess, type AuthenticatedRequest } from '@/server/api/public-router';
+import type { Finding } from '@/server/intelligence/types/executor.types';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,7 +68,7 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
     });
 
     return apiSuccess({ investigations: list });
-  } catch (error: any) {
+  } catch (error) {
     console.error('GET /api/public/v1/intelligence error:', error);
     return apiError('Internal server error', 500);
   }
@@ -151,8 +152,7 @@ export const POST = withPublicApi(async (req: AuthenticatedRequest) => {
         createdAt: investigation.createdAt,
       },
       message: 'Scan started. Check status via GET /api/public/v1/intelligence?investigationId=<id>',
-    });
-  } catch (error: any) {
+    });    } catch (error) {
     console.error('POST /api/public/v1/intelligence error:', error);
     return apiError('Internal server error', 500);
   }
@@ -194,7 +194,7 @@ async function scanInBackground(
       }),
     );
 
-    const allFindings: any[] = [];
+    const allFindings: Finding[] = [];
     for (const r of results) {
       if (r.status === 'fulfilled' && r.value?.findings) {
         allFindings.push(...r.value.findings);

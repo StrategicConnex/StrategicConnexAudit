@@ -151,14 +151,18 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
     setLoadingNode(node.id);
     try {
       const res = await fetch(`/api/intelligence/graph?nodeId=${encodeURIComponent(node.id)}`);
-      const data = await res.json();
+      const data = (await res.json()) as {
+        success: boolean;
+        nodes: AttackSurfaceNode[];
+        edges: AttackSurfaceEdge[];
+      };
       if (data.success) {
         setDynamicNodes(prev => {
-          const newNodes = data.nodes.filter((n: any) => !prev.some(p => p.id === n.id) && !nodes.some((base: any) => base.id === n.id));
+          const newNodes = data.nodes.filter((n) => !prev.some(p => p.id === n.id) && !nodes.some((base) => base.id === n.id));
           return [...prev, ...newNodes];
         });
         setDynamicEdges(prev => {
-          const newEdges = data.edges.filter((e: any) => !prev.some(p => p.from === e.from && p.to === e.to) && !edges.some((base: any) => base.from === e.from && base.to === e.to));
+          const newEdges = data.edges.filter((e) => !prev.some(p => p.from === e.from && p.to === e.to) && !edges.some((base) => base.from === e.from && base.to === e.to));
           return [...prev, ...newEdges];
         });
       }

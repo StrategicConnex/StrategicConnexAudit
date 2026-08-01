@@ -15,6 +15,7 @@
 import { eq, and, desc } from "drizzle-orm";
 import { directDb } from "@/shared/db";
 import { pushSubscriptions } from "@/shared/db/schemas/push-subscriptions";
+import type { PushSubscription } from "web-push";
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  Tipos
@@ -103,7 +104,7 @@ export async function sendPushNotification(
     );
 
     const result = await wp.sendNotification(
-      subscription as any,
+      subscription as unknown as PushSubscription,
       JSON.stringify(payload),
       { TTL: 86400 }, // 24 hours TTL
     );

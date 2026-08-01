@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     // Default: catalog view
     const catalog = await listPluginCatalog(user.id);
     return NextResponse.json({ success: true, plugins: catalog });
-  } catch (error: any) {
+  } catch (error) {
     console.error("GET /api/plugins failure:", error);
     return NextResponse.json({
       success: false,
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       success: false,
       error: `Acción desconocida: ${action}`,
     }, { status: 400 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("POST /api/plugins failure:", error);
     return NextResponse.json({
       success: false,

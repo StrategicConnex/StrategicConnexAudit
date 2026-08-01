@@ -46,12 +46,13 @@ export const periodicAnomalyDetection = schedules.task({
             `[AnomalyDetector] ${project.domain}: ${totalAnomalies} anomalías detectadas.`
           );
         }
-      } catch (err: any) {
-        console.error(`[AnomalyDetector] Error in ${project.name}:`, err.message);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[AnomalyDetector] Error in ${project.name}:`, msg);
         summaries.push({
           projectId: project.id,
           domain: project.domain,
-          error: err.message,
+          error: msg,
           metricCount: 0,
           totalAnomalies: 0,
           results: [],

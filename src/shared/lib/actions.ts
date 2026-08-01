@@ -29,7 +29,7 @@ export type DbTransaction = PgTransaction<NodePgQueryResultHKT, typeof schema, E
 async function handleDevBypass<Schema extends z.ZodTypeAny, T>(
   zodSchema: Schema,
   formData: z.infer<Schema> | FormData,
-  action: (data: z.infer<Schema>, context: { user: User; tx: any }) => Promise<T>
+  action: (data: z.infer<Schema>, context: { user: User; tx: any }) => Promise<T> // eslint-disable-line @typescript-eslint/no-explicit-any -- directDb lazy proxy
 ): Promise<ActionState<T>> {
   try {
     // Parsear datos de entrada

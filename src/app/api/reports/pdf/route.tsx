@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { renderToStream } from '@react-pdf/renderer';
 import { Readable } from 'stream';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, asc, desc } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { directDb } from '@/shared/db';
 import { withRLS } from '@/shared/db/rls';
@@ -126,10 +126,10 @@ export const POST = withRateLimit(
         investigations.map(async (inv, idx) => {
           const findings = await directDb.query.intelligenceFindings.findMany({
             where: eq(intelligenceFindings.investigationId, inv.id),
-            orderBy: (fields: any) => [fields.createdAt],
+            orderBy: [asc(intelligenceFindings.createdAt)],
           });
 
-          const pdfFindings: PdfFinding[] = findings.map((f: any) => ({
+          const pdfFindings: PdfFinding[] = findings.map((f) => ({
             severity: f.severity ?? 'info',
             title: f.title ?? 'Untitled finding',
             description: f.description ?? '',
@@ -149,7 +149,7 @@ export const POST = withRateLimit(
             limit: 200,
           });
 
-          const pdfAssets: PdfAsset[] = assetRecords.map((a: any) => ({
+          const pdfAssets: PdfAsset[] = assetRecords.map((a) => ({
             assetType: a.assetType ?? 'other',
             value: a.value ?? '',
             ip: a.ip ?? null,
@@ -228,11 +228,11 @@ export const POST = withRateLimit(
         headers: responseHeaders,
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       reportProgress(genId, 0, 'Error', 'error');
       console.error('POST /api/reports/pdf error:', error);
       return NextResponse.json(
-        { success: false, error: `Error al generar PDF: ${error.message || 'Error desconocido'}` },
+        { success: false, error: `Error al generar PDF: ${error instanceof Error ? error.message : 'Error desconocido'}` },
         { status: 500 },
       );
     }

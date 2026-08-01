@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       ...result,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("GET /api/security/siem/test failure:", error);
     return NextResponse.json({
       success: false,

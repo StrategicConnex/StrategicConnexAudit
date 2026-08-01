@@ -77,8 +77,8 @@ export function MarketplaceTab() {
       } else {
         setError(data.error || 'Error al cargar plugins');
       }
-    } catch (err: any) {
-      setError('Error de conexion: ' + (err.message || err));
+    } catch (err: unknown) {
+      setError('Error de conexion: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);
     }
@@ -106,8 +106,8 @@ export function MarketplaceTab() {
       } else {
         setError(data.error || 'Error al instalar');
       }
-    } catch (err: any) {
-      setError('Error de conexion: ' + (err.message || err));
+    } catch (err: unknown) {
+      setError('Error de conexion: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setInstallingId(null);
     }
@@ -131,8 +131,8 @@ export function MarketplaceTab() {
       } else {
         setError(data.error || 'Error al desinstalar');
       }
-    } catch (err: any) {
-      setError('Error de conexion: ' + (err.message || err));
+    } catch (err: unknown) {
+      setError('Error de conexion: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setInstallingId(null);
     }

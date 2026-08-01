@@ -63,11 +63,6 @@ export function handleApiError(err: unknown): NextResponse {
 
 // ─── Higher-order function ─────────────────────────────────────────────────
 
-type RouteHandler = (
-  req: NextRequest,
-  ...args: any[]
-) => Promise<NextResponse>;
-
 /**
  * Wraps a route handler with a global try/catch that delegates to
  * handleApiError.  Individual routes no longer need their own try {} catch {}.
@@ -80,8 +75,10 @@ type RouteHandler = (
  *     return NextResponse.json({ success: true, data });
  *   });
  */
-export function withErrorHandler(handler: RouteHandler): RouteHandler {
-  return async (req: NextRequest, ...args: any[]) => {
+export function withErrorHandler<Args extends unknown[]>(
+  handler: (req: NextRequest, ...args: Args) => Promise<NextResponse>,
+): (req: NextRequest, ...args: Args) => Promise<NextResponse> {
+  return async (req: NextRequest, ...args: Args) => {
     try {
       return await handler(req, ...args);
     } catch (err) {

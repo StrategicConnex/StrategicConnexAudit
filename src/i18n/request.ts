@@ -18,13 +18,13 @@ export async function getLocale(): Promise<Locale> {
     const cookieLocale = cookieStore.get("NEXT_LOCALE")?.value;
     const accepted = cookieStore.get("accept-language")?.value;
 
-    if (cookieLocale && routing.locales.includes(cookieLocale as any)) {
+    if (cookieLocale && routing.locales.includes(cookieLocale as Locale)) {
       locale = cookieLocale as Locale;
     } else if (accepted) {
       const preferred = accepted
         .split(",")
         .map((l) => l.split(";")[0].trim().split("-")[0].toLowerCase())
-        .find((l) => routing.locales.includes(l as any));
+        .find((l) => routing.locales.includes(l as Locale));
       if (preferred) locale = preferred as Locale;
     }
   } catch {

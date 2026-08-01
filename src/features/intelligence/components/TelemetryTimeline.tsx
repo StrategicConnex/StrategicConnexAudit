@@ -4,11 +4,21 @@ import React from "react";
 import { History } from "lucide-react";
 import type { RunEventData } from "../hooks/useInvestigationRealtime";
 
+interface TimelineItem {
+  id: string;
+  message: string;
+  eventType?: string;
+  type?: string;
+  tool?: string;
+  time?: string;
+  createdAt?: string;
+}
+
 interface TelemetryTimelineProps {
   events: RunEventData[];
   isActive: boolean;
   isDemo?: boolean;
-  demoEvents?: Array<{ id: string; type: string; tool: string; time: string; message: string }>;
+  demoEvents?: TimelineItem[];
 }
 
 const EVENT_STYLES: Record<string, string> = {
@@ -19,7 +29,7 @@ const EVENT_STYLES: Record<string, string> = {
 };
 
 export function TelemetryTimeline({ events, isActive, isDemo, demoEvents }: TelemetryTimelineProps) {
-  const items = isDemo && demoEvents ? demoEvents : events;
+  const items: TimelineItem[] = isDemo && demoEvents ? demoEvents : events;
   const isEmpty = items.length === 0;
 
   return (
@@ -42,8 +52,8 @@ export function TelemetryTimeline({ events, isActive, isDemo, demoEvents }: Tele
             Iniciando conexión con Supabase Realtime... Esperando el primer reporte de los escáneres perimetrales.
           </div>
         ) : (
-          items.map((item: any) => {
-            const eventType = item.eventType || item.type;
+          items.map((item) => {
+            const eventType = item.eventType || item.type || 'info';
             const eventClass = EVENT_STYLES[eventType] || EVENT_STYLES.info;
             const timestamp = item.createdAt
               ? new Date(item.createdAt).toLocaleTimeString()

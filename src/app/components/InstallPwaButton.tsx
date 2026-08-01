@@ -14,8 +14,13 @@ import { Download, X } from 'lucide-react';
  * Safari no soporta beforeinstallprompt pero los usuarios pueden
  * instalar desde el menú Compartir → Agregar a pantalla de inicio.
  */
+interface BeforeInstallPromptEventLike extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 export function InstallPwaButton() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEventLike | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -28,7 +33,7 @@ export function InstallPwaButton() {
 
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEventLike);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
