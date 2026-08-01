@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   Key, ShieldCheck, FileText, Copy, Check,
   ChevronDown, ChevronRight, Terminal, BookOpen, ArrowLeft,
@@ -536,9 +537,9 @@ export default function DocsApiPage() {
 
         {/* Header */}
         <div className="space-y-4">
-          <a href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-fg hover:text-primary transition-colors">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-fg hover:text-primary transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
-          </a>
+          </Link>
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center">
               <BookOpen className="w-6 h-6 text-primary" />
@@ -594,7 +595,7 @@ export default function DocsApiPage() {
         {/* Interactive tools grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Try-it link */}
-          <a
+          <Link
             href="/docs/api/playground"
             className="group block backdrop-blur-xl border border-chartreuse/20 bg-chartreuse/[0.02] rounded-2xl p-6 hover:border-chartreuse/40 hover:bg-chartreuse/[0.04] transition-all"
           >
@@ -616,10 +617,10 @@ export default function DocsApiPage() {
                 <ArrowLeft className="w-5 h-5 rotate-180" />
               </div>
             </div>
-          </a>
+          </Link>
 
           {/* Swagger UI link */}
-          <a
+          <Link
             href="/swagger"
             className="group block backdrop-blur-xl border border-primary/20 bg-primary/[0.02] rounded-2xl p-6 hover:border-primary/40 hover:bg-primary/[0.04] transition-all"
           >
@@ -641,7 +642,7 @@ export default function DocsApiPage() {
                 <ArrowLeft className="w-5 h-5 rotate-180" />
               </div>
             </div>
-          </a>
+          </Link>
         </div>
 
         {/* Authentication Guide */}

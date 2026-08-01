@@ -130,66 +130,6 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
     return points;
   }, [metadata, target]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!mapContainerRef.current) return;
-    if (mapInstanceRef.current) return;
-
-    const initMap = async () => {
-      try {
-        const leafletModule = await import('leaflet');
-        const L = leafletModule.default || leafletModule;
-        await import('leaflet/dist/leaflet.css');
-
-        delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        });
-
-        const map = L.map(mapContainerRef.current!, {
-          zoomControl: true,
-          scrollWheelZoom: true,
-          attributionControl: false,
-        });
-
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19,
-          subdomains: 'abcd',
-        }).addTo(map);
-
-        mapInstanceRef.current = map;
-        if (geoPoints.length > 0) {
-          addMarkersAndLines(L, map, geoPoints);
-        }
-      } catch (err) {
-        console.error('[GeoMap] Failed to initialize Leaflet:', err);
-      }
-    };
-
-    initMap();
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!mapInstanceRef.current) return;
-    const map = mapInstanceRef.current;
-    import('leaflet').then((leafletModule) => {
-      const L = leafletModule.default || leafletModule;
-      clearLayers();
-      if (geoPoints.length > 0) {
-        addMarkersAndLines(L, map, geoPoints);
-      }
-    });
-  }, [geoPoints]);
-
   const TYPE_COLORS: Record<string, string> = {
     target: '#6271C4',
     asn: '#D4373C',
@@ -292,6 +232,66 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
     }
     layersRef.current = [];
   }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return;
+
+    const initMap = async () => {
+      try {
+        const leafletModule = await import('leaflet');
+        const L = leafletModule.default || leafletModule;
+        await import('leaflet/dist/leaflet.css');
+
+        delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        });
+
+        const map = L.map(mapContainerRef.current!, {
+          zoomControl: true,
+          scrollWheelZoom: true,
+          attributionControl: false,
+        });
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19,
+          subdomains: 'abcd',
+        }).addTo(map);
+
+        mapInstanceRef.current = map;
+        if (geoPoints.length > 0) {
+          addMarkersAndLines(L, map, geoPoints);
+        }
+      } catch (err) {
+        console.error('[GeoMap] Failed to initialize Leaflet:', err);
+      }
+    };
+
+    initMap();
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    import('leaflet').then((leafletModule) => {
+      const L = leafletModule.default || leafletModule;
+      clearLayers();
+      if (geoPoints.length > 0) {
+        addMarkersAndLines(L, map, geoPoints);
+      }
+    });
+  }, [geoPoints]);
 
   if (geoPoints.length === 0) {
     return (

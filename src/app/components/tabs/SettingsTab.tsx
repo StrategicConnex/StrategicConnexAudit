@@ -87,6 +87,9 @@ export function SettingsTab({
   const [showExpiringSoon, setShowExpiringSoon] = useState(false);
   const [sortNewestFirst, setSortNewestFirst] = useState(true);
 
+  // Frozen "now" for expiry math - Date.now() during render is impure
+  const [now] = useState(() => Date.now());
+
   // Webhooks state
   const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
   const [loadingWebhooks, setLoadingWebhooks] = useState(false);
@@ -313,7 +316,7 @@ export function SettingsTab({
       }
       if (showExpiringSoon) {
         if (!key.expiresAt) return false;
-        const days = (new Date(key.expiresAt).getTime() - Date.now()) / 86400000;
+        const days = (new Date(key.expiresAt).getTime() - now) / 86400000;
         if (days > 7 || days < 0) return false;
       }
       return true;
@@ -327,7 +330,7 @@ export function SettingsTab({
   // Helper: render expiry badge with days remaining
   function renderExpiryBadge(expiresAt: string | null) {
     if (!expiresAt) return null;
-    const days = (new Date(expiresAt).getTime() - Date.now()) / 86400000;
+    const days = (new Date(expiresAt).getTime() - now) / 86400000;
     if (days <= 7 && days >= 0) {
       return (
         <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">

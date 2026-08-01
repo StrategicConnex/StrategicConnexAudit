@@ -104,6 +104,9 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
   const [error, setError] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
+  // Frozen "now" for expiry math - Date.now() during render is impure
+  const [now] = useState(() => Date.now());
+
   const toggleItem = (id: string) => {
     setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -392,7 +395,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                 const itemKey = `whois-${idx}`;
                 const isExpanded = expandedItems[itemKey] || false;
                 const daysRemaining = snap.expiresDate
-                  ? Math.round((new Date(snap.expiresDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  ? Math.round((new Date(snap.expiresDate).getTime() - now) / (1000 * 60 * 60 * 24))
                   : null;
 
                 return (

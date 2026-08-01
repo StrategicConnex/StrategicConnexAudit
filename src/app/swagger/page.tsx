@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import Link from 'next/link';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import SwaggerLazyLoader from './SwaggerLazyLoader';
 
@@ -110,12 +111,12 @@ export default function SwaggerPage() {
       `}</style>
 
       <div className="max-w-[1200px] mx-auto px-6 pt-8 pb-4">
-        <a
+        <Link
           href="/docs/api"
           className="inline-flex items-center gap-1.5 text-[10px] text-muted-fg hover:text-primary transition-colors"
         >
           <ArrowLeft className="w-3 h-3" /> Back to API Reference
-        </a>
+        </Link>
         <h1 className="text-2xl font-extrabold tracking-tight mt-2 flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center">
             <BookOpen className="w-5 h-5 text-primary" />
