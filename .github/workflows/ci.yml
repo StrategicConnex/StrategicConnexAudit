@@ -25,12 +25,10 @@ jobs:
   secret-scan:
     name: Secret Scan (gitleaks)
     runs-on: ubuntu-latest
-    # B02/T02-04: detección de secretos reales en el repo. Corre gitleaks sobre
-    # todo el historial (fetch-depth: 0). Falla el build si encuentra un leak.
-    # ⚠️ No bloqueante en este entorno de prueba (continue-on-error): si gitleaks
-    # no puede autenticarse/licenciarse, el job se reporta como skip sin romper
-    # CI. Para activarlo como barrera dura, quitar `continue-on-error: true`.
-    continue-on-error: true
+    # B02/T02-04 + TSK-006 (P0): detección de secretos reales en el repo.
+    # Corre gitleaks sobre todo el historial (fetch-depth: 0).
+    # BARRERA DURA: sin `continue-on-error` — el job FALLA el pipeline si
+    # gitleaks detecta un leak (REQ-106, SECURITY-AUDIT VULN-000).
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,6 +38,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        # Exit code 1 on leak → step fails → job fails (barrera dura).
 
   docs-quality-gate:
     name: Docs Quality Gate
@@ -51,18 +50,25 @@ jobs:
           node-version: 22
 
       # Validador de documentación Enterprise (MASTER_PROMPT-v2.md §4.1):
-      # corre sobre todos los TDD de docs/architecture/ y FALLA el build si
-      # alguno baja del umbral (default 80 = estándar "no entregar"). Script
-      # Node puro, zero-deps — no requiere pnpm install.
-      - name: Docs Quality Gate (docs/architecture/*.md, min 80)
+      # corre sobre los TDDs técnicos (arquitectura, BD, jobs, módulos,
+      # trazabilidad, riesgo, deuda técnica, testing) y FALLA el build si alguno
+      # baja del umbral (default 80 = estándar "no entregar"). Script Node puro,
+      # zero-deps — no requiere pnpm install.
+      #
+      # EXCLUSIONES deliberadas: MASTER-INDEX.md y los planes de gobernanza
+      # (docs/superpowers/) son índices/planes, no TDDs técnicos — no se validan.
+      - name: Docs Quality Gate (docs técnicos, min 80)
         run: |
           set -e
-          echo "📚 Corriendo Quality Gate sobre docs/architecture/*.md (umbral 80/100)"
-          for f in docs/architecture/*.md; do
-            echo "→ $f"
-            node scripts/quality-gate.mjs "$f" --min 80 --quiet
+          DIRS="docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing"
+          echo "📚 Corriendo Quality Gate sobre docs técnicos (umbral 80/100)"
+          for d in $DIRS; do
+            for f in "$d"/*.md; do
+              echo "→ $f"
+              node scripts/quality-gate.mjs "$f" --min 80 --quiet
+            done
           done
-          echo "✅ Todos los TDDs de docs/architecture/ cumplen el umbral 80."
+          echo "✅ Todos los TDDs técnicos cumplen el umbral 80."
 
       - name: Report quality gate in PR
         if: always()
@@ -70,11 +76,13 @@ jobs:
           {
             echo '## 📚 Docs Quality Gate'
             echo ''
-            echo 'Umbral: 80/100 · `docs/architecture/*.md` · [scripts/quality-gate.mjs](scripts/quality-gate.mjs)'
+            echo 'Umbral: 80/100 · TDDs técnicos (architecture/database/jobs/modules/traceability/risk/technical-debt/testing) · [scripts/quality-gate.mjs](scripts/quality-gate.mjs)'
             echo ''
             echo '```'
-            for f in docs/architecture/*.md; do
-              node scripts/quality-gate.mjs "$f" --min 80 --quiet || true
+            for d in docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing; do
+              for f in "$d"/*.md; do
+                node scripts/quality-gate.mjs "$f" --min 80 --quiet || true
+              done
             done
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
