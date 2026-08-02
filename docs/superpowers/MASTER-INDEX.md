@@ -5,7 +5,7 @@
 > **Regla de gobierno:** actualizar este índice al cerrar cada batch y tras cualquier cambio de estado de un artefacto (§53 del master prompt).
 
 **Plan fuente:** `docs/superpowers/plans/2026-08-01-engineering-master-plan.md` [VERIFIED]
-**Última actualización:** 2026-08-02 (BATCH 02 — B02 completado)
+**Última actualización:** 2026-08-02 (BATCH 03 — B03 completado)
 
 ---
 
@@ -16,7 +16,7 @@
 | B00 | Gobierno y Baseline | **en curso** (checkpoint pendiente) | Estado git estable, MASTER INDEX, esqueleto `docs/` target | este archivo |
 | B01 | Arquitectura y Proyecto | **completado** (2026-08-02) | PROJECT-INVENTORY, SYSTEM-MAP, DEPENDENCY-GRAPH, ADR-000..006 | `docs/architecture/` |
 | B02 | Seguridad y Auth | **completado** (2026-08-02) | SECURITY-AUDIT-REPORT v2.0, THREAT-REGISTER, rls.test.ts, secret-scan, ENVIRONMENT-MATRIX | `docs/security/`, `docs/guides/`, `src/shared/db/` |
-| B03 | Base de Datos y Datos | pendiente | DATA-DICTIONARY, ERD, INDEX-STRATEGY, Data Lineage | `docs/database/` |
+| B03 | Base de Datos y Datos | **completado** (2026-08-02) | DATA-DICTIONARY, ERD, INDEX-STRATEGY, Data Lineage, estado migraciones | `docs/database/` |
 | B04 | Módulos y Contratos | pendiente | Module Contract ×9 módulos | `docs/modules/` |
 | B05 | Jobs y Trigger.dev | pendiente | Job Contract ×12 triggers | `docs/jobs/` |
 | B06 | Testing | pendiente | TEST-COVERAGE-MATRIX + tests nuevos | `docs/testing/` |
@@ -37,7 +37,9 @@
 | SYSTEM-MAP.md | creado | `docs/architecture/SYSTEM-MAP.md` | B01 |
 | DEPENDENCY-GRAPH.md | creado | `docs/architecture/DEPENDENCY-GRAPH.md` | B01 |
 | ADR-000..006 | creado | `docs/architecture/ADR/` | B01 |
-| DATA-DICTIONARY / ERD / INDEX-STRATEGY | por crear | `docs/database/` | B03 |
+| DATA-DICTIONARY.md | creado (58 tablas, 25 enums, 70 FKs, 71 índices) | `docs/database/DATA-DICTIONARY.md` | B03 |
+| ERD.md | creado (6 mermaid erDiagram + FLOW-010..015) | `docs/database/ERD.md` | B03 |
+| INDEX-STRATEGY.md | creado (MAT-021/022, 7 recomendaciones, 8 hallazgos) | `docs/database/INDEX-STRATEGY.md` | B03 |
 | SECURITY-AUDIT-REPORT | existe — **actualizado v2.0** | `docs/security/SECURITY-AUDIT-REPORT.md` | B02 |
 | THREAT-REGISTER | creado (15 amenazas STRIDE) | `docs/security/THREAT-REGISTER.md` | B02 |
 | ENVIRONMENT-MATRIX | creado (37 vars por ambiente) | `docs/guides/ENVIRONMENT-MATRIX.md` | B02 |
@@ -70,7 +72,13 @@
   - [x] T02-03 rls.test.ts — contract test SQL de withRLS (5 tests verdes); isolación por usuario verificada
   - [x] T02-04 secret-scan (gitleaks) en CI + ENVIRONMENT-MATRIX.md (37 vars, gate 100/100)
   - [x] **REMEDIACIÓN IDOR (MODE C, aprobado en CHECKPOINT):** VULN-004 `history` (auth `authenticate` + owner-check `withRLS` → 404) y VULN-005 `assets/graph` (auth + queries en `withRLS`). Verificado: tests 253/253, lint 0 errores, build PASS. SECURITY-AUDIT v2.1 + THREAT-REGISTER actualizados.
-- [ ] **B03 — Base de Datos y Datos** (DATA-DICTIONARY, ERD, INDEX-STRATEGY, migraciones)- [ ] **B04 — Módulos y Contratos** (Module Contract template + 9 módulos)
+- [x] **B03 — Base de Datos y Datos** (completado 2026-08-02; commits `docs(b03)`)
+  - [x] T03-01 DATA-DICTIONARY.md — 58 tablas (plan asumía 56) en 12 dominios; 25 pgEnums, 70 FKs, 71 índices; hallazgos INDEX-201/202
+  - [x] T03-02 ERD.md — 6 diagramas mermaid por dominio + FLOW-010..015 (lineage con evidencia archivo:línea)
+  - [x] T03-03 INDEX-STRATEGY.md — MAT-021/022; 7 índices [RECOMMENDED] con consultas reales; 8 hallazgos (MAT-201..208)
+  - [x] Verificación migraciones: journal 20 (0000–0019) vs disco 21 → huérfano `0001_quota_enforcement.sql` confirmado (byte-idéntico a 0002); `0010_snapshot.json` malformed (2 tablas); faltan 13 snapshots; `drizzle-kit check` read-only OK (reporta 0010)
+  - [x] MODE A→B cumplido: **no** se ejecutó `db:generate`, **no** se tocaron esquemas ni migraciones
+- [ ] **B04 — Módulos y Contratos** (Module Contract template + 9 módulos)
 - [ ] **B05 — Jobs y Trigger.dev** (Job Contract ×12 + análisis idempotencia)
 - [ ] **B06 — Testing** (TEST-COVERAGE-MATRIX + unit tests `src/modules` + route tests)
 - [ ] **B07 — Performance** (refresh PERFORMANCE_REPORT + CWV + bundle)
@@ -99,3 +107,4 @@
 - El archivo del plan (`docs/superpowers/plans/2026-08-01-engineering-master-plan.md`) se mantiene intacto y **sin commitear** (no estaba listado en los commits de T00-01) [OBSERVED].
 - B01 (2026-08-02): 4 commits `docs(b01): ...` (T01-01..T01-04). Hallazgos transferibles a B02/B03: migración huérfana `0001_quota_enforcement.sql`; duplicación `AttackSurfaceGraph` (2 componentes, HIGH); 9 ciclos types-only en `schemas/index.ts`; `src/modules/` sin tests; cobertura Statements 12.51% preexistente. Check 04 del gate en PROJECT-INVENTORY (ERD/dictionary) quedó fuera de alcance del inventario y se reportó sin arreglar.
 - B02 (2026-08-02): 3 commits (`docs(b02)`, `test(b02)`, `ci(b02)`) + 2 de remediación (`fix(b02)`). **Hallazgos HIGH remediados (MODE C, aprobado en CHECKPOINT):** VULN-004 IDOR cross-tenant en `/api/intelligence/history` (sin auth, directDb) → auth (`authenticate`) + owner-check `withRLS`; VULN-005 IDOR en `/api/intelligence/assets/graph` (sin auth, sin RLS) → auth + queries en `withRLS`. Verificado: tests 253/253, lint 0 errores, build PASS. **Pendientes (B03):** VULN-001 XSS IA AiCopilot (escapeHtml), VULN-002 secret token GET webhooks, VULN-003 `/intelligence` fuera de rutas del middleware, VULN-006 auth condicional looker-studio, VULN-007 SSE pdf/progress sin auth. Inconsistencia env: `NEXT_PUBLIC_SUPABASE_ANON_KEY` vs `PUBLISHABLE_KEY` en `useRealtimeMetrics.ts`. Gitleaks añadido con `continue-on-error` (barrera dura pendiente de validar en GitHub Actions). [OBSERVED]
+- B03 (2026-08-02): 4 commits `docs(b03): ...` (T03-01..T03-03 + cierre). 58 tablas documentadas (el plan asumía 56; la real es mayor — ver DATA-DICTIONARY §Anexo). **Hallazgos de migraciones:** huérfano `0001_quota_enforcement.sql` (no en journal; byte-idéntico a `0002`, SHA-256 `DF676882…E266`; idempotente, no corrompe — borrar en próximo MODE C); `0010_snapshot.json` malformed (`drizzle-kit check` falla leyéndolo; 2 tablas, sin enums, id texto); 13 snapshots faltantes (0002, 0007–0009, 0011–0019); `idx_adversary_mitre_id` no-único (0012) ausente del esquema (drift); triggers de cuota fuera de esquemas Drizzle; `push_subscriptions.active` es `text 'true'` (no boolean); timestamp 0002 retrodata manual. **Recomendados:** 7 índices con consultas reales (trigram ip para audit/siem, expression `metadata->>'action'`, compuestos DNS/whois/findings). MODE A→B estricto: sin `db:generate`, sin cambios de schema/migración. Pendiente B03→B04: validar CI gitleaks, 5 VULN del B02, reconstrucción snapshot 0010. [OBSERVED]
