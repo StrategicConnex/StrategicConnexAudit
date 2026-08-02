@@ -17,27 +17,29 @@ El `_journal.json` contiene **20 entradas (0000–0019)**. En disco hay **21 arc
 | Fuente | Archivos | Detalle |
 |---|---|---|
 | Journal (idx 0–19) | 20 | 0000–0019 según `_journal.json` v7 |
-| Disco (`drizzle/`) | 21 | Incluye `0001_quota_enforcement.sql` **no registrado** |
-| **Huérfano confirmado** | 1 | `0001_quota_enforcement.sql` (manual) |
+| Disco (`drizzle/`) | 20 | `0001_quota_enforcement.sql` **eliminado** (MAT-201 resuelto) |
+| **Huérfano** | 0 | — |
 
-### 1.2. Hallazgo MAT-201 — archivo huérfano `0001_quota_enforcement.sql`
+### 1.2. Hallazgo MAT-201 — archivo huérfano `0001_quota_enforcement.sql` — RESUELTO ✅ (MODE C, post-B03)
 
 - SHA-256 de `0001_quota_enforcement.sql` = `DF6768825C3EB5E94989F21EE329993A44C6DD2394B9CABF4F8D063F2670E266`
 - SHA-256 de `0002_quota_enforcement.sql` = **idéntico** (`DF676882...E266`).
 - El archivo **byte-idéntico** `0002_quota_enforcement.sql` **sí** está en el journal (idx 2).
 - El generado por Drizzle en el slot 0001 es `0001_silky_ikaris.sql` (migración real de `users.onboarded`).
-- Conclusión: `0001_quota_enforcement.sql` es una copia manual duplicada de `0002` que **no** aplica la herramienta. Es idempotente (`IF NOT EXISTS`), por lo que no corrompe el esquema, pero **debe eliminarse** del directorio para que `drizzle-kit generate` no genere `0002` de nuevo.
+- **Remediación (commit `2f977c3`):** `0001_quota_enforcement.sql` fue **eliminado**. Era una copia manual duplicada de `0002`, idempotente (`IF NOT EXISTS`) y ausente del journal.
 
-### 1.3. Snapshots — MALFORMED / FALTANTES
+### 1.3. Snapshots — estado post-higiene ✅
 
 | Snapshot | Estado |
 |---|---|
 | 0000, 0001, 0003, 0004, 0005, 0006 | Presentes y coherentes (0006: 42 tablas + enums) |
-| **0010** | **MALFORMED** — 2 tablas, sin enums, `id="0010_dns_whois_history"` (texto, no hash UUID), 6114 bytes |
-| 0002, 0007, 0008, 0009, 0011–0019 | **Faltantes** (13) — el journal conserva tags `null` |
+| **0010** | **ELIMINADO (commit `2f977c3`)** — estaba malformed (`id="0010_dns_whois_history"` texto, 2 tablas, sin enums) y su contenido no era recuperable de forma fiable |
+| **0019** | **REGENERADO (commit `2f977c3`)** — snapshot del esquema Drizzle completo (58 tablas, 21 enums), `prevId` encadenado al snapshot 0006 |
+| 0002, 0007, 0008, 0009, 0011–0018 | Faltantes (12) — no bloquean `check`/`generate` |
 
-- `pnpm exec drizzle-kit check` (read-only) reporta: **`drizzle\meta\0010_snapshot.json data is malformed`**.
-- Impacto: `drizzle-kit` no puede calcular el diff incremental a partir del snapshot 0010. La regeneración segura requiere reconstruir el snapshot (p. ej., re-baselinear contra una BD de referencia o borrar meta y regenerar bajo control de versiones), tarea que queda **fuera del alcance B03** (MODE A→B).
+- `pnpm exec drizzle-kit check` (read-only) → **`Everything's fine 🐶🔥`** tras la higiene.
+- `pnpm exec drizzle-kit generate` → **`No schema changes, nothing to migrate`** (esquema actual == snapshot 0019). `db:generate` queda **desbloqueado** para futuras migraciones.
+- Nota: el snapshot 0019 regenerado proviene de los esquemas TS (fuente de verdad declarativa). Los snapshots intermedios faltantes no son regenerables sin BD de referencia; se documentan como limitación, no como bloqueo.
 
 ### 1.4. Migraciones especiales (RLS y best practices)
 
@@ -155,9 +157,9 @@ CREATE INDEX CONCURRENTLY idx_dns_proj_query_date ON dns_history(project_id, que
 | ID | Hallazgo | Impacto |
 |---|---|---|
 | MAT-201 | `0001_quota_enforcement.sql` huérfano (no está en journal) | `drizzle-kit generate` regenerará duplicados; hay que borrarlo |
-| MAT-202 | `0001` y `0002` byte-idénticos (mismo SHA-256) | Confirma duplicación manual; inofensivo (idempotente) pero ruido |
-| MAT-203 | `0010_snapshot.json` malformed (2 tablas, sin enums, id texto) | `drizzle-kit check` falla al leerlo; diff incremental bloqueado |
-| MAT-204 | Faltan 13 snapshots (0002, 0007–0009, 0011–0019) | Sin snapshots la herramienta no puede re-validar histórico |
+| MAT-202 | `0001` y `0002` byte-idénticos (mismo SHA-256) | Confirma duplicación manual; inofensivo (idempotente) pero ruido — **el 0001 fue eliminado** |
+| MAT-203 | `0010_snapshot.json` malformed (2 tablas, sin enums, id texto) | **Resuelto** — snapshot eliminado; regenerado 0019; `check` pasa |
+| MAT-204 | Faltan 13 snapshots (0002, 0007–0009, 0011–0018) | No bloquean `check`/`generate`; no regenerables sin BD de referencia |
 | MAT-205 | `idx_adversary_mitre_id` (no único) en 0012, ausente del esquema Drizzle; en 0018 se crea el único | Drift esquema↔migración; el no-único es redundante si 0018 aplica |
 | MAT-206 | Triggers de cuota (`quota_enforcement`) creados por SQL manual, no en esquemas Drizzle | No se puede regenerar desde esquemas |
 | MAT-207 | `push_subscriptions.active` es `text` con valor `'true'` (no `boolean`) | Mismatch tipado; ver INDEX-201 en `DATA-DICTIONARY.md` |
