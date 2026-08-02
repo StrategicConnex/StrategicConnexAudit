@@ -60,6 +60,10 @@ jobs:
       - name: Docs Quality Gate (docs técnicos, min 80)
         run: |
           set -e
+          # nullglob: las carpetas sin .md commiteados (p.ej. docs/jobs/ antes
+          # del commit de sus JOB-CONTRACT) expanden el glob a vacío y se
+          # omiten — el job valida lo que existe en el checkout, sin fallar.
+          shopt -s nullglob
           DIRS="docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing"
           echo "📚 Corriendo Quality Gate sobre docs técnicos (umbral 80/100)"
           for d in $DIRS; do
@@ -79,6 +83,7 @@ jobs:
             echo 'Umbral: 80/100 · TDDs técnicos (architecture/database/jobs/modules/traceability/risk/technical-debt/testing) · [scripts/quality-gate.mjs](scripts/quality-gate.mjs)'
             echo ''
             echo '```'
+            shopt -s nullglob
             for d in docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing; do
               for f in "$d"/*.md; do
                 node scripts/quality-gate.mjs "$f" --min 80 --quiet || true
