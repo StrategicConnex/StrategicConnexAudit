@@ -17,13 +17,17 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
+import { createClient } from "@/shared/lib/supabase/server";
+import { withRLS } from "@/shared/db/rls";
+import { projects } from "@/shared/db/schemas";
+import { eq } from "drizzle-orm";
 import { queryDnsHistory } from "@/server/intelligence/history/dns-history";
 import { queryWhoisHistory } from "@/server/intelligence/history/whois-history";
 import { getProjectHistoryTimeline } from "@/server/intelligence/history/orchestrator";
 
 export const dynamic = "force-dynamic";
 
-async function handler(req: NextRequest, _identifier: string) {
+async function handler(req: NextRequest, userId: string) {
   try {
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
@@ -37,6 +41,22 @@ async function handler(req: NextRequest, _identifier: string) {
 
     if (!projectId) {
       return NextResponse.json({ success: false, error: "projectId es requerido" }, { status: 400 });
+    }
+
+    // Verificar ownership del proyecto bajo RLS. Los readers de historial usan
+    // directDb (bypass de RLS), por lo que el control de acceso debe ocurrir aquí.
+    const ownedProject = await withRLS(userId, async (tx) =>
+      tx.query.projects.findFirst({
+        where: eq(projects.id, projectId),
+        columns: { id: true },
+      })
+    );
+
+    if (!ownedProject) {
+      return NextResponse.json(
+        { success: false, error: "Proyecto no encontrado o acceso denegado" },
+        { status: 404 }
+      );
     }
 
     let dnsResult = null;
@@ -64,6 +84,15 @@ async function handler(req: NextRequest, _identifier: string) {
 
 export const GET = (req: NextRequest) =>
   withRateLimit(
-    { limit: 30, window: 60, prefix: "intel_history" },
+    {
+      limit: 30,
+      window: 60,
+      prefix: "intel_history",
+      authenticate: async (req) => {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        return user ? { id: user.id } : null;
+      },
+    },
     handler,
   )(req);
