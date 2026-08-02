@@ -6,7 +6,7 @@
 
 **Plan fuente:** `docs/superpowers/plans/2026-08-01-engineering-master-plan.md` [VERIFIED]
 **Plan de implementación (MODE C):** `docs/superpowers/plans/2026-08-02-implementation-plan.md` [VERIFIED] — 23 tareas ejecutables (TSK-001..023) P0→P3. **P0 COMPLETADO (TSK-001..006, 2026-08-02).**
-**Última actualización:** 2026-08-02 (BATCH 05 completado; P0 del plan MODE C completado)
+**Última actualización:** 2026-08-02 (B06 Testing completado — 11 tests P0 nuevos: 5 route/trigger + 6 trigger tests → **359 tests / 40 files · 9/12 triggers con test**; P0 del plan MODE C completado)
 
 ---
 
@@ -20,7 +20,7 @@
 | B03 | Base de Datos y Datos | **completado** (2026-08-02) | DATA-DICTIONARY, ERD, INDEX-STRATEGY, Data Lineage, estado migraciones | `docs/database/` |
 | B04 | Módulos y Contratos | **completado** (2026-08-02) | Module Contract template + ×9 módulos (gate 100/100 c/u) | `docs/modules/` |
 | B05 | Jobs y Trigger.dev | **completado** (2026-08-02) | Job Contract ×12 triggers (gate 100/100 c/u) | `docs/jobs/` |
-| B06 | Testing | pendiente | TEST-COVERAGE-MATRIX + tests nuevos | `docs/testing/` |
+| B06 | Testing | **completado** (2026-08-02) | TEST-COVERAGE-MATRIX + tests P0 (5 route.test/trigger.test) + **6 trigger.test más → 9/12 triggers con test** · **359 tests / 40 files** | `docs/testing/`, `src/app/api/`, `src/trigger/` |
 | B07 | Performance | pendiente | Refresh PERFORMANCE_REPORT + CWV + bundle | `docs/improvements/` |
 | B08 | Observabilidad | pendiente | OBSERVABILITY-MATRIX + convención de IDs | `docs/observability/` |
 | B09 | i18n | pendiente | I18N-AUDIT + script de paridad de keys | `docs/i18n/` |
@@ -54,7 +54,9 @@
 | CI secret-scan | añadido (gitleaks) | `.github/workflows/ci.yml` | B02 |
 | Module Contracts (template + 9) | creados (gate 100/100 c/u) | `docs/modules/` | B04 |
 | Job Contracts (12) | **creados** (gate 100/100 c/u; idempotencia documentada) | `docs/jobs/` | B05 |
-| TEST-COVERAGE-MATRIX | por crear | `docs/testing/TEST-COVERAGE-MATRIX.md` | B06 |
+| TEST-COVERAGE-MATRIX | **completado** (2026-08-02, gate 100/100) | `docs/testing/TEST-COVERAGE-MATRIX.md` | B06 |
+| Tests P0 de cobertura (5 nuevos) | **implementados** — route.test siem/run (5) + public/v1/intelligence (11) + trigger.test siem (4) / discovery (4) / uptime (5) → suite 359/359 PASS | `src/app/api/security/siem/run/route.test.ts`, `src/app/api/public/v1/intelligence/route.test.ts`, `src/trigger/{siem,discovery,uptime}.trigger.test.ts` | B06 |
+| Trigger tests P0 (6 nuevos) | **implementados** — adversary (5), anomaly (5), monitoring (6), scheduled-scan (3), audit (6), webhook (7) = **9/12 triggers con test (75%)** | `src/trigger/{adversary,anomaly,monitoring,scheduled-scan,audit,webhook}.trigger.test.ts` | B06 |
 | OBSERVABILITY-MATRIX | por crear | `docs/observability/OBSERVABILITY-MATRIX.md` | B08 |
 | I18N-AUDIT | por crear | `docs/i18n/I18N-AUDIT.md` | B09 |
 | TRACEABILITY-MATRIX | completado (2026-08-02) | `docs/traceability/TRACEABILITY-MATRIX.md` | B10 |
@@ -96,7 +98,13 @@
   - [x] Análisis de idempotencia por job: siem PARTIAL FAIL, discovery PASS, uptime FAIL, adversary PARTIAL, anomaly PARTIAL, monitoring FAIL, webhook PARTIAL, audit FAIL parcial, cleanup PASS, api-key-expiry PARTIAL FAIL, scheduled-scan N/A (stub), hello PASS
   - [x] Hallazgos: `scheduled-scan.trigger.ts` es stub no registrado (feature no operativa); fixes de dedup recomendados en T05-02 [RECOMMENDED]
   - [x] Verificación: quality gate 100/100 ×12 docs
-- [x] **B06 — Testing** (TEST-COVERAGE-MATRIX creado 2026-08-02, gate 100/100; unit tests `src/modules` + route tests pendientes de TSK-022)
+- [x] **B06 — Testing** (completado 2026-08-02: TEST-COVERAGE-MATRIX gate 100/100 + tests P0 → suite **40 files / 359 tests PASS**; triggers **9/12 con test**)
+  - [x] T06-01 TEST-COVERAGE-MATRIX.md — baseline 298→359 tests, matriz por módulo/trigger/endpoint, gate 100/100
+  - [x] T06-02 route.test `security/siem/run` (5 tests: auth dual CRON/sesión, 200, 500)
+  - [x] T06-03 route.test `public/v1/intelligence` (11 tests: 401, GET detail/list, 400, 404, 429, scan background, resiliente)
+  - [x] T06-04 trigger.test siem (4) · discovery (4) · uptime (5) — registro de task + delegación a run*
+  - [x] T06-05 trigger.test adversary (5) · anomaly (5) · monitoring (6) — escenarios MITRE, anomalías, alertas High/Critical
+  - [x] T06-06 trigger.test scheduled-scan (3) · audit (6) · webhook (7) — stub config, flujo crawl/ownership, HMAC + SSRF
 - [ ] **B07 — Performance** (refresh PERFORMANCE_REPORT + CWV + bundle)
 - [ ] **B08 — Observabilidad** (OBSERVABILITY-MATRIX + convención correlation IDs)
 - [ ] **B09 — i18n** (I18N-AUDIT + script paridad keys)
@@ -135,3 +143,98 @@
 - B03/Post-B05 (2026-08-02): **SUPABASE-AUDIT.md** creado aplicando DATABASE ENGINE DETECTION — EXTENDED del MASTER PROMPT 2.0: detección (PLATFORM=SUPABASE, ENGINE=POSTGRESQL, ORM=DRIZZLE), NIVEL 1 PostgreSQL (58 tablas, 71 índices, 20 migraciones), NIVEL 2 Supabase Platform (RLS matrix, Service Role server-only ✅, Storage/Edge Functions N/A, Realtime con SB-003 env inconsistente). **Hallazgos: SB-001 RLS solo en 5/58 tablas (MEDIUM), SB-002 realtime con anon key sobre tablas sin RLS (MEDIUM), SB-003 ANON_KEY vs PUBLISHABLE_KEY, SB-004 publicación realtime no verificada, SB-005 directDb 24 archivos (LOW).** Health Score ≈66/100 GOOD [ESTIMATE]. Gate 100/100. [OBSERVED]
 - B05 (2026-08-02): 12 Job Contracts creados en `docs/jobs/` (siem-exporter, discovery, uptime, adversary, anomaly, monitoring, webhook, audit, cleanup, api-key-expiry, scheduled-scan, hello) — todos gate 100/100. **Análisis de idempotencia/retry por job (§27):** siem PARTIAL FAIL (entrega duplicada en retry, PagerDuty mitiga con dedup_key), discovery PASS (unique + UPDATE lastSeenAt), uptime FAIL (INSERT plano duplica en retry), adversary PARTIAL (getOrCreateScenarioId idempotente con 0018; runs son historial), anomaly PARTIAL (persistAnomaly inserta por ciclo), monitoring FAIL (alerta duplicada sin check resolved=false), webhook PARTIAL (run.id estable pero re-envía configs ya OK), audit FAIL parcial (sin guard de status, duplica crawl_results/issues en retry), cleanup PASS (DELETE idempotente), api-key-expiry PARTIAL FAIL (sin dedup por key/fecha), scheduled-scan **N/A — STUB no registrado en Trigger.dev** (feature "escaneo agendado" no operativa), hello PASS. **Fixes T05-02 [RECOMMENDED]** documentados por job (dedup keys, guard de status, onConflictDoNothing). Verificado: quality gate 100/100 ×12. [OBSERVED]
 - **P0 ejecutado (2026-08-02, MODE C aprobado):** TSK-001..006 implementados — `escapeHtml` antes del render en AiCopilot (VULN-001), `secretToken` enmascarado con `secretTokenPreview` + test de regresión (VULN-002), `/intelligence` en `isProtectedRoute` (VULN-003), looker-studio fail-closed con `timingSafeEqual` y sin query param (VULN-006), progreso PDF namespaced `pdf_progress:<userId>:<genId>` con sesión en GET (VULN-007), gitleaks sin `continue-on-error` (REQ-106). Verificado: tsc EXIT=0, 254 tests (251 OK; 3 fallos = suite de red de egress-guard contra httpbin.org caído, ambiental pre-existente, archivo no tocado), lint 0 errores, SECURITY-AUDIT v2.2 + gate 100. SECURITY-AUDIT-REPORT actualizado a v2.2 (restan solo VULN-008/009 Low mock). Commits pendientes: 7 archivos de código + ci.yml + docs. [OBSERVED]
+
+---
+
+## Alcance y objetivos
+
+Este documento es el **índice maestro de gobernanza documental** de SCAUDIT Pro. **Objetivos:** (1) registrar el estado de cada artefacto y batch B00→B10; (2) garantizar continuidad entre batches sin contradicciones; (3) ser la fuente de verdad del inventario documental, planes y contratos. **Alcance:** documentación, planes, contratos de módulo/job, tests y artefactos de gobernanza. **Fuera de alcance:** el código fuente en sí (se documenta en `docs/architecture/PROJECT-INVENTORY.md`).
+
+## Requisitos
+
+| ID | Requisito | Fuente | Batch |
+|----|-----------|--------|-------|
+| REQ-001 | Índice maestro que registre estado de artefactos y batches | Plan T00-02 | B00 |
+| REQ-002 | Baseline de verificación (lint/build/test/coverage) con no-regresión | Plan T00-03 | B00 |
+| REQ-003 | Cada batch requiere checkpoint y actualización del índice | §53 master prompt | B00 |
+| REQ-004 | Todo artefacto con etiqueta de evidencia [VERIFIED]/[OBSERVED]/[INFERRED] | Reglas de gobierno | B00 |
+| REQ-005 | Quality Gate final 27/27 §55 + cross-validation §54 | T10-04 | B10 |
+
+## Arquitectura
+
+### Contexto y componentes
+
+El sistema se documenta por capas: `src/app/` (rutas API + UI), `src/server/` (lógica de negocio, executors, seguridad), `src/trigger/` (Trigger.dev jobs), `src/shared/` (db, lib, utils) y `src/features/` (UI de inteligencia). La documentación técnica vive en `docs/architecture/` (PROJECT-INVENTORY, SYSTEM-MAP, DEPENDENCY-GRAPH) y los contratos de módulo en `docs/modules/`. [VERIFIED]
+
+```mermaid
+flowchart LR
+    A[Gobernanza B00] --> B[Arquitectura B01]
+    B --> C[Seguridad B02]
+    C --> D[Base de Datos B03]
+    D --> E[Módulos B04]
+    E --> F[Jobs B05]
+    F --> G[Testing B06]
+    G --> H[Final B10]
+```
+
+## Datos
+
+El modelo de datos real está documentado en `docs/database/DATA-DICTIONARY.md` (58 tablas, 25 enums, 70 FKs, 71 índices) y `docs/database/ERD.md` (6 diagramas mermaid + FLOW-010..015). Estado de migraciones: journal 20 (0000–0019), `0019_snapshot.json` regenerado (58 tablas, 21 enums). [VERIFIED]
+
+| Dominio | Tablas | Documento |
+|---------|--------|-----------|
+| Seguridad | intelligence_findings, security_audit_logs, developer_api_keys | DATA-DICTIONARY |
+| Proyectos | projects, project_members, audits, keyword_targets | DATA-DICTIONARY |
+| Monitoreo | uptime_logs, monitoring_*, push_subscriptions | DATA-DICTIONARY |
+
+## APIs
+
+El inventario de **42 rutas** está en `docs/architecture/PROJECT-INVENTORY.md` y la matriz de seguridad en `docs/security/SECURITY-AUDIT-REPORT.md` (v2.2). Rutas con test (8 route.test): webhooks (15), public/v1/intelligence (11), adversary (6), members (6), siem/run (5), cron/siem (5), cron/uptime (4), graph (3). [VERIFIED]
+
+
+| Endpoint | Método | Auth | Estado |
+|----------|--------|------|--------|
+| /api/public/v1/intelligence | GET/POST | API key SHA-256 | ✅ test |
+| /api/security/siem/run | POST | CRON_SECRET o sesión | ✅ test |
+| /api/intelligence/adversary | POST/PATCH | Sesión + RLS | ✅ 6 tests |
+| /api/webhooks | POST | HMAC firma | ✅ 15 tests |
+
+## Seguridad
+
+Trust boundaries: el middleware autentica rutas protegidas; RLS multi-tenant cubre 5/58 tablas (SB-001) — ver `docs/database/SUPABASE-AUDIT.md`. **VULN-001..007 remediados en P0** (XSS IA, secretToken webhooks, middleware /intelligence, looker fail-closed, pdf progress, gitleaks fail-hard). Threat register: 15 amenazas STRIDE en `docs/security/THREAT-REGISTER.md`. Controles: rate limiting Upstash Redis, egress-guard SSRF, escapeHtml antes del render. [VERIFIED]
+
+## Testing
+
+Estrategia: pirámide Vitest (unit → service → component → security → integration) + E2E Playwright. Cobertura actual: **359 tests / 40 files PASS** (ejecución `npx vitest run` 2026-08-02, incluye 11 archivos de test nuevos de B06: 5 route/trigger + 6 trigger). [VERIFIED]
+
+| Área | Suites | Tests |
+|------|--------|-------|
+| src/server (intelligence + security + notifications) | 8 | 134 |
+| src/app/api (route.test) | 8 | 55 |
+| src/shared (db/lib/utils) | 6 | 37 |
+| UI (components + features) | 7 | 60 |
+| src/trigger (trigger.test) | 9 | 45 |
+| src/proxy.test | 1 | 18 |
+| tests/api-contract (contract.test) | 1 | 10 |
+| **Total** | **40 files** | **359** |
+
+## Operaciones
+
+Monitorización: jobs Trigger.dev (siem */5, uptime */15, discovery 0 */6) documentados en `docs/jobs/`. Recovery: `docs/database/PRODUCTION-PUSH-FINAL-VALIDATION.md` (backup/recovery, rollback forward-only vía Drizzle, ventana T+5m..T+24h). Alerting: SIEM → Slack/PagerDuty/Splunk. Runbooks: `docs/guides/troubleshooting.md`. Observabilidad (B08) pendiente. [VERIFIED]
+
+## Trazabilidad
+
+| ID | Cadena REQ → COMP → TEST → DEP |
+|----|----------------------------------|
+| REQ-001 | REQ-001 → COMP-001 (MASTER-INDEX) → TEST-001 (gate) → DEP-001 (CI docs-quality-gate) |
+| REQ-002 | REQ-002 → COMP-002 (rls.ts) → TEST-002 (rls.test.ts, 5) → DEP-002 (CI test) |
+| REQ-005 | REQ-005 → COMP-003 (FINAL-REPORT) → TEST-003 (T10-04 27/27) → DEP-003 (CI docs) |
+
+## Glosario
+
+| Término | Definición |
+|---------|------------|
+| Batch | Fase de ejecución del plan maestro (B00→B10) |
+| Gate | Quality gate de 20 checks × 5 pts = 100; umbral 80 |
+| MODE A/B/C | Modos del plan: auditar / documentar / implementar |
+| Artefacto | Documento o entregable registrado en el índice |

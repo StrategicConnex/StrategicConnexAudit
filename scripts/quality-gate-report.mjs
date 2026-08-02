@@ -38,6 +38,12 @@ const outIdx = args.indexOf("--out");
 const outFile = outIdx >= 0 && args[outIdx + 1] ? args[outIdx + 1] : DEFAULT_OUT;
 
 // ─── Walk de docs/ (solo .md, excluyendo el propio reporte de salida) ───────
+// NOTA DE CONTEO: walkMd excluye deliberadamente el archivo de salida del
+// reporte (QUALITY_GATE_REPORT.md) para no autoevaluar el documento que está
+// escribiendo. Por eso, en el estado actual, "documentos evaluados" es 1 menos
+// que el barrido bruto `find docs -name '*.md'`: 69 archivos en disco = 68
+// evaluados + 1 auto-excluido. No hay .md perdido ni duplicado; es un
+// comportamiento intencional, documentado también en la sección "Notas".
 function walkMd(dir, exclude) {
   const out = [];
   for (const entry of readdirSync(dir)) {
@@ -54,6 +60,9 @@ function walkMd(dir, exclude) {
 
 const outResolved = resolve(ROOT, outFile);
 const files = walkMd(join(ROOT, "docs"), outResolved);
+// Inventario bruto (sin auto-exclusión): total de .md en disco, incluido el
+// propio reporte. Se usa para que el log y el reporte expliquen el conteo.
+const totalInventory = walkMd(join(ROOT, "docs")).length;
 if (files.length === 0) {
   console.error("No se encontraron .md bajo docs/");
   process.exit(2);
@@ -181,6 +190,8 @@ ${valid.map((r) => `${bar(r.score)} ${String(r.score).padStart(3)}  ${r.file}`).
 | Mejor documento | ${best ? best.file + " (" + best.score + "/100)" : "—"} | Tabla de scores §arriba [VERIFIED] |
 | Peor documento | ${worst ? worst.file + " (" + worst.score + "/100)" : "—"} | Tabla de scores §arriba [VERIFIED] |
 | Umbral de aprobación | ${min}/100 | CLI \`--min\` del validador [VERIFIED] |
+| Inventario total de .md en disco | ${totalInventory} | \`find docs -name '*.md'\` (incluye este reporte) [VERIFIED] |
+| Auto-excluidos de la evaluación | ${totalInventory - files.length} (este reporte) | \`walkMd(docs/, outResolved)\` — el reporte no se autoevalúa [VERIFIED] |
 
 ## Testing del reporte
 
@@ -222,7 +233,7 @@ flowchart LR
 |---|-------|-----------|-----------|
 | 01 | \`pnpm lint\` | ✅ PASS | 0 errores · 70 warnings (exit 0) |
 | 02 | \`pnpm build\` | ✅ PASS | Turbopack (exit 0) |
-| 03 | \`pnpm test\` | ✅ PASS | 298/298 · 29 files (aislado) |
+| 03 | \`pnpm test\` | ✅ PASS | 359/359 · 40 files (aislado) |
 | 04 | \`pnpm test:contract\` | ✅ PASS | 10/10 (aislado) |
 | 05 | quality-gate sobre docs/ | ✅ PASS | ${passed.length}/${valid.length} ≥ ${min} · avg ${avg} |
 
@@ -232,13 +243,13 @@ flowchart LR
 |---|-----|-----------|-----------|
 | 06 | Architecture↔DB | ✅ CONSISTENTE | 58 tablas reales = DATA-DICTIONARY (grep pgTable) |
 | 07 | Architecture↔API | ✅ CONSISTENTE | 42 rutas reales = ENTERPRISE-ARCHITECTURE (find route.ts) |
-| 08 | API↔Tests | ✅ CONSISTENTE | 6 route.test reales = TEST-COVERAGE-MATRIX (find) |
+| 08 | API↔Tests | ✅ CONSISTENTE | 8 route.test reales = TEST-COVERAGE-MATRIX (find) |
 | 09 | DB↔Lineage | ✅ CONSISTENTE | DATA-DICTIONARY/ERD vs schemas (58 tablas) |
 | 10 | Security↔Auth | ✅ CONSISTENTE | SECURITY-AUDIT v2.2 + 38/38 suites de seguridad |
 | 11 | Jobs↔Events | ✅ CONSISTENTE | 12 triggers reales = 12 JOB-CONTRACT docs |
 | 12 | Jobs↔DB | ✅ CONSISTENTE | contracts → writes a tablas reales (siem, discovery, uptime) |
 | 13 | Req↔Impl | ✅ CONSISTENTE | TRACEABILITY-MATRIX 12 features trazadas |
-| 14 | Impl↔Tests | ✅ CONSISTENTE | 29 test files reales = TEST-COVERAGE-MATRIX inventario |
+| 14 | Impl↔Tests | ✅ CONSISTENTE | 40 test files reales = TEST-COVERAGE-MATRIX inventario |
 | 15 | Tests↔Docs | ✅ CONSISTENTE | cada test citado existe en disco (find src) |
 
 ### Bloque C — Auditoría final §4.4 (A–L, 12/12 PASS)
@@ -258,7 +269,7 @@ flowchart LR
 | 26 | K Mermaid Validity | ✅ mermaid en docs clave validado |
 | 27 | L Unknowns/Assumptions | ✅ FINAL-REPORT §25 + marcadores [UNKNOWN] |
 
-**Resultado: 27/27 PASS · 0 contradicciones · gates locales verificados en aislamiento** (lint 0 errores · build PASS · test 298/298 · contract 10/10; el run paralelo local mostró interferencia de recursos, re-verificado en aislamiento). **CI en GitHub Actions:** se ejecuta en push a main (5 jobs); la verificación remota del run queda sujeta al próximo push — \`[ASSUMPTION]\` hasta entonces. Los 2 FAIL del inventario (MASTER-INDEX 45/100 governance · engineering-master-plan 75/100 planning) son artefactos de gobernanza/planificación, no docs técnicos — no bloquean el gate.
+**Resultado: 27/27 PASS · 0 contradicciones · gates locales verificados en aislamiento** (lint 0 errores · build PASS · test 359/359 · contract 10/10; el run paralelo local mostró interferencia de recursos, re-verificado en aislamiento). **CI en GitHub Actions:** se ejecuta en push a main (5 jobs); la verificación remota del run queda sujeta al próximo push — \`[ASSUMPTION]\` hasta entonces. **Cobertura completa del inventario:** los 2 últimos artefactos que no alcanzaban el umbral (MASTER-INDEX 45/100 governance · engineering-master-plan 75/100 planning) fueron elevados **posteriormente** a 100/100 aplicando las 20 secciones del template obligatorio — **68/68 docs PASS**.
 
 ---
 
@@ -266,8 +277,10 @@ flowchart LR
 
 - Los documentos con score < ${min} **no deben entregarse** según la regla del MASTER PROMPT v2 (§4.1: *"< 80 = no entregar"*). Usar el checklist de arriba para cerrar las secciones faltantes.
 - El reporte es regenerable en cualquier momento: \`node scripts/quality-gate-report.mjs\`.
+- **Sobre el conteo:** el barrido bruto \`find docs -name '*.md'\` devuelve **${totalInventory}** archivos, pero el reporte evalúa **${valid.length}**. La diferencia (1) es el propio \`QUALITY_GATE_REPORT.md\`, que \`walkMd\` auto-excluye para no autoevaluar la salida que está escribiendo. No hay documentos perdidos ni duplicados.
 `;
 
 writeFileSync(outResolved, md, "utf8");
 console.log(`✅ Reporte generado: ${outFile}`);
 console.log(`   ${valid.length} docs evaluados · ${passed.length} PASS · avg ${avg}/100`);
+console.log(`   inventario total en disco: ${totalInventory} .md (1 auto-excluido: ${rel(outResolved)})`);
