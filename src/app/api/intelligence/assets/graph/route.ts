@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/shared/db";
+import { createClient } from "@/shared/lib/supabase/server";
+import { withRLS } from "@/shared/db/rls";
 import { intelligenceAssets, intelligenceFindings } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 
@@ -9,6 +10,12 @@ import { eq } from "drizzle-orm";
  */
 export async function GET(req: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
 
@@ -16,14 +23,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
     }
 
-    // 1. Cargar Assets del Proyecto
-    const assets = await db.query.intelligenceAssets.findMany({
-      where: eq(intelligenceAssets.projectId, projectId)
-    });
+    // 1. Cargar Assets y Hallazgos del Proyecto bajo el contexto RLS del usuario
+    // (aísla multi-tenant: el usuario solo puede leer proyectos que le pertenecen)
+    const { assets, findings } = await withRLS(user.id, async (tx) => {
+      const assets = await tx.query.intelligenceAssets.findMany({
+        where: eq(intelligenceAssets.projectId, projectId)
+      });
 
-    // 2. Cargar Hallazgos del Proyecto (para colorear nodos o crear aristas de riesgo)
-    const findings = await db.query.intelligenceFindings.findMany({
-      where: eq(intelligenceFindings.projectId, projectId)
+      const findings = await tx.query.intelligenceFindings.findMany({
+        where: eq(intelligenceFindings.projectId, projectId)
+      });
+
+      return { assets, findings };
     });
 
     const nodes: any[] = [];
