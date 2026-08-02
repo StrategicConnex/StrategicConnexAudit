@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "skills": {
+    "007": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/007/SKILL.md",
+      "computedHash": "07b9bab38c77b5da9e0ab07e00676d020665a53d1213f737214b1217606a3107"
+    },
+    "api-security-best-practices": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/api-security-best-practices/SKILL.md",
+      "computedHash": "665caa1fd86a50c5ed9b9a106e715e7891b8a6e1bdb3fd24f1af305c5e0384d4"
+    },
+    "api-security-testing": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/api-security-testing/SKILL.md",
+      "computedHash": "b58813440375789e86e94f5442a54411adc1ce1ca7a40cc1e06e67b97b6fe4e7"
+    },
+    "drizzle-migration-conflict": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/drizzle-migration-conflict/SKILL.md",
+      "computedHash": "b38e55a1f6e72d7b094194644f2435d39603cf7c01c76370a9801c167c71f285"
+    },
+    "drizzle-orm-expert": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/drizzle-orm-expert/SKILL.md",
+      "computedHash": "69a59e2bac33472e7ea871fe206d287cbdecb2d3034022aa6fb345d982f90bb2"
+    },
+    "nextjs-supabase-auth": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nextjs-supabase-auth/SKILL.md",
+      "computedHash": "f2f8b00877ed450e4b5d1e040b52c1c4d312ec2264c75d2248253814c2a9e9ba"
+    },
+    "postgres-best-practices": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/postgres-best-practices/SKILL.md",
+      "computedHash": "79edb864c0d2a1274fab1bafe25569cd7079ce519564574c00a3167e332cfc72"
+    },
+    "postgresql-optimization": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/postgresql-optimization/SKILL.md",
+      "computedHash": "e12753fdc341ac4806c30f8326328297492c4849c52ae49c988f9c528d519daf"
+    },
+    "red-team-tactics": {
+      "source": "C:\\Users\\Juan\\AppData\\Local\\Temp\\agentic-awesome-skills-catalog",
+      "sourceType": "local",
+      "computedHash": "6af3dae68247a011bf28420d52224fbea64ea691613eb547319aa1153eb1d063"
+    },
+    "red-team-tools": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/red-team-tools/SKILL.md",
+      "computedHash": "431c87829285fabf368bea0482a6e08d728f110060dcc043eaa3a155a8171335"
+    },
+    "security-audit": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-audit/SKILL.md",
+      "computedHash": "75c3d961f04992c2c7adcc453a3ecbf137d4756d914614d0a41a6a6126121991"
+    },
+    "security-auditor": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-auditor/SKILL.md",
+      "computedHash": "7f618562271cbd667bb9998b73d68c8a25ab1b866c00d045e21281cbec6468d9"
+    },
+    "shodan-reconnaissance": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/shodan-reconnaissance/SKILL.md",
+      "computedHash": "fad4d94de8a4fc1900907a515ab53317639708905300bdf78dc16256a07f0617"
+    },
+    "supabase": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase/SKILL.md",
+      "computedHash": "06c8b6fbbc95aba9b4dc158a65934d3c4461e9e492f01cda762c6b9e6d97c4ae"
+    },
+    "supabase-automation": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-automation/SKILL.md",
+      "computedHash": "20326a4d19c1959674b590af6b815a45ae8459d2fa5bdda79319eb645c6ed94a"
+    },
+    "threat-modeling-expert": {
+      "source": "C:\\Users\\Juan\\AppData\\Local\\Temp\\agentic-awesome-skills-catalog",
+      "sourceType": "local",
+      "computedHash": "cfacaf87858667b638966e0de2d79ba1cf42b3db349f3fc17c357d7ed832e6eb"
+    }
+  }
+}
