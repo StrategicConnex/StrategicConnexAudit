@@ -103,8 +103,8 @@ flowchart TB
 | Entry / API | Método | Auth | Riesgo |
 |---|---|---|
 | `/api/**` (42 rutas) | Sesión / CRON_SECRET / API key / pública | Medio |
-| `/api/intelligence/history` | 🔴 Ninguna (rate limit IP) | **Alto — VULN-004** |
-| `/api/intelligence/assets/graph` | 🔴 Ninguna | **Alto — VULN-005** |
+| `/api/intelligence/history` | ✅ Sesión (`authenticate` en `withRateLimit`) + owner-check RLS | ~~Alto — VULN-004~~ Resuelto |
+| `/api/intelligence/assets/graph` | ✅ Sesión + `withRLS` | ~~Alto — VULN-005~~ Resuelto |
 | `/api/public/v1/*` | API key hashed | Medio |
 | `/api/looker-studio` | ⚠️ Condicional (VULN-006) | Medio |
 | `/api/reports/pdf/progress` | 🔴 Ninguna (genId) | Medio — VULN-007 |
@@ -117,9 +117,9 @@ flowchart TB
 
 | ID | Asset | Threat (STRIDE) | Impact (1-5) | Likelihood (1-5) | Control | Residual |
 |---|---|---|---|---|---|---|
-| THR-001 | AST-003 | (I) IDOR cross-tenant en `/intelligence/history` — leer historial de cualquier proyecto por projectId sin sesión | 5 | 4 | 🔴 **Sin control — VULN-004** (`withRateLimit` IP no es control de acceso) | **Alto — pendiente fix** |
-| THR-002 | AST-003 | (I) IDOR cross-tenant en `/assets/graph` — assets+findings de cualquier proyecto sin auth ni RLS | 5 | 4 | 🔴 **Sin control — VULN-005** | **Alto — pendiente fix** |
-| THR-003 | AST-006 | (S/T) DOM XSS vía salida de IA no sanitizada en AiCopilot (`dangerouslySetInnerHTML`) | 4 | 3 | 🔴 **Parcial — VULN-001**: no hay escape; CSP mitiga parcial | Alto |
+| THR-001 | AST-003 | (I) IDOR cross-tenant en `/intelligence/history` — leer historial de cualquier proyecto por projectId sin sesión | 5 | 4 | ✅ **Remediado (B02)**: `authenticate` en `withRateLimit` (401 sin sesión) + owner-check `withRLS` antes de consultar | **Bajo** |
+| THR-002 | AST-003 | (I) IDOR cross-tenant en `/assets/graph` — assets+findings de cualquier proyecto sin auth ni RLS | 5 | 4 | ✅ **Remediado (B02)**: `createClient` + `auth.getUser` (401) + queries en `withRLS(user.id)` | **Bajo** |
+| THR-003 | AST-006 | (S/T) DOM XSS vía salida de IA no sanitizada en AiCopilot (`dangerouslySetInnerHTML`) | 4 | 3 | 🔴 **VULN-001**: no hay escape; CSP mitiga parcial | Alto |
 | THR-004 | AST-004 | (I) Exposición de `secret_token` de webhooks en GET `/api/webhooks` | 4 | 3 | 🔴 **VULN-002** — RLS limita a miembros, pero cualquier miembro lo lee | Medio |
 | THR-005 | AST-005 | (S/T) Spoofing de webhook SIEM/cliente vía firma conocida o fallback dev | 4 | 2 | `verifyWebhookSignature` timing-safe + secret (fallback dev solo NODE_ENV≠prod) | Medio |
 | THR-006 | AST-003 | (I) Exfiltración de datos vía API pública GET (investigationId) sin ownership check | 4 | 2 | API key hashed + POST con owner-check; GET sin filtrar | Medio |
@@ -129,7 +129,7 @@ flowchart TB
 | THR-010 | AST-008 | (S/T) SSRF vía executor sandbox (solicitudes a redes internas) | 4 | 2 | `egress-guard` + `assertPublicHostname` + timeouts | Bajo |
 | THR-011 | AST-008 | (E/T) RCE vía executor (comandos shell) | 5 | 1 | Sandbox sin `child_process`, allowlist curl/nc/nmap | Bajo |
 | THR-012 | AST-004 | (D) DoS por consumo de cuota IA / rate limit por IP débil | 3 | 3 | Rate limits por usuario/IP + fallback chain | Medio |
-| THR-013 | AST-003 | (T) Tampering de datos por bypass RLS via `db` plano sin `withRLS` | 5 | 3 | 🔴 **VULN-005** — el mismo código fuente; uso de `withRLS` en el resto | **Alto — pendiente fix** |
+| THR-013 | AST-003 | (T) Tampering de datos por bypass RLS via `db` plano sin `withRLS` | 5 | 3 | ✅ **Remediado (B02)**: assets/graph ahora usa `withRLS`; auditado el resto de rutas API — todas usan `withRLS` u owner-check explícito | **Bajo** |
 | THR-014 | AST-004 | (I) Logs/debug que imprimen secrets (DATABASE_URL mascarada, health booleano) | 2 | 1 | `:****@` masking + health booleano (sin valor) | Bajo |
 | THR-015 | AST-007 | (R) Repudiation: acciones maliciosas sin auditoría (falta audit log en rutas sin auth) | 3 | 3 | `security_audit_logs` + SIEM exporter; rutas VULN-004/005 no auditan | Medio |
 
@@ -142,7 +142,7 @@ flowchart TB
 | Unit | Vitest — executors, egress-guard, ratelimit, RLS contract test | 248+ tests |
 | RLS | `src/shared/db/rls.test.ts` — claims distintos por usuario (T02-03) | Aislamiento multi-tenant |
 | E2E | Playwright — login, dashboard, reporte IA | Flujo feliz |
-| Security | Propuesto: 401/403 en rutas sin auth (VULN-004/005); XSS en AiCopilot | Pendiente |
+| Security | ✅ 401/403 implementado en rutas IDOR (VULN-004/005, B02); pendiente: regression test para AiCopilot XSS (REQ-001) | Parcial |
 
 ---
 
@@ -240,4 +240,4 @@ Ver §3 — 1 bloque mermaid, 11 nodos, válido.
 
 ## 18. Resumen ejecutivo
 
-**15 amenazas registradas (STRIDE completo).** El mayor riesgo residual se concentra en **THR-001/THR-002/THR-013** (IDOR cross-tenant por rutas sin auth/RLS — VULN-004/005), seguidas de THR-003 (XSS IA). El resto de la superficie está cubierta por controles existentes (RLS transaccional, egress-guard, sandbox sin shell, hashing de API keys, HMAC, gitleaks). **Acción prioritaria:** remediar VULN-004/005 (autenticar + owner-check + `withRLS`) y luego VULN-001 (escapeHtml).
+**15 amenazas registradas (STRIDE completo).** Los IDOR cross-tenant **THR-001/THR-002/THR-013 (VULN-004/005) fueron remediados en B02** (auth + owner-check + `withRLS`; verificado con tests/lint/build). El riesgo residual principal ahora es **THR-003 (XSS IA — VULN-001)**, seguido de VULN-002 (secret token en GET webhooks) y VULN-006/007 (auth condicional/SSE sin auth). El resto de la superficie está cubierta por controles existentes (RLS transaccional, egress-guard, sandbox sin shell, hashing de API keys, HMAC, gitleaks). **Acción prioritaria:** remediar VULN-001 (escapeHtml en AiCopilot) y revisar VULN-002/006/007 en B03.
