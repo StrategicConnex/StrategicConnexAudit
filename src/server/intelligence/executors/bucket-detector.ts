@@ -48,9 +48,10 @@ export class BucketDetectorExecutor {
               // Network error, maybe protected or no HTTP
               findings.push({ bucketUrl: target, provider: provider.name, status: 'protected' });
             }
-          } catch (e: any) {
+          } catch (e: unknown) {
             // DNS resolution failed (NXDOMAIN), bucket doesn't exist
-            if (e.code !== 'ENOTFOUND') {
+            const errCode = e instanceof Error ? (e as NodeJS.ErrnoException).code : undefined;
+            if (errCode !== 'ENOTFOUND') {
               // Something else failed, ignore
             }
           }

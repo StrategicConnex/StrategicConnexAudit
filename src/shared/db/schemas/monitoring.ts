@@ -1,6 +1,6 @@
 import {
   pgTable, uuid, varchar, text, timestamp,
-  jsonb, boolean, index
+  jsonb, boolean, index, uniqueIndex
 } from "drizzle-orm/pg-core";
 import { users, projects } from "./index";
 
@@ -16,6 +16,7 @@ export const monitoringSchedules = pgTable("monitoring_schedules", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   index("idx_monitoring_schedules_project").on(t.projectId),
+  index("idx_monitoring_schedules_next_run").on(t.nextRunAt),
 ]);
 
 // ─── 2. Registro de Alertas de Drift de Seguridad ─────────────────────────────
@@ -31,6 +32,7 @@ export const monitoringAlerts = pgTable("monitoring_alerts", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   index("idx_monitoring_alerts_project_resolved").on(t.projectId, t.resolved),
+  index("idx_monitoring_alerts_project_created").on(t.projectId, t.createdAt),
 ]);
 
 // ─── 3. Keys de Desarrollo de la API ─────────────────────────────────────────
@@ -46,6 +48,7 @@ export const developerApiKeys = pgTable("developer_api_keys", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   index("idx_developer_api_keys_user").on(t.userId),
+  uniqueIndex("idx_developer_api_keys_hashed").on(t.hashedKey),
 ]);
 
 // ─── 4. Destinos Webhook para Integración ─────────────────────────────────────

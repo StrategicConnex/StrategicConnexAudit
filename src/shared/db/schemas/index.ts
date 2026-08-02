@@ -1,6 +1,6 @@
 import {
   pgTable, uuid, text, integer, timestamp, pgEnum,
-  jsonb, boolean, numeric, date, bigint, unique
+  jsonb, boolean, numeric, date, bigint, unique, index
 } from "drizzle-orm/pg-core";
 
 // Enums
@@ -104,7 +104,9 @@ export const integrationSyncLogs = pgTable("integration_sync_logs", {
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_integration_sync_logs_integration").on(t.integrationId),
+]);
 
 // 7. Integration Data GSC
 export const integrationDataGsc = pgTable("integration_data_gsc", {
@@ -364,7 +366,9 @@ export const abTests = pgTable("ab_tests", {
   uplift: numeric("uplift", { precision: 8, scale: 4 }),
   confidence: numeric("confidence", { precision: 5, scale: 4 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_ab_tests_project").on(t.projectId),
+]);
 
 // 24. AB Test Results
 export const abTestResults = pgTable("ab_test_results", {
@@ -411,7 +415,10 @@ export const reports = pgTable("reports", {
   createdBy: uuid("created_by").references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_reports_project").on(t.projectId),
+  index("idx_reports_created_by").on(t.createdBy),
+]);
 
 // 28. Report Exports
 export const reportExports = pgTable("report_exports", {
@@ -477,7 +484,9 @@ export const webVitalsLogs = pgTable("web_vitals_logs", {
   timing: jsonb("timing"),
   rawPayload: jsonb("raw_payload"),
   recordedAt: timestamp("recorded_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [
+  index("idx_web_vitals_project_recorded").on(t.projectId, t.recordedAt),
+]);
 
 export * from "./intelligence";
 export * from "./monitoring";

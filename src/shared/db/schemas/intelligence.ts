@@ -132,4 +132,7 @@ export const intelligenceUsageEvents = pgTable("intelligence_usage_events", {
   allowed: boolean("allowed").notNull(),
   reason: text("reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_intel_usage_project_created").on(t.projectId, t.createdAt),
+  index("idx_intel_usage_user").on(t.userId),
+]);

@@ -5,6 +5,7 @@ import {
   ToolExecutor, ExecutionContext, ExecutionResult, Finding, TlsScanOutput,
   WebsiteHeadersOutput, WebsiteSecurityHeadersOutput, WebsiteRobotsOutput,
   WebsiteRedirectsOutput, WebsiteCookiesOutput, WebsiteCspOutput,
+  errMsg,
 } from "../types/executor.types";
 
 const urlSchema = z.object({ url: z.string().url() });
@@ -36,13 +37,13 @@ export const websiteHeadersExecutor: ToolExecutor<{ url: string }, WebsiteHeader
       res.headers.forEach((val, key) => {
         headers[key] = val;
       });
-    } catch (e: any) {
-      ctx.log(`Error al descargar cabeceras: ${e.message}`);
+    } catch (e: unknown) {
+      ctx.log(`Error al descargar cabeceras: ${errMsg(e)}`);
       return {
         success: false,
         output: { url, status: 0, statusText: "Error", headers: {} },
         findings: [],
-        error: `Fallo al recuperar las cabeceras HTTP: ${e.message}`,
+        error: `Fallo al recuperar las cabeceras HTTP: ${errMsg(e)}`,
       };
     }
 
@@ -100,12 +101,12 @@ export const websiteSecurityHeadersExecutor: ToolExecutor<{ url: string }, Websi
         res.headers.forEach((val, key) => {
           headers[key.toLowerCase()] = val;
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         return {
           success: false,
           output: { url, hsts: null, csp: null, xfo: null, xcto: null, rp: null },
           findings: [],
-          error: `Error al conectar para analizar cabeceras de seguridad: ${e.message}`,
+          error: `Error al conectar para analizar cabeceras de seguridad: ${errMsg(e)}`,
         };
       }
     }
@@ -197,7 +198,7 @@ export const websiteTlsExecutor: ToolExecutor<{ host: string }, TlsScanOutput> =
       // Necesitamos leer el certificado incluso si es autofirmado o tiene una cadena de confianza
       // incompleta. NO usar esta conexión para comunicaciones sensibles con el host.
       const socket = tls.connect(443, host, { servername: host, rejectUnauthorized: false }, () => {
-        const cert: any = socket.getPeerCertificate(true);
+        const cert = socket.getPeerCertificate(true);
         const protocol = socket.getProtocol();
         const cipher = socket.getCipher();
 
@@ -218,8 +219,8 @@ export const websiteTlsExecutor: ToolExecutor<{ host: string }, TlsScanOutput> =
 
         const output: TlsScanOutput = {
           host,
-          subject: cert.subject?.CN || "Desconocido",
-          issuer: cert.issuer?.O || cert.issuer?.CN || "Desconocido",
+          subject: String(cert.subject?.CN || "Desconocido"),
+          issuer: String(cert.issuer?.O || cert.issuer?.CN || "Desconocido"),
           validFrom: cert.valid_from,
           validTo: cert.valid_to,
           daysRemaining,
@@ -369,7 +370,7 @@ export const websiteRedirectsExecutor: ToolExecutor<{ url: string }, WebsiteRedi
         if (res.status < 300 || res.status >= 400) break;
         if (!location) break;
         currentUrl = new URL(location, currentUrl).href;
-      } catch (e: any) {
+      } catch {
         chain.push({ url: currentUrl, status: 0, location: null });
         break;
       }
@@ -450,9 +451,9 @@ export const websiteCookiesExecutor: ToolExecutor<{ url: string }, WebsiteCookie
         const raw = res.headers.get("set-cookie");
         if (raw) setCookieHeaders = [raw];
       }
-    } catch (e: any) {
-      ctx.log(`Error fetching cookies: ${e.message}`);
-      return { success: false, output: { url, cookies: [], cookieCount: 0 }, findings: [], error: `Error al analizar cookies: ${e.message}` };
+    } catch (e: unknown) {
+      ctx.log(`Error fetching cookies: ${errMsg(e)}`);
+      return { success: false, output: { url, cookies: [], cookieCount: 0 }, findings: [], error: `Error al analizar cookies: ${errMsg(e)}` };
     }
 
     interface CookieInfo {
@@ -549,13 +550,13 @@ export const websiteCspExecutor: ToolExecutor<{ url: string }, WebsiteCspOutput>
         cspHeader = res2.headers.get("content-security-policy") ||
                     res2.headers.get("content-security-policy-report-only") || "";
       }
-    } catch (e: any) {
-      ctx.log(`Error fetching CSP: ${e.message}`);
+    } catch (e: unknown) {
+      ctx.log(`Error fetching CSP: ${errMsg(e)}`);
       return {
         success: false,
         output: { url, csp: null, directives: {}, score: 0, hasUnsafeInline: false, hasUnsafeEval: false, hasWildcardSrc: false, hasStrictDynamic: false, directiveCount: 0 },
         findings: [],
-        error: `Error al obtener CSP: ${e.message}`,
+        error: `Error al obtener CSP: ${errMsg(e)}`,
       };
     }
 

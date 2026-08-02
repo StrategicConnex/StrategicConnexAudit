@@ -13,7 +13,7 @@
 import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, WhoisFullOutput } from "../types/executor.types";
+import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, WhoisFullOutput, RdapResponse, errMsg } from "../types/executor.types";
 import { persistWhoisSnapshot } from "../history/whois-history";
 import { whoisCircuit, CircuitOpenError } from "../core/circuit-breaker";
 import { geoipCache, IntelligenceCache } from "../core/cache";
@@ -49,7 +49,7 @@ export const whoisFullExecutor: ToolExecutor<{ domain: string }, WhoisFullOutput
 
     // ── 1. Cache (cacheamos rdapData raw, no el snapshot con Date objects) ─
     const cacheKey = IntelligenceCache.buildKey("whois-full", domain);
-    const cachedRdap = geoipCache.get<any>(cacheKey);
+    const cachedRdap = geoipCache.get<RdapResponse>(cacheKey);
 
     if (cachedRdap) {
       ctx.log(`[WHOIS Full] Cache hit para ${domain}`);
@@ -58,7 +58,7 @@ export const whoisFullExecutor: ToolExecutor<{ domain: string }, WhoisFullOutput
     }
 
     // ── 2. Fetch RDAP (con circuit breaker) ───────────────────────────────
-    let rdapData: any = null;
+    let rdapData: RdapResponse | null = null;
     try {
       rdapData = await whoisCircuit.execute(async () => {
         const res = await safeFetch(`https://rdap.org/domain/${domain}`, {
@@ -67,11 +67,11 @@ export const whoisFullExecutor: ToolExecutor<{ domain: string }, WhoisFullOutput
         if (!res.ok) throw new Error(`RDAP HTTP ${res.status} para ${domain}`);
         return res.json();
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e instanceof CircuitOpenError) {
         ctx.log(`[WHOIS Full] Circuito abierto: ${e.message}. Usando fallback DNS.`);
       } else {
-        ctx.log(`[WHOIS Full] Error RDAP: ${e.message}. Usando fallback DNS.`);
+        ctx.log(`[WHOIS Full] Error RDAP: ${errMsg(e)}. Usando fallback DNS.`);
       }
       return buildFallbackResponse(domain, ctx);
     }
@@ -123,7 +123,7 @@ export const whoisFullExecutor: ToolExecutor<{ domain: string }, WhoisFullOutput
 //  Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-function parseRdapToSnapshot(domain: string, rdapData: any): WhoisSnapshot {
+function parseRdapToSnapshot(domain: string, rdapData: RdapResponse): WhoisSnapshot {
   const events = rdapData.events || [];
   let createdDate: Date | null = null;
   let expiresDate: Date | null = null;
@@ -155,9 +155,9 @@ function parseRdapToSnapshot(domain: string, rdapData: any): WhoisSnapshot {
   for (const entity of entities) {
     if (!entity.vcardArray?.[1]) continue;
     const vcard = entity.vcardArray[1];
-    const fnEntry = vcard.find((item: any) => item[0] === "fn");
-    const orgEntry = vcard.find((item: any) => item[0] === "org");
-    const emailEntry = vcard.find((item: any) => item[0] === "email");
+    const fnEntry = vcard.find((item) => item[0] === "fn");
+    const orgEntry = vcard.find((item) => item[0] === "org");
+    const emailEntry = vcard.find((item) => item[0] === "email");
 
     if (entity.roles?.includes("registrar") && fnEntry) registrar = fnEntry[3] || "Desconocido";
     if (entity.roles?.includes("abuse") && emailEntry) abuseContact = emailEntry[3] || null;

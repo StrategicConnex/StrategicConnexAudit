@@ -6,6 +6,7 @@ import {
   ToolExecutor, ExecutionContext, ExecutionResult, Finding,
   PingOutput, ReverseDnsOutput, GeoIpOutput, TracerouteOutput,
   AsnOutput, CdnOutput, WafOutput, ReverseIpOutput, IpReputationOutput,
+  errMsg,
 } from "../types/executor.types";
 
 const hostSchema = z.object({ host: z.string().min(3).max(253) });
@@ -16,6 +17,19 @@ const urlSchema = z.object({ url: z.string().min(3).max(2048) });
 /**
  * Helper para hashing de IP para generar datos de fallback deterministas pero realistas
  */
+/** Datos GeoIP normalizados (contrato interno de network.geoip / network.asn / threat.ip_reputation) */
+interface GeoIpData {
+  countryName?: string;
+  countryCode?: string;
+  regionName?: string;
+  cityName?: string;
+  asn?: string | number | null;
+  isp?: string;
+  isProxy?: boolean;
+  latitude?: number;
+  longitude?: number;
+}
+
 function getLocalGeoIPFallback(ip: string) {
   let hash = 0;
   for (let i = 0; i < ip.length; i++) {
@@ -266,7 +280,7 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, GeoIpOutput> = {
       else ipv4 = ip;
     }
 
-    let data: any = null;
+    let data: GeoIpData | null = null;
     
     // 1. Intentar API 1: freeipapi.com
     try {
@@ -274,8 +288,8 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, GeoIpOutput> = {
       if (res.ok) {
         data = await res.json();
       }
-    } catch (e: any) {
-      ctx.log(`Error consumiendo freeipapi: ${e.message}`);
+    } catch (e: unknown) {
+      ctx.log(`Error consumiendo freeipapi: ${errMsg(e)}`);
     }
 
     // 2. Intentar API 2: ip-api.com si la primera falla
@@ -298,8 +312,8 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, GeoIpOutput> = {
             };
           }
         }
-      } catch (e: any) {
-        ctx.log(`Error consumiendo ip-api: ${e.message}`);
+      } catch (e: unknown) {
+        ctx.log(`Error consumiendo ip-api: ${errMsg(e)}`);
       }
     }
 
@@ -501,7 +515,7 @@ export const networkAsnExecutor: ToolExecutor<{ ip: string }, AsnOutput> = {
     ctx.log(`Iniciando consulta ASN para IP: ${ip}`);
     await assertPublicHostname(ip);
 
-    let data: any = null;
+    let data: GeoIpData | null = null;
     
     // 1. Intentar API 1: freeipapi.com
     try {
@@ -509,8 +523,8 @@ export const networkAsnExecutor: ToolExecutor<{ ip: string }, AsnOutput> = {
       if (res.ok) {
         data = await res.json();
       }
-    } catch (e: any) {
-      ctx.log(`Error consumiendo freeipapi en ASN: ${e.message}`);
+    } catch (e: unknown) {
+      ctx.log(`Error consumiendo freeipapi en ASN: ${errMsg(e)}`);
     }
 
     // 2. Intentar API 2: ip-api.com
@@ -533,8 +547,8 @@ export const networkAsnExecutor: ToolExecutor<{ ip: string }, AsnOutput> = {
             };
           }
         }
-      } catch (e: any) {
-        ctx.log(`Error consumiendo ip-api en ASN: ${e.message}`);
+      } catch (e: unknown) {
+        ctx.log(`Error consumiendo ip-api en ASN: ${errMsg(e)}`);
       }
     }
 
@@ -742,8 +756,8 @@ export const networkWafExecutor: ToolExecutor<{ url: string }, WafOutput> = {
         confidence = 0.95;
         signatures.push("fortiweb");
       }
-    } catch (e: any) {
-      ctx.log(`Fallo al consultar URL para detección WAF: ${e.message}`);
+    } catch (e: unknown) {
+      ctx.log(`Fallo al consultar URL para detección WAF: ${errMsg(e)}`);
     }
 
     const output = {
@@ -847,7 +861,7 @@ export const threatIpReputationExecutor: ToolExecutor<{ ip: string }, IpReputati
     await assertPublicHostname(ip);
 
     // Hacemos un chequeo de reputación simulado altamente creíble y estructurado
-    let data: any = null;
+    let data: GeoIpData | null = null;
     try {
       const res = await safeFetch(`https://freeipapi.com/api/json/${ip}`);
       if (res.ok) {

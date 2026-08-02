@@ -24,12 +24,12 @@ const WEAK_CIPHERS = new Set([
 function tlsHandshake(
   host: string,
   options: tls.ConnectionOptions
-): Promise<{ protocol: string | null; cipher: string | null; cert: any }> {
+): Promise<{ protocol: string | null; cipher: string | null; cert: tls.PeerCertificate | null }> {
   return new Promise((resolve) => {
     const socket = tls.connect(443, host, options, () => {
       const protocol = socket.getProtocol();
       const cipher = socket.getCipher();
-      const cert: any = socket.getPeerCertificate(true);
+      const cert = socket.getPeerCertificate(true);
       socket.destroy();
       resolve({ protocol, cipher: cipher?.name || null, cert });
     });
@@ -79,7 +79,7 @@ export const tlsAdvancedExecutor: ToolExecutor<{ host: string }, TlsAdvancedOutp
     const output = {
       host, protocol: primary.protocol, cipher: primary.cipher,
       certificate: {
-        subject: cert?.subject?.CN || "N/A", issuer: cert?.issuer?.O || "N/A",
+        subject: String(cert?.subject?.CN ?? "N/A"), issuer: String(cert?.issuer?.O ?? "N/A"),
         validFrom: cert?.valid_from || "N/A", validTo: cert?.valid_to || "N/A",
         daysRemaining, fingerprint: cert?.fingerprint256 || "N/A",
         serialNumber: cert?.serialNumber || "N/A",

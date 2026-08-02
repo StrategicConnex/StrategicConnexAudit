@@ -512,6 +512,17 @@ export interface TechnologyProfileOutput {
 // mantenimiento manual. No duplicar aquí un mapa estático: colisionaría de nombre
 // y quedaría fuera de sync con el registry.
 
+/** Shape mínimo de respuesta RDAP (RFC 7483) compartido por osint.whois y whois.full */
+export interface RdapResponse {
+  events?: Array<{ eventAction: string; eventDate: string }>;
+  entities?: Array<{
+    roles?: string[];
+    vcardArray?: [string, Array<Array<string>>];
+  }>;
+  nameservers?: Array<{ ldhName?: string }>;
+  status?: string[];
+}
+
 export type InferExecutorInput<T extends ToolExecutor<any, any>> =
   T extends ToolExecutor<infer TInput, any> ? TInput : never;
 export type InferExecutorOutput<T extends ToolExecutor<any, any>> =
@@ -522,6 +533,11 @@ export interface ExecutionResult<TOutput> {
   output: TOutput;
   findings: Finding[];
   error?: string;
+}
+
+/** Extrae el mensaje de un error desconocido (catch) de forma segura */
+export function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }
 
 export interface ToolExecutor<TInput = unknown, TOutput = unknown> {
