@@ -351,11 +351,64 @@ flowchart LR
 
 ---
 
+---
+
+## 7. Auditoría Supabase/Postgres Best Practices — Migración 0019 (NUEVO)
+
+Aplicación del skill supabase-postgres-best-practices (reglas query-missing-indexes
+CRITICAL y security-rls-performance HIGH) sobre la capa de BD. Se detectaron
+columnas WHERE/JOIN y columnas de hot path SIN índice → seq scans en tablas de
+alto volumen y en cada request autenticado.
+
+### 7.1 Hallazgos y fixes (migración 0019_supabase_best_practices_indexes.sql)
+
+| # | Tabla / Columna | Problema (regla) | Índice creado |
+|---|-----------------|------------------|---------------|
+| 1 | web_vitals_logs (RUM) | Sin índice; dashboard filtra por (project_id, recorded_at) — CRITICAL | idx_web_vitals_project_recorded |
+| 2 | developer_api_keys.hashed_key | Lookup por hash en CADA request API (api-auth.ts) — CRITICAL | idx_developer_api_keys_hashed (UNIQUE) |
+| 3 | project_members.user_id | Policies RLS (0016) subquery por user_id; unique (project_id, user_id) no cubre — CRITICAL | idx_project_members_user |
+| 4 | intelligence_usage_events | Quota metering sin índice por project/user | idx_intel_usage_project_created + idx_intel_usage_user |
+| 5 | domain_technologies.project_id | FK sin índice (discovery JOIN) | idx_domain_technologies_project |
+| 6 | ab_tests.project_id | FK sin índice | idx_ab_tests_project |
+| 7 | reports.project_id / created_by | FKs sin índice | idx_reports_project + idx_reports_created_by |
+| 8 | integration_sync_logs.integration_id | FK sin índice | idx_integration_sync_logs_integration |
+| 9 | monitoring_alerts | orderBy createdAt desc sin cobertura | idx_monitoring_alerts_project_created |
+| 10 | monitoring_schedules.next_run_at | Cron de uptime consulta por nextRunAt | idx_monitoring_schedules_next_run |
+| 11 | team_audit_logs.project_id / project_invitations.invited_by | FKs sin índice | idx_team_audit_logs_project + idx_project_invitations_invited_by |
+
+### 7.2 Sincronización con schemas Drizzle (fuente única)
+
+Los índices se declararon también en los schemas (index.ts, monitoring.ts,
+teams.ts, technologies.ts, intelligence.ts) y la migración se registró en
+drizzle/meta/_journal.json (idx 19) → drizzle-kit push no lo considera drift.
+
+### 7.3 Buenas prácticas aplicadas (skill supabase-postgres-best-practices)
+
+- query-missing-indexes: índices en columnas WHERE/JOIN de alto tráfico.
+- security-rls-performance: el índice project_members.user_id acelera las
+  policies de membresía (subquery por user_id) ~5-10x.
+- conn-*: max: 2 en producción (Vercel + Supabase pooler) ya estaba configurado
+  — correcto para no agotar el límite de conexiones del pooler.
+- CREATE INDEX IF NOT EXISTS: migración idempotente y re-ejecutable.
+
+```mermaid
+flowchart LR
+  A[Migración 0019] --> B[12 CREATE INDEX IF NOT EXISTS]
+  B --> C[web_vitals RUM]
+  B --> D[developer_api_keys.hashed_key]
+  B --> E[project_members.user_id]
+  B --> F[FKs core: ab_tests, reports, integration_sync_logs]
+  B --> G[monitoring: alerts + schedules]
+  B --> H[usage_events + domain_technologies + teams]
+```
+
+---
+
 ## Versionado
 
 | Campo | Valor |
 |-------|-------|
-| Versión | 1.1 |
+| Versión | 1.2 |
 | Fecha | 2026-08-01 |
 | Autor | Equipo SCAUDIT |
 | Estado | Aprobado |
