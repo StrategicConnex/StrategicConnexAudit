@@ -22,6 +22,25 @@ jobs:
       - run: pnpm lint
       - run: pnpm build
 
+  secret-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    # B02/T02-04: detección de secretos reales en el repo. Corre gitleaks sobre
+    # todo el historial (fetch-depth: 0). Falla el build si encuentra un leak.
+    # ⚠️ No bloqueante en este entorno de prueba (continue-on-error): si gitleaks
+    # no puede autenticarse/licenciarse, el job se reporta como skip sin romper
+    # CI. Para activarlo como barrera dura, quitar `continue-on-error: true`.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
   docs-quality-gate:
     name: Docs Quality Gate
     runs-on: ubuntu-latest
