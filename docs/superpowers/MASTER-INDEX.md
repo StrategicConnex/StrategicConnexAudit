@@ -5,7 +5,7 @@
 > **Regla de gobierno:** actualizar este índice al cerrar cada batch y tras cualquier cambio de estado de un artefacto (§53 del master prompt).
 
 **Plan fuente:** `docs/superpowers/plans/2026-08-01-engineering-master-plan.md` [VERIFIED]
-**Última actualización:** 2026-08-02 (BATCH 03 — B03 completado)
+**Última actualización:** 2026-08-02 (BATCH 04 — B04 completado)
 
 ---
 
@@ -17,7 +17,7 @@
 | B01 | Arquitectura y Proyecto | **completado** (2026-08-02) | PROJECT-INVENTORY, SYSTEM-MAP, DEPENDENCY-GRAPH, ADR-000..006 | `docs/architecture/` |
 | B02 | Seguridad y Auth | **completado** (2026-08-02) | SECURITY-AUDIT-REPORT v2.0, THREAT-REGISTER, rls.test.ts, secret-scan, ENVIRONMENT-MATRIX | `docs/security/`, `docs/guides/`, `src/shared/db/` |
 | B03 | Base de Datos y Datos | **completado** (2026-08-02) | DATA-DICTIONARY, ERD, INDEX-STRATEGY, Data Lineage, estado migraciones | `docs/database/` |
-| B04 | Módulos y Contratos | pendiente | Module Contract ×9 módulos | `docs/modules/` |
+| B04 | Módulos y Contratos | **completado** (2026-08-02) | Module Contract template + ×9 módulos (gate 100/100 c/u) | `docs/modules/` |
 | B05 | Jobs y Trigger.dev | pendiente | Job Contract ×12 triggers | `docs/jobs/` |
 | B06 | Testing | pendiente | TEST-COVERAGE-MATRIX + tests nuevos | `docs/testing/` |
 | B07 | Performance | pendiente | Refresh PERFORMANCE_REPORT + CWV + bundle | `docs/improvements/` |
@@ -45,7 +45,7 @@
 | ENVIRONMENT-MATRIX | creado (37 vars por ambiente) | `docs/guides/ENVIRONMENT-MATRIX.md` | B02 |
 | RLS contract test | creado (5 tests) | `src/shared/db/rls.test.ts` | B02 |
 | CI secret-scan | añadido (gitleaks) | `.github/workflows/ci.yml` | B02 |
-| Module Contracts (9) | por crear | `docs/modules/` | B04 |
+| Module Contracts (template + 9) | creados (gate 100/100 c/u) | `docs/modules/` | B04 |
 | Job Contracts (12) | por crear | `docs/jobs/` | B05 |
 | TEST-COVERAGE-MATRIX | por crear | `docs/testing/TEST-COVERAGE-MATRIX.md` | B06 |
 | OBSERVABILITY-MATRIX | por crear | `docs/observability/OBSERVABILITY-MATRIX.md` | B08 |
@@ -78,7 +78,11 @@
   - [x] T03-03 INDEX-STRATEGY.md — MAT-021/022; 7 índices [RECOMMENDED] con consultas reales; 8 hallazgos (MAT-201..208)
   - [x] Verificación migraciones: journal 20 (0000–0019) vs disco 21 → huérfano `0001_quota_enforcement.sql` confirmado (byte-idéntico a 0002); `0010_snapshot.json` malformed (2 tablas); faltan 12 snapshots
   - [x] **HIGIENE DE MIGRACIONES (MODE C, aprobado en CHECKPOINT, commit `2f977c3`):** eliminado `0001_quota_enforcement.sql` (duplicado de 0002) y `0010_snapshot.json` (malformed); regenerado `0019_snapshot.json` (58 tablas, 21 enums, prevId→0006). Verificado: `drizzle-kit check` → "Everything's fine", `drizzle-kit generate` → "No schema changes" (db:generate desbloqueado), `pnpm build` PASS. INDEX-STRATEGY actualizado.
-- [ ] **B04 — Módulos y Contratos** (Module Contract template + 9 módulos)
+- [x] **B04 — Módulos y Contratos** (completado 2026-08-02; commits `docs(b04)`)
+  - [x] T04-01 MODULE-CONTRACT-template.md (13 secciones, §5 gobernanza, gate 100/100)
+  - [x] 9 contratos de módulo (audit, backlinks, competitors, cro, integrations, keywords, performance, reporting, schema) — gate 100/100 cada uno, evidencia `[VERIFIED]` con rutas reales
+  - [x] Hallazgos documentados: 9 módulos esqueleto vacíos (0 archivos), 4 dominios sin lógica, fugas de infraestructura (sin escritor/consumidor), PerformanceTab estático
+  - [x] Verificación: quality gate 100/100 ×10 docs, `pnpm build` PASS
 - [ ] **B05 — Jobs y Trigger.dev** (Job Contract ×12 + análisis idempotencia)
 - [ ] **B06 — Testing** (TEST-COVERAGE-MATRIX + unit tests `src/modules` + route tests)
 - [ ] **B07 — Performance** (refresh PERFORMANCE_REPORT + CWV + bundle)
@@ -108,3 +112,4 @@
 - B01 (2026-08-02): 4 commits `docs(b01): ...` (T01-01..T01-04). Hallazgos transferibles a B02/B03: migración huérfana `0001_quota_enforcement.sql`; duplicación `AttackSurfaceGraph` (2 componentes, HIGH); 9 ciclos types-only en `schemas/index.ts`; `src/modules/` sin tests; cobertura Statements 12.51% preexistente. Check 04 del gate en PROJECT-INVENTORY (ERD/dictionary) quedó fuera de alcance del inventario y se reportó sin arreglar.
 - B02 (2026-08-02): 3 commits (`docs(b02)`, `test(b02)`, `ci(b02)`) + 2 de remediación (`fix(b02)`). **Hallazgos HIGH remediados (MODE C, aprobado en CHECKPOINT):** VULN-004 IDOR cross-tenant en `/api/intelligence/history` (sin auth, directDb) → auth (`authenticate`) + owner-check `withRLS`; VULN-005 IDOR en `/api/intelligence/assets/graph` (sin auth, sin RLS) → auth + queries en `withRLS`. Verificado: tests 253/253, lint 0 errores, build PASS. **Pendientes (B03):** VULN-001 XSS IA AiCopilot (escapeHtml), VULN-002 secret token GET webhooks, VULN-003 `/intelligence` fuera de rutas del middleware, VULN-006 auth condicional looker-studio, VULN-007 SSE pdf/progress sin auth. Inconsistencia env: `NEXT_PUBLIC_SUPABASE_ANON_KEY` vs `PUBLISHABLE_KEY` en `useRealtimeMetrics.ts`. Gitleaks añadido con `continue-on-error` (barrera dura pendiente de validar en GitHub Actions). [OBSERVED]
 - B03 (2026-08-02): 4 commits `docs(b03): ...` (T03-01..T03-03 + cierre) + 1 de higiene (`fix(db)`). 58 tablas documentadas (el plan asumía 56; la real es mayor — ver DATA-DICTIONARY §Anexo). **Higiene de migraciones ejecutada (MODE C, aprobado en CHECKPOINT, commit `2f977c3`):** eliminado huérfano `0001_quota_enforcement.sql` (byte-idéntico a `0002`, SHA-256 `DF676882…E266`); eliminado `0010_snapshot.json` malformed; regenerado `0019_snapshot.json` desde esquemas TS (58 tablas, 21 enums, prevId→0006). Verificado: `drizzle-kit check` "Everything's fine" ✅, `drizzle-kit generate` "No schema changes" ✅ (db:generate desbloqueado), `pnpm build` PASS ✅. **Drift restante (documentado, no bloqueante):** `idx_adversary_mitre_id` no-único (0012) ausente del esquema; triggers de cuota fuera de esquemas Drizzle; `push_subscriptions.active` es `text 'true'`; 12 snapshots intermedios faltantes (no regenerables sin BD de referencia). Pendiente B03→B04: validar CI gitleaks, 5 VULN del B02 (VULN-001 XSS IA, VULN-002, VULN-003, VULN-006, VULN-007), recomendar MAT-205 (dropear índice no-único) en siguiente MODE C. [OBSERVED]
+- B04 (2026-08-02): 2 commits `docs(b04): ...` (`25d9ac0` + cierre). **Inventario real `src/modules/*`:** 9 directorios (audit, backlinks, competitors, cro, integrations, keywords, performance, reporting, schema) con estructura clean-architecture (`application/`, `domain/`, `infrastructure/`, `presentation/`) pero **0 archivos** — 153 subdirectorios vacíos, 0 rastreados por git. La funcionalidad real vive en capas legacy (`src/app/actions/*`, `src/app/api/**`, `src/trigger/*`). **Hallazgos transferibles a B05/B06/B10:** `integration_sync_logs`/`integration_data_bing`/`integrations` sin escritor; `performance_results` sin consumidor (`PerformanceTab.tsx` con datos estáticos hardcodeados L28-39); no existe `src/app/api/integrations/**` (fuga de infraestructura); `reports.report` sin escritor (comentario `-- Legacy: reports.report`); 4 dominios sin lógica de negocio (backlinks, competitors, cro, schema — tablas solo-seed). Contract tests de RLS cubren tabla `competitors` pero ningún test cubre los módulos. Verificado: quality gate 100/100 ×10 docs, `pnpm build` PASS. [OBSERVED]
