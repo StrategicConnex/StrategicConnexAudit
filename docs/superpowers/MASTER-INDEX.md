@@ -5,7 +5,7 @@
 > **Regla de gobierno:** actualizar este índice al cerrar cada batch y tras cualquier cambio de estado de un artefacto (§53 del master prompt).
 
 **Plan fuente:** `docs/superpowers/plans/2026-08-01-engineering-master-plan.md` [VERIFIED]
-**Última actualización:** 2026-08-01 (BATCH 00)
+**Última actualización:** 2026-08-01 (BATCH 00 — T00-03 baseline registrado)
 
 ---
 
@@ -31,7 +31,7 @@
 |-----------|--------|------|-------|
 | MASTER-INDEX (este archivo) | creado | `docs/superpowers/MASTER-INDEX.md` | B00 |
 | Esqueleto `docs/` target (10 dirs + `.gitkeep`) | creado | `docs/{adr,database,modules,jobs,testing,observability,i18n,risk,technical-debt,traceability}/` | B00 |
-| Baseline de verificación (lint/build/test/coverage) | en registro | `docs/superpowers/MASTER-INDEX.md` §Baseline | B00 |
+| Baseline de verificación (lint/build/test/coverage) | registrado | `docs/superpowers/MASTER-INDEX.md` §Baseline | B00 |
 | ENTERPRISE-ARCHITECTURE.md | existe — actualizar | `docs/architecture/ENTERPRISE-ARCHITECTURE.md` | B01 |
 | ADR-000..006 | por crear | `docs/architecture/ADR/` | B01 |
 | DATA-DICTIONARY / ERD / INDEX-STRATEGY | por crear | `docs/database/` | B03 |
@@ -66,14 +66,18 @@
 
 ## Baseline de verificación
 
-> Registrado por T00-03 el 2026-08-01. Comandos: `pnpm lint` · `pnpm build` · `pnpm test` · `pnpm test:coverage`.
+> Registrado por T00-03 el 2026-08-01. Comandos: `pnpm lint` · `pnpm build` · `pnpm test` · `pnpm test:coverage`. Fuente: salida real de los comandos [VERIFIED].
 
 | Comando | Resultado | Detalle |
 |---------|-----------|---------|
-| `pnpm lint` | _pendiente de registro_ | — |
-| `pnpm build` | _pendiente de registro_ | — |
-| `pnpm test` | _pendiente de registro_ | nº tests / pass |
-| `pnpm test:coverage` | _pendiente de registro_ | % líneas / % branches |
+| `pnpm lint` | **PASS** — 0 errores, 69 warnings | warnings `no-unused-vars` / `react-hooks/exhaustive-deps` preexistentes, no bloqueantes |
+| `pnpm build` | **PASS** — compilado OK (37.7s + TS 37.0s) | Next.js 16.2.4 Turbopack; 1 warning no bloqueante (NFT trace en `next.config.ts`) |
+| `pnpm test` | **PASS** — 248 tests / 248 passed (19 files) | Vitest 4.1.5, duración 27.52s |
+| `pnpm test:coverage` | **EJECUTADO — NO cumple umbrales globales (exit 1)** | Statements 12.51% (umbral 25%) · Branches 9.78% (umbral 20%) · Functions 8.8% (umbral 20%) · Lines 12.46% (umbral 25%) |
+
+> **Nota coverage:** los tests pasan en verde; el fallo es solo de umbral de cobertura global (preexistente, no causado por B00). Registrado como baseline para verificar no-regresión. Ver `docs/testing/TEST-COVERAGE-MATRIX.md` (B06) y `src/trigger/*` al 0% como áreas críticas.
+>
+> **Nota quality gate:** `node scripts/quality-gate.mjs docs/superpowers/MASTER-INDEX.md --min 80` → **10/100 FAIL** porque el validador usa el template de 20 secciones de documentación técnica (scope/arquitectura/flujos/API…). MASTER-INDEX.md es un artefacto de gobernanza, no un doc técnico; el plan remite el ajuste del validador a B10. No bloqueante para B00 [OBSERVED].
 
 ## Notas
 
