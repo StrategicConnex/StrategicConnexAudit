@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, timestamp, pgEnum, unique
+  pgTable, uuid, text, timestamp, pgEnum, unique, index
 } from "drizzle-orm/pg-core";
 import { users, projects } from "./index";
 
@@ -21,7 +21,8 @@ export const projectMembers = pgTable("project_members", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
-  unique().on(t.projectId, t.userId)
+  unique().on(t.projectId, t.userId),
+  index("idx_project_members_user").on(t.userId),
 ]);
 
 // 3. Project Invitations Table
@@ -35,7 +36,8 @@ export const projectInvitations = pgTable("project_invitations", {
   invitedBy: uuid("invited_by").references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
-  unique().on(t.projectId, t.email)
+  unique().on(t.projectId, t.email),
+  index("idx_project_invitations_invited_by").on(t.invitedBy),
 ]);
 
 // 4. Team Audit Logs Table
@@ -47,4 +49,6 @@ export const teamAuditLogs = pgTable("team_audit_logs", {
   targetEmail: text("target_email"),
   role: projectRoleEnum("role"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_team_audit_logs_project").on(t.projectId),
+]);

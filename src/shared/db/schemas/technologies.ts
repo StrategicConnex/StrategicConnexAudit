@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, timestamp, jsonb, numeric
+  pgTable, uuid, text, timestamp, jsonb, numeric, index
 } from "drizzle-orm/pg-core";
 import { projects } from "./index";
 
@@ -11,4 +11,6 @@ export const domainTechnologies = pgTable("domain_technologies", {
   category: text("category").notNull(),
   confidence: numeric("confidence", { precision: 4, scale: 3 }).notNull().default("0.900"),
   detectedAt: timestamp("detected_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_domain_technologies_project").on(t.projectId),
+]);

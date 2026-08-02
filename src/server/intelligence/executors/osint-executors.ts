@@ -1,7 +1,7 @@
 import { z } from "zod";
 import dns from "node:dns/promises";
 import { assertPublicHostname, safeFetch } from "../security/egress-guard";
-import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, OsintWhoisOutput } from "../types/executor.types";
+import { ToolExecutor, ExecutionContext, ExecutionResult, Finding, OsintWhoisOutput, RdapResponse, errMsg } from "../types/executor.types";
 import { whoisCircuit, CircuitOpenError } from "../core/circuit-breaker";
 import { geoipCache, IntelligenceCache } from "../core/cache";
 import { persistWhoisSnapshot } from "../history/whois-history";
@@ -23,11 +23,11 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
     ctx.log(`Iniciando consulta OSINT RDAP para: ${domain}`);
     await assertPublicHostname(domain);
 
-    let rdapData: any = null;
+    let rdapData: RdapResponse | null = null;
     try {
       // Verificar caché antes de llamar a la API RDAP
       const cacheKey = IntelligenceCache.buildKey("rdap", domain);
-      const cachedRdap = geoipCache.get<any>(cacheKey);
+      const cachedRdap = geoipCache.get<RdapResponse>(cacheKey);
 
       if (cachedRdap) {
         rdapData = cachedRdap;
@@ -41,11 +41,11 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
         // Cachear resultado 30 minutos (datos WHOIS son muy estables)
         geoipCache.set(cacheKey, rdapData, 30 * 60 * 1000);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e instanceof CircuitOpenError) {
         ctx.log(`Circuito WHOIS/RDAP abierto: ${e.message}. Usando estimación local.`);
       } else {
-        ctx.log(`Error consumiendo API RDAP pública: ${e.message}`);
+        ctx.log(`Error consumiendo API RDAP pública: ${errMsg(e)}`);
       }
     }
 
@@ -134,7 +134,7 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
       if (entity.roles && entity.roles.includes("registrar")) {
         const vcard = entity.vcardArray;
         if (vcard && vcard[1]) {
-          const fn = vcard[1].find((item: any) => item[0] === "fn");
+          const fn = vcard[1].find((item) => item[0] === "fn");
           if (fn) {
             registrar = fn[3];
           }
@@ -145,7 +145,7 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
     // Obtener Nameservers desde RDAP o vía resolución DNS directa
     let nameservers: string[] = [];
     if (rdapData.nameservers) {
-      nameservers = rdapData.nameservers.map((ns: any) => ns.ldhName).filter(Boolean);
+      nameservers = rdapData.nameservers.map((ns) => ns.ldhName ?? "").filter(Boolean);
     }
     if (nameservers.length === 0) {
       try {
