@@ -1,8 +1,8 @@
 ---
-version: 2.0
+version: 2.1
 date: 2026-08-02
 author: Equipo SCAUDIT — Security Review
-status: Aprobado con hallazgos pendientes de remediación
+status: Aprobado — VULN-004/005 (IDOR High) remediados; restan VULN-001 (XSS IA High) + Medium/Low
 ---
 
 # 🔐 SCAUDIT — Reporte de Auditoría de Seguridad (OWASP / DevSecOps)
@@ -178,8 +178,8 @@ flowchart TB
 
 | Ruta | Método | Hallazgo | Severidad |
 |---|---|---|---|
-| `/api/intelligence/history` | GET | IDOR cross-tenant vía directDb (VULN-004) | **High** |
-| `/api/intelligence/assets/graph` | GET | IDOR cross-tenant sin RLS (VULN-005) | **High** |
+| `/api/intelligence/history` | GET | ~~IDOR cross-tenant vía directDb~~ **REMEDIADO** — auth + owner-check (VULN-004) | ~~High~~ Resuelto |
+| `/api/intelligence/assets/graph` | GET | ~~IDOR cross-tenant sin RLS~~ **REMEDIADO** — auth + `withRLS` (VULN-005) | ~~High~~ Resuelto |
 | `/api/reports/pdf/progress` | GET | SSE sin auth, genId adivinable (VULN-007) | Medium |
 | `/api/projects/[id]/members` | GET/POST | Mock, datos falsos, sin auth (VULN-008) | Low |
 | `/api/intelligence/graph` | GET | Mock traversal, sin auth, sin datos reales (VULN-009) | Low |
@@ -214,21 +214,28 @@ flowchart TB
 - **Confidence:** Medium
 - **Fix:** Agregar `/intelligence` a `isProtectedRoute` (o default-deny).
 
-### VULN-004 — IDOR cross-tenant en `/api/intelligence/history` (High) — NUEVO
+### VULN-004 — IDOR cross-tenant en `/api/intelligence/history` (High) — REMEDIADO ✅
 
 - **Location:** `src/app/api/intelligence/history/route.ts`
 - **Confidence:** High
-- **Issue:** El handler solo pasa por `withRateLimit` (rate limit por IP, **sin** `authenticate`). Acepta `projectId` arbitrario y consulta `queryDnsHistory` / `queryWhoisHistory` / `getProjectHistoryTimeline`, que operan sobre `directDb` — **bypass total de RLS**. Cualquier atacante con un UUID válido (o fuerza bruta de UUIDs) lee el historial DNS/WHOIS de cualquier proyecto. [VERIFIED, código leído]
-- **Impact:** Fuga cross-tenant de historial de resoluciones DNS/WHOIS y timeline de todos los proyectos.
-- **Fix:** Exigir sesión (createClient + auth.getUser) y verificar ownership del proyecto (RLS o `ownerId`), antes de consultar el historial.
+- **Issue (original):** El handler solo pasaba por `withRateLimit` (rate limit por IP, **sin** `authenticate`). Aceptaba `projectId` arbitrario y consultaba `queryDnsHistory` / `queryWhoisHistory` / `getProjectHistoryTimeline`, que operan sobre `directDb` — **bypass total de RLS**. Cualquier atacante con un UUID válido (o fuerza bruta de UUIDs) podía leer el historial DNS/WHOIS de cualquier proyecto. [VERIFIED, código leído]
+- **Impact (original):** Fuga cross-tenant de historial de resoluciones DNS/WHOIS y timeline de todos los proyectos.
+- **Fix aplicado (commit `fix(b02): remediar IDOR history`):**
+  1. `withRateLimit` ahora usa `authenticate` → exige sesión y rate-limita por `user.id` (401 si no hay usuario).
+  2. Antes de consultar el historial, verifica ownership del proyecto con `withRLS(user.id)` (`projects.findFirst` por `id`); si no lo posee → 404.
+  3. Los readers siguen en `directDb` (necesario para workers de persistencia), pero el acceso ahora está acotado por el owner-check previo.
+- **Estado:** Resuelto. Verificado con `pnpm test` (253/253), `pnpm lint` (0 errores) y `pnpm build`.
 
-### VULN-005 — IDOR cross-tenant en `/api/intelligence/assets/graph` (High) — NUEVO
+### VULN-005 — IDOR cross-tenant en `/api/intelligence/assets/graph` (High) — REMEDIADO ✅
 
 - **Location:** `src/app/api/intelligence/assets/graph/route.ts`
 - **Confidence:** High
-- **Issue:** `GET` sin autenticación ni rate limit. Consulta `db.query.intelligenceAssets` / `intelligenceFindings` por `projectId` **sin** `withRLS` y sin owner-check — como el pool `db` se ejecuta con el rol del `DATABASE_URL` (postgres, superusuario RLS-bypass), expone assets + findings de cualquier proyecto. [VERIFIED, código leído]
-- **Impact:** Fuga cross-tenant de assets descubiertos, metadata y hallazgos (severidades, evidencia).
-- **Fix:** Autenticar sesión, validar ownership y envolver en `withRLS(user.id)`.
+- **Issue (original):** `GET` sin autenticación ni rate limit. Consultaba `db.query.intelligenceAssets` / `intelligenceFindings` por `projectId` **sin** `withRLS` y sin owner-check — como el pool `db` se ejecuta con el rol del `DATABASE_URL` (postgres, superusuario RLS-bypass), exponía assets + findings de cualquier proyecto. [VERIFIED, código leído]
+- **Impact (original):** Fuga cross-tenant de assets descubiertos, metadata y hallazgos (severidades, evidencia).
+- **Fix aplicado (commit `fix(b02): remediar IDOR assets/graph`):**
+  1. `createClient()` + `auth.getUser()` → 401 si no hay sesión.
+  2. Ambas queries envueltas en `withRLS(user.id)` → RLS aísla el acceso por proyecto.
+- **Estado:** Resuelto. Verificado con `pnpm test` (253/253), `pnpm lint` (0 errores) y `pnpm build`.
 
 ### VULN-006 — Auth condicional en `/api/looker-studio` (Medium) — NUEVO
 

@@ -64,11 +64,12 @@
   - [x] T01-02 SYSTEM-MAP.md — FLUJO A (request) + FLUJO B (Trigger.dev) + Module Map, gate 100/100
   - [x] T01-03 DEPENDENCY-GRAPH.md — madge 282 files, 9 ciclos types-only, fan-in/out, god modules, duplicación `AttackSurfaceGraph`, gate 100/100
   - [x] T01-04 ADR-000-template + ADR-001..006 — 7 archivos, 8 secciones + evidencia `[VERIFIED]`, gate 100/100 cada uno
-- [x] **B02 — Seguridad y Auth** (completado 2026-08-02; commits `docs(b02)`, `test(b02)`, `ci(b02)`)
-  - [x] T02-01 SECURITY-AUDIT-REPORT.md refresh v2.0 — inventario 42 rutas, matriz OWASP, Service Role verificado; gate 100/100
+- [x] **B02 — Seguridad y Auth** (completado 2026-08-02; commits `docs(b02)`, `test(b02)`, `ci(b02)`, `fix(b02)`)
+  - [x] T02-01 SECURITY-AUDIT-REPORT.md refresh v2.1 — inventario 42 rutas, matriz OWASP, Service Role verificado; gate 100/100
   - [x] T02-02 THREAT-REGISTER.md — 15 amenazas STRIDE, 7 columnas, controles → archivos; gate 100/100
   - [x] T02-03 rls.test.ts — contract test SQL de withRLS (5 tests verdes); isolación por usuario verificada
   - [x] T02-04 secret-scan (gitleaks) en CI + ENVIRONMENT-MATRIX.md (37 vars, gate 100/100)
+  - [x] **REMEDIACIÓN IDOR (MODE C, aprobado en CHECKPOINT):** VULN-004 `history` (auth `authenticate` + owner-check `withRLS` → 404) y VULN-005 `assets/graph` (auth + queries en `withRLS`). Verificado: tests 253/253, lint 0 errores, build PASS. SECURITY-AUDIT v2.1 + THREAT-REGISTER actualizados.
 - [ ] **B03 — Base de Datos y Datos** (DATA-DICTIONARY, ERD, INDEX-STRATEGY, migraciones)- [ ] **B04 — Módulos y Contratos** (Module Contract template + 9 módulos)
 - [ ] **B05 — Jobs y Trigger.dev** (Job Contract ×12 + análisis idempotencia)
 - [ ] **B06 — Testing** (TEST-COVERAGE-MATRIX + unit tests `src/modules` + route tests)
@@ -97,4 +98,4 @@
 - T00-01 respetó exactamente la división en 2 commits del plan. Archivos no relacionados con B00 (`.claude/`, `.idea/`, `.serena/`, `docs/scaudit-documentacion-unificada.html`, `docs/superpowers/plans/…`) quedaron **sin commitear** [OBSERVED].
 - El archivo del plan (`docs/superpowers/plans/2026-08-01-engineering-master-plan.md`) se mantiene intacto y **sin commitear** (no estaba listado en los commits de T00-01) [OBSERVED].
 - B01 (2026-08-02): 4 commits `docs(b01): ...` (T01-01..T01-04). Hallazgos transferibles a B02/B03: migración huérfana `0001_quota_enforcement.sql`; duplicación `AttackSurfaceGraph` (2 componentes, HIGH); 9 ciclos types-only en `schemas/index.ts`; `src/modules/` sin tests; cobertura Statements 12.51% preexistente. Check 04 del gate en PROJECT-INVENTORY (ERD/dictionary) quedó fuera de alcance del inventario y se reportó sin arreglar.
-- B02 (2026-08-02): 3 commits (`docs(b02)`, `test(b02)`, `ci(b02)`). **Hallazgos nuevos HIGH:** VULN-004 IDOR cross-tenant en `/api/intelligence/history` (sin auth, directDb), VULN-005 IDOR en `/api/intelligence/assets/graph` (sin auth, sin RLS). Pendiente aprobación del usuario para remediar (MODE C) — ver CHECKPOINT B02. Inconsistencia env: `NEXT_PUBLIC_SUPABASE_ANON_KEY` vs `PUBLISHABLE_KEY` en `useRealtimeMetrics.ts`. Gitleaks añadido con `continue-on-error` (barrera dura pendiente de validar en GitHub Actions). [OBSERVED]
+- B02 (2026-08-02): 3 commits (`docs(b02)`, `test(b02)`, `ci(b02)`) + 2 de remediación (`fix(b02)`). **Hallazgos HIGH remediados (MODE C, aprobado en CHECKPOINT):** VULN-004 IDOR cross-tenant en `/api/intelligence/history` (sin auth, directDb) → auth (`authenticate`) + owner-check `withRLS`; VULN-005 IDOR en `/api/intelligence/assets/graph` (sin auth, sin RLS) → auth + queries en `withRLS`. Verificado: tests 253/253, lint 0 errores, build PASS. **Pendientes (B03):** VULN-001 XSS IA AiCopilot (escapeHtml), VULN-002 secret token GET webhooks, VULN-003 `/intelligence` fuera de rutas del middleware, VULN-006 auth condicional looker-studio, VULN-007 SSE pdf/progress sin auth. Inconsistencia env: `NEXT_PUBLIC_SUPABASE_ANON_KEY` vs `PUBLISHABLE_KEY` en `useRealtimeMetrics.ts`. Gitleaks añadido con `continue-on-error` (barrera dura pendiente de validar en GitHub Actions). [OBSERVED]
