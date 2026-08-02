@@ -57,6 +57,8 @@ SCAUDIT (StrategicAudit Pro) es una plataforma **enterprise-grade de inteligenci
 
 **Exclusiones:** detalles internos de terceros (Supabase, Vercel, OpenRouter), procedimientos de negocio de StrategicConnex.
 
+**Documentos de decisión (ADRs):** las decisiones históricas clave están registradas en [ADR-000-template](ADR/ADR-000-template.md) · [ADR-001](ADR/ADR-001-consolidar-tool-registry.md) (tool-registry C05) · [ADR-002](ADR/ADR-002-fail-open-rate-limit.md) (fail-open Redis) · [ADR-003](ADR/ADR-003-i18n-cookie-based.md) (i18n cookie) · [ADR-004](ADR/ADR-004-polling-vs-sse.md) (polling vs SSE) · [ADR-005](ADR/ADR-005-egress-guard-ssrf.md) (egress SSRF) · [ADR-006](ADR/ADR-006-rls-with-set-local-role.md) (RLS `SET LOCAL ROLE`).
+
 ---
 
 ## 3. System Context (C1)
