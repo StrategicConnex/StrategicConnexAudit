@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         .update(pushSubscriptions)
         .set({
           subscription: subscription as Record<string, unknown>,
-          active: "true",
+          active: true,
           userAgent: req.headers.get("user-agent") || undefined,
           updatedAt: new Date(),
         })
@@ -128,7 +128,7 @@ export async function DELETE(req: NextRequest) {
     // 3. Deactivate subscription
     await directDb
       .update(pushSubscriptions)
-      .set({ active: "false", updatedAt: new Date() })
+      .set({ active: false, updatedAt: new Date() })
       .where(eq(pushSubscriptions.endpoint, endpoint));
 
     return NextResponse.json({ success: true, status: "unsubscribed" });
@@ -164,7 +164,7 @@ export async function GET(req: NextRequest) {
         .where(
           and(
             eq(pushSubscriptions.userId, user.id),
-            eq(pushSubscriptions.active, "true"),
+            eq(pushSubscriptions.active, true),
           ),
         )
         .orderBy(pushSubscriptions.createdAt);

@@ -13,6 +13,7 @@ import {
   pgTable, uuid, text, timestamp, integer,
   jsonb, index
 } from "drizzle-orm/pg-core";
+import { desc } from "drizzle-orm";
 import { projects } from "./index";
 import { intelligenceInvestigations } from "./intelligence";
 
@@ -37,6 +38,13 @@ export const dnsHistory = pgTable("dns_history", {
   index("idx_dns_history_project_record_type").on(t.projectId, t.recordType),
   index("idx_dns_history_query_created").on(t.query, t.createdAt),
   index("idx_dns_history_snapshot_date").on(t.snapshotDate),
+  // REC-05 (TSK-008): getDnsRecordHistory — equality project+query+recordType,
+  // order snapshotDate DESC.
+  index("idx_dns_proj_query_rtype_date").on(
+    t.projectId, t.query, t.recordType, desc(t.snapshotDate)
+  ),
+  // REC-07 (TSK-008): cambios de tipo de registro + diff — project+query por fecha.
+  index("idx_dns_proj_query_date").on(t.projectId, t.query, desc(t.snapshotDate)),
 ]);
 
 // ─── WHOIS History ───────────────────────────────────────────────────────────
@@ -67,4 +75,6 @@ export const whoisHistory = pgTable("whois_history", {
   index("idx_whois_history_project_domain").on(t.projectId, t.domain),
   index("idx_whois_history_domain_snapshot").on(t.domain, t.snapshotDate),
   index("idx_whois_history_expires_date").on(t.expiresDate),
+  // REC-06 (TSK-008): equality project+domain, order snapshotDate DESC (limit 2).
+  index("idx_whois_proj_domain_date").on(t.projectId, t.domain, desc(t.snapshotDate)),
 ]);

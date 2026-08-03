@@ -10,7 +10,7 @@
  */
 
 import {
-  pgTable, uuid, text, timestamp, jsonb, index
+  pgTable, uuid, text, timestamp, jsonb, index, boolean
 } from "drizzle-orm/pg-core";
 import { users } from "./index";
 
@@ -33,8 +33,9 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   /** User-Agent del navegador que se suscribi */
   userAgent: text("user_agent"),
 
-  /** Activo: desactivamos en lugar de borrar para evitar re-suscripciones masivas */
-  active: text("active").notNull().default("true"),
+  /** Activo: desactivamos en lugar de borrar para evitar re-suscripciones masivas.
+   *  MAT-207/TSK-009: tipo corregido de text('true') a boolean. */
+  active: boolean("active").notNull().default(true),
 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

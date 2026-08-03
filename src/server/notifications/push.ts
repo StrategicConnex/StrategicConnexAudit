@@ -134,7 +134,7 @@ export async function sendPushNotificationToAll(
     const subscriptions = await directDb
       .select()
       .from(pushSubscriptions)
-      .where(eq(pushSubscriptions.active, "true"))
+      .where(eq(pushSubscriptions.active, true))
       .orderBy(desc(pushSubscriptions.createdAt));
 
     if (subscriptions.length === 0) {
@@ -152,7 +152,7 @@ export async function sendPushNotificationToAll(
           try {
             await directDb
               .update(pushSubscriptions)
-              .set({ active: "false", updatedAt: new Date() })
+              .set({ active: false, updatedAt: new Date() })
               .where(eq(pushSubscriptions.id, sub.id));
           } catch {
             // fail-safe
@@ -183,7 +183,7 @@ export async function sendPushNotificationToUser(
       .where(
         and(
           eq(pushSubscriptions.userId, userId),
-          eq(pushSubscriptions.active, "true"),
+          eq(pushSubscriptions.active, true),
         ),
       );
 
@@ -196,7 +196,7 @@ export async function sendPushNotificationToUser(
         try {
           await directDb
             .update(pushSubscriptions)
-            .set({ active: "false", updatedAt: new Date() })
+            .set({ active: false, updatedAt: new Date() })
             .where(eq(pushSubscriptions.id, sub.id));
         } catch {
           // fail-safe
