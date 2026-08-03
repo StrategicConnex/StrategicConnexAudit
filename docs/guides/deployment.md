@@ -342,24 +342,47 @@ Para evitar deploys accidentales, puedes configurar **Git Protection** en Vercel
 
 ## 7. Docs Quality Gate (CI)
 
-El pipeline de CI incluye un job `docs-quality-gate` que valida la **documentación Enterprise** de `docs/architecture/` contra el template obligatorio del [MASTER PROMPT v2](../improvements/MASTER_PROMPT-v2.md) (§4.1 — Quality Gate, 20 items × 5 pts = 100).
+El pipeline de CI incluye un job `docs-quality-gate` que valida la **documentación Enterprise** de las 8 carpetas técnicas (`docs/architecture/`, `docs/database/`, `docs/jobs/`, `docs/modules/`, `docs/traceability/`, `docs/risk/`, `docs/technical-debt/`, `docs/testing/`) contra el template obligatorio del [MASTER PROMPT v2](../improvements/MASTER_PROMPT-v2.md) (§4.1 — Quality Gate, 20 items × 5 pts = 100).
 
 ### Qué hace
 
-Cada push/PR ejecuta `scripts/quality-gate.mjs` sobre **todos** los `docs/architecture/*.md` con un umbral de **80/100** (el estándar "no entregar" del MASTER PROMPT v2) y **falla el build** si algún TDD baja de ese puntaje:
+Cada push/PR ejecuta `scripts/quality-gate.mjs` sobre **todos** los `*.md` de esas carpetas con un umbral de **80/100** (el estándar "no entregar" del MASTER PROMPT v2) y **falla el build** si algún TDD baja de ese puntaje. Los **JOB-CONTRACT de `docs/jobs/`** son contratos de Trigger.dev con requisitos más estrictos y exigen **90/100** vía `--min-dir`:
 
 ```bash
 # Equivalente local al step de CI
 set -e
-for f in docs/architecture/*.md; do
-  node scripts/quality-gate.mjs "$f" --min 80 --quiet
+shopt -s nullglob
+DIRS="docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing"
+for d in $DIRS; do
+  for f in "$d"/*.md; do
+    node scripts/quality-gate.mjs "$f" --min 80 --min-dir docs/jobs=90 --quiet
+  done
 done
 ```
+
+#### Carpetas validadas y excepciones
+
+| Carpeta | Qué contiene | Umbral |
+|---------|--------------|--------|
+| `docs/architecture/` | TDDs de arquitectura (`AI-ROUTER-TDD`, `ENTERPRISE-ARCHITECTURE`, `PIPELINE-HISTORY`, …) | 80 |
+| `docs/database/` | TDDs y engines de base de datos | 80 |
+| `docs/jobs/` | **JOB-CONTRACT** de Trigger.dev (12) | **90** (estricto) |
+| `docs/modules/` | Module Contracts (10) | 80 |
+| `docs/traceability/` | Matriz de trazabilidad | 80 |
+| `docs/risk/` | Risk register | 80 |
+| `docs/technical-debt/` | Registro de deuda técnica | 80 |
+| `docs/testing/` | Matriz de cobertura de testing | 80 |
+
+**Exclusiones deliberadas:** `docs/superpowers/` (MASTER-INDEX y los planes de gobernanza) **no** se valida — son índices/planes de trabajo, no TDDs técnicos, y no siguen el template de 20 checks. Lo mismo aplica al resto de `docs/` que no esté en la lista (guías, mejoras, security): el job solo cubre las 8 carpetas técnicas.
+
+#### Comportamiento `nullglob`
+
+El job usa `shopt -s nullglob` antes de los loops. Efecto: si una carpeta **no contiene ningún `.md` commiteado** en el checkout de CI (p.ej. porque los docs de `docs/jobs/` todavía no se commiteaban), el glob `"$d"/*.md` se expande a **vacío** en vez de pasarse como literal `docs/jobs/*.md` — la carpeta se omite sin fallar el job. Esto hace que el pipeline sea tolerante a carpetas vacías o aún sin commitear: el job valida **lo que existe en el checkout** y, cuando se commitean los docs, los incluye automáticamente sin cambiar el workflow.
 
 > El job `docs-quality-gate` corre en **paralelo** a lint/build/tests y **no requiere `pnpm install`** — el validador es un script Node puro (zero-deps), por lo que solo necesita `actions/checkout` + `actions/setup-node`.
 
 {: .note }
-**Estado actual (ago 2026):** los tres TDDs de `docs/architecture/` — `AI-ROUTER-TDD.md`, `ENTERPRISE-ARCHITECTURE.md` y `PIPELINE-HISTORY.md` — puntúan **100/100** y pasan el umbral 80. Si un futuro PR agrega un TDD nuevo o degrada uno existente, el job `docs-quality-gate` lo marcará en rojo (usá el checklist del [QUALITY_GATE_REPORT](../improvements/quality-gate-report) para cerrar las secciones que faltan).
+**Estado actual (ago 2026):** los TDDs técnicos de las 8 carpetas validan **39/39 PASS** — los 6 de `docs/architecture/` y los 12 JOB-CONTRACT de `docs/jobs/` puntúan **100/100** (los contratos pasan el umbral estricto de 90) y el resto cumple ≥ 80. Si un futuro PR agrega un TDD nuevo o degrada uno existente, el job `docs-quality-gate` lo marcará en rojo (usá el checklist del [QUALITY_GATE_REPORT](../improvements/quality-gate-report) para cerrar las secciones que faltan).
 
 ### Cómo correrlo localmente
 
@@ -367,9 +390,18 @@ done
 # Un solo documento (exit 0 = PASS, exit 1 = FAIL)
 node scripts/quality-gate.mjs docs/architecture/AI-ROUTER-TDD.md --min 80
 
-# Todos los TDDs de arquitectura (mismo loop que CI)
-for f in docs/architecture/*.md; do
-  node scripts/quality-gate.mjs "$f" --min 80 --quiet
+# Un JOB-CONTRACT (exige 90 con --min-dir docs/jobs=90)
+node scripts/quality-gate.mjs docs/jobs/JOB-CONTRACT-siem-exporter.md --min 80 --min-dir docs/jobs=90 --quiet
+
+# Tabla de scores por carpeta con promedio (igual que el PR summary de CI)
+node scripts/quality-gate.mjs --table docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing --min 80 --min-dir docs/jobs=90
+
+# Todos los TDDs técnicos (mismo loop que CI, exit != 0 si alguno falla)
+set -e; shopt -s nullglob
+for d in docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing; do
+  for f in "$d"/*.md; do
+    node scripts/quality-gate.mjs "$f" --min 80 --min-dir docs/jobs=90 --quiet
+  done
 done
 
 # Reporte global de todos los docs de docs/ (publica QUALITY_GATE_REPORT.md)
@@ -403,6 +435,7 @@ git commit --no-verify
 | Cambio | Dónde |
 |--------|-------|
 | Umbral (p.ej. 85) | `.github/workflows/ci.yml` → job `docs-quality-gate` → reemplazar `--min 80` por `--min 85` (y `.githooks/pre-commit` si querés que el hook local use el mismo) |
+| Umbral por carpeta (p.ej. `docs/jobs` a 90) | Mismo job → añadir `--min-dir <dir>=<N>` (repetible) a la invocación; el validador usa el **máximo** entre `--min` y los `--min-dir` cuyo directorio sea prefijo de la ruta |
 | Alcance (p.ej. `docs/**/*.md`) | Mismo job → cambiar el glob del `for f in ...` (y el `grep` del hook local) |
 | Umbral por defecto del validador | `scripts/quality-gate.mjs` → `let min = 80` (default cuando no se pasa `--min`) — ya coincide con el umbral de CI |
 

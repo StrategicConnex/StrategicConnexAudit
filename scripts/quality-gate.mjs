@@ -7,20 +7,30 @@
  * (PARTE 4.1 — Quality Gate): 20 items × 5 pts = 100.
  *
  * Uso:
- *   node .freebuff/quality-gate.mjs <archivo.md> [--min 80] [--json] [--quiet]
+ *   node scripts/quality-gate.mjs <archivo.md> [--min 80] [--min-dir DIR=N] [--json] [--quiet]
+ *   node scripts/quality-gate.mjs --table [<dir> ...] [--min 80] [--min-dir DIR=N]
  *
- *   --min N   umbral de aprobación (default 80; < 80 = FAIL, igual que el prompt)
- *   --json    salida JSON (para CI / scripts)
- *   --quiet   solo imprime la puntuación final
+ *   --min N        umbral global de aprobación (default 80; < N = FAIL)
+ *   --min-dir DIR=N  umbral por directorio, repetible (ej: --min-dir docs/jobs=90).
+ *                  El umbral efectivo del archivo es el MÁXIMO entre --min y los
+ *                  --min-dir cuyo directorio sea prefijo de la ruta del archivo.
+ *   --table        genera una tabla Markdown de scores por carpeta (docs,
+ *                  PASS, promedio, mínimo, máximo y umbral) con fila TOTAL.
+ *                  Sin argumentos usa las 8 carpetas técnicas por defecto.
+ *   --json         salida JSON (para CI / scripts)
+ *   --quiet        solo imprime la puntuación final
  *
  * Exit code: 0 si score >= umbral, 1 si FAIL (reutilizable en CI / pre-commit).
+ * En modo --table siempre sale 0 (reporte informativo; el gate real es el loop
+ * de archivo por archivo en CI).
  *
  * Detección: heurística de contenido (headers de sección + marcadores del
  * documento: FIG-/MAT-/FLOW-/REQ-/[UNKNOWN]/[VERIFIED]/mermaid/glosario…),
  * tolerante a español/inglés. No requiere dependencias.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 
 // ─── Config de los 20 checks (id · título · función de detección) ───────────
 // Cada check vale 5 puntos. La función recibe { text, headers, lines, mermaid }
@@ -172,7 +182,7 @@ const CHECKS = [
     detect: ({ lines, text }) => {
       const top = lines.slice(0, 40).join("\n").toLowerCase();
       return /versi[oó]n|version|fecha|date|autor|author|estado|status/i.test(top) &&
-        /(?:\d+\.\d+|20\d\d[-/]\d{1,2}|\d{1,2}\/\d{1,2}\/20\d\d)/.test(text);
+        /(?:\d+\.\d+|20\d\d[-\/]\d{1,2}|\d{1,2}\/\d{1,2}\/20\d\d)/.test(text);
     },
   },
 ];
@@ -212,10 +222,129 @@ function isMermaidSane(block) {
     /(-->|---|->>|==>|-.->|--\s|\.\.\.)/.test(block));
 }
 
+/** Umbral efectivo del archivo: MÁXIMO(--min, --min-dir con prefijo de ruta). */
+function effectiveMinFor(filePath, baseMin, dirMins) {
+  let eff = baseMin;
+  let source = "global";
+  const norm = filePath.replace(/\\/g, "/");
+  for (const dm of dirMins) {
+    if (norm === dm.dir || norm.startsWith(dm.dir + "/")) {
+      if (dm.min > eff) {
+        eff = dm.min;
+        source = dm.dir;
+      }
+    }
+  }
+  return { min: eff, source };
+}
+
+/**
+ * Puntúa un archivo .md. Devuelve null si no se puede leer.
+ * Resultado: { file, score, max, min, minSource, pass, checks }.
+ */
+function scoreFile(filePath, baseMin, dirMins) {
+  let content;
+  try {
+    content = readFileSync(filePath, "utf8");
+  } catch {
+    return null;
+  }
+  const lines = content.split("\n");
+  const headers = lines.filter((l) => /^#{1,3}\s+/.test(l));
+  const mermaid = extractMermaid(lines);
+  const ctx = { headers, text: content.toLowerCase(), lines, mermaid };
+
+  const results = CHECKS.map((c) => {
+    let ok = false;
+    try {
+      ok = Boolean(c.detect(ctx));
+    } catch {
+      ok = false;
+    }
+    return { id: c.id, title: c.title, ok, pts: ok ? 5 : 0 };
+  });
+
+  const score = results.reduce((s, r) => s + r.pts, 0);
+  const { min, source } = effectiveMinFor(filePath, baseMin, dirMins);
+  return {
+    file: filePath,
+    score,
+    max: 100,
+    min,
+    minSource: source,
+    pass: score >= min,
+    checks: results,
+  };
+}
+
+const fmtNum = (x) =>
+  x === null || x === undefined ? "—" : (Number.isInteger(x) ? x : x.toFixed(1));
+
+/**
+ * Genera la tabla Markdown de scores por carpeta (modo --table).
+ * Columnas: Carpeta · Docs · PASS · Promedio · Mín · Máx · Umbral + fila TOTAL.
+ * Los docs bajo el umbral se listan al final para que el reviewer los vea.
+ */
+function tableReport(dirs, baseMin, dirMins) {
+  const rows = [];
+  let tFiles = 0, tPass = 0, tSum = 0, tMin = null, tMax = null;
+  const failing = [];
+
+  for (const d of dirs) {
+    let entries = [];
+    try {
+      entries = readdirSync(d).filter((f) => f.endsWith(".md")).sort();
+    } catch {
+      // carpeta inexistente o vacía — se omite con 0 docs
+    }
+    let n = 0, passN = 0, sum = 0, mn = null, mx = null;
+    for (const f of entries) {
+      const r = scoreFile(join(d, f).replace(/\\/g, "/"), baseMin, dirMins);
+      if (!r) continue;
+      n++; sum += r.score;
+      mn = mn === null ? r.score : Math.min(mn, r.score);
+      mx = mx === null ? r.score : Math.max(mx, r.score);
+      if (r.pass) passN++;
+      else failing.push(`- \`${r.file}\`: ${r.score}/100`);
+    }
+    // Umbral efectivo de la carpeta: MÁXIMO(--min, --min-dir con prefijo de la carpeta)
+    const { min: dirMin } = effectiveMinFor(d, baseMin, dirMins);
+    const avg = n > 0 ? sum / n : null;
+    rows.push({ dir: d, n, passN, avg, mn, mx, dirMin });
+    tFiles += n; tPass += passN; tSum += sum;
+    if (mn !== null) tMin = tMin === null ? mn : Math.min(tMin, mn);
+    if (mx !== null) tMax = tMax === null ? mx : Math.max(tMax, mx);
+  }
+
+  const out = [];
+  out.push("| Carpeta | Docs | PASS | Promedio | Mín | Máx | Umbral |");
+  out.push("|---|---|---|---|---|---|---|");
+  for (const r of rows) {
+    // Carpeta vacía/inexistente (sin .md en el checkout) → badge neutro "—",
+    // no un falso ❌: no hay nada que validar ahí (nullglob del gate).
+    const badge = r.n === 0 ? "—" : (r.passN === r.n ? "✅" : "❌");
+    out.push(`| ${r.dir} | ${r.n} | ${badge} ${r.passN}/${r.n} | ${fmtNum(r.avg)} | ${fmtNum(r.mn)} | ${fmtNum(r.mx)} | ${r.dirMin} |`);
+  }
+  out.push(`| **TOTAL** | **${tFiles}** | **${tPass}/${tFiles}** | **${fmtNum(tFiles ? tSum / tFiles : null)}** | **${fmtNum(tMin)}** | **${fmtNum(tMax)}** | — |`);
+  if (failing.length > 0) {
+    out.push("");
+    out.push(`**${failing.length} doc(s) bajo el umbral:**`);
+    out.push(...failing);
+  }
+  return out.join("\n");
+}
+
 // ─── CLI ─────────────────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
-const file = args.find((a) => !a.startsWith("--"));
+
+// Args posicionales (rutas): todo arg que no sea un flag ni el valor de
+// --min/--min-dir. En modo archivo es un único .md; en modo --table son dirs.
+const positionals = args.filter((a, i) => {
+  if (a.startsWith("--")) return false;
+  const prev = args[i - 1];
+  return !(prev === "--min" || prev === "--min-dir");
+});
 
 // ── Parsing robusto de --min: acepta `--min 80` y `--min=80`; ante un valor
 //    inválido (NaN) o no-positivo cae al default 80 en vez de romper el gate.
@@ -230,56 +359,91 @@ if (minEq) {
   if (Number.isFinite(p) && p > 0) min = p;
 }
 
+// ── Parsing de --min-dir: umbral por directorio, repetible ───────────────────
+//    Formato: `--min-dir <dir>=<N>` o `--min-dir=<dir>=<N>` (ej: docs/jobs=90).
+//    Permite exigir más a carpetas específicas (p.ej. JOB-CONTRACT) sin subir
+//    el umbral global del resto.
+const dirMins = [];
+{
+  let i = 0;
+  while (i < args.length) {
+    let spec = null;
+    if (args[i] === "--min-dir") {
+      spec = args[i + 1];
+      i += 2;
+    } else if (args[i].startsWith("--min-dir=")) {
+      spec = args[i].slice("--min-dir=".length);
+      i += 1;
+    } else {
+      i += 1;
+      continue;
+    }
+    if (!spec) continue;
+    const eq = spec.lastIndexOf("=");
+    if (eq <= 0) {
+      console.warn(`⚠️  --min-dir ignorado: formato esperado "--min-dir <dir>=<N>" (recibido: "${spec}")`);
+      continue;
+    }
+    const dir = spec.slice(0, eq).replace(/\\/g, "/").replace(/\/+$/, "");
+    const p = Number(spec.slice(eq + 1));
+    if (!dir || !Number.isFinite(p) || p <= 0) {
+      console.warn(`⚠️  --min-dir ignorado: umbral inválido (recibido: "${spec}")`);
+      continue;
+    }
+    dirMins.push({ dir, min: p });
+  }
+}
+
+const asTable = args.includes("--table");
 const asJson = args.includes("--json");
 const quiet = args.includes("--quiet");
 
+// Carpetas técnicas por defecto (usadas por --table sin argumentos y por CI).
+const DEFAULT_DIRS = [
+  "docs/architecture", "docs/database", "docs/jobs", "docs/modules",
+  "docs/traceability", "docs/risk", "docs/technical-debt", "docs/testing",
+];
+
+// ── Modo tabla: reporte de scores por carpeta (siempre exit 0) ───────────────
+if (asTable) {
+  const dirs = positionals.length > 0 ? positionals : DEFAULT_DIRS;
+  console.log(tableReport(dirs, min, dirMins));
+  process.exit(0);
+}
+
+const file = positionals[0];
+
 if (!file) {
   console.error(
-    "Uso: node .freebuff/quality-gate.mjs <archivo.md> [--min 80] [--json] [--quiet]"
+    "Uso: node scripts/quality-gate.mjs <archivo.md> [--min 80] [--min-dir DIR=N] [--json] [--quiet]"
+  );
+  console.error(
+    "     node scripts/quality-gate.mjs --table [<dir> ...] [--min 80] [--min-dir DIR=N]"
   );
   process.exit(2);
 }
 
-let content;
-try {
-  content = readFileSync(file, "utf8");
-} catch (err) {
-  console.error(`❌ No se pudo leer ${file}: ${err.message}`);
+const result = scoreFile(file, min, dirMins);
+if (!result) {
+  console.error(`❌ No se pudo leer ${file}`);
   process.exit(2);
 }
-
-const lines = content.split("\n");
-const headers = lines.filter((l) => /^#{1,3}\s+/.test(l));
-const mermaid = extractMermaid(lines);
-const text = content.toLowerCase();
-const ctx = { headers, text, lines, mermaid };
-
-const results = CHECKS.map((c) => {
-  let ok = false;
-  try {
-    ok = Boolean(c.detect(ctx));
-  } catch {
-    ok = false;
-  }
-  return { id: c.id, title: c.title, ok, pts: ok ? 5 : 0 };
-});
-
-const score = results.reduce((s, r) => s + r.pts, 0);
-const pass = score >= min;
+const { score, minSource, pass, checks } = result;
 
 if (asJson) {
-  console.log(JSON.stringify({ file, score, max: 100, min, pass, checks: results }, null, 2));
+  console.log(JSON.stringify({ file, score, max: result.max, min: result.min, minSource, dirMins, pass, checks }, null, 2));
 } else if (quiet) {
-  console.log(`${file}: ${score}/100 ${pass ? "PASS" : "FAIL (mín " + min + ")"}`);
+  const th = minSource === "global" ? `mín ${result.min}` : `mín ${result.min} (${minSource})`;
+  console.log(`${file}: ${score}/100 ${pass ? "PASS (" + th + ")" : "FAIL (" + th + ")"}`);
 } else {
   console.log(`\n════════ QUALITY GATE — ${file} ════════`);
   console.log(`Template: MASTER_PROMPT-v2.md §4.1 (20 items × 5 pts = 100)\n`);
-  for (const r of results) {
+  for (const r of checks) {
     console.log(`${r.ok ? "✅" : "❌"}  ${String(r.id).padStart(2, "0")}. [${r.pts}/5] ${r.title}`);
   }
   console.log(`\n${"─".repeat(52)}`);
-  console.log(`SCORE: ${score}/100  ·  Umbral: ${min}  ·  ${pass ? "✅ PASS" : "❌ FAIL"}`);
-  if (!pass) console.log(`   → < ${min}: NO entregar (regla del MASTER PROMPT v2).`);
+  console.log(`SCORE: ${score}/100  ·  Umbral: ${result.min}${minSource !== "global" ? ` (${minSource})` : ""}  ·  ${pass ? "✅ PASS" : "❌ FAIL"}`);
+  if (!pass) console.log(`   → < ${result.min}: NO entregar (regla del MASTER PROMPT v2).`);
 }
 
 process.exit(pass ? 0 : 1);
