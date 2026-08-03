@@ -32,9 +32,11 @@ export const dynamic = 'force-dynamic';
  */
 
 // Helper: write progress to Redis (fire-and-forget, non-blocking)
-function reportProgress(genId: string | undefined, percent: number, step: string, status?: string) {
+// SECURITY (VULN-007): the key is namespaced by userId so the progress of a
+// generation can only be read by its owner (see progress/route.ts).
+function reportProgress(userId: string, genId: string | undefined, percent: number, step: string, status?: string) {
   if (!genId) return;
-  const key = `pdf_progress:${genId}`;
+  const key = `pdf_progress:${userId}:${genId}`;
   // Pass raw object — Upstash handles serialization internally
   redis.set(key, { percent, step, status: status || 'working' })
     .catch((e: unknown) => console.warn('[pdf-progress] Redis write failed:', e));
@@ -70,7 +72,7 @@ export const POST = withRateLimit(
         );
       }
 
-      reportProgress(genId, 5, 'Verificando acceso al proyecto...');
+      reportProgress(userId, genId, 5, 'Verificando acceso al proyecto...');
 
       // Fetch project with ownership check
       const projectData = await withRLS(userId, async (tx) => {
@@ -83,14 +85,14 @@ export const POST = withRateLimit(
       });
 
       if (!projectData) {
-        reportProgress(genId, 0, 'Error', 'error');
+        reportProgress(userId, genId, 0, 'Error', 'error');
         return NextResponse.json(
           { success: false, error: 'Proyecto no encontrado o acceso denegado' },
           { status: 404 },
         );
       }
 
-      reportProgress(genId, 15, 'Obteniendo investigaciones...');
+      reportProgress(userId, genId, 15, 'Obteniendo investigaciones...');
 
       // Fetch investigations for this project (or specific one)
       let investigations;
@@ -112,14 +114,14 @@ export const POST = withRateLimit(
       }
 
       if (investigations.length === 0) {
-        reportProgress(genId, 0, 'Error', 'error');
+        reportProgress(userId, genId, 0, 'Error', 'error');
         return NextResponse.json(
           { success: false, error: 'No se encontraron investigaciones para este proyecto' },
           { status: 404 },
         );
       }
 
-      reportProgress(genId, 25, `Cargando findings y assets de ${investigations.length} investigaciones...`);
+      reportProgress(userId, genId, 25, `Cargando findings y assets de ${investigations.length} investigaciones...`);
 
       // Build sections from investigations
       const sections = await Promise.all(
@@ -159,7 +161,7 @@ export const POST = withRateLimit(
 
           // Report sub-progress
           const subProgress = 25 + Math.round(((idx + 1) / investigations.length) * 35);
-          reportProgress(genId, subProgress, `Procesada investigación ${idx + 1} de ${investigations.length}...`);
+          reportProgress(userId, genId, subProgress, `Procesada investigación ${idx + 1} de ${investigations.length}...`);
 
           return {
             id: inv.id,
@@ -174,7 +176,7 @@ export const POST = withRateLimit(
         }),
       );
 
-      reportProgress(genId, 65, 'Calculando scores y preparando datos...');
+      reportProgress(userId, genId, 65, 'Calculando scores y preparando datos...');
 
       // Calculate overall score (average across all investigations)
       const scores = sections.filter((s) => s.score != null).map((s) => s.score!);
@@ -195,12 +197,12 @@ export const POST = withRateLimit(
         sections,
       };
 
-      reportProgress(genId, 75, 'Renderizando páginas del PDF...');
+      reportProgress(userId, genId, 75, 'Renderizando páginas del PDF...');
 
       // Render PDF to stream
       const stream = await renderToStream(<PdfReport data={reportData} />);
 
-      reportProgress(genId, 90, 'Generando archivo PDF...');
+      reportProgress(userId, genId, 90, 'Generando archivo PDF...');
 
       // Collect stream into buffer (Readable is async-iterable)
       const chunks: Buffer[] = [];
@@ -209,7 +211,7 @@ export const POST = withRateLimit(
       }
       const pdfBuffer = Buffer.concat(chunks);
 
-      reportProgress(genId, 100, 'PDF listo', 'complete');
+      reportProgress(userId, genId, 100, 'PDF listo', 'complete');
 
       const filename = `SCAUDIT_Report_${projectData.name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
@@ -229,7 +231,7 @@ export const POST = withRateLimit(
       });
 
     } catch (error: unknown) {
-      reportProgress(genId, 0, 'Error', 'error');
+      reportProgress(userId, genId, 0, 'Error', 'error');
       console.error('POST /api/reports/pdf error:', error);
       return NextResponse.json(
         { success: false, error: `Error al generar PDF: ${error instanceof Error ? error.message : 'Error desconocido'}` },

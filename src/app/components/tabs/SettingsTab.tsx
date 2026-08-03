@@ -49,7 +49,12 @@ interface WebhookConfig {
   projectId: string;
   name: string;
   url: string;
-  secretToken: string;
+  /**
+   * VULN-002 fix: GET /api/webhooks ya NO devuelve el secreto de firma.
+   * Solo un preview enmascarado (primeros 8 chars). El secreto completo se
+   * muestra UNA sola vez en el modal de creación (respuesta del POST).
+   */
+  secretTokenPreview?: string | null;
   events: string[];
   active: boolean;
   createdAt: string;
@@ -841,21 +846,17 @@ export function SettingsTab({
                       </div>
 
                       <div className="flex items-center gap-3 justify-end flex-shrink-0">
-                        <button
-                          onClick={() => handleCopy(wh.secretToken, wh.id)}
-                          className="bg-zinc-500/10 hover:bg-zinc-500/20 border border-border hover:border-primary/30 text-muted-fg hover:text-primary px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
-                          title={t('webhooksCopySecret')}
-                        >
-                          {copiedId === wh.id ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-chartreuse" /> {t('webhooksCopied')}
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5" /> {t('webhooksCopySecret')}
-                            </>
-                          )}
-                        </button>
+                        {/* VULN-002 fix: el secreto de firma ya no se re-expone desde el
+                            listado ni se ofrece copiarlo (solo un preview enmascarado).
+                            Se muestra completo UNA sola vez al crear el webhook (modal POST). */}
+                        {wh.secretTokenPreview && (
+                          <span
+                            className="bg-zinc-500/10 border border-border text-muted-fg px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider"
+                            title={t('webhooksSecretMasked')}
+                          >
+                            {wh.secretTokenPreview}
+                          </span>
+                        )}
 
                         <button
                           onClick={() => handleDeleteWebhook(wh.id)}
@@ -942,25 +943,13 @@ export function SettingsTab({
             </div>
 
             <div className="bg-black border border-border rounded-xl p-5 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksModalSecretLabel')}</span>
-                <button
-                  onClick={() => handleCopy(revealedWebhookSecret, 'modal-webhook')}
-                  className="text-primary hover:text-primary/80 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
-                >
-                  {copiedId === 'modal-webhook' ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-chartreuse" /> {t('webhooksModalCopied')}
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" /> {t('webhooksModalCopy')}
-                    </>
-                  )}
-                </button>
-              </div>
+              {/* VULN-002 fix: sin botón de copiar — el secreto solo se muestra una
+                  vez (creación) para minimizar la superficie de exposición. */}
+              <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksModalSecretLabel')}</span>
 
-              <div className="font-mono text-sm text-primary break-all select-all font-semibold select-none bg-card p-4 border border-border/50 rounded-lg text-center tracking-wide">
+              {/* Sin botón de copiar (VULN-002), el texto queda SELECCIONABLE a mano:
+                  select-all sin select-none para que el usuario pueda guardarlo. */}
+              <div className="font-mono text-sm text-primary break-all select-all font-semibold bg-card p-4 border border-border/50 rounded-lg text-center tracking-wide">
                 {revealedWebhookSecret}
               </div>
             </div>

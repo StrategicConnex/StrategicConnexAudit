@@ -1,9 +1,42 @@
 import { exportElementToPdf } from './pdf-utils';
+import { escapeHtml } from './html';
 
 export interface IntelligenceBranding {
   name: string;
   color: string;
   logoUrl?: string;
+}
+
+/**
+ * buildIntelligenceHeaderHtml — builds the intelligence PDF header HTML with
+ * all user-controlled fields escaped (branding + targetName). Pure/testable.
+ */
+export function buildIntelligenceHeaderHtml(
+  branding: IntelligenceBranding | undefined,
+  targetName: string,
+  dateTime: string
+): string {
+  const safeName = escapeHtml(branding?.name ?? '');
+  const safeLogoUrl = escapeHtml(branding?.logoUrl ?? '');
+  const safeTarget = escapeHtml(targetName);
+
+  const logoHtml = branding?.logoUrl
+    ? `<img src="${safeLogoUrl}" alt="${safeName} Logo" style="max-height: 45px; object-fit: contain;" crossorigin="anonymous"/>`
+    : `<div style="display: flex; align-items: center; gap: 8px; color: #10b981;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span style="font-weight: 800; font-size: 18px; font-family: 'JetBrains Mono', monospace; tracking: -0.05em;">STRATEGIC_CONNEX</span></div>`;
+
+  const titleHtml = `<h2 style="margin:0; font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 900; color: #09090b; letter-spacing: -0.03em; text-transform: uppercase;">REPORTE DE SEGURIDAD PERIMETRAL</h2>`;
+
+  return `
+      <div style="display:flex; align-items:center; gap: 15px;">
+        ${logoHtml}
+        ${branding?.name ? `<span style="font-weight:700; font-size: 16px; font-family: 'Inter', sans-serif; opacity: 0.8; color: #71717a;">| ${safeName}</span>` : ''}
+      </div>
+      <div style="text-align: right;">
+        ${titleHtml}
+        <p style="margin:4px 0 0 0; color:#10b981; font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">OBJETIVO: ${safeTarget}</p>
+        <p style="margin:2px 0 0 0; color:#71717a; font-size: 11px; font-family: 'JetBrains Mono', monospace;'>FECHA: ${escapeHtml(dateTime)}</p>
+      </div>
+    `;
 }
 
 const applyIntelligenceExportTheme = (clonedDoc: Document, branding?: IntelligenceBranding) => {
@@ -154,23 +187,12 @@ export const exportIntelligenceToPdf = async (
     headerDiv.style.backgroundColor = '#FFFFFF';
     headerDiv.style.color = '#09090b';
 
-    const logoHtml = branding?.logoUrl
-      ? `<img src="${branding.logoUrl}" alt="${branding.name} Logo" style="max-height: 45px; object-fit: contain;" crossorigin="anonymous"/>`
-      : `<div style="display: flex; align-items: center; gap: 8px; color: #10b981;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span style="font-weight: 800; font-size: 18px; font-family: 'JetBrains Mono', monospace; tracking: -0.05em;">STRATEGIC_CONNEX</span></div>`;
-
-    const titleHtml = `<h2 style="margin:0; font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 900; color: #09090b; letter-spacing: -0.03em; text-transform: uppercase;">REPORTE DE SEGURIDAD PERIMETRAL</h2>`;
-
-    headerDiv.innerHTML = `
-      <div style="display:flex; align-items:center; gap: 15px;">
-        ${logoHtml}
-        ${branding?.name ? `<span style="font-weight:700; font-size: 16px; font-family: 'Inter', sans-serif; opacity: 0.8; color: #71717a;">| ${branding.name}</span>` : ''}
-      </div>
-      <div style="text-align: right;">
-        ${titleHtml}
-        <p style="margin:4px 0 0 0; color:#10b981; font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">OBJETIVO: ${targetName}</p>
-        <p style="margin:2px 0 0 0; color:#71717a; font-size: 11px; font-family: 'JetBrains Mono', monospace;'>FECHA: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}</p>
-      </div>
-    `;
+    // XSS defense: branding + targetName are escaped inside the builder.
+    headerDiv.innerHTML = buildIntelligenceHeaderHtml(
+      branding,
+      targetName,
+      `${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`
+    );
 
     element.insertBefore(headerDiv, element.firstChild);
   };

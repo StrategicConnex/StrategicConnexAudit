@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { redis } from '@/shared/lib/ratelimit';
+import { createClient } from '@/shared/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -11,12 +12,22 @@ export const runtime = 'nodejs';
  * The POST /api/reports/pdf handler writes progress to Redis as it works.
  * This endpoint polls Redis every 600ms and forwards events to the client.
  *
+ * SECURITY (VULN-007 fix): requires an active session. The Redis key is
+ * namespaced by userId (`pdf_progress:<userId>:<genId>`), so a caller can
+ * only observe progress of generations they started themselves.
+ *
  * Events:
  *   event: progress\ndata: {"percent":N,"step":"..."}\n\n
  *   event: complete\ndata: {"percent":100}\n\n
  *   event: error\ndata: {"error":"..."}\n\n
  */
 export async function GET(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const genId = searchParams.get('genId');
 
@@ -24,7 +35,7 @@ export async function GET(req: NextRequest) {
     return new Response('Missing or invalid genId', { status: 400 });
   }
 
-  const redisKey = `pdf_progress:${genId}`;
+  const redisKey = `pdf_progress:${user.id}:${genId}`;
 
   // SSE response headers
   const headers: Record<string, string> = {

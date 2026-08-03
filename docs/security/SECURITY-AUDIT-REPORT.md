@@ -2,12 +2,12 @@
 version: 2.1
 date: 2026-08-02
 author: Equipo SCAUDIT — Security Review
-status: Aprobado — VULN-004/005 (IDOR High) remediados; restan VULN-001 (XSS IA High) + Medium/Low
+status: Aprobado — VULN-004/005 (IDOR High) remediados; VULN-001/002/003/006/007 remediados (P0 TSK-001..006); restan VULN-008/009 (Low, mocks)
 ---
 
 # 🔐 SCAUDIT — Reporte de Auditoría de Seguridad (OWASP / DevSecOps)
 
-> **Fecha:** 2026-08-02 · **Versión:** 2.0 · **Autor:** Equipo SCAUDIT (skills `security-review` + `security-auditor`) · **Estado:** ✅ Aprobado — 5 hallazgos (1 High nuevo, 4 Medium/Low nuevos), 0 críticos
+> **Fecha:** 2026-08-02 · **Versión:** 2.2 · **Autor:** Equipo SCAUDIT (skills `security-review` + `security-auditor`) · **Estado:** ✅ Aprobado — VULN-001/002/003/006/007 **remediados** (P0 TSK-001..006) · VULN-004/005 remediados previamente · restan VULN-008/009 (Low, mocks)
 > **Metodología:** OWASP Top 10 + Cheat Sheet Series · trazado de flujo de datos (UI → API → Admin SDK → DB) · adversarial analysis · reporte HIGH-confidence-only.
 > **Alcance de esta revisión:** commit `739e09d` (post-B01). Inventario de las 42 rutas de `src/app/api`, separación de cliente/servidor Supabase, y escaneo de secretos.
 
@@ -42,9 +42,9 @@ status: Aprobado — VULN-004/005 (IDOR High) remediados; restan VULN-001 (XSS I
 
 | OWASP | Área | Estado | Evidencia |
 |---|---|---|---|
-| A01 — Broken Access Control | IDOR / authz multi-tenant | 🔴 **2 hallazgos abiertos** | VULN-004 (history), VULN-005 (assets/graph), VULN-006 (looker-studio) |
+| A01 — Broken Access Control | IDOR / authz multi-tenant | 🟡 **solo mocks sin datos (Low)** | VULN-008 (members), VULN-009 (graph) |
 | A03 — Injection | SQLi vía `sql.raw` | ✅ [VERIFIED] | `windowHours` server-controlled (ver §7 research table) |
-| A05 — Broken Function Level Auth | Rutas sin autenticación | 🔴 **1 hallazgo abierto** | VULN-007 (pdf/progress) |
+| A05 — Broken Function Level Auth | Rutas sin autenticación | ✅ **remediado** | VULN-007 (pdf/progress) protegido con sesión |
 | A08 — Software & Data Integrity | Deserialización / secrets en bundle | ✅ [VERIFIED] | Service Role nunca en bundle cliente (§3.2) |
 | A10 — SSRF | Server-Side Request Forgery | ✅ [VERIFIED] | `assertPublicHostname` + egress-guard (§3.1) |
 | A07 — Auth Failures | Dev bypass, fallback de secretos | 🟡 [OBSERVED] | Dev bypass gated por NODE_ENV; `SCAUDIT_WEBHOOK_SECRET` con fallback dev |
@@ -189,30 +189,30 @@ flowchart TB
 
 ## 7. Seguridad — Hallazgos (VULN)
 
-### VULN-001 — DOM XSS vía salida de IA sin sanitización (High) — RE-verificado
+### VULN-001 — DOM XSS vía salida de IA sin sanitización (High) — REMEDIADO ✅
 
 - **Location:** `src/app/components/AiCopilot.tsx:151`
 - **Confidence:** High
 - **Issue:** `msg.content` (respuesta del modelo, influenciable por el usuario vía prompt injection) se inyecta con `dangerouslySetInnerHTML`. El replace de markdown se aplica **antes** de cualquier escape. [VERIFIED, código leído]
 - **Impact:** Robo de sesión, exfiltración de datos del dashboard.
-- **Evidence:**
+- **Fix aplicado (TSK-001, P0):** Se aplica `escapeHtml(msg.content)` (helper `report-utils.ts:234`) **ANTES** del replace de markdown. Los `<br/>`/`<strong>` se generan post-escape → el contenido entrante del modelo nunca se renderiza como HTML crudo.
   ```tsx
-  <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') }} />
+  <div dangerouslySetInnerHTML={{ __html: escapeHtml(msg.content).replace(/\n/g, '<br/>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') }} />
   ```
-- **Fix:** Aplicar `escapeHtml(msg.content)` (helper existente en `report-utils.ts`) antes del replace, o react-markdown + rehype-sanitize.
+- **Estado:** Resuelto.
 
-### VULN-002 — Exposición del secreto de firma de webhooks (Medium) — RE-verificado
+### VULN-002 — Exposición del secreto de firma de webhooks (Medium) — REMEDIADO ✅
 
 - **Location:** `src/app/api/webhooks/route.ts` (GET handler)
 - **Confidence:** High
 - **Issue:** El GET lista rows completos de `webhook_configs`, incluyendo `secretToken`. [VERIFIED]
-- **Fix:** No devolver `secretToken` en GET — devolver prefijo enmascarado (`whsec_…`).
+- **Fix aplicado (TSK-002, P0):** El GET devuelve `secretTokenPreview` (`whsec_…`, primeros 8 chars) y nunca la clave `secretToken`. Test de regresión añadido (`route.test.ts`).
 
-### VULN-003 — `/intelligence` fuera de las rutas protegidas del middleware (Medium)
+### VULN-003 — `/intelligence` fuera de las rutas protegidas del middleware (Medium) — REMEDIADO ✅
 
 - **Location:** `src/shared/lib/supabase/middleware.ts` (`isProtectedRoute` solo cubre `/projects`, `/dashboard`, `/settings`)
 - **Confidence:** Medium
-- **Fix:** Agregar `/intelligence` a `isProtectedRoute` (o default-deny).
+- **Fix aplicado (TSK-003, P0):** Se añadió `currentPath.startsWith('/intelligence')` a `isProtectedRoute`.
 
 ### VULN-004 — IDOR cross-tenant en `/api/intelligence/history` (High) — REMEDIADO ✅
 
@@ -237,21 +237,21 @@ flowchart TB
   2. Ambas queries envueltas en `withRLS(user.id)` → RLS aísla el acceso por proyecto.
 - **Estado:** Resuelto. Verificado con `pnpm test` (253/253), `pnpm lint` (0 errores) y `pnpm build`.
 
-### VULN-006 — Auth condicional en `/api/looker-studio` (Medium) — NUEVO
+### VULN-006 — Auth condicional en `/api/looker-studio` (Medium) — REMEDIADO ✅
 
 - **Location:** `src/app/api/looker-studio/route.ts` (líneas 74-86)
 - **Confidence:** High
 - **Issue:** Si `LOOKER_STUDIO_API_KEY` **no está definida** en el entorno, el bloque de autorización se salta por completo (queda solo rate-limit por IP). Además el API key se acepta por **query param** (`?apiKey=`), filtrándose en logs/analytics/referrers. [VERIFIED, código leído]
 - **Impact:** Endpoint de datos de negocio (GSC/GA4) accesible sin credencial si la env var falta; key en URLs.
-- **Fix:** Exigir header `Authorization` siempre; nunca query param; fail-closed si la env var no existe.
+- **Fix aplicado (TSK-004, P0):** Fail-closed (401 si la env var no existe), solo `Authorization: Bearer`, comparación con `crypto.timingSafeEqual`, y eliminado el query param `apiKey`.
 
-### VULN-007 — SSE de progreso de PDF sin auth (Medium) — NUEVO
+### VULN-007 — SSE de progreso de PDF sin auth (Medium) — REMEDIADO ✅
 
 - **Location:** `src/app/api/reports/pdf/progress/route.ts`
 - **Confidence:** High
 - **Issue:** `GET /api/reports/pdf/progress?genId=<id>` es público. `genId` es un UUID generado por el cliente (o aleatorio) de ≥8 chars; al ser adivinable/determinista, un atacante puede observar el progreso de generación de PDFs ajenos. [VERIFIED, código leído]
 - **Impact:** Fuga de metadatos de generación (percent, step, errores); DoS leve por conexiones SSE abiertas.
-- **Fix:** Asociar `genId` a la sesión del usuario en Redis (clave con userId) o firmar el genId.
+- **Fix aplicado (TSK-005, P0):** El GET exige sesión (`createClient().auth.getUser()` → 401 sin sesión). La clave Redis ahora es `pdf_progress:<userId>:<genId>` (namespaced por usuario) tanto en el POST (`reports/pdf/route.tsx`) como en el GET — un caller solo puede ver el progreso de sus propias generaciones.
 
 ### VULN-008 — Endpoint de miembros sin auth (Low, mock) — NUEVO
 
@@ -408,4 +408,4 @@ Ver §3 (arquitectura) — 1 bloque mermaid, 11 nodos, válido.
 
 ## 18. Resumen ejecutivo
 
-**5 hallazgos (0 críticos, 3 high, 2 medium).** La aplicación tiene una postura de seguridad sólida: RLS transaccional, egress-guard con CIDR matching, sandbox sin shell, hashing de API keys, CSP, `CRON_SECRET` en crons y separación cliente/servidor verificada (Service Role nunca en bundle). La **revisión v2.0** añade dos hallazgos **HIGH nuevos de IDOR cross-tenant** en `/api/intelligence/history` (directDb sin auth) y `/api/intelligence/assets/graph` (db sin RLS), más auth condicional en looker-studio y SSE público en pdf/progress. **Priorizar remediación de VULN-004 y VULN-005** (ambas son una única clase: datos multi-tenant expuestos por falta de sesión + ownership). El `escapeHtml` de VULN-001 sigue disponible en `report-utils.ts`. No se detectaron secretos reales en el repo (gitleaks en CI a partir de T02-04).
+**2 hallazgos (0 críticos, 0 high, 0 medium, 2 low).** La aplicación tiene una postura de seguridad sólida: RLS transaccional, egress-guard con CIDR matching, sandbox sin shell, hashing de API keys, CSP, `CRON_SECRET` en crons y separación cliente/servidor verificada (Service Role nunca en bundle). La **revisión v2.1** detectó dos IDOR cross-tenant HIGH (VULN-004/005) que fueron remediados. La **revisión v2.2** cierra el batch P0: VULN-001 (XSS IA → `escapeHtml` antes del render), VULN-002 (secret webhooks enmascarado + test), VULN-003 (`/intelligence` en middleware), VULN-006 (looker-studio fail-closed + `timingSafeEqual`), VULN-007 (progreso PDF namespaced por usuario con sesión). **Restan solo 2 hallazgos Low** (VULN-008/009) que son endpoints mock sin datos reales — se protegen/eliminan al conectar datos reales (plan MODE C TSK-011/012). No se detectaron secretos reales en el repo (gitleaks es ahora barrera dura en CI).

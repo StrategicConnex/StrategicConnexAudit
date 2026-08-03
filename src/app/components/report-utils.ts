@@ -230,15 +230,13 @@ function parseNumericValue(value: string): number | null {
 
 // ─── Sanitizer ────────────────────────────────────────────────────────────────
 
-/** Escapes HTML special characters to prevent XSS in generated reports. */
-export function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+/**
+ * Escapes HTML special characters to prevent XSS in generated reports.
+ * Single implementation lives in src/shared/utils/html.ts (cubierta por
+ * tests de regresión de XSS); re-exportado aquí para compatibilidad.
+ */
+export { escapeHtml } from '@/shared/utils/html';
+import { escapeHtml } from '@/shared/utils/html';
 
 // ─── HTML Generator ───────────────────────────────────────────────────────────
 
@@ -442,7 +440,7 @@ export function generateHtmlReportDocument(data: ParsedReport): string {
       <h1>Reporte Estratégico de Auditoría SEO</h1>
       <p style="color: var(--accent); margin-top: 0.5rem; font-size: 1.1rem;">Informe Ejecutivo Automatizado por Inteligencia Artificial</p>
       <div class="meta-grid">
-        <div class="meta-item">Proyecto: <strong>${data.title}</strong></div>
+        <div class="meta-item">Proyecto: <strong>${sanitizedTitle}</strong></div>
         <div class="meta-item">Fecha de Generación: <strong>${new Date().toLocaleDateString('es-ES')}</strong></div>
         <div class="meta-item">Auditoría Técnica: <strong>Salud ${data.healthScore}/100</strong></div>
       </div>

@@ -179,6 +179,102 @@ describe("Webhooks API — Validación", () => {
     expect(body.success).toBe(true);
   });
 
+  it("GET con webhooks → NO expone secretToken (VULN-002 fix)", async () => {
+    const secret = "whsec_super_secret_value";
+    mockFindMany.mockResolvedValue([
+      {
+        id: "wh-1",
+        name: "Mi Webhook",
+        url: "https://hooks.example.com",
+        events: ["audit.completed"],
+        active: true,
+        createdAt: new Date("2026-01-01"),
+        updatedAt: new Date("2026-01-01"),
+        secretToken: secret,
+      },
+    ]);
+
+    const res = await GET(createRequest("GET", "?projectId=project-1"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    expect(body.success).toBe(true);
+    const webhook = body.webhooks[0];
+    // La clave `secretToken` nunca aparece en el objeto
+    expect(webhook.secretToken).toBeUndefined();
+    // Se devuelve un preview enmascarado (primeros 8 chars + …)
+    expect(webhook.secretTokenPreview).toBe("whsec_su…");
+
+    // Aserción de integración: el response SERIALIZADO COMPLETO nunca contiene
+    // el secreto ni siquiera como substring en otro campo.
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain(secret);
+    expect(serialized).not.toContain("super_secret");
+  });
+
+  it("GET → ninguna webhook filtra el secreto en OTRO campo (name/url) (VULN-002)", async () => {
+    // Si algún día un campo adicional (p.ej. name) llevara el secreto embebido,
+    // la aserción serializada debe detectarlo — no solo la ausencia de la clave.
+    const secret = "whsec_super_secret_value";
+    mockFindMany.mockResolvedValue([
+      {
+        id: "wh-a",
+        name: `Notif-${secret}`,
+        url: "https://hooks.example.com/a",
+        events: ["audit.completed"],
+        active: true,
+        createdAt: new Date("2026-01-01"),
+        updatedAt: new Date("2026-01-01"),
+        secretToken: secret,
+      },
+      {
+        id: "wh-b",
+        name: "Clean",
+        url: `https://hooks.example.com/${secret}`,
+        events: ["alert.triggered"],
+        active: true,
+        createdAt: new Date("2026-01-01"),
+        updatedAt: new Date("2026-01-01"),
+        secretToken: secret,
+      },
+    ]);
+
+    const res = await GET(createRequest("GET", "?projectId=project-1"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    // El secreto no puede filtrarse en ningún campo del response.
+    expect(JSON.stringify(body)).not.toContain(secret);
+    // Y tampoco la clave cruda en ningún webhook.
+    for (const wh of body.webhooks) {
+      expect(wh.secretToken).toBeUndefined();
+    }
+  });
+
+  it("GET con webhook SIN secreto → secretTokenPreview null (VULN-002)", async () => {
+    mockFindMany.mockResolvedValue([
+      {
+        id: "wh-2",
+        name: "Sin secreto",
+        url: "https://hooks.example.com/alt",
+        events: ["alert.triggered"],
+        active: false,
+        createdAt: new Date("2026-01-01"),
+        updatedAt: new Date("2026-01-01"),
+        secretToken: null,
+      },
+    ]);
+
+    const res = await GET(createRequest("GET", "?projectId=project-1"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    const webhook = body.webhooks[0];
+    expect(webhook.secretToken).toBeUndefined();
+    expect(webhook.secretTokenPreview).toBeNull();
+    expect(JSON.stringify(body)).not.toContain("whsec_");
+  });
+
   it("POST con datos válidos → genera whsec_ token", async () => {
     mockInsert.mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: "wh-1", secretToken: "whsec_test" }]) }) });
     // Para que el POST funcione, necesitamos que el insert devuelva .returning()
