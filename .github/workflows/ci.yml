@@ -55,41 +55,42 @@ jobs:
       # baja del umbral (default 80 = estándar "no entregar"). Script Node puro,
       # zero-deps — no requiere pnpm install.
       #
+      # Umbral por carpeta (--min-dir): los JOB-CONTRACT de docs/jobs son
+      # contratos de Trigger.dev con requisitos más estrictos → exigen 90/100,
+      # mientras el resto de TDDs técnicos sigue en 80/100.
+      #
       # EXCLUSIONES deliberadas: MASTER-INDEX.md y los planes de gobernanza
       # (docs/superpowers/) son índices/planes, no TDDs técnicos — no se validan.
-      - name: Docs Quality Gate (docs técnicos, min 80)
+      - name: Docs Quality Gate (docs técnicos, min 80 · docs/jobs min 90)
         run: |
           set -e
-          # nullglob: las carpetas sin .md commiteados (p.ej. docs/jobs/ antes
-          # del commit de sus JOB-CONTRACT) expanden el glob a vacío y se
-          # omiten — el job valida lo que existe en el checkout, sin fallar.
+          # nullglob: las carpetas sin .md commiteados expanden el glob a vacío
+          # y se omiten — el job valida lo que existe en el checkout, sin fallar.
           shopt -s nullglob
           DIRS="docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing"
-          echo "📚 Corriendo Quality Gate sobre docs técnicos (umbral 80/100)"
+          echo "📚 Corriendo Quality Gate sobre docs técnicos (80/100 · docs/jobs 90/100)"
           for d in $DIRS; do
             for f in "$d"/*.md; do
               echo "→ $f"
-              node scripts/quality-gate.mjs "$f" --min 80 --quiet
+              node scripts/quality-gate.mjs "$f" --min 80 --min-dir docs/jobs=90 --quiet
             done
           done
-          echo "✅ Todos los TDDs técnicos cumplen el umbral 80."
+          echo "✅ Todos los TDDs técnicos cumplen el umbral requerido."
 
       - name: Report quality gate in PR
         if: always()
         run: |
+          # Tabla de scores por carpeta (modo --table del validador): emite
+          # docs, PASS, promedio, mínimo, máximo y umbral por carpeta + TOTAL,
+          # con los docs bajo el umbral listados al final. Sin code fence para
+          # que GitHub lo renderice como tabla Markdown en el PR summary.
+          node scripts/quality-gate.mjs --table docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing --min 80 --min-dir docs/jobs=90 > /tmp/qg-table.txt || true
           {
             echo '## 📚 Docs Quality Gate'
             echo ''
-            echo 'Umbral: 80/100 · TDDs técnicos (architecture/database/jobs/modules/traceability/risk/technical-debt/testing) · [scripts/quality-gate.mjs](scripts/quality-gate.mjs)'
+            echo 'Umbral: 80/100 (docs/jobs 90/100) · TDDs técnicos (architecture/database/jobs/modules/traceability/risk/technical-debt/testing) · [scripts/quality-gate.mjs](scripts/quality-gate.mjs)'
             echo ''
-            echo '```'
-            shopt -s nullglob
-            for d in docs/architecture docs/database docs/jobs docs/modules docs/traceability docs/risk docs/technical-debt docs/testing; do
-              for f in "$d"/*.md; do
-                node scripts/quality-gate.mjs "$f" --min 80 --quiet || true
-              done
-            done
-            echo '```'
+            cat /tmp/qg-table.txt
           } >> "$GITHUB_STEP_SUMMARY"
 
   test-and-coverage:
