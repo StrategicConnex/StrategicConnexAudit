@@ -16,7 +16,7 @@
     "e2e:report": "npx tsx --env-file=.env.local src/scripts/e2e-ai-report.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "node scripts/prepare.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
