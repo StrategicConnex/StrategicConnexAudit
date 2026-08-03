@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { db } from '@/shared/db';
 import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets } from '@/shared/db/schemas';
 import { eq, desc, isNull, sql, and } from 'drizzle-orm';
@@ -67,22 +68,32 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // 2. Authorization check
+    // 2. Authorization check (VULN-006 fix): fail-closed, header-only, timing-safe
+    // SECURITY: if the env var is missing the endpoint must DENY (fail-closed),
+    // never open. The API key is accepted ONLY via `Authorization: Bearer` —
+    // never via `?apiKey=` query param (which leaks into logs/referrers).
     const authHeader = req.headers.get('Authorization');
     const { searchParams } = new URL(req.url);
-    const searchApiKey = searchParams.get('apiKey');
     const expectedKey = process.env.LOOKER_STUDIO_API_KEY;
 
-    if (expectedKey) {
-      const isAuthorizedHeader = authHeader === `Bearer ${expectedKey}`;
-      const isAuthorizedParam = searchApiKey === expectedKey;
-      
-      if (!isAuthorizedHeader && !isAuthorizedParam) {
-        return NextResponse.json(
-          { error: 'Unauthorized', message: 'Invalid or missing API Key' }, 
-          { status: 401 }
-        );
-      }
+    if (!expectedKey) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'LOOKER_STUDIO_API_KEY no configurada en el servidor' },
+        { status: 401 }
+      );
+    }
+
+    const provided = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const isAuthorized =
+      provided !== null &&
+      provided.length === expectedKey.length &&
+      crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expectedKey));
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Invalid or missing API Key' },
+        { status: 401 }
+      );
     }
 
     const projectId = searchParams.get('projectId');

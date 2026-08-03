@@ -48,7 +48,9 @@ export async function updateSession(request: NextRequest) {
   // 1. Proteger rutas privadas (ej. /projects, /dashboard, etc.)
   // Agrega aquí las rutas que deseas proteger. Si el panel entero está protegido, 
   // puedes invertir la lógica y verificar rutas públicas.
-  const isProtectedRoute = currentPath.startsWith('/projects') || currentPath.startsWith('/dashboard') || currentPath.startsWith('/settings');
+  // SECURITY (VULN-003): /intelligence is a sensitive UI shell that must
+  // require an active session (defense-in-depth — the data APIs already auth).
+  const isProtectedRoute = currentPath.startsWith('/projects') || currentPath.startsWith('/dashboard') || currentPath.startsWith('/settings') || currentPath.startsWith('/intelligence');
   
   if (isProtectedRoute && !user) {
     url.pathname = '/login'; // O la ruta de autenticación que uses

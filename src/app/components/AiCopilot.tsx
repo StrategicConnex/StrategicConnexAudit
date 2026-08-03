@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles, Loader2, Minimize2, Maximize2, ShieldAlert, FileText, Activity } from 'lucide-react';
+import { escapeHtml } from './report-utils';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -148,7 +149,7 @@ export function AiCopilot({ contextData }: { contextData: unknown }) {
                 ? (mode === 'analyst' ? 'bg-destructive/40 text-foreground border-destructive/20 shadow-md' : 'bg-primary/40 text-foreground border-primary/20 shadow-md') 
                 : 'bg-muted/20 text-foreground/80 border-border/50'
             }`}>
-              <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') }} />
+              <div dangerouslySetInnerHTML={{ __html: escapeHtml(msg.content).replace(/\n/g, '<br/>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') }} />
             </div>
           </div>
         ))}

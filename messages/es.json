@@ -285,7 +285,7 @@
     "webhooksActiveBadge": "Activo",
     "webhooksPausedBadge": "Pausado",
     "webhooksSubscribedTo": "Suscrito a:",
-    "webhooksCopySecret": "Copiar Firma de Seguridad",
+    "webhooksSecretMasked": "Vista previa enmascarada: el secreto completo de firma se muestra solo una vez al crear.",
     "webhooksCopied": "Copiado",
     "webhooksDeleteTitle": "Eliminar Webhook",
     "webhooksDeleteConfirm": "¿Está seguro de que desea eliminar esta integración de webhook? Se detendrá el envío de eventos de inmediato.",
@@ -298,8 +298,6 @@
     "webhooksModalTitle": "¡Webhook Registrado con Éxito!",
     "webhooksModalDesc": "Utilice este secreto de firma para validar de forma criptográfica la autenticidad e integridad de los payloads de eventos entrantes.",
     "webhooksModalSecretLabel": "Secret Token de Firma",
-    "webhooksModalCopied": "¡Copiado!",
-    "webhooksModalCopy": "Copiar Secreto",
     "webhooksModalButton": "He Guardado el Secreto"
   },
   "performance": {

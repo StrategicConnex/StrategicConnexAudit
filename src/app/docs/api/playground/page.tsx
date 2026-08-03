@@ -8,6 +8,7 @@ import {
   ChevronDown, ChevronRight, Loader2, AlertCircle,
   Globe, Lock, Eye, EyeOff,
 } from 'lucide-react';
+import { escapeHtml, syntaxHighlightJson } from '@/shared/utils/html';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -62,12 +63,8 @@ function statusColor(status: number): string {
 }
 
 // ─── HTML entity escape ──────────────────────────────────────────────────────
-
-function escapeHtml(str: string): string {
-  return str.replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] || c
-  );
-}
+// Implementación compartida en src/shared/utils/html.ts (escapeHtml) — pura,
+// reutilizable y cubierta por tests de regresión de XSS.
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -362,15 +359,10 @@ function JsonView({ data }: { data: unknown }) {
 }
 
 function SyntaxHighlight({ json }: { json: string }) {
-  // Simple JSON syntax highlighting on sanitized HTML-escaped text
-  const highlighted = json
-    .replace(/&quot;([^&]*)&quot;\s*:/g, '<span class="text-primary">"$1"</span>:')
-    .replace(/&quot;([^&]*)&quot;/g, '<span class="text-chartreuse">"$1"</span>')
-    .replace(/\b(true|false)\b/g, '<span class="text-amber-400">$1</span>')
-    .replace(/\b(null)\b/g, '<span class="text-muted-fg/50">$1</span>')
-    .replace(/\b(\d+\.?\d*)\b/g, '<span class="text-purple-400">$1</span>');
-
-  return <span dangerouslySetInnerHTML={{ __html: highlighted }} />;
+  // Simple JSON syntax highlighting on sanitized HTML-escaped text.
+  // IMPORTANT: `json` is ALWAYS pre-escaped (escapeHtml) before reaching here,
+  // so the injected <span> wrappers are the only raw HTML in the DOM.
+  return <span dangerouslySetInnerHTML={{ __html: syntaxHighlightJson(json) }} />;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────

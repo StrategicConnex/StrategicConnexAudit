@@ -1,9 +1,43 @@
 import { exportElementToPdf } from './pdf-utils';
+import { escapeHtml } from './html';
 
 export interface AgencyBranding {
   name: string;
   color: string;
   logoUrl: string;
+}
+
+/**
+ * buildAuditHeaderHtml — builds the white-label PDF header HTML with all
+ * user-controlled branding fields escaped (XSS defense). Pure and testable.
+ * Returns empty string when there is no branding to show.
+ */
+export function buildAuditHeaderHtml(
+  branding: AgencyBranding | undefined,
+  generatedDate: string
+): string {
+  if (!branding || (!branding.name && !branding.logoUrl)) return '';
+
+  const safeName = escapeHtml(branding.name);
+  const safeLogoUrl = escapeHtml(branding.logoUrl);
+  const safeColor = escapeHtml(branding.color || '#0C1929');
+
+  const logoHtml = branding.logoUrl
+    ? `<img src="${safeLogoUrl}" alt="${safeName} Logo" style="max-height: 50px; object-fit: contain;" crossorigin="anonymous"/>`
+    : '';
+
+  const titleHtml = `<h2 style="margin:0; font-family: 'Inter', sans-serif; font-size: 28px; font-weight: 800; color: ${safeColor}; letter-spacing: -0.02em;">AUDITORÍA ESTRATÉGICA</h2>`;
+
+  return `
+      <div style="display:flex; align-items:center; gap: 20px;">
+        ${logoHtml}
+        ${branding.name ? `<span style="font-weight:700; font-size: 20px; font-family: 'Inter', sans-serif; opacity: 0.8;">${safeName}</span>` : ''}
+      </div>
+      <div style="text-align: right;">
+        ${titleHtml}
+        <p style="margin:4px 0 0 0; color:#64748B; font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em;">Generado: ${escapeHtml(generatedDate)}</p>
+      </div>
+    `;
 }
 
 const applyAuditExportTheme = (clonedDoc: Document, branding?: AgencyBranding) => {
@@ -159,22 +193,11 @@ export const exportAuditToPdf = async (
     headerDiv.style.backgroundColor = '#FFFFFF';
     headerDiv.style.color = '#0C1929';
 
-    const logoHtml = branding.logoUrl
-      ? `<img src="${branding.logoUrl}" alt="${branding.name} Logo" style="max-height: 50px; object-fit: contain;" crossorigin="anonymous"/>`
-      : '';
-
-    const titleHtml = `<h2 style="margin:0; font-family: 'Inter', sans-serif; font-size: 28px; font-weight: 800; color: ${branding.color || '#0C1929'}; letter-spacing: -0.02em;">AUDITORÍA ESTRATÉGICA</h2>`;
-
-    headerDiv.innerHTML = `
-      <div style="display:flex; align-items:center; gap: 20px;">
-        ${logoHtml}
-        ${branding.name ? `<span style="font-weight:700; font-size: 20px; font-family: 'Inter', sans-serif; opacity: 0.8;">${branding.name}</span>` : ''}
-      </div>
-      <div style="text-align: right;">
-        ${titleHtml}
-        <p style="margin:4px 0 0 0; color:#64748B; font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em;">Generado: ${new Date().toLocaleDateString('es-ES')}</p>
-      </div>
-    `;
+    // XSS defense: all branding fields are escaped inside the builder.
+    headerDiv.innerHTML = buildAuditHeaderHtml(
+      branding,
+      new Date().toLocaleDateString('es-ES')
+    );
 
     element.insertBefore(headerDiv, element.firstChild);
   };

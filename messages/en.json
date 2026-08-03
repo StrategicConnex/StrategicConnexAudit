@@ -285,7 +285,7 @@
     "webhooksActiveBadge": "Active",
     "webhooksPausedBadge": "Paused",
     "webhooksSubscribedTo": "Subscribed to:",
-    "webhooksCopySecret": "Copy Signing Secret",
+    "webhooksSecretMasked": "Masked preview — full signing secret is shown only once at creation.",
     "webhooksCopied": "Copied",
     "webhooksDeleteTitle": "Delete Webhook",
     "webhooksDeleteConfirm": "Are you sure you want to delete this webhook integration? Event delivery will stop immediately.",
@@ -298,8 +298,6 @@
     "webhooksModalTitle": "Webhook Registered Successfully!",
     "webhooksModalDesc": "Use this signing secret to cryptographically validate the authenticity and integrity of incoming event payloads.",
     "webhooksModalSecretLabel": "Signing Secret Token",
-    "webhooksModalCopied": "Copied!",
-    "webhooksModalCopy": "Copy Secret",
     "webhooksModalButton": "I Have Saved the Secret"
   },
   "performance": {

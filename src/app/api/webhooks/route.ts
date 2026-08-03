@@ -48,10 +48,42 @@ export async function GET(req: NextRequest) {
         where: eq(webhookConfigs.projectId, projectId)
       });
 
+      // SECURITY (VULN-002): never expose the signing secret in read responses.
+      // Return a masked preview so clients can tell the secret was set.
+      const safeWebhooks = webhooks.map((wh) => ({
+        id: wh.id,
+        name: wh.name,
+        url: wh.url,
+        events: wh.events,
+        active: wh.active,
+        createdAt: wh.createdAt,
+        updatedAt: wh.updatedAt,
+        secretTokenPreview: wh.secretToken
+          ? `${wh.secretToken.slice(0, 8)}…`
+          : null,
+      }));
+
+      // Defense-in-depth (VULN-002): even if a future field (name, url, …)
+      // accidentally carried the raw secret, redact EVERY occurrence in the
+      // serialized payload so the response can never contain it as a substring.
+      const rawSecrets = webhooks
+        .map((w) => w.secretToken)
+        .filter(Boolean) as string[];
+
+      let payload: { webhooks: typeof safeWebhooks } = { webhooks: safeWebhooks };
+      if (rawSecrets.length > 0) {
+        const serialized = JSON.stringify(payload);
+        const redacted = rawSecrets.reduce(
+          (json, s) => json.split(s).join(`${s.slice(0, 8)}…`),
+          serialized
+        );
+        payload = JSON.parse(redacted) as typeof payload;
+      }
+
       return {
         success: true,
         status: 200,
-        data: { webhooks }
+        data: payload
       };
     });
 
