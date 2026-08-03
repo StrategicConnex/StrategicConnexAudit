@@ -71,3 +71,8 @@ next-env.d.ts
 /scratch/
 
 .vscode/
+
+# IDE / agent tooling
+.claude/
+.idea/
+.serena/
