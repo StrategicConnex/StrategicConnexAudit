@@ -1,12 +1,44 @@
 import { NextResponse } from "next/server";
-import { canPerformAction, ProjectRole } from "@/server/auth/rbac";
+import { ProjectRole } from "@/server/auth/rbac";
+import { createClient } from "@/shared/lib/supabase/server";
+import { withRLS } from "@/shared/db/rls";
+import { projects } from "@/shared/db/schemas";
+import { eq } from "drizzle-orm";
+
+/**
+ * VULN-008 fix: el endpoint exige sesión y verifica que el proyecto pertenezca
+ * al usuario (owner-check bajo RLS) ANTES de responder. El payload sigue siendo
+ * mock hasta conectar datos reales, pero la superficie ya no es pública.
+ */
+async function authorizeProject(projectId: string): Promise<
+  | { user: { id: string } }
+  | { error: NextResponse }
+> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 }) };
+  }
+
+  const owned = await withRLS(user.id, async (tx) =>
+    tx.query.projects.findFirst({ where: eq(projects.id, projectId) })
+  );
+  if (!owned) {
+    return { error: NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 }) };
+  }
+
+  return { user: { id: user.id } };
+}
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: projectId } = await params;
-  
+
+  const auth = await authorizeProject(projectId);
+  if ("error" in auth) return auth.error;
+
   // Mock response until DB connection / Auth Context is wired in
   const members = [
     {
@@ -42,6 +74,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: projectId } = await params;
+
+  const auth = await authorizeProject(projectId);
+  if ("error" in auth) return auth.error;
 
   try {
     const body = await request.json();

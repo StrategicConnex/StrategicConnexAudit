@@ -2,6 +2,7 @@ import {
   pgTable, uuid, text, timestamp, integer,
   jsonb, index
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // ─── Security Audit Logs ──────────────────────────────────────────────────────
 // Eventos de seguridad estructurados: rate limit hits, open redirect attempts,
@@ -21,6 +22,10 @@ export const securityAuditLogs = pgTable("security_audit_logs", {
 }, (t) => [
   index("idx_sec_audit_event_type_created").on(t.eventType, t.createdAt),
   index("idx_sec_audit_ip_created").on(t.ip, t.createdAt),
+  // REC-02 (TSK-008): ILIKE '%…%' sobre ip sin índice GIN trgm → seq scan.
+  index("idx_sec_audit_ip_trgm").using("gin", t.ip.op("gin_trgm_ops")),
+  // REC-03 (TSK-008): filtro metadata->>'action' en audit-logs.
+  index("idx_sec_audit_meta_action").on(sql`(metadata->>'action')`),
 ]);
 
 // ─── SIEM Alert Logs ──────────────────────────────────────────────────────────
@@ -49,4 +54,6 @@ export const siemAlertLogs = pgTable("siem_alert_logs", {
   index("idx_siem_logs_created").on(t.createdAt),
   index("idx_siem_logs_severity_created").on(t.severity, t.createdAt),
   index("idx_siem_logs_rule_type_created").on(t.ruleEventType, t.createdAt),
+  // REC-04 (TSK-008): ILIKE '%…%' sobre ip en siem-alerts → GIN trgm.
+  index("idx_siem_ip_trgm").using("gin", t.ip.op("gin_trgm_ops")),
 ]);

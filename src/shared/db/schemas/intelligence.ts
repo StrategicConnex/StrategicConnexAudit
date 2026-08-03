@@ -89,6 +89,9 @@ export const intelligenceFindings = pgTable("intelligence_findings", {
   index("idx_intel_findings_project_severity").on(t.projectId, t.severity),
   index("idx_intel_findings_investigation_severity").on(t.investigationId, t.severity),
   index("idx_intel_findings_investigation_created").on(t.investigationId, t.createdAt),
+  // REC-01 (TSK-008): FK tool_run_id con onDelete set null — borrar un tool_run
+  // fuerza seq scan sobre findings sin este índice.
+  index("idx_findings_tool_run").on(t.toolRunId),
 ]);
 
 // 4. Activos Descubiertos (Subdominios, IPs, etc.)

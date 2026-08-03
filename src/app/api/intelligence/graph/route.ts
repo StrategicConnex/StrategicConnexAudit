@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/shared/lib/supabase/server";
 
+/**
+ * VULN-009 fix: la ruta exige sesión (el frontend AttackSurfaceGraph la consume,
+ * así que se protege con authenticate en vez de eliminarse). El payload sigue
+ * siendo mock hasta conectar el grafo real.
+ */
 export async function GET(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const nodeId = searchParams.get("nodeId");
 
