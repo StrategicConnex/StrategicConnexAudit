@@ -437,7 +437,7 @@ TRIGGER_SECRET_KEY=tr_dev_xxxxxxxxxxxx
 | API Key Expiry | `src/trigger/api-key-expiry.trigger.ts` | Diario 09:00 UTC | Alerta cuando keys están por expirar |
 | Audit | `src/trigger/audit.trigger.ts` | Bajo demanda | Ejecuta auditorías técnicas |
 | Monitoring | `src/trigger/monitoring.trigger.ts` | Bajo demanda | Monitoreo de infraestructura |
-| Uptime | `src/trigger/uptime.trigger.ts` | Diario | Verificación de uptime de proyectos |
+| Uptime | `src/trigger/uptime.trigger.ts` | Cada 15 min | Verificación de uptime de proyectos |
 | Webhook | `src/trigger/webhook.trigger.ts` | Bajo demanda | Delivery de webhooks |
 
 ### 4.4 Verificar conexión

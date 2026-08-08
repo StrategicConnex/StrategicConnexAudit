@@ -760,7 +760,7 @@ flowchart LR
 | GET | `/api/public/v1/health` | Público | Verificación post-deploy |
 | GET | `/api/monitoring` | Sesión | Estado de monitoreo |
 | GET | `/api/intelligence/health` | Sesión | Health del engine |
-| POST | `/api/cron/uptime` | `x-cron-secret` | Cron diario |
+| POST | `/api/cron/uptime` | `Bearer <CRON_SECRET>` | Cron cada 15 min |
 
 ---
 

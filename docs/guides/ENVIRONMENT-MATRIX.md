@@ -1,6 +1,6 @@
 ---
-version: 1.0
-date: 2026-08-02
+version: 1.1
+date: 2026-08-08
 author: Equipo SCAUDIT — Plataforma/DevOps
 status: Aprobado
 ---
@@ -120,7 +120,7 @@ flowchart LR
 |---|---|
 | Framework | Next.js (`next build`, install frozen-lockfile) |
 | Región | `iad1` |
-| Cron | `/api/cron/uptime` diario (protegido por `CRON_SECRET`; GET) |
+| Cron | `/api/cron/siem` cada 5 min + `/api/cron/uptime` cada 15 min (protegidos por `Bearer CRON_SECRET`) |
 | CI/CD | GitHub Actions: lint-and-build, secret-scan, docs-gate, tests, api-contract |
 
 ---
