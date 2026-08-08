@@ -164,7 +164,7 @@ export function MarketplaceTab() {
 
     return (
       <div key={pkg.id}
-        className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 transition-all duration-300 hover:border-primary/15 hover:bg-muted/10 flex flex-col">
+        className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 transition-colors duration-300 hover:border-primary/15 hover:bg-muted/10 flex flex-col">
 
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -225,7 +225,7 @@ export function MarketplaceTab() {
               <button
                 onClick={() => handleUninstall(item.instance!.id, pkg.id)}
                 disabled={isInstalling}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold hover:bg-destructive/20 transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold hover:bg-destructive/20 transition-[color,background-color,border-color,opacity] cursor-pointer disabled:opacity-50"
               >
                 {isInstalling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                 Desinstalar
@@ -235,7 +235,7 @@ export function MarketplaceTab() {
             <button
               onClick={() => handleInstall(pkg.id)}
               disabled={isInstalling}
-              className="flex items-center gap-2 bg-foreground text-background hover:bg-foreground/80 transition-all font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl border border-border cursor-pointer active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed w-full justify-center"
+              className="flex items-center gap-2 bg-foreground text-background hover:bg-foreground/80 transition-[color,background-color,border-color,opacity,transform] font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl border border-border cursor-pointer active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed w-full justify-center"
             >
               {isInstalling ? (
                 <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Instalando...</>
@@ -294,7 +294,7 @@ export function MarketplaceTab() {
             placeholder="Buscar plugins..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-muted/5 border border-border rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-fg/50 focus:outline-none focus:border-primary/40 transition-all"
+            className="w-full bg-muted/5 border border-border rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-fg/50 focus:outline-none focus:border-primary/40 transition-colors"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-fg hover:text-foreground cursor-pointer">
@@ -304,14 +304,14 @@ export function MarketplaceTab() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => setCategoryFilter('all')}
-            className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+            className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
               categoryFilter === 'all' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/5 border-border text-muted-fg hover:text-foreground'
             }`}>
             Todos ({plugins.length})
           </button>
           {categories.map((cat) => (
             <button key={cat} onClick={() => setCategoryFilter(cat)}
-              className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer flex items-center gap-1.5 ${
                 categoryFilter === cat ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/5 border-border text-muted-fg hover:text-foreground'
               }`}>
               {CATEGORY_ICONS[cat] || <Tag className="w-3 h-3" />}

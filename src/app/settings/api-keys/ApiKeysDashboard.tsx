@@ -213,7 +213,6 @@ export default function ApiKeysDashboard() {
 
   // ── Derived data ───────────────────────────────────────────────
   const activeKeys = apiKeys.filter(k => !k.expiresAt || new Date(k.expiresAt) > new Date());
-  const expiredKeys = apiKeys.filter(k => k.expiresAt && new Date(k.expiresAt) <= new Date());
   const expiringSoonKeys = apiKeys.filter(k => {
     const d = daysUntil(k.expiresAt);
     return d !== null && d >= 0 && d <= 7;
@@ -366,10 +365,11 @@ export default function ApiKeysDashboard() {
               {sortNewest ? 'Newest' : 'Oldest'}
             </button>
             <button onClick={fetchKeys}
+              aria-label="Actualizar claves"
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
               title="Refresh"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw aria-hidden="true" className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
@@ -458,20 +458,22 @@ export default function ApiKeysDashboard() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleCopy(key.keyPrefix, 'cp-' + key.id)}
+                            aria-label="Copiar prefijo de la clave"
                             className="text-muted-fg hover:text-primary bg-muted/10 hover:bg-primary/10 p-2 rounded-lg border border-border hover:border-primary/30 transition-all cursor-pointer"
                             title="Copy prefix"
                           >
                             {copiedId === 'cp-' + key.id
-                              ? <Check className="w-3.5 h-3.5 text-chartreuse" />
-                              : <Copy className="w-3.5 h-3.5" />
+                              ? <Check aria-hidden="true" className="w-3.5 h-3.5 text-chartreuse" />
+                              : <Copy aria-hidden="true" className="w-3.5 h-3.5" />
                             }
                           </button>
                           <button
                             onClick={() => handleRevoke(key.id)}
+                            aria-label="Revocar esta API key"
                             className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-lg border border-destructive/20 transition-all cursor-pointer"
                             title="Revoke this key"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 aria-hidden="true" className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>

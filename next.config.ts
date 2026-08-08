@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // /docs/[...slug] renders the markdown from docs/ at REQUEST time (dynamic
+  // rendering is required so the CSP nonce applies — see src/proxy.ts), so the
+  // markdown files must ship inside the serverless function bundle.
+  outputFileTracingIncludes: {
+    "/docs/[...slug]": ["./docs/**/*"],
+  },
   experimental: {
     optimizePackageImports: ["lucide-react"],
     /**

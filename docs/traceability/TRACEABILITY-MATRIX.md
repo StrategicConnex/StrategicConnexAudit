@@ -3,8 +3,8 @@ layout: default
 title: Traceability Matrix
 nav_order: 8.1
 permalink: /docs/traceability/traceability-matrix
-version: 1.0
-fecha: 2026-08-02
+version: 1.1
+fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -110,7 +110,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 ## 7. Seguridad (trust boundaries y controles)
 
 - **Trust boundary:** browser → middleware → API routes → Supabase (RLS). [VERIFIED]
-- **Controles por funcionalidad:** RLS `member_or_owner` (rls.test.ts 5/5) · egress-guard SSRF (27/30 tests) · XSS IA escapado (AiCopilot 6/6) · secretToken enmascarado (webhooks 15/15) · API keys SHA-256 · gitleaks fail-hard CI. [VERIFIED — SECURITY-AUDIT v2.2]
+- **Controles por funcionalidad:** RLS `member_or_owner` (rls.test.ts 5/5) · egress-guard SSRF (31/31 tests) · XSS IA escapado (AiCopilot 6/6) · secretToken enmascarado (webhooks 15/15) · API keys SHA-256 · gitleaks fail-hard CI. [VERIFIED — SECURITY-AUDIT v2.2]
 - **Amenazas cubiertas:** IDOR cross-tenant (VULN-004/005), XSS IA (VULN-001), fuga realtime (SB-002 → CHANGE-003), VULN-008/009 autenticados (P1). [VERIFIED]
 
 ---
@@ -124,7 +124,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | Test | Ruta | Estado |
 |------|------|--------|
 | RLS contract | `src/shared/db/rls.test.ts` | ✅ 5/5 |
-| Egress-guard SSRF | `src/server/intelligence/security/egress-guard.test.ts` | ✅ 27/30 (3 ambientales) |
+| Egress-guard SSRF | `src/server/intelligence/security/egress-guard.test.ts` | ✅ 31/31 (integración real se omite sin red) |
 | XSS AiCopilot | `src/app/components/AiCopilot.test.tsx` | ✅ 6/6 |
 | Webhooks | `src/app/api/webhooks/route.test.ts` | ✅ 15/15 |
 | Members | `src/app/api/projects/[id]/members/route.test.ts` | ✅ 6/6 |
@@ -139,7 +139,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | Executors | `src/server/intelligence/executors/executors.test.ts` | ✅ |
 | Cron SIEM/Uptime | `src/app/api/cron/{siem,uptime}/route.test.ts` | ✅ |
 
-**Cobertura global:** 29 files · 298 tests (295 OK + 3 ambientales) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX].
+**Cobertura global:** 40 files · 360 tests (360 OK) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX].
 
 ---
 
@@ -169,7 +169,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | 1 | **Auth (Magic Link)** | REQ-104 | `src/app/login`, `src/app/auth` | middleware | `users` | — | `rls.test.ts` ✅ | ENTERPRISE-ARCHITECTURE |
 | 2 | **RLS multi-tenant** | REQ-104 | `src/shared/db/rls.ts` | 42 rutas | `project_members` | — | `rls.test.ts` (5) ✅ | SUPABASE-AUDIT |
 | 3 | **Rate limit** | REQ-106 | `src/shared/lib/ratelimit.ts` | inteligencia | `intelligence_usage_events` | — | `ratelimit.test.ts` ✅ | ADR-002 |
-| 4 | **Egress-guard SSRF** | REQ-105 | `src/server/intelligence/security/egress-guard.ts` | engine HTTP | — | — | `egress-guard.test.ts` (27/30) ✅ | ADR-005 |
+| 4 | **Egress-guard SSRF** | REQ-105 | `src/server/intelligence/security/egress-guard.ts` | engine HTTP | — | — | `egress-guard.test.ts` (31/31) ✅ | ADR-005 |
 | 5 | **Discovery** | REQ-108 | `src/server/intelligence/executors/` | `/api/intelligence/discovery` | `intelligence_assets` | `discovery.trigger.ts` | `executors.test.ts` ✅ | JOB-CONTRACT-discovery |
 | 6 | **SIEM** | REQ-108 | `src/server/security/siem-exporter.ts` | `/api/cron/siem`, `/api/security/siem/*` | `siem_alert_logs` | `siem.trigger.ts` | `siem-exporter.test.ts` + cron route.test ✅ | JOB-CONTRACT-siem |
 | 7 | **Adversary (PTT)** | REQ-108 | `scenario-runner.ts` + `sandbox-executor.ts` | `/api/intelligence/adversary` | `adversary_*` | `adversary.trigger.ts` | `adversary/route.test.ts` (6) + runner + sandbox ✅ | JOB-CONTRACT-adversary |
@@ -226,7 +226,7 @@ flowchart LR
 
 - [UNKNOWN] Cobertura E2E Playwright (pendiente B10).
 - [UNKNOWN] `src/server/db/supabase-live-test.mjs` (script suelto, no test runner) — sin ejecutar en CI.
-- [ASSUMPTION] Los 3 fallos de egress-guard permanecen ambientales (red real) mientras httpbin.org esté caído.
+- [RESOLVED] La suite de red de egress-guard sondea conectividad en `beforeAll` (example.com/httpbin.org) y omite los tests sin internet — 31/31 sin fallos ambientales.
 - [RECOMMENDED] Resolver TD-11 (2 tool-registries) para que ADR-001 sea fiel al disco.
 
 ---
@@ -247,6 +247,7 @@ flowchart LR
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Matriz de trazabilidad B10 (T10-01, §48): 12 funcionalidades críticas | Aprobado |
+| 1.1 | 2026-08-08 | Seguridad: gap SSRF IPv4-mapped IPv6 (`::ffff:`) cerrado en egress-guard; suite 31/31 y resiliente sin red | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/traceability/TRACEABILITY-MATRIX.md --min 80` → PASS
 

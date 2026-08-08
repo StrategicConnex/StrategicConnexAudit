@@ -2,6 +2,7 @@
 
 import { FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
 
 interface ExportCsvButtonProps {
   projectId: string;
@@ -34,18 +35,21 @@ export function ExportCsvButton({ projectId }: ExportCsvButtonProps) {
   };
 
   return (
-    <button 
+    <Button
       onClick={handleExport}
       disabled={isExporting}
-      className="w-full sm:w-auto h-10 px-6 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed
-        bg-muted/30 text-foreground hover:bg-muted/60 hover:text-white border border-border/30 shadow-sm hover:shadow-md"
+      variant="muted"
+      size="md"
+      shape="pill"
+      press="none"
+      className="w-full sm:w-auto px-6"
     >
       {isExporting ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
       ) : (
-        <FileSpreadsheet className="w-3.5 h-3.5" />
+        <FileSpreadsheet className="w-3.5 h-3.5" aria-hidden="true" />
       )}
       {isExporting ? 'Exporting...' : 'Export Keywords CSV'}
-    </button>
+    </Button>
   );
 }

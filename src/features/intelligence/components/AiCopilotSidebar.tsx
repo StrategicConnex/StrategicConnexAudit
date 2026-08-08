@@ -34,7 +34,7 @@ export function AiCopilotSidebar({
     investigationStatus !== undefined;
 
   return (
-    <aside className={`relative border-l border-border bg-card shrink-0 h-full flex flex-col transition-all duration-300 ease-in-out ${
+    <aside className={`relative border-l border-border bg-card shrink-0 h-full flex flex-col transition-[background-color,border-color,opacity] duration-300 ease-in-out ${
       isOpen ? "w-80 opacity-100" : "w-0 opacity-0 overflow-hidden border-l-0"
     }`}>
       {/* Header */}
@@ -59,7 +59,7 @@ export function AiCopilotSidebar({
           <button
             onClick={onRequestRemediation}
             disabled={isGenerating || !canRequestPlan}
-            className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-mono hover:bg-emerald-500/20 active:scale-98 transition-all disabled:opacity-40 disabled:scale-100"
+            className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-mono hover:bg-emerald-500/20 active:scale-98 transition-[color,background-color,border-color,opacity,transform] disabled:opacity-40 disabled:scale-100"
           >
             {isGenerating ? (
               <>
@@ -81,7 +81,7 @@ export function AiCopilotSidebar({
         {messages.map((msg, idx) => (
           <div
             key={idx}
-            className={`flex flex-col space-y-1 p-3 rounded-xl text-xs max-w-[90%] transition-all ${
+            className={`flex flex-col space-y-1 p-3 rounded-xl text-xs max-w-[90%] transition-[color,background-color,margin] ${
               msg.role === "user"
                 ? "bg-foreground text-background ml-auto border border-border"
                 : "bg-muted border border-border text-foreground mr-auto"
@@ -103,12 +103,12 @@ export function AiCopilotSidebar({
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder="Pregunta sobre puertos, SPF..."
-            className="flex-1 bg-transparent border-0 outline-none text-xs text-foreground placeholder-[#52525b] py-2.5 px-3"
+            className="flex-1 bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-lg text-xs text-foreground placeholder-[#52525b] py-2.5 px-3"
           />
           <button
             type="submit"
             disabled={!inputValue.trim()}
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-100 text-background hover:bg-foreground active:scale-95 disabled:opacity-30 disabled:scale-100 transition-all"
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-100 text-background hover:bg-foreground active:scale-95 disabled:opacity-30 disabled:scale-100 transition-[color,background-color,opacity,transform]"
           >
             <ArrowRight className="w-3.5 h-3.5" />
           </button>

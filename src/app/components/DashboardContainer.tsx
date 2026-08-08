@@ -124,7 +124,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-background">
+      <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col h-screen overflow-hidden bg-background">
         {/* Header Component */}
         <DashboardHeader 
           activeTab={activeTab} 

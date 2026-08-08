@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/shared/db";
 import { intelligenceAssets } from "@/shared/db/schemas/intelligence";
 import { projects } from "@/shared/db/schemas";
 import { eq, and, desc, isNull, count } from "drizzle-orm";

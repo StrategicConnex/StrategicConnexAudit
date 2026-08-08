@@ -3,8 +3,8 @@ layout: default
 title: Seguridad
 nav_order: 4
 permalink: /docs/security
-version: 1.1
-fecha: 2026-08-01
+version: 1.2
+fecha: 2026-08-08
 autor: Equipo SCAUDIT
 estado: Aprobado
 ---
@@ -58,23 +58,31 @@ Aplicada dinámicamente por `src/proxy.ts` en cada request:
 ```
 Content-Security-Policy:
   default-src 'self';
-  script-src 'self' 'unsafe-inline' ['unsafe-eval' en dev];
+  script-src 'self' 'nonce-<nonce>' 'strict-dynamic' ['unsafe-eval' en dev];
   style-src 'self' 'unsafe-inline';
+  object-src 'none';
   img-src 'self' data: https:;
   font-src 'self' data:;
-  connect-src 'self' https://*.supabase.co https://apifreellm.com;
+  connect-src 'self' https://*.supabase.co;
   frame-ancestors 'none';
   base-uri 'self';
   form-action 'self';
   report-uri /api/security/csp-report
 ```
 
+**Detalles clave de la política actual (v1.2):**
+
+- **`script-src` con nonce por request + `'strict-dynamic'`, SIN `'unsafe-inline'`.** El nonce se genera en `src/proxy.ts` por cada request y se inyecta en los headers del **request** (Next.js 16 lo extrae y lo aplica automáticamente a sus scripts inline de hidratación) y se replica en el header de la **respuesta**. La presencia de `'unsafe-inline'` desactivaría silenciosamente la validación por nonce en todo navegador CSP3, por lo que está prohibido. `'strict-dynamic'` permite que el runtime nonceado cargue sus chunks dinámicos.
+- **`connect-src` solo `'self' https://*.supabase.co`.** Los proveedores LLM (apifreellm.com) y los exporters SIEM se ejecutan server-side y no están gobernados por esta política; incluirlos en `connect-src` solo ampliaría la superficie de exfiltración del navegador.
+- **`object-src 'none'`** deshabilita plugins (flash/java) no usados por la app.
+- **Requisito de renderizado:** los nonces exigen renderizado dinámico; no hay páginas estáticas prerenderizadas (los antiguos `force-static`/`generateStaticParams` se eliminaron).
+
 ### Capa 2: Meta Tag (layout.tsx)
 
-Capa adicional para páginas prerendered (estáticas):
+`layout.tsx` lee el nonce del request (`headers()`) y renderiza una meta CSP con **el mismo nonce** como fallback por defensa en profundidad. Cuando coexisten header y meta, el navegador exige **ambas** políticas, así que la meta nunca debilita el header — solo garantiza una política estricta si el header del proxy faltara:
 
 ```html
-<meta httpEquiv="Content-Security-Policy" content="..." />
+<meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; object-src 'none'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'" />
 ```
 
 ### Reportes
@@ -415,8 +423,8 @@ flowchart LR
 
 | Campo | Valor |
 |-------|-------|
-| Versión | 1.1 |
-| Fecha | 2026-08-01 |
+| Versión | 1.2 |
+| Fecha | 2026-08-08 |
 | Autor | Equipo SCAUDIT |
 | Estado | Aprobado |
 

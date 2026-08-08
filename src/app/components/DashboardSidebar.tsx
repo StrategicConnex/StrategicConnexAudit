@@ -43,7 +43,7 @@ function NavButton({ tab, activeTab, icon, label, badge, onClick, onHover }: Nav
     <button
       onClick={onClick}
       onMouseEnter={onHover}
-      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 group border cursor-pointer ${
+      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-[13px] font-medium transition-colors duration-300 group border cursor-pointer ${
         isActive
           ? 'bg-primary/5 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
           : 'text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10'
@@ -197,7 +197,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
       <div className="px-4 mb-1 z-10 space-y-1">
         <Link
           href="/docs"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.docs')}</span>
@@ -205,7 +205,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         </Link>
         <Link
           href="/ai/health"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <HeartPulse size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.aiHealth')}</span>
@@ -213,7 +213,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         </Link>
         <Link
           href="/mitre-coverage"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <Crosshair size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.mitre')}</span>
@@ -221,7 +221,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         </Link>
         <Link
           href="/docs/api"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.apiReference')}</span>
@@ -229,7 +229,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         </Link>
         <Link
           href="/settings/api-keys"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <Key size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.apiKeys')}</span>
@@ -237,7 +237,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         </Link>
         <Link
           href="/swagger"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
         >
           <Zap size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.apiPlayground')}</span>
@@ -255,7 +255,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
       <div className="p-4 border-t border-border/50 shrink-0 z-10">
         <button
           onClick={() => onTabChange('settings')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-all duration-300 border cursor-pointer ${
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] font-medium transition-colors duration-300 border cursor-pointer ${
             activeTab === 'settings'
               ? 'bg-primary/5 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
               : 'text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10'

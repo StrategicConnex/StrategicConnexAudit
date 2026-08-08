@@ -61,7 +61,7 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, 
               <div
                 key={item.id}
                 onClick={() => onSelectEvidence(isSelected ? null : item.id)}
-                className={`p-4 border rounded-xl cursor-pointer transition-all duration-300 ${
+                className={`p-4 border rounded-xl cursor-pointer transition-colors duration-300 ${
                   isSelected
                     ? "bg-card border-emerald-500/40 shadow-lg"
                     : "bg-card border-border hover:border-border"

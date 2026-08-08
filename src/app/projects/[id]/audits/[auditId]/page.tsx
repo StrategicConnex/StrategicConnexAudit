@@ -169,7 +169,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
         </div>
       </header>
 
-      <main className="flex-1 p-8 overflow-y-auto cyber-grid">
+      <main id="main-content" tabIndex={-1} className="flex-1 p-8 overflow-y-auto cyber-grid">
         <div id="pdf-export-content" className="max-w-5xl mx-auto space-y-8 p-4 -m-4 bg-background">
           
           {/* Fila de Score de Salud y Métricas rápidas */}

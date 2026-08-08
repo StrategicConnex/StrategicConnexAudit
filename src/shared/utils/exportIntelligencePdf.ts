@@ -39,7 +39,7 @@ export function buildIntelligenceHeaderHtml(
     `;
 }
 
-const applyIntelligenceExportTheme = (clonedDoc: Document, branding?: IntelligenceBranding) => {
+const applyIntelligenceExportTheme = (clonedDoc: Document, _branding?: IntelligenceBranding) => {
   const colorSpaceRegex = /oklch|oklab|lab/gi;
 
   try {

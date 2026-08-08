@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Crosshair, ShieldOff, ShieldCheck, AlertTriangle, Loader2,
-  Terminal, FileText, ChevronDown, Clock, Activity, Search, Skull, ArrowRight
+  Terminal, ChevronDown, Clock, Activity, ArrowRight
 } from 'lucide-react';
 
 interface ScenarioDef {
@@ -72,7 +72,7 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   useEffect(() => {
     fetchScenarios();
@@ -177,7 +177,7 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
               <select
                 value={projectId}
                 onChange={(e) => setSelectedProjectId?.(e.target.value)}
-                className="w-full bg-muted border border-border hover:border-primary/20 text-foreground text-xs font-bold rounded-xl py-3 px-4 outline-none transition-all cursor-pointer appearance-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]"
+                className="w-full bg-muted border border-border hover:border-primary/20 text-foreground text-xs font-bold rounded-xl py-3 px-4 outline-none transition-[color,background-color,border-color,box-shadow] cursor-pointer appearance-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]"
               >
                 {initialProjects.length === 0 && (
                   <option value={projectId} className="bg-muted text-foreground">
@@ -237,14 +237,14 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
             <button
               onClick={() => handleReportResult('detected')}
               disabled={reportingResult}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-chartreuse/10 border border-chartreuse/20 text-chartreuse text-[10px] font-bold hover:bg-chartreuse/20 transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-chartreuse/10 border border-chartreuse/20 text-chartreuse text-[10px] font-bold hover:bg-chartreuse/20 transition-[color,background-color,border-color,opacity] cursor-pointer disabled:opacity-50"
             >
               <ShieldCheck className="w-3 h-3" /> {t('btnDetected')}
             </button>
             <button
               onClick={() => handleReportResult('missed')}
               disabled={reportingResult}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold hover:bg-destructive/20 transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold hover:bg-destructive/20 transition-[color,background-color,border-color,opacity] cursor-pointer disabled:opacity-50"
             >
               <ShieldOff className="w-3 h-3" /> {t('btnNotDetected')}
             </button>
@@ -255,12 +255,12 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
       {/* Filter */}
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => setActiveFilter('all')}
-          className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${activeFilter === 'all' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/5 border-border text-muted-fg hover:text-foreground'}`}>
+          className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${activeFilter === 'all' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/5 border-border text-muted-fg hover:text-foreground'}`}>
           {t('filterAll', { count: scenarios.length })}
         </button>
         {tactics.map((t) => (
           <button key={t} onClick={() => setActiveFilter(t)}
-            className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${activeFilter === t ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/5 border-border text-muted-fg hover:text-foreground'}`}>
+            className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${activeFilter === t ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/5 border-border text-muted-fg hover:text-foreground'}`}>
             {t}
           </button>
         ))}
@@ -297,7 +297,7 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
             : scenario.detectionRate >= 50 ? 'text-primary' : 'text-destructive';
 
           return (
-            <div key={scenario.mitreId} className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden transition-all duration-300 hover:border-primary/15">
+            <div key={scenario.mitreId} className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden transition-colors duration-300 hover:border-primary/15">
               <button onClick={() => setExpandedScenario(isExpanded ? null : scenario.mitreId)}
                 className="w-full p-6 flex items-center justify-between text-left cursor-pointer hover:bg-muted/5 transition-colors">
                 <div className="flex items-center gap-4 flex-1">
@@ -322,7 +322,7 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
                 <ChevronDown className={`w-4 h-4 text-muted-fg transition-transform duration-300 ml-4 ${isExpanded ? 'rotate-180 text-primary' : ''}`} />
               </button>
 
-              <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[600px]' : 'max-h-0'}`}>
+              <div className={`transition-[max-height] duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[600px]' : 'max-h-0'}`}>
                 <div className="px-6 pb-6 space-y-4 border-t border-border/50 pt-4">
                   <p className="text-xs text-foreground/80 leading-relaxed">{scenario.description}</p>
                   <div className="bg-primary/5 border border-primary/10 p-4 rounded-xl">
@@ -339,7 +339,7 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
                   <div className="flex items-center gap-3 pt-2">
                     <button onClick={(e) => { e.stopPropagation(); handleRunScenario(scenario.mitreId); }}
                       disabled={isRunning}
-                      className="flex items-center gap-2 bg-foreground text-background hover:bg-foreground/80 transition-all font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl border border-border cursor-pointer active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed">
+                      className="flex items-center gap-2 bg-foreground text-background hover:bg-foreground/80 transition-[color,background-color,border-color,opacity,transform] font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl border border-border cursor-pointer active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed">
                       {isRunning ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('btnRunning')}</>
                         : <><ArrowRight className="w-3.5 h-3.5" /> {t('btnRunSimulation')}</>}
                     </button>

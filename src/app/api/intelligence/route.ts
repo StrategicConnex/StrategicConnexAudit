@@ -14,7 +14,7 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { checkIntelScanRateLimit } from "@/shared/lib/ratelimit";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
-import { getExecutor, isKnownTool, listToolDefinitions } from "@/server/intelligence/core/tool-registry";
+import { isKnownTool, listToolDefinitions } from "@/server/intelligence/core/tool-registry";
 import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
 import { Finding } from "@/server/intelligence/types/executor.types";
 import { buildResultMap, getPrimaryIp, buildScanResponse, buildScanMetadata } from "@/server/intelligence/core/scan-response";

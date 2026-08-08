@@ -63,7 +63,7 @@ const PLUGIN_TO_NATIVE_MAP: Record<string, string> = {
  * Los runners pueden usar APIs externas, hacer escaneos compuestos, etc.
  */
 const BUILTIN_PLUGIN_RUNNERS: Record<string, PluginRunner> = {
-  "subdomain-enumerator": async (ctx, input, pkg) => {
+  "subdomain-enumerator": async (ctx, input, _pkg) => {
     const domain = (input.domain || input.target || "") as string;
     if (!domain) {
       return { success: false, output: {}, findings: [], error: "Se requiere un dominio objetivo." };
@@ -129,7 +129,7 @@ const BUILTIN_PLUGIN_RUNNERS: Record<string, PluginRunner> = {
     };
   },
 
-  "threat-intel-feed": async (ctx, input, pkg) => {
+  "threat-intel-feed": async (ctx, input, _pkg) => {
     const domain = (input.domain || input.target || "") as string;
     if (!domain) {
       return { success: false, output: {}, findings: [], error: "Se requiere un dominio objetivo." };
@@ -156,7 +156,7 @@ const BUILTIN_PLUGIN_RUNNERS: Record<string, PluginRunner> = {
     };
   },
 
-  "compliance-scanner": async (ctx, input, pkg) => {
+  "compliance-scanner": async (ctx, input, _pkg) => {
     const domain = (input.domain || input.target || "") as string;
     if (!domain) {
       return { success: false, output: {}, findings: [], error: "Se requiere un dominio objetivo." };

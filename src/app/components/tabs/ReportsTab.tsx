@@ -38,7 +38,7 @@ interface ReportsTabProps {
 
 export function ReportsTab({ 
   initialProjects, selectedProjectId, setSelectedProjectId, 
-  aiReport, viewMode, setViewMode, setActiveTab 
+  aiReport, viewMode, setViewMode 
 }: ReportsTabProps) {
   const t = useTranslations('reports');
   return (
@@ -51,7 +51,7 @@ export function ReportsTab({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Card 1 */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 flex flex-col justify-between gap-10 group hover:border-primary/20 transition-all ">
+        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 flex flex-col justify-between gap-10 group hover:border-primary/20 transition-colors ">
           <div className="flex flex-col gap-6">
             <div className="w-14 h-14 rounded-xl bg-muted/10 flex items-center justify-center text-muted-fg group-hover:text-primary group-hover:bg-primary/10 group-hover:border-primary/20 transition-colors border border-border">
               <FileText className="w-7 h-7" />
@@ -69,7 +69,7 @@ export function ReportsTab({
         </div>
 
         {/* Card 2 */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 flex flex-col justify-between gap-10 group hover:border-chartreuse/20 transition-all ">
+        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 flex flex-col justify-between gap-10 group hover:border-chartreuse/20 transition-colors ">
           <div className="flex flex-col gap-6">
             <div className="w-14 h-14 rounded-xl bg-muted/10 flex items-center justify-center text-muted-fg group-hover:text-chartreuse group-hover:bg-chartreuse/10 group-hover:border-chartreuse/20 transition-colors border border-border">
               <BarChart3 className="w-7 h-7" />
@@ -108,7 +108,7 @@ export function ReportsTab({
                 alert(t('csvError'));
               }
             }}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-chartreuse/10 border border-chartreuse/20 hover:border-chartreuse/40 text-chartreuse rounded-xl hover:bg-emerald-500/20 transition-all text-[11px] font-bold uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(140,200,80,0.1)] hover:shadow-[0_0_20px_rgba(140,200,80,0.2)]"
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-chartreuse/10 border border-chartreuse/20 hover:border-chartreuse/40 text-chartreuse rounded-xl hover:bg-emerald-500/20 transition-[color,background-color,border-color,box-shadow] text-[11px] font-bold uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(140,200,80,0.1)] hover:shadow-[0_0_20px_rgba(140,200,80,0.2)]"
           >
             <Download className="w-4 h-4" /> {t('downloadCsv')}
           </button>
@@ -146,7 +146,7 @@ export function ReportsTab({
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
                   disabled={aiReport.state.isGenerating}
-                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3.5 text-sm text-foreground/80 font-bold outline-none focus:shadow-[0_0_15px_rgba(98,113,196,0.15)] transition-all appearance-none cursor-pointer pr-10"
+                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3.5 text-sm text-foreground/80 font-bold outline-none focus:shadow-[0_0_15px_rgba(98,113,196,0.15)] transition-[color,background-color,border-color,box-shadow] appearance-none cursor-pointer pr-10"
                 >
                   <option value="" className="bg-card text-muted-fg">{t('selectPlaceholder')}</option>
                   {initialProjects.map((proj) => (
@@ -162,7 +162,7 @@ export function ReportsTab({
             <button
               onClick={aiReport.generate}
               disabled={aiReport.state.isGenerating || !selectedProjectId}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-all disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-[color,background-color,opacity,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
             >
               {aiReport.state.isGenerating ? (
                 <>
@@ -199,7 +199,7 @@ export function ReportsTab({
               <div className="bg-muted/10 border border-border p-1 rounded-xl flex gap-1">
                 <button
                   onClick={() => setViewMode('visual')}
-                  className={`px-5 py-2 text-[10px] font-extrabold uppercase tracking-widest rounded-lg transition-all cursor-pointer ${
+                  className={`px-5 py-2 text-[10px] font-extrabold uppercase tracking-widest rounded-lg transition-[color,background-color,box-shadow] cursor-pointer ${
                     viewMode === 'visual' ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/10' : 'text-muted-fg hover:text-foreground/80'
                   }`}
                 >
@@ -207,7 +207,7 @@ export function ReportsTab({
                 </button>
                 <button
                   onClick={() => setViewMode('markdown')}
-                  className={`px-5 py-2 text-[10px] font-extrabold uppercase tracking-widest rounded-lg transition-all cursor-pointer ${
+                  className={`px-5 py-2 text-[10px] font-extrabold uppercase tracking-widest rounded-lg transition-[color,background-color,box-shadow] cursor-pointer ${
                     viewMode === 'markdown' ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/10' : 'text-muted-fg hover:text-foreground/80'
                   }`}
                 >
@@ -262,7 +262,7 @@ export function ReportsTab({
                 { name: t('historyRow1Name'), type: t('historyRow1Format'), status: t('historyRow1Status') },
                 { name: t('historyRow2Name'), type: t('historyRow2Format'), status: t('historyRow2Status') },
               ].map((log, i) => (
-                <tr key={i} className="text-[13px] hover:bg-muted/5 transition-all">
+                <tr key={i} className="text-[13px] hover:bg-muted/5 transition-colors">
                   <td className="px-8 py-5 font-bold text-foreground/80">{log.name}</td>
                   <td className="px-8 py-5"><span className="text-[9px] bg-muted/20 border border-border text-muted-fg px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">{log.type}</span></td>
                   <td className="px-8 py-5 text-center text-chartreuse font-extrabold">{log.status}</td>
@@ -313,7 +313,7 @@ function ReportVisualView({ text, isFallback }: { text: string; isFallback?: boo
           </div>
           <div className="md:col-span-2 space-y-3">
             {data.tableRows.slice(0, 4).map((row, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-muted/1 p-4 rounded-xl border border-border hover:border-primary/20 transition-all">
+              <div key={idx} className="flex justify-between items-center bg-muted/1 p-4 rounded-xl border border-border hover:border-primary/20 transition-colors">
                 <span className="text-[12px] font-bold text-muted-fg uppercase tracking-wider">{row.metric}</span>
                 <span className="text-[13px] font-extrabold text-foreground">{row.value}</span>
               </div>

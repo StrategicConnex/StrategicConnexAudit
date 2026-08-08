@@ -28,7 +28,6 @@ vi.mock("../security/egress-guard", () => ({
 
 // Mock DNS globalmente antes de todos los tests
 vi.mock("node:dns/promises", () => {
-  const createMock = () => vi.fn();
   const defaultExports = {
     resolveTxt: vi.fn().mockResolvedValue([]),
     resolve4: vi.fn().mockResolvedValue(["1.2.3.4"]),

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { 
   Settings, 
@@ -146,7 +146,7 @@ export function SettingsTab({
   };
 
   // Fetch API Keys
-  const fetchApiKeys = async () => {
+  const fetchApiKeys = useCallback(async () => {
     setLoadingKeys(true);
     setKeysError(null);
     try {
@@ -162,10 +162,10 @@ export function SettingsTab({
     } finally {
       setLoadingKeys(false);
     }
-  };
+  }, [t]);
 
   // Fetch Webhooks for current Project
-  const fetchWebhooks = async (projId: string) => {
+  const fetchWebhooks = useCallback(async (projId: string) => {
     if (!projId) return;
     setLoadingWebhooks(true);
     setWebhooksError(null);
@@ -182,18 +182,18 @@ export function SettingsTab({
     } finally {
       setLoadingWebhooks(false);
     }
-  };
+  }, [t]);
 
   // Initial loads
   useEffect(() => {
     fetchApiKeys();
-  }, []);
+  }, [fetchApiKeys]);
 
   useEffect(() => {
     if (selectedProjectId) {
       fetchWebhooks(selectedProjectId);
     }
-  }, [selectedProjectId]);
+  }, [selectedProjectId, fetchWebhooks]);
 
   // Create API Key
   const handleCreateApiKey = async (e: React.FormEvent) => {
@@ -365,7 +365,7 @@ export function SettingsTab({
           {/* IA integrations */}
           <div className="space-y-6">
             <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">{t('sectionAi')}</h3>
-            <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-all">
+            <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-colors">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-[15px] font-bold text-white tracking-tight">{t('aiGatewayLabel')}</span>
                 <span className="text-[9px] font-bold bg-chartreuse/10 text-chartreuse px-3 py-1 rounded-full border border-chartreuse/20 uppercase tracking-wider">{t('aiGatewayBadge')}</span>
@@ -385,7 +385,7 @@ export function SettingsTab({
             <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3 flex items-center gap-2">
               <Palette className="w-4 h-4 text-primary" /> {t('sectionBranding')}
             </h3>
-            <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-all">
+            <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-colors">
               <p className="text-xs text-muted-fg mb-10 leading-relaxed">{t('brandingDesc')}</p>
               
               <div className="grid gap-8">
@@ -394,7 +394,7 @@ export function SettingsTab({
                   <input 
                     type="text" 
                     placeholder={t('brandingNamePlaceholder')} 
-                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                     id="branding-name-input"
                     value={agencyName}
                     onChange={(e) => setAgencyName(e.target.value)}
@@ -416,7 +416,7 @@ export function SettingsTab({
                         type="text" 
                         id="branding-color-text"
                         placeholder={t('brandingColorPlaceholder')} 
-                        className="flex-1 bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm font-bold text-foreground/80 focus:outline-none transition-all uppercase placeholder-zinc-700"
+                        className="flex-1 bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm font-bold text-foreground/80 focus:outline-none transition-colors uppercase placeholder-zinc-700"
                         value={primaryColor}
                         onChange={(e) => setPrimaryColor(e.target.value)}
                       />
@@ -428,7 +428,7 @@ export function SettingsTab({
                     <input 
                       type="text" 
                       placeholder={t('brandingLogoPlaceholder')} 
-                      className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+                      className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                       value={logoUrl}
                       onChange={(e) => setLogoUrl(e.target.value)}
                     />
@@ -439,7 +439,7 @@ export function SettingsTab({
               <div className="mt-12 flex justify-end">
                 <button 
                   onClick={handleSaveBranding}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black px-10 py-3.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-all flex items-center gap-3 group cursor-pointer"
+                  className="bg-cyan-500 hover:bg-cyan-400 text-black px-10 py-3.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-[color,background-color,box-shadow] flex items-center gap-3 group cursor-pointer"
                 >
                   <Save className="w-4 h-4 group-hover:scale-110 transition-transform text-black" /> {t('brandingSaveButton')}
                 </button>
@@ -466,7 +466,7 @@ export function SettingsTab({
             </div>
             <a
               href="/settings/api-keys"
-              className="shrink-0 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all flex items-center gap-2 cursor-pointer"
+              className="shrink-0 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-[color,background-color,box-shadow] flex items-center gap-2 cursor-pointer"
             >
               <BarChart3 className="w-4 h-4" /> {t('apiKeysDashboardButton')}
             </a>
@@ -489,7 +489,7 @@ export function SettingsTab({
                   placeholder={t('apiKeysNamePlaceholder')} 
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
-                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                 />
               </div>
 
@@ -498,7 +498,7 @@ export function SettingsTab({
                 <select
                   value={expiresDays}
                   onChange={(e) => setExpiresDays(Number(e.target.value))}
-                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-muted-fg font-bold focus:outline-none transition-all focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-muted-fg font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                 >
                   <option value={0}>{t('apiKeysExpiryNever')}</option>
                   <option value={30}>{t('apiKeysExpiry30')}</option>
@@ -519,7 +519,7 @@ export function SettingsTab({
               <button
                 type="submit"
                 disabled={creatingKey || !newKeyName.trim()}
-                className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-all flex items-center gap-2 cursor-pointer"
+                className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
               >
                 {creatingKey ? (
                   <>
@@ -560,7 +560,7 @@ export function SettingsTab({
                       placeholder={t('apiKeysSearchPlaceholder')}
                       value={keySearch}
                       onChange={(e) => setKeySearch(e.target.value)}
-                      className="w-full bg-card border border-border focus:border-primary rounded-xl pl-10 pr-4 py-2.5 text-xs text-foreground/80 font-medium focus:outline-none transition-all placeholder-zinc-600"
+                      className="w-full bg-card border border-border focus:border-primary rounded-xl pl-10 pr-4 py-2.5 text-xs text-foreground/80 font-medium focus:outline-none transition-colors placeholder-zinc-600"
                     />
                   </div>
                   <div className="flex items-center gap-3">
@@ -576,7 +576,7 @@ export function SettingsTab({
                     </label>
                     <button
                       onClick={() => setSortNewestFirst(!sortNewestFirst)}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-colors cursor-pointer"
                     >
                       <ArrowUpDown className="w-3.5 h-3.5" />
                       {sortNewestFirst ? t('apiKeysSortNewest') : t('apiKeysSortOldest')}
@@ -637,7 +637,7 @@ export function SettingsTab({
                             <td className="p-4 text-right">
                               <button
                                 onClick={() => handleRevokeApiKey(key.id)}
-                                className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-lg border border-destructive/20 transition-all cursor-pointer"
+                                className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-lg border border-destructive/20 transition-colors cursor-pointer"
                                 title={t('apiKeysRevokeTitle')}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -677,7 +677,7 @@ export function SettingsTab({
                 <select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId && setSelectedProjectId(e.target.value)}
-                  className="bg-card border border-border focus:border-primary rounded-xl px-4 py-2.5 text-xs text-white font-bold focus:outline-none transition-all cursor-pointer"
+                  className="bg-card border border-border focus:border-primary rounded-xl px-4 py-2.5 text-xs text-white font-bold focus:outline-none transition-colors cursor-pointer"
                 >
                   {initialProjects.map(proj => (
                     <option key={proj.id} value={proj.id}>{proj.name} ({proj.domain})</option>
@@ -705,7 +705,7 @@ export function SettingsTab({
                     placeholder={t('webhooksNamePlaceholder')} 
                     value={newWebhookName}
                     onChange={(e) => setNewWebhookName(e.target.value)}
-                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                   />
                 </div>
 
@@ -717,7 +717,7 @@ export function SettingsTab({
                     placeholder={t('webhooksUrlPlaceholder')} 
                     value={newWebhookUrl}
                     onChange={(e) => setNewWebhookUrl(e.target.value)}
-                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-all placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)] font-mono"
+                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)] font-mono"
                   />
                 </div>
               </div>
@@ -726,7 +726,7 @@ export function SettingsTab({
               <div className="space-y-3">
                 <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest block">{t('webhooksEventsLabel')}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-all cursor-pointer">
+                  <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-colors cursor-pointer">
                     <input
                       type="checkbox"
                       checked={webhookEvents.includes('audit.completed')}
@@ -739,7 +739,7 @@ export function SettingsTab({
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-all cursor-pointer">
+                  <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-colors cursor-pointer">
                     <input
                       type="checkbox"
                       checked={webhookEvents.includes('alert.triggered')}
@@ -775,7 +775,7 @@ export function SettingsTab({
                 <button
                   type="submit"
                   disabled={creatingWebhook || !newWebhookName.trim() || !newWebhookUrl.trim() || webhookEvents.length === 0}
-                  className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-all flex items-center gap-2 cursor-pointer"
+                  className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
                 >
                   {creatingWebhook ? (
                     <>
@@ -817,7 +817,7 @@ export function SettingsTab({
                   {webhooks.map((wh) => (
                     <div 
                       key={wh.id} 
-                      className="bg-muted/1 border border-border rounded-2xl p-6 hover:bg-muted/1 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+                      className="bg-muted/1 border border-border rounded-2xl p-6 hover:bg-muted/1 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6"
                     >
                       <div className="space-y-3 flex-1 min-w-0">
                         <div className="flex items-center gap-3">
@@ -860,7 +860,7 @@ export function SettingsTab({
 
                         <button
                           onClick={() => handleDeleteWebhook(wh.id)}
-                          className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-xl border border-destructive/20 transition-all cursor-pointer"
+                          className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-xl border border-destructive/20 transition-colors cursor-pointer"
                           title={t('webhooksDeleteTitle')}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -919,7 +919,7 @@ export function SettingsTab({
                   setShowKeyModal(false);
                   setRevealedClearKey(null);
                 }}
-                className="bg-zinc-100 hover:bg-white text-black font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(255,255,255,0.1)] transition-all cursor-pointer"
+                className="bg-zinc-100 hover:bg-white text-black font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(255,255,255,0.1)] transition-[color,background-color,box-shadow] cursor-pointer"
               >
                 {t('apiKeysModalButton')}
               </button>
@@ -960,7 +960,7 @@ export function SettingsTab({
                   setShowWebhookModal(false);
                   setRevealedWebhookSecret(null);
                 }}
-                className="bg-zinc-100 hover:bg-white text-black font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(255,255,255,0.1)] transition-all cursor-pointer"
+                className="bg-zinc-100 hover:bg-white text-black font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(255,255,255,0.1)] transition-[color,background-color,box-shadow] cursor-pointer"
               >
                 {t('webhooksModalButton')}
               </button>

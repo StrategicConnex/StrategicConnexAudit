@@ -94,7 +94,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
       </aside>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-8 py-10">
           {children}
         </div>

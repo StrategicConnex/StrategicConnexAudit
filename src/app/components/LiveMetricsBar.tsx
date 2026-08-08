@@ -32,9 +32,9 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
       const qs = params.toString();
       const url = "/api/intelligence/live" + (qs ? "?" + qs : "");
       const res = await fetch(url);
-      if (!res.ok) { mountedRef.current && setMetrics(p => ({ ...p, connected: false })); return; }
+      if (!res.ok) { if (mountedRef.current) setMetrics(p => ({ ...p, connected: false })); return; }
       const data = await res.json();
-      if (!data.success) { mountedRef.current && setMetrics(p => ({ ...p, connected: false })); return; }
+      if (!data.success) { if (mountedRef.current) setMetrics(p => ({ ...p, connected: false })); return; }
       if (!mountedRef.current) return;
       setMetrics(p => ({ ...p, connected: true, lastCheckTimestamp: data.ts,
         uptimePercent: data.uptime.uptimePercent ?? p.uptimePercent,
@@ -44,21 +44,22 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
         eventsCount: data.events.total,
         lastEventTimestamp: data.events.latest.length > 0 ? data.events.latest[0].created_at : p.lastEventTimestamp,
       }));
-    } catch { mountedRef.current && setMetrics(p => ({ ...p, connected: false })); }
+    } catch { if (mountedRef.current) setMetrics(p => ({ ...p, connected: false })); }
   }, [projectId, investigationId]);
   useEffect(() => { mountedRef.current = true; poll(); intervalRef.current = setInterval(poll, 15000);
     return () => { mountedRef.current = false; if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [poll]);
   const pClass = metrics.connected ? "bg-emerald-400 animate-pulse" : "bg-red-400";
   return (
-    <div className={"fixed bottom-4 right-4 z-[60] transition-all duration-300 " + (expanded ? "w-72" : "w-auto")}
+    <div className={"fixed bottom-4 right-4 z-[60] transition-[width] duration-300 " + (expanded ? "w-72" : "w-auto")}
       onMouseEnter={() => setExpanded(true)} onMouseLeave={() => setExpanded(false)}>
       <div className="bg-card/90 backdrop-blur-md border border-border rounded-xl shadow-2xl overflow-hidden">
         {!expanded && (
           <button onClick={() => setExpanded(true)}
+            aria-label="Expandir métricas en vivo"
             className="flex items-center space-x-2 px-3 py-2 text-[10px] font-mono text-muted-fg hover:text-foreground transition-colors">
-            <span className={"w-2 h-2 rounded-full " + pClass} />
-            <Activity className="w-3 h-3 text-primary" /> <span>Live</span>
+            <span className={"w-2 h-2 rounded-full " + pClass} aria-hidden="true" />
+            <Activity aria-hidden="true" className="w-3 h-3 text-primary" /> <span>Live</span>
           </button>
         )}
         {expanded && (

@@ -171,7 +171,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
     } finally {
       setLoadingNode(null);
     }
-  }, [loadingNode, target, metadata, score]);
+  }, [loadingNode, nodes, edges]);
 
   const handleMouseEnter = (node: AttackSurfaceNode, e: React.MouseEvent) => {
     const svgEl = e.currentTarget.closest('svg') as SVGSVGElement;

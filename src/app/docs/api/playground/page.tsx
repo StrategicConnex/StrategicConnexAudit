@@ -542,7 +542,7 @@ export default function ApiPlaygroundPage() {
       setLoading(false);
       setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
     }
-  }, [endpoint, apiKey, paramValues, bodyMode, bodyRaw, missingRequired, buildUrl, buildHeaders, buildBody]);
+  }, [endpoint, apiKey, missingRequired, buildUrl, buildHeaders, buildBody]);
 
   const handleReplay = useCallback((idx: number) => {
     const entry = history[idx];

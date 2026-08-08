@@ -150,17 +150,18 @@ export function IncidentBriefModal({
             {brief && (
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 text-[10px] font-bold text-muted-fg hover:text-white bg-muted/30 hover:bg-muted/50 border border-border px-3 py-2 rounded-lg transition-all cursor-pointer"
+                className="flex items-center gap-1.5 text-[10px] font-bold text-muted-fg hover:text-white bg-muted/30 hover:bg-muted/50 border border-border px-3 py-2 rounded-lg transition-colors cursor-pointer"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-chartreuse" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? <Check aria-hidden="true" className="w-3.5 h-3.5 text-chartreuse" /> : <Copy aria-hidden="true" className="w-3.5 h-3.5" />}
                 {copied ? 'Copiado' : 'Copiar'}
               </button>
             )}
             <button
               onClick={onClose}
+              aria-label="Cerrar Incident Brief"
               className="p-2 hover:bg-muted/40 rounded-lg text-muted-fg hover:text-white transition-colors cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X aria-hidden="true" className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -203,7 +204,7 @@ export function IncidentBriefModal({
               </div>
               <button
                 onClick={handleGenerate}
-                className="flex items-center gap-2 bg-destructive/15 hover:bg-destructive/25 border border-destructive/30 text-destructive font-extrabold text-sm px-6 py-3 rounded-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                className="flex items-center gap-2 bg-destructive/15 hover:bg-destructive/25 border border-destructive/30 text-destructive font-extrabold text-sm px-6 py-3 rounded-xl transition-[color,background-color,border-color,transform] duration-300 hover:scale-[1.02] cursor-pointer"
               >
                 <Zap className="w-4 h-4" />
                 Generar Brief con IA

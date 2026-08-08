@@ -134,7 +134,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
       {/* 3 metric cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Uptime */}
-        <div className="rounded-xl p-4 border transition-all duration-300 hover:scale-[1.02]"
+        <div className="rounded-xl p-4 border transition-[border-color,transform] duration-300 hover:scale-[1.02]"
           style={{ background: "oklch(100% 0 0 / 0.02)", borderColor: "oklch(15% 0.008 265 / 0.3)" }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
@@ -159,7 +159,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
         </div>
 
         {/* Latency */}
-        <div className="rounded-xl p-4 border transition-all duration-300 hover:scale-[1.02]"
+        <div className="rounded-xl p-4 border transition-[border-color,transform] duration-300 hover:scale-[1.02]"
           style={{ background: "oklch(100% 0 0 / 0.02)", borderColor: "oklch(15% 0.008 265 / 0.3)" }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
@@ -184,7 +184,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
         </div>
 
         {/* Health Score */}
-        <div className="rounded-xl p-4 border transition-all duration-300 hover:scale-[1.02]"
+        <div className="rounded-xl p-4 border transition-[border-color,transform] duration-300 hover:scale-[1.02]"
           style={{ background: "oklch(100% 0 0 / 0.02)", borderColor: "oklch(15% 0.008 265 / 0.3)" }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">

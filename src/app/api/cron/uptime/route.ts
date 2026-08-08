@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/db';
 import { projects, uptimeLogs } from '@/shared/db/schemas';
 import { isNull } from 'drizzle-orm';
+import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
 
 export const maxDuration = 60; // 1 minute timeout
 export const dynamic = 'force-dynamic';
@@ -34,17 +35,18 @@ export async function GET(request: Request) {
     for (const project of activeProjects) {
       if (!project.domain) continue;
 
-      let url = project.domain;
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = `https://${url}`;
-      }
-
       const startTime = performance.now();
+      let url = "";
       let isUp = false;
       let statusCode = null;
       let error = null;
 
       try {
+        // Egress-guard SSRF: el domain del proyecto es input del usuario.
+        // Mismo patrón que uptime.trigger.ts (validateSafeUrl + normalizeUrl).
+        url = normalizeUrl(project.domain);
+        await validateSafeUrl(url);
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         

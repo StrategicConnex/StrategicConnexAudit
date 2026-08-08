@@ -15,7 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { AppError, ErrorPayload, toAppError } from "./app-error";
+import { ErrorPayload, toAppError } from "./app-error";
 import { logger } from "@/shared/lib/logger";
 
 // ─── Response builder ──────────────────────────────────────────────────────

@@ -11,8 +11,8 @@ interface MailHealthScorecardProps {
 function StatusRing({ label, status }: { label: string; status: MailStatus }) {
   const styles = MAIL_HEALTH_STYLES[status];
   return (
-    <div className="bg-background/80 border border-border rounded-xl p-3.5 flex flex-col items-center text-center relative overflow-hidden hover:border-border transition-all">
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] font-mono ring-4 ${styles.ring} ${styles.bg} mb-2.5 transition-all`}>
+    <div className="bg-background/80 border border-border rounded-xl p-3.5 flex flex-col items-center text-center relative overflow-hidden hover:border-border transition-colors">
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] font-mono ring-4 ${styles.ring} ${styles.bg} mb-2.5 transition-colors`}>
         {label}
       </div>
       <span className="text-[10px] font-mono font-semibold text-foreground uppercase">

@@ -4,10 +4,11 @@ import {
   getMitreCoverage,
   getToolsByTactic,
   type MitreTechnique,
-  type MitreTactic,
 } from "@/server/intelligence/mitre/mapping";
 
-export const dynamic = "force-static";
+// NOTE: intentionally NOT force-static — the CSP nonce (src/proxy.ts) requires
+// dynamic rendering so Next.js can apply the per-request nonce to inline scripts.
+
 
 // ─── Tactic color mapping ─────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ export default function MitreCoveragePage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-10">
+      <main id="main-content" tabIndex={-1} className="max-w-6xl mx-auto px-6 py-8 space-y-10">
 
         {/* ═══════════════════════════════════════════════════════════════
            Section 1: Global Summary (3 stat cards)

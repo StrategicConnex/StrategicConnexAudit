@@ -348,6 +348,7 @@ function CoverPage({ data }: { data: PdfReportData }) {
   return (
     <Page size="A4" style={styles.coverPage}>
       {data.branding?.logoUrl ? (
+        // eslint-disable-next-line jsx-a11y/alt-text -- Image de @react-pdf/renderer (logo decorativo en PDF, no es HTML)
         <Image style={styles.coverLogo} src={data.branding.logoUrl} />
       ) : null}
 
@@ -717,7 +718,7 @@ function OverviewPage({ data }: { data: PdfReportData }) {
           <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
             {/* Labels column */}
             <View style={{ width: labelWidth, paddingTop: 0 }}>
-              {scoredSections.map((s, i) => (
+              {scoredSections.map((s) => (
                 <Text key={s.id} style={{
                   fontSize: 7,
                   color: THEME.fgMuted,

@@ -72,10 +72,11 @@ export function AiCopilot({ contextData }: { contextData: unknown }) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-8 p-5 rounded-full bg-gradient-to-r from-primary to-primary/80 text-foreground shadow-[0_0_20px_rgba(98,113,196,0.3)] border border-primary/20 hover:scale-105 hover:shadow-[0_0_30px_rgba(98,113,196,0.5)] hover:border-primary/40 transition-all duration-300 z-50 flex items-center justify-center group cursor-pointer"
+        aria-label="Abrir Strategic Copilot"
+        className="fixed bottom-8 right-8 p-5 rounded-full bg-gradient-to-r from-primary to-primary/80 text-foreground shadow-[0_0_20px_rgba(98,113,196,0.3)] border border-primary/20 hover:scale-105 hover:shadow-[0_0_30px_rgba(98,113,196,0.5)] hover:border-primary/40 transition-[color,background-color,border-color,box-shadow,transform] duration-300 z-50 flex items-center justify-center group cursor-pointer"
       >
-        <Sparkles className="w-5 h-5 animate-pulse text-primary/80" strokeWidth={2.5} />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-[140px] transition-all duration-300 font-extrabold text-[11px] uppercase tracking-widest whitespace-nowrap px-0 group-hover:px-2 text-foreground">
+        <Sparkles aria-hidden="true" className="w-5 h-5 animate-pulse text-primary/80" strokeWidth={2.5} />
+        <span className="max-w-0 overflow-hidden group-hover:max-w-[140px] transition-[max-width,padding] duration-300 font-extrabold text-[11px] uppercase tracking-widest whitespace-nowrap px-0 group-hover:px-2 text-foreground">
           Strategic Copilot
         </span>
       </button>
@@ -83,7 +84,7 @@ export function AiCopilot({ contextData }: { contextData: unknown }) {
   }
 
   return (
-    <div className={`fixed bottom-8 right-8 glass-card border border-border shadow-2xl rounded-2xl flex flex-col z-50 transition-all duration-500 ease-in-out animate-in slide-in-from-bottom-10 fade-in ${isExpanded ? 'w-[700px] h-[85vh]' : 'w-[400px] h-[600px] max-h-[85vh]'}`}>
+    <div className={`fixed bottom-8 right-8 glass-card border border-border shadow-2xl rounded-2xl flex flex-col z-50 transition-[width,height,max-height] duration-500 ease-in-out animate-in slide-in-from-bottom-10 fade-in ${isExpanded ? 'w-[700px] h-[85vh]' : 'w-[400px] h-[600px] max-h-[85vh]'}`}>
       {/* Header */}
       <div className="flex flex-col border-b border-border/50 bg-card/80 rounded-t-2xl shrink-0 backdrop-blur-xl">
         <div className="flex items-center justify-between p-5 pb-4">
@@ -106,17 +107,19 @@ export function AiCopilot({ contextData }: { contextData: unknown }) {
           <div className="flex items-center gap-1">
             <button 
               onClick={() => setIsExpanded(!isExpanded)} 
+              aria-label={isExpanded ? 'Colapsar panel' : 'Expandir panel'}
               className="p-2 hover:bg-muted/30 rounded-lg text-muted-fg hover:text-foreground transition-colors"
               title={isExpanded ? 'Colapsar' : 'Expandir'}
             >
-              {isExpanded ? <Minimize2 className="w-3.5 h-3.5" strokeWidth={2.5} /> : <Maximize2 className="w-3.5 h-3.5" strokeWidth={2.5} />}
+              {isExpanded ? <Minimize2 aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={2.5} /> : <Maximize2 aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={2.5} />}
             </button>
             <button 
               onClick={() => setIsOpen(false)} 
+              aria-label="Cerrar copilot"
               className="p-2 hover:bg-muted/30 rounded-lg text-muted-fg hover:text-foreground transition-colors"
               title="Cerrar"
             >
-              <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+              <X aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={2.5} />
             </button>
           </div>
         </div>
@@ -126,13 +129,13 @@ export function AiCopilot({ contextData }: { contextData: unknown }) {
           <div className="bg-muted/10 border border-border/50 p-1 rounded-lg flex items-center gap-1">
             <button
               onClick={() => { setMode('copilot'); setMessages([{ role: 'assistant', content: 'Hola. Soy Strategic Copilot. ¿En qué te puedo ayudar hoy? Puedo analizar reportes, priorizar tareas o explicarte problemas técnicos.' }]); }}
-              className={`flex-1 text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-md transition-all ${mode === 'copilot' ? 'bg-muted/40 text-foreground shadow-sm' : 'text-muted-fg hover:text-foreground/80'}`}
+              className={`flex-1 text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-md transition-[color,background-color,box-shadow] ${mode === 'copilot' ? 'bg-muted/40 text-foreground shadow-sm' : 'text-muted-fg hover:text-foreground/80'}`}
             >
               Copilot
             </button>
             <button
               onClick={() => { setMode('analyst'); setMessages([{ role: 'assistant', content: 'Analyst Mode activo. Listo para forense técnico, triage de alertas y revisión de postura.' }]); }}
-              className={`flex-1 text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-md transition-all ${mode === 'analyst' ? 'bg-destructive/10 text-destructive shadow-sm' : 'text-muted-fg hover:text-foreground/80'}`}
+              className={`flex-1 text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-md transition-[color,background-color,box-shadow] ${mode === 'analyst' ? 'bg-destructive/10 text-destructive shadow-sm' : 'text-muted-fg hover:text-foreground/80'}`}
             >
               Analyst
             </button>
@@ -171,7 +174,7 @@ export function AiCopilot({ contextData }: { contextData: unknown }) {
             <button
               key={i}
               onClick={() => handleSend(q)}
-              className="text-[9px] font-bold uppercase tracking-wider whitespace-nowrap bg-muted/20 hover:bg-muted/50 border border-border text-muted-fg hover:text-foreground px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5"
+              className="text-[9px] font-bold uppercase tracking-wider whitespace-nowrap bg-muted/20 hover:bg-muted/50 border border-border text-muted-fg hover:text-foreground px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
             >
               {mode === 'analyst' ? <Activity className="w-3 h-3 text-destructive/50" /> : <FileText className="w-3 h-3 text-primary/50" />}
               {q}
@@ -196,20 +199,21 @@ export function AiCopilot({ contextData }: { contextData: unknown }) {
               }
             }}
             placeholder={mode === 'analyst' ? "Comandos forenses o consultas de análisis..." : "Pregúntale al Copilot..."}
-            className={`w-full bg-muted/60 border border-border focus:border-primary/40 rounded-xl px-4 py-3.5 pr-14 text-xs font-medium text-foreground placeholder:text-muted-fg outline-none resize-none max-h-32 transition-all duration-300 focus:ring-1 focus:ring-primary/20`}
+            className={`w-full bg-muted/60 border border-border focus:border-primary/40 rounded-xl px-4 py-3.5 pr-14 text-xs font-medium text-foreground placeholder:text-muted-fg outline-none resize-none max-h-32 transition-colors duration-300 focus:ring-1 focus:ring-primary/20`}
             rows={1}
             style={{ minHeight: '50px' }}
           />
           <button
             type="submit"
+            aria-label="Enviar mensaje"
             disabled={!input.trim() || isLoading}
-            className={`absolute right-2 top-2 p-2 rounded-lg text-foreground disabled:opacity-20 transition-all cursor-pointer shadow-md ${
+            className={`absolute right-2 top-2 p-2 rounded-lg text-foreground disabled:opacity-20 transition-[color,background-color,opacity,box-shadow] cursor-pointer shadow-md ${
               mode === 'analyst' 
                 ? 'bg-destructive hover:bg-destructive/80 hover:shadow-[0_0_15px_rgba(200,50,55,0.3)]' 
                 : 'bg-primary hover:bg-primary/80 hover:shadow-[0_0_15px_rgba(98,113,196,0.3)]'
             }`}
           >
-            <Send className="w-3.5 h-3.5" strokeWidth={2.5} />
+            <Send aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
         </form>
         <p className="mt-3 text-[9px] font-extrabold text-center text-muted-fg uppercase tracking-widest">

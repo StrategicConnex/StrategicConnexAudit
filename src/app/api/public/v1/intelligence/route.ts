@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { eq, and, desc } from 'drizzle-orm';
 import { directDb } from '@/shared/db';
@@ -29,7 +28,6 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get('projectId');
   const investigationId = searchParams.get('investigationId');
-  const userId = req.apiKeyAuth.userId!;
 
   try {
     if (investigationId) {

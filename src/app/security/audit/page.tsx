@@ -1254,13 +1254,12 @@ export default function SecurityAuditDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tab]);
 
   const handleTabChange = useCallback((t: Tab) => {
     setTab(t);
     setExpandedId(null);
     fetchLogs(filters, t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- tab no se usa en el cuerpo del callback
   }, [fetchLogs, filters]);
 
   // Initial load
@@ -1331,7 +1330,7 @@ export default function SecurityAuditDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
+      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-6 py-6">
         <TabHeader active={tab} onChange={handleTabChange} />
 
         {/* Security Events Tab */}

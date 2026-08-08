@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { MapPin } from 'lucide-react';
 import type { Map as LeafletMap } from 'leaflet';
 
@@ -47,6 +47,14 @@ interface GeoMapProps {
 }
 
 type LeafletNS = typeof import('leaflet');
+
+const TYPE_COLORS: Record<string, string> = {
+  target: '#6271C4',
+  asn: '#D4373C',
+  hop: '#EBA52D',
+  cdn: '#8BC34A',
+  reverse: '#71717A',
+};
 
 export function GeoMap({ metadata, target }: GeoMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -130,15 +138,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
     return points;
   }, [metadata, target]);
 
-  const TYPE_COLORS: Record<string, string> = {
-    target: '#6271C4',
-    asn: '#D4373C',
-    hop: '#EBA52D',
-    cdn: '#8BC34A',
-    reverse: '#71717A',
-  };
-
-  function createIcon(L: LeafletNS, type: string, isTarget: boolean) {
+  const createIcon = useCallback((L: LeafletNS, type: string, isTarget: boolean) => {
     const color = TYPE_COLORS[type] || '#71717A';
     const size = isTarget ? 14 : 10;
     return L.divIcon({
@@ -156,9 +156,9 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
       iconSize: [size * 2, size * 2],
       iconAnchor: [size, size],
     });
-  }
+  }, []);
 
-  function addMarkersAndLines(L: LeafletNS, map: LeafletMap, points: GeoLocation[]) {
+  const addMarkersAndLines = useCallback((L: LeafletNS, map: LeafletMap, points: GeoLocation[]) => {
     const markerGroup = L.layerGroup().addTo(map);
     const lineGroup = L.layerGroup().addTo(map);
     const latlngs: [number, number][] = [];
@@ -224,14 +224,14 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
     }
 
     layersRef.current = [markerGroup, lineGroup];
-  }
+  }, [createIcon]);
 
-  function clearLayers() {
+  const clearLayers = useCallback(() => {
     for (const layer of layersRef.current) {
       if (layer?.remove) layer.remove();
     }
     layersRef.current = [];
-  }
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -263,9 +263,6 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
         }).addTo(map);
 
         mapInstanceRef.current = map;
-        if (geoPoints.length > 0) {
-          addMarkersAndLines(L, map, geoPoints);
-        }
       } catch (err) {
         console.error('[GeoMap] Failed to initialize Leaflet:', err);
       }
@@ -291,7 +288,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
         addMarkersAndLines(L, map, geoPoints);
       }
     });
-  }, [geoPoints]);
+  }, [geoPoints, addMarkersAndLines, clearLayers]);
 
   if (geoPoints.length === 0) {
     return (

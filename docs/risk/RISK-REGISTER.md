@@ -3,8 +3,8 @@ layout: default
 title: Risk Register
 nav_order: 8.2
 permalink: /docs/risk/risk-register
-version: 1.0
-fecha: 2026-08-02
+version: 1.1
+fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -72,13 +72,14 @@ Registro consolidado de **riesgos de SCAUDIT Pro** a partir de los hallazgos rea
 | RSK-03 | Realtime sin RLS (SB-002) filtra datos cross-tenant | 3 | 5 | 15 | CHANGE-003 (publicación realtime con RLS) | Engineering | ⛔ OPEN |
 | RSK-04 | Backup/PITR no confirmado antes de DDL | 3 | 5 | 15 | §6 gate: confirmar PITR + `pg_dump --schema-only` antes del push | Owner | ⛔ OPEN ([UNKNOWN]) |
 | RSK-05 | Rollback Drizzle forward-only sin down-migrations | 3 | 5 | 15 | Planes SQL manuales §17 (DROP INDEX, `::text`, DISABLE RLS) | DBA | 🟡 MITIGADO (planes listos) |
-| RSK-06 | httpbin.org caído → 3 tests ambientales rotos | 5 | 2 | 10 | Excluido de cobertura con `--exclude`; marcado ambiental | Engineering | 🟡 MITIGADO (documentado) |
+| RSK-06 | httpbin.org caído → 3 tests ambientales rotos | 5 | 2 | 10 | Suite egress-guard resiliente: sondea conectividad en `beforeAll` y omite los tests sin red; 31/31 en cualquier entorno | Engineering | ✅ CERRADO (2026-08-08) |
 | RSK-07 | Trigger scheduled-scan no operativo silencioso | 4 | 3 | 12 | TSK-022 cierre + trigger tests | Engineering | ⛔ OPEN |
 | RSK-08 | IA :free con rate limit (5/60s) degrada experiencia | 4 | 2 | 8 | Fail-open + cache 5min + AI Router fallback | Engineering | 🟡 MITIGADO |
 | RSK-09 | 2 tool-registries duplicados divergen (ADR-001 no fiel al disco) | 3 | 3 | 9 | TD-11: consolidar `core/tool-registry.ts` + `registry/tool-registry.ts` | Engineering | ⛔ OPEN |
 | RSK-10 | RLS solo en 5/58 tablas (SB-001) — tablas sensibles sin política | 3 | 4 | 12 | CHANGE-003 + revisión RLS por tabla crítica | Engineering | ⛔ OPEN |
+| RSK-11 | Gap SSRF IPv4-mapped IPv6 (`::ffff:x.x.x.x`) evadía egress-guard → acceso a red interna/metadata | 4 | 5 | 20 | `ipv4MappedToIpv4()` extrae la IPv4 embebida (RFC 4291, formas decimal y hexadecimal) y la coteja contra los CIDR IPv4; tests dedicados | Engineering | ✅ CERRADO (2026-08-08) |
 
-> **10 riesgos registrados** (≥8 requeridos por T10-02). 7 OPEN · 3 MITIGADO · 0 CERRADO (ninguno cerrado aún por definición del batch). [VERIFIED]
+> **11 riesgos registrados** (≥8 requeridos por T10-02). 7 OPEN · 2 MITIGADO · 2 CERRADO (RSK-06/11, 2026-08-08). [VERIFIED]
 
 ---
 
@@ -117,12 +118,13 @@ Registro consolidado de **riesgos de SCAUDIT Pro** a partir de los hallazgos rea
 | Riesgo | Test que lo mitiga | Estado |
 |--------|--------------------|--------|
 | RSK-01 | `push.test.ts` (3) boolean semantics + `rls.test.ts` | ✅ |
-| RSK-06 | `egress-guard.test.ts` (27/30) | ✅ |
+| RSK-06 | `egress-guard.test.ts` (31/31, omisión por red) | ✅ |
+| RSK-11 | `egress-guard.test.ts` (31/31, bloqueo `::ffff:`) | ✅ |
 | RSK-03 | `rls.test.ts` (5/5) + members/graph (9/9) | ✅ parcial |
 | RSK-08 | `ratelimit.test.ts` + suite AI Router (gap) | 🟡 parcial |
 | RSK-02 | TEST-COVERAGE-MATRIX (documenta el gap) | ✅ documentado |
 
-**Cobertura global:** 29 files · 298 tests (295 OK + 3 ambientales) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX].
+**Cobertura global:** 40 files · 360 tests (360 OK) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX].
 
 ---
 
@@ -210,6 +212,7 @@ flowchart LR
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Risk Register B10 (T10-02, §36): 10 riesgos consolidados | Aprobado |
+| 1.1 | 2026-08-08 | RSK-06 CERRADO (suite egress-guard resiliente sin red) · RSK-11 CERRADO (gap SSRF IPv4-mapped IPv6 cerrado) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/risk/RISK-REGISTER.md --min 80` → PASS
 

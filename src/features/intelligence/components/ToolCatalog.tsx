@@ -122,7 +122,7 @@ export default function ToolCatalog() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar herramienta, puerto, spf..."
-            className="w-full bg-muted border border-border rounded-xl pl-9 pr-4 py-2 text-xs text-foreground placeholder-[#52525b] focus:border-border focus:ring-0 outline-none transition-all"
+            className="w-full bg-muted border border-border rounded-xl pl-9 pr-4 py-2 text-xs text-foreground placeholder-[#52525b] focus:border-border focus-visible:ring-2 focus-visible:ring-primary/40 outline-none transition-colors"
           />
         </div>
       </div>
@@ -131,7 +131,7 @@ export default function ToolCatalog() {
       <div className="flex px-4 py-3 overflow-x-auto border-b border-border bg-card/50 gap-2 scrollbar-none">
         <button
           onClick={() => setSelectedCategory("all")}
-          className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg border text-[11px] font-mono tracking-wide uppercase transition-all shrink-0 ${
+          className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg border text-[11px] font-mono tracking-wide uppercase transition-colors shrink-0 ${
             selectedCategory === "all"
               ? "bg-foreground text-background border-foreground font-semibold"
               : "bg-muted border-border text-muted-fg hover:text-foreground"
@@ -146,7 +146,7 @@ export default function ToolCatalog() {
             <button
               key={key}
               onClick={() => setSelectedCategory(key as ToolCategory)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-mono tracking-wide uppercase transition-all shrink-0 ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-mono tracking-wide uppercase transition-colors shrink-0 ${
                 selectedCategory === key
                   ? "bg-foreground text-background border-foreground font-semibold"
                   : "bg-muted border-border text-muted-fg hover:text-foreground"
@@ -170,7 +170,7 @@ export default function ToolCatalog() {
               <div
                 key={tool.id}
                 onClick={() => selectTool(isSelected ? null : tool.id)}
-                className={`relative flex flex-col p-3.5 border rounded-xl cursor-pointer group transition-all duration-300 ${
+                className={`relative flex flex-col p-3.5 border rounded-xl cursor-pointer group transition-colors duration-300 ${
                   isSelected
                     ? "bg-card border-emerald-500/30 shadow-lg shadow-emerald-950/10"
                     : "bg-card/60 border-border hover:border-border hover:bg-card"

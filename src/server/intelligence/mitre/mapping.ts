@@ -60,7 +60,7 @@ export function getMitreCoverage() {
   const uniqueTactics = new Set<string>();
   const toolsPerTactic: Record<string, number> = {};
 
-  for (const [toolId, techniques] of Object.entries(MITRE_MAPPING)) {
+  for (const [, techniques] of Object.entries(MITRE_MAPPING)) {
     for (const technique of techniques) {
       uniqueTechs.add(technique.id);
       uniqueTactics.add(technique.tactic);

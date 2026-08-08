@@ -54,9 +54,6 @@ function deterministicIp(input: string): string {
   }
   hash = Math.abs(hash);
 
-  const a = (hash >> 24) & 0xff;
-  const b = (hash >> 16) & 0xff;
-  const c = (hash >> 8) & 0xff;
   const d = hash & 0xff;
   // Generar IP tipo 203.0.113.x (TEST-NET-3) para evitar leaks de IP real
   return `203.0.113.${(d % 200) + 1}`;
@@ -66,7 +63,7 @@ function deterministicIp(input: string): string {
 
 export async function runCtMonitor(
   domain: string,
-  projectId: string
+  _projectId: string
 ): Promise<DiscoveryModuleResult> {
   const startTime = Date.now();
   const assets: DiscoveredAsset[] = [];

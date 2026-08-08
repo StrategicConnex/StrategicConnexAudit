@@ -350,10 +350,10 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
       {/* Tab Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border/50 pb-6">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <Sliders className="w-6 h-6 text-[oklch(68% 0.14 230)]" />
+          <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <Sliders aria-hidden="true" className="w-6 h-6 text-[oklch(68% 0.14 230)]" />
             {t('pageTitle')}
-          </h1>
+          </h2>
           <p className="text-xs text-muted-fg mt-1">
             {t('pageSubtitle')}
           </p>
@@ -403,7 +403,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     onChange={(e) => setSchedule(prev => ({ ...prev, enabled: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-9 h-5 bg-muted/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-foreground after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-muted-fg peer-checked:after:bg-primary after:border-none after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary/20" />
+                  <div className="w-9 h-5 bg-muted/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-foreground after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-muted-fg peer-checked:after:bg-primary after:border-none after:rounded-full after:h-4 after:w-4 after:transition-[background-color,border-color,transform] peer-checked:bg-primary/20" />
                 </label>
               </div>
 
@@ -431,7 +431,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <button
                 type="submit"
                 disabled={isSavingSchedule}
-                className="w-full flex items-center justify-center gap-2 bg-muted/10 border border-border/40 hover:bg-primary/10 hover:border-primary/20 text-xs font-bold text-foreground/80 px-4 py-2.5 rounded-lg transition-all duration-300 active:scale-[0.98] cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-muted/10 border border-border/40 hover:bg-primary/10 hover:border-primary/20 text-xs font-bold text-foreground/80 px-4 py-2.5 rounded-lg transition-[color,background-color,border-color,transform] duration-300 active:scale-[0.98] cursor-pointer"
               >
                 {isSavingSchedule ? t('scheduleSaving') : t('scheduleUpdateButton')}
               </button>
@@ -461,7 +461,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 <div className="relative w-16 h-16 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <path className="text-white/[0.03]" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path className="text-primary transition-all duration-1000" strokeDasharray={`${projectsPercentage}, 100`} strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path className="text-primary transition-[color,stroke-dasharray] duration-1000" strokeDasharray={`${projectsPercentage}, 100`} strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                   </svg>
                   <span className="absolute text-xs font-bold text-white">{initialProjects.length} / {planInfo.projects === 999 ? '∞' : planInfo.projects}</span>
                 </div>
@@ -473,7 +473,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 <div className="relative w-16 h-16 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <path className="text-white/[0.03]" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path className="text-indigo-400 transition-all duration-1000" strokeDasharray={`${scansPercentage}, 100`} strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path className="text-indigo-400 transition-[color,stroke-dasharray] duration-1000" strokeDasharray={`${scansPercentage}, 100`} strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                   </svg>
                   <span className="absolute text-xs font-bold text-white">{activeScansSimulated} / {planInfo.scans === 9999 ? '∞' : planInfo.scans}</span>
                 </div>
@@ -488,7 +488,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
 
           <button
             onClick={() => setShowPlanModal(true)}
-            className="w-full bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
+            className="w-full bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-colors duration-300 cursor-pointer"
           >
             {t('quotaUpgradeButton')}
           </button>
@@ -529,7 +529,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
 
           <button
             onClick={triggerSlackTest}
-            className="w-full flex items-center justify-center gap-2 bg-muted/10 border border-border/40 hover:bg-destructive/10 hover:border-destructive/20 text-xs font-bold text-destructive px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 bg-muted/10 border border-border/40 hover:bg-destructive/10 hover:border-destructive/20 text-xs font-bold text-destructive px-4 py-2.5 rounded-lg transition-colors duration-300 cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" /> {t('slackTestButton')}
           </button>
@@ -577,7 +577,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 return (
                   <div
                     key={alert.id}
-                    className={`p-4 rounded-lg border border-border/30 border-l-2 ${borderColors} transition-all duration-300 flex items-start justify-between gap-4`}
+                    className={`p-4 rounded-lg border border-border/30 border-l-2 ${borderColors} transition-colors duration-300 flex items-start justify-between gap-4`}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -634,7 +634,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     </div>
                     <button
                       onClick={() => handleDeleteWebhook(w.id)}
-                      className="text-muted-fg hover:text-destructive hover:bg-destructive/10 p-1.5 rounded transition-all shrink-0 cursor-pointer"
+                      className="text-muted-fg hover:text-destructive hover:bg-destructive/10 p-1.5 rounded transition-colors shrink-0 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -714,7 +714,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                       )}
                       <button
                         onClick={() => handleDeleteApiKey(key.id)}
-                        className="text-muted-fg hover:text-destructive hover:bg-destructive/10 p-1.5 rounded transition-all cursor-pointer"
+                        className="text-muted-fg hover:text-destructive hover:bg-destructive/10 p-1.5 rounded transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -809,7 +809,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <button
                 type="submit"
                 disabled={isQueuingBulk}
-                className="w-full flex items-center justify-center gap-2 bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-all duration-300 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-colors duration-300 cursor-pointer"
               >
                 {isQueuingBulk ? t('bulkQueuing') : t('bulkProcessButton')}
               </button>
@@ -821,7 +821,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
 
       {/* ────────────────── Pricing Sheet Upgrade Modal ────────────────── */}
       {showPlanModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-all duration-300 animate-in fade-in">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-[background-color,border-color,filter] duration-300 animate-in fade-in">
           <div className="glass-card max-w-4xl w-full rounded-2xl border border-border bg-[#040406]/90 p-8 relative space-y-6">
             <button
               onClick={() => setShowPlanModal(false)}
@@ -841,7 +841,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
               
               {/* Starter Tier */}
-              <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-all duration-300 ${
+              <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 ${
                 currentPlan === 'starter'
                   ? 'border-[oklch(68% 0.14 230)] bg-[oklch(68% 0.14 230)]/[0.02]'
                   : 'border-border/50 bg-muted/1 hover:border-border'
@@ -864,14 +864,14 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     setCurrentPlan('starter');
                     setShowPlanModal(false);
                   }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-all cursor-pointer"
+                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-colors cursor-pointer"
                 >
                   {currentPlan === 'starter' ? t('planActive') : t('planSelect', { plan: t('planStarter') })}
                 </button>
               </div>
 
               {/* Business Tier */}
-              <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-all duration-300 relative ${
+              <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 relative ${
                 currentPlan === 'business'
                   ? 'border-[oklch(68% 0.14 230)] bg-[oklch(68% 0.14 230)]/[0.03] shadow-[0_4px_30px_rgba(6,182,212,0.15)]'
                   : 'border-border/50 bg-muted/1 hover:border-border'
@@ -897,14 +897,14 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     setCurrentPlan('business');
                     setShowPlanModal(false);
                   }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg bg-[oklch(68% 0.14 230)] hover:bg-[oklch(68% 0.14 230)]/80 text-black transition-all cursor-pointer"
+                  className="w-full text-xs font-bold py-2.5 rounded-lg bg-[oklch(68% 0.14 230)] hover:bg-[oklch(68% 0.14 230)]/80 text-black transition-colors cursor-pointer"
                 >
                   {currentPlan === 'business' ? t('planActive') : t('planSelect', { plan: t('planBusiness') })}
                 </button>
               </div>
 
               {/* Enterprise Tier */}
-              <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-all duration-300 ${
+              <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 ${
                 currentPlan === 'enterprise'
                   ? 'border-[oklch(68% 0.14 230)] bg-[oklch(68% 0.14 230)]/[0.02]'
                   : 'border-border/50 bg-muted/1 hover:border-border'
@@ -927,7 +927,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     setCurrentPlan('enterprise');
                     setShowPlanModal(false);
                   }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-all cursor-pointer"
+                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-colors cursor-pointer"
                 >
                   {currentPlan === 'enterprise' ? t('planActive') : t('planSelect', { plan: t('planEnterprise') })}
                 </button>

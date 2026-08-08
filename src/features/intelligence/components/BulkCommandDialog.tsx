@@ -110,7 +110,7 @@ export function BulkCommandDialog({ isOpen, onClose, projectId }: BulkCommandDia
             <button
               type="submit"
               disabled={loading || targets.trim() === ""}
-              className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-[background-color,opacity]"
             >
               {loading ? "Despachando..." : "Ejecutar Lote"}
             </button>

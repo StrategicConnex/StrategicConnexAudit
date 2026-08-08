@@ -134,7 +134,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
 
   useEffect(() => {
     fetchHistory(activeTab, activeTab === 'timeline' ? (searchQuery || defaultQuery) : (searchQuery || undefined));
-  }, [activeTab, fetchHistory]);
+  }, [activeTab, fetchHistory, defaultQuery, searchQuery]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,8 +176,8 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
           </p>
         </div>
         {onClose && (
-          <button onClick={onClose} className="text-muted-fg hover:text-foreground/80 transition-colors text-xs font-bold cursor-pointer">
-            Cerrar x
+          <button onClick={onClose} aria-label="Cerrar historial" className="text-muted-fg hover:text-foreground/80 transition-colors text-xs font-bold cursor-pointer">
+            Cerrar
           </button>
         )}
       </div>
@@ -192,15 +192,15 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={activeTab === 'timeline' ? 'Dominio para timeline...' : 'Filtrar por dominio o IP...'}
-              className="w-full bg-muted/30 border border-border text-foreground text-xs rounded-lg py-2 pl-9 pr-8 outline-none focus:border-primary/40 transition-all"
+              className="w-full bg-muted/30 border border-border text-foreground text-xs rounded-lg py-2 pl-9 pr-8 outline-none focus:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors"
             />
             {searchQuery && (
-              <button type="button" onClick={() => { setSearchQuery(''); if (activeTab !== 'timeline') fetchHistory(activeTab); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-fg hover:text-foreground cursor-pointer">
-                <X className="w-3 h-3" />
+              <button type="button" aria-label="Limpiar búsqueda" onClick={() => { setSearchQuery(''); if (activeTab !== 'timeline') fetchHistory(activeTab); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-fg hover:text-foreground cursor-pointer">
+                <X aria-hidden="true" className="w-3 h-3" />
               </button>
             )}
           </div>
-          <button type="submit" className="bg-muted/20 border border-border hover:bg-muted/40 text-xs font-bold px-3 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5">
+          <button type="submit" className="bg-muted/20 border border-border hover:bg-muted/40 text-xs font-bold px-3 py-2 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5">
             <Filter className="w-3 h-3" /> Buscar
           </button>
         </form>
@@ -209,7 +209,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
         <div className="flex gap-1.5 mt-3">
           <button
             onClick={() => setActiveTab('dns')}
-            className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
               activeTab === 'dns'
                 ? 'bg-primary/15 border-primary/30 text-primary'
                 : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -223,7 +223,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
           </button>
           <button
             onClick={() => setActiveTab('whois')}
-            className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
               activeTab === 'whois'
                 ? 'bg-primary/15 border-primary/30 text-primary'
                 : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -237,7 +237,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
           </button>
           <button
             onClick={() => setActiveTab('timeline')}
-            className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
               activeTab === 'timeline'
                 ? 'bg-primary/15 border-primary/30 text-primary'
                 : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'

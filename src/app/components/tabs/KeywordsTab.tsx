@@ -24,6 +24,12 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
   const t = useTranslations('keywords');
   return (
     <div className="space-y-12 relative z-10 font-sans text-foreground">
+      {/* Page title — h1 lives in DashboardHeader; this is the in-content h2 */}
+      <div>
+        <h2 className="text-2xl font-extrabold tracking-tight text-white">{t('pageTitle')}</h2>
+        <p className="text-xs text-muted-fg mt-1">{t('pageSubtitle')}</p>
+      </div>
+
       {/* GSC Integrations Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         {[
@@ -66,12 +72,12 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
               placeholder={t('inputPlaceholder')}
-              className="w-full bg-card border border-border focus:border-primary rounded-xl pl-12 pr-4 py-3.5 text-foreground/80 text-sm focus:outline-none transition-all placeholder-zinc-600 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+              className="w-full bg-card border border-border focus:border-primary rounded-xl pl-12 pr-4 py-3.5 text-foreground/80 text-sm focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-600 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
             />
           </div>
           <button 
             type="submit" 
-            className="px-8 py-3.5 bg-cyan-500 text-black text-[11px] font-extrabold uppercase tracking-widest rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] cursor-pointer"
+            className="px-8 py-3.5 bg-cyan-500 text-black text-[11px] font-extrabold uppercase tracking-widest rounded-xl hover:bg-cyan-400 transition-[color,background-color,box-shadow] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] cursor-pointer"
           >
             <Plus className="w-4 h-4" /> {t('startTrackingButton')}
           </button>

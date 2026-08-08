@@ -133,6 +133,8 @@
     "tlsScan": "Escaneo TLS/SSL"
   },
   "overview": {
+    "pageTitle": "Centro de Comando",
+    "pageSubtitle": "Vista general del sistema, salud técnica y monitoreo en tiempo real.",
     "telemetry": "Telemetría (30 Días)",
     "avgLcpVsAudits": "LCP Promedio vs Auditorías",
     "activityLog": "Activity Log",
@@ -398,6 +400,8 @@
     "planRecommended": "Recomendado"
   },
   "keywords": {
+    "pageTitle": "Posicionamiento de Palabras Clave",
+    "pageSubtitle": "Rankings SERP, métricas GSC y monitoreo activo de keywords.",
     "metricImpressions": "Impresiones",
     "metricClicks": "Clics Orgánicos",
     "metricCtr": "CTR Promedio",

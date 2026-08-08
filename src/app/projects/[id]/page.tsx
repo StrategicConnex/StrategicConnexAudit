@@ -199,7 +199,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       </header>
       
       {/* Content */}
-      <main className="flex-1 p-10 overflow-y-auto relative z-10">
+      <main id="main-content" tabIndex={-1} className="flex-1 p-10 overflow-y-auto relative z-10">
         <div className="max-w-[1400px] mx-auto space-y-12">
           
           {/* Panel de Métricas Rápidas */}

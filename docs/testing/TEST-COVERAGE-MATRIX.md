@@ -3,8 +3,8 @@ layout: default
 title: Test Coverage Matrix
 nav_order: 4.1
 permalink: /docs/testing/test-coverage-matrix
-version: 1.0
-fecha: 2026-08-02
+version: 1.3
+fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -43,7 +43,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 |-----|-----------|--------------|
 | REQ-201 | Suite unit completa en verde (`pnpm test`) | ✅ 327/327 (ejecución real 2026-08-02) |
 | REQ-202 | Cobertura global por encima del umbral de CI | ❌ Statements 13.72% vs umbral 25% (preexistente, baseline B00) |
-| REQ-203 | Ruta crítica de seguridad con test propio | ✅ rls (5) · AiCopilot XSS (6) · webhooks (15) · egress-guard (30) |
+| REQ-203 | Ruta crítica de seguridad con test propio | ✅ rls (5) · AiCopilot XSS (6) · webhooks (15) · egress-guard (31) |
 | REQ-204 | Cada endpoint público/crítico con `route.test.ts` | ❌ 8/42 rutas (19.0%) |
 | REQ-205 | Cada trigger con test (src/trigger/*) | ❌ 9/12 triggers (75%) |
 | REQ-206 | Contrato de API publicado y testeado | ✅ 10/10 (`tests/api-contract`) |
@@ -86,7 +86,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | Métrica | Valor actual | Δ vs B00 |
 |---------|--------------|----------|
 | Test files | 40 | +21 files |
-| Tests (`pnpm test`) | 359 (359 OK) | +105 |
+| Tests (`pnpm test`) | 360 (360 OK) | +106 |
 | Coverage (sin suite egress-guard de red) | **~329/329 tests · 39 files** | — |
 | Statements | 13.72% | +1.21pp |
 | Branches | 10.62% | +0.84pp |
@@ -136,7 +136,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | RLS `member_or_owner` (Unauthenticated/User/Owner/Non-Owner/Privileged) | `src/shared/db/rls.test.ts` | 5/5 ✅ |
 | XSS de IA (VULN-001, prompt injection) | `src/app/components/AiCopilot.test.tsx` | 6/6 ✅ |
 | XSS en reportes/PDF (report-utils, exportPdf) | `report-utils-xss` + `export-pdf-xss` + `html.test` | ✅ |
-| SSRF / egress guard (bloqueo IP privada, DNS rebinding) | `src/server/intelligence/security/egress-guard.test.ts` | 27/30 (3 ambientales red) |
+| SSRF / egress guard (bloqueo IP privada, DNS rebinding, IPv4-mapped IPv6) | `src/server/intelligence/security/egress-guard.test.ts` | 31/31 ✅ — gap `::ffff:` cerrado; integración real se omite sin red (probe `beforeAll`) |
 | Secretos webhooks enmascarados (VULN-002) | `webhooks/route.test.ts` (serialized-body) | ✅ |
 | IDOR cross-tenant (VULN-008/009) | members + graph route.test | 9/9 ✅ |
 | Boolean `active` (TSK-009) | `src/server/notifications/push.test.ts` | 3/3 ✅ |
@@ -156,7 +156,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | Carpeta | Suites | Tests aprox. | Foco |
 |---------|--------|--------------|------|
 | `src/app/api` | 8 (webhooks, members, graph, adversary, cron/siem, cron/uptime, siem/run, public/v1/intelligence) | 55 | Rutas críticas + security |
-| `src/server/intelligence` | 5 (executors, scenario-runner, sandbox-executor, scan-response, egress-guard) | 117 | Motor de inteligencia |
+| `src/server/intelligence` | 5 (executors, scenario-runner, sandbox-executor, scan-response, egress-guard) | 118 | Motor de inteligencia |
 | `src/server/security` | 2 (siem-exporter, siem-exporter.pentest) | 14 | SIEM exporter |
 | `src/app/components` | 4 (AiCopilot, MermaidBlock, report-utils, report-utils-xss) | 25 | XSS + render |
 | `src/features/intelligence` | 3 (AttackSurfaceGraph, markdown, severity) | 35 | UI inteligencia |
@@ -222,7 +222,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 
 - **Monitoreo de cobertura:** `pnpm test:coverage` produce `coverage/lcov-report/index.html` (navegable por módulo) + salida text en CI job `test-and-coverage`.
 - **Runbook de incidente de cobertura:** si `pnpm test` falla por tests rotos → identificar suite (Vitest reporta archivo/caso) → corregir o marcar ambiental (patrón egress-guard) → re-ejecutar; si los umbrales bajan de §4.2 → **BLOCKER** hasta recuperar.
-- **Recovery:** los tests ambientales (egress-guard, red real) se aíslan con `--exclude` para desbloquear cobertura local (§4.2 usa 268/28 sin esa suite).
+- **Recovery:** la suite egress-guard es resiliente — sondea conectividad en `beforeAll` (example.com/httpbin.org) y omite los tests de red sin internet; ya no requiere `--exclude` (31/31 en cualquier entorno).
 - **Runbook de triggers:** tras añadir un trigger nuevo → exigir `*.test.ts` colocado junto al archivo (patrón `src/server/**/*.test.ts`) [RECOMMENDED].
 
 ---
@@ -317,7 +317,7 @@ flowchart LR
 | "La cobertura regresó" | §4.2 vs §4.1: sube en 4 métricas | **REFUTADO** — no-regresión ✅ [VERIFIED] |
 | "Los triggers están cubiertos" | 9/12 con test (75%) | **PARCIAL** — 3 pendientes [VERIFIED] |
 | "Todas las rutas tienen route.test" | 8/42 (19.0%) | **REFUTADO** — gap de 34 rutas [VERIFIED] |
-| "Los 3 fallos de egress-guard son regresión" | red real contra httpbin.org caído, archivo no tocado | **REFUTADO** — ambiental [VERIFIED] |
+| "Los 3 fallos de egress-guard son regresión" | la suite ahora sondea conectividad (example.com/httpbin.org) en `beforeAll` y omite los tests sin red | **RESUELTO** — 31/31 sin fallos [VERIFIED] |
 | "Baseline B00 = 248 tests" (MASTER-INDEX) | PRODUCTION-PUSH-FINAL-VALIDATION §4 registra 254 (251+3) | **INCONSISTENCIA RESUELTA** — 254 es el conteo con los 3 ambientales; este reporte usa 254 |
 | "report-utils XSS estaba cubierto" | bug real encontrado y corregido en batch XSS | **HALLAZGO RESUELTO** — ahora 2 suites cubren [VERIFIED] |
 
@@ -328,7 +328,7 @@ flowchart LR
 - [UNKNOWN] Cobertura exacta de Playwright E2E (no instrumentada; pendiente B10).
 - [UNKNOWN] Volumen de líneas por módulo de negocio (v8 reporta por archivo, no por módulo agregado).
 - [ASSUMPTION] Los umbrales de CI (25/20/20/25) se mantienen hasta el cierre de huecos P0/P1; no se bajan.
-- [ASSUMPTION] Los 3 fallos de egress-guard permanecen ambientales mientras httpbin.org esté caído.
+- [RESOLVED] La suite de red de egress-guard se omite sin conectividad (probe `beforeAll` a example.com/httpbin.org) — 31/31 en cualquier entorno.
 - [RECOMMENDED] Añadir `src/server/ai/ai-router.ts` y `src/server/intelligence/core/*` a la cobertura en el próximo batch.
 
 ---
@@ -368,6 +368,7 @@ flowchart LR
 | 1.0 | 2026-08-02 | Matriz de cobertura B06: baseline B00 vs estado real (29 files, 298 tests, 13.72% stmts), cobertura por módulo/trigger/endpoint, gaps priorizados | Aprobado |
 | 1.1 | 2026-08-02 | B06 completado: 5 tests P0 nuevos (siem/run, public/v1/intelligence, siem/discovery/uptime trigger) → 34 files · 327 tests · 8 route.test (19.0%) · 3/12 triggers (25%) | Aprobado |
 | 1.2 | 2026-08-02 | P0 de cobertura de triggers: +6 trigger.test (adversary, anomaly, monitoring, scheduled-scan, audit, webhook) → 40 files · 359 tests · **9/12 triggers (75%)** · 3 pendientes (api-key-expiry, cleanup, hello) | Aprobado |
+| 1.3 | 2026-08-08 | Seguridad: gap SSRF IPv4-mapped IPv6 (`::ffff:`) cerrado en egress-guard (+2 tests) → **31/31**; suite de red resiliente (omite tests sin internet); **360/360 tests** | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/testing/TEST-COVERAGE-MATRIX.md --min 80` → PASS
 

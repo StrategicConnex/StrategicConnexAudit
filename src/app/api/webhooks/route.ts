@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     try {
       const parsedUrl = new URL(url);
       await assertPublicHostname(parsedUrl.hostname);
-    } catch (ssrfErr: any) {
+    } catch {
       return NextResponse.json({
         success: false,
         error: "La URL del webhook no es válida o apunta a una dirección no permitida."

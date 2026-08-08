@@ -9,7 +9,7 @@ export default function AiCoreVisual({ size = 200, interactive = true }: AiCoreV
   return (
     <div 
       style={{ width: size, height: size }}
-      className={`relative flex items-center justify-center select-none transition-all duration-500 ease-out ${
+      className={`relative flex items-center justify-center select-none transition-transform duration-500 ease-out ${
         interactive ? 'hover:scale-[1.06] hover:rotate-[2deg] active:scale-[0.98]' : ''
       }`}
     >

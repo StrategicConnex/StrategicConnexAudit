@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, timestamp, jsonb, numeric, index
+  pgTable, uuid, text, timestamp, numeric, index
 } from "drizzle-orm/pg-core";
 import { projects } from "./index";
 

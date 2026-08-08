@@ -33,7 +33,7 @@ export function LanguageSwitcher({ mini = false }: { mini?: boolean }) {
       <button
         onClick={handleSwitch}
         disabled={isPending}
-        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-fg/60 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-fg/60 hover:text-foreground transition-[color,opacity] cursor-pointer disabled:opacity-50"
         title="Switch language"
       >
         {isPending ? (
@@ -53,7 +53,7 @@ export function LanguageSwitcher({ mini = false }: { mini?: boolean }) {
       className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium
                  text-muted-fg border border-border/50
                  hover:text-foreground hover:border-primary/20 hover:bg-primary/5
-                 transition-all duration-300 cursor-pointer disabled:opacity-50"
+                 transition-[color,background-color,border-color,opacity] duration-300 cursor-pointer disabled:opacity-50"
     >
       {isPending ? (
         <Loader2 size={14} className="animate-spin shrink-0" />

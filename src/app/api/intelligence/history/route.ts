@@ -27,9 +27,9 @@ import { getProjectHistoryTimeline } from "@/server/intelligence/history/orchest
 
 export const dynamic = "force-dynamic";
 
-async function handler(req: NextRequest, userId: string) {
+async function handler(_req: NextRequest, userId: string) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(_req.url);
     const projectId = searchParams.get("projectId");
     const type = searchParams.get("type") || "all";
     const query = searchParams.get("query") || undefined;
@@ -88,7 +88,7 @@ export const GET = (req: NextRequest) =>
       limit: 30,
       window: 60,
       prefix: "intel_history",
-      authenticate: async (req) => {
+      authenticate: async (_req) => {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         return user ? { id: user.id } : null;

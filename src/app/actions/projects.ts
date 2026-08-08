@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { projects, users } from '@/shared/db/schemas';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { validateSafeUrl } from "@/server/intelligence/security/egress-guard";
 
 const CreateProjectSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
@@ -19,6 +20,16 @@ export const createProject = authenticatedAction(
     // Validacin/Formateo de URL
     if (!/^https?:\/\//i.test(domain)) {
       domain = `https://${domain}`;
+    }
+
+    // Egress-guard SSRF: el domain alimenta fetches server-side (uptime cron,
+    // audit trigger, discovery). Bloquear IPs privadas/loopback en el input
+    // evita que un proyecto apunte a la red interna (defensa en profundidad).
+    try {
+      await validateSafeUrl(domain);
+    } catch (egressErr) {
+      const egressMessage = egressErr instanceof Error ? egressErr.message : String(egressErr);
+      return { error: `Dominio bloqueado por EgressGuard: ${egressMessage}` };
     }
 
     try {

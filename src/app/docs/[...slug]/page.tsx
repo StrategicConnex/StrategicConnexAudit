@@ -228,6 +228,7 @@ export default async function DocPage({ params }: Props) {
             <hr className="my-10 border-border/30" {...props} />
           ),
           img: ({ src, alt, ...props }) => (
+            // eslint-disable-next-line @next/next/no-img-element -- las imágenes de markdown tienen dimensiones desconocidas; next/image requiere width/height o fill
             <img
               src={src}
               alt={alt || ""}
@@ -244,15 +245,12 @@ export default async function DocPage({ params }: Props) {
   );
 }
 
-/* --- Generación estática ----------------------------------------------- */
+/* --- Renderizado dinámico ---------------------------------------------- */
 
-export async function generateStaticParams() {
-  return Object.keys(SLUG_MAP).map((key) => ({
-    slug: key.split("/"),
-  }));
-}
-
-export const dynamicParams = false;
+// NOTE: intentionally NOT statically generated — the CSP nonce (src/proxy.ts)
+// requires dynamic rendering so Next.js can apply the per-request nonce to
+// inline scripts. The markdown files are shipped to the runtime via
+// outputFileTracingIncludes in next.config.ts.
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;

@@ -1,10 +1,12 @@
+import { safeFetch } from "../security/egress-guard";
+
 export class TechProfilerExecutor {
   async execute(domain: string) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch(`https://${domain}`, {
+      const response = await safeFetch(`https://${domain}`, {
         signal: controller.signal,
         headers: {
           'User-Agent': 'StrategicAuditBot/1.0',

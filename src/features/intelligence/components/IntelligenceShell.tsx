@@ -127,9 +127,10 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
       {/* Mobile Catalog Trigger */}
       <button
         onClick={() => setIsMobileCatalogOpen(!isMobileCatalogOpen)}
-        className="lg:hidden fixed bottom-5 right-5 z-50 flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500 text-background shadow-2xl hover:scale-105 active:scale-95 transition-all"
+        aria-label={isMobileCatalogOpen ? "Cerrar catálogo de herramientas" : "Abrir catálogo de herramientas"}
+        className="lg:hidden fixed bottom-5 right-5 z-50 flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500 text-background shadow-2xl hover:scale-105 active:scale-95 transition-[color,background-color,box-shadow,transform]"
       >
-        {isMobileCatalogOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {isMobileCatalogOpen ? <X aria-hidden="true" className="w-5 h-5" /> : <Menu aria-hidden="true" className="w-5 h-5" />}
       </button>
 
       {/* 1. LEFT PANEL: Tool Directory */}
@@ -148,7 +149,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
       )}
 
       {/* 2. CENTER PANEL */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-background ambient-mesh">
+      <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-background ambient-mesh">
         {/* Top Command HUD */}
         <section className="relative p-4 sm:p-6 border-b border-border bg-muted/30 flex flex-col space-y-4 overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
@@ -161,15 +162,16 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
             <div className="flex items-center space-x-3">
               <Link
                 href="/"
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:border-secondary active:scale-95 transition-all"
+                aria-label="Volver al Dashboard"
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:border-secondary active:scale-95 transition-[color,background-color,border-color,transform]"
                 title="Volver al Dashboard"
               >
-                <ArrowLeft className="w-4.5 h-4.5" />
+                <ArrowLeft aria-hidden="true" className="w-4.5 h-4.5" />
               </Link>
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-foreground font-mono flex items-center space-x-2 group/title">
                   <Terminal className="w-5 h-5 text-emerald-400 scan-pulse" />
-                  <span className="group-hover/title:animate-glitch transition-all">Auditoría de Red Activa</span>
+                  <span className="group-hover/title:animate-glitch transition-colors">Auditoría de Red Activa</span>
                 </h1>
                 <p className="text-xs text-muted-fg mt-0.5">Consola diagnóstica modular de seguridad perimetral y DNS.</p>
               </div>
@@ -181,7 +183,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
               <button
                 onClick={handleExportPdf}
                 disabled={isExportingPdf}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted text-muted-fg hover:text-foreground hover:border-border text-xs font-mono transition-all active:scale-95 disabled:opacity-50"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted text-muted-fg hover:text-foreground hover:border-border text-xs font-mono transition-[color,background-color,border-color,opacity,transform] active:scale-95 disabled:opacity-50"
                 title="Exportar reporte PDF"
               >
                 {isExportingPdf ? (
@@ -194,7 +196,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
 
               <button
                 onClick={toggleAiSidebar}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono transition-all ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors ${
                   aiSidebarOpen
                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                     : "bg-muted border-border text-muted-fg hover:text-foreground"
@@ -228,7 +230,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`pb-2.5 text-xs font-mono uppercase tracking-wide border-b-2 transition-all ${
+                  className={`pb-2.5 text-xs font-mono uppercase tracking-wide border-b-2 transition-colors ${
                     activeTab === tab.id
                       ? "border-emerald-500 text-foreground font-semibold"
                       : "border-transparent text-muted-fg hover:text-muted-fg"

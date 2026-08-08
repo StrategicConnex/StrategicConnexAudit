@@ -16,7 +16,7 @@ export function DashboardSkeleton() {
       </aside>
 
       {/* Main Content Skeleton */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className="h-20 border-b border-border/50 flex items-center justify-between px-10">
           <div className="h-6 w-56 bg-foreground/5 rounded-full"></div>
           <div className="flex items-center gap-6">

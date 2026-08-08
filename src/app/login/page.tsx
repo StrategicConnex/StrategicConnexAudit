@@ -107,7 +107,7 @@ function LoginContent() {
       setValidationState(basicValid ? 'valid' : 'invalid');
       setValidationReason(basicValid ? null : t('networkError'));
     }
-  }, []);
+  }, [t]);
 
   // ─── Referencia para el timer de debounce ──────────────────────
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);

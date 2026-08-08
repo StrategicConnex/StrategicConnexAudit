@@ -36,8 +36,8 @@ export function ProjectsTab({ dashboardData, NewProjectModal }: ProjectsTabProps
         ))}
         
         {/* Empty project placeholder card */}
-        <div className="border border-dashed border-white/[0.08] hover:border-cyan-500/40 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-6 transition-all min-h-[240px] bg-white/[0.005] group">
-          <div className="w-14 h-14 rounded-xl bg-white/[0.02] flex items-center justify-center text-zinc-600 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 group-hover:border-cyan-500/20 transition-all border border-white/[0.08] shadow-sm">
+        <div className="border border-dashed border-white/[0.08] hover:border-cyan-500/40 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-6 transition-[color,background-color,border-color,box-shadow,height] min-h-[240px] bg-white/[0.005] group">
+          <div className="w-14 h-14 rounded-xl bg-white/[0.02] flex items-center justify-center text-zinc-600 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 group-hover:border-cyan-500/20 transition-[color,background-color,border-color,box-shadow] border border-white/[0.08] shadow-sm">
             <Plus className="w-7 h-7" />
           </div>
           <div className="space-y-1">

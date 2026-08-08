@@ -11,7 +11,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockFindMany = vi.fn();
-const mockInsert = vi.fn();
 const mockValues = vi.fn();
 
 vi.mock("@/shared/db", () => ({

@@ -3,8 +3,8 @@ layout: default
 title: Arquitectura Enterprise
 nav_order: 3
 permalink: /docs/architecture
-version: 2.0
-fecha: 2026-08-01
+version: 2.1
+fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -430,7 +430,7 @@ erDiagram
 
 | Control | Implementación | Archivo |
 |---------|---------------|---------|
-| CSP | `default-src 'self'`, `script-src 'self' 'unsafe-inline'` (+`'unsafe-eval'` en dev), `connect-src` `'self' https://*.supabase.co https://apifreellm.com https://*.vercel.app` (IA corre server-side), `frame-ancestors 'none'` | `src/proxy.ts` |
+| CSP | `default-src 'self'`, `script-src 'self' 'nonce-<nonce>' 'strict-dynamic'` (+`'unsafe-eval'` en dev), `object-src 'none'`, `connect-src 'self' https://*.supabase.co` (IA/SIEM corren server-side, fuera del alcance del CSP), `frame-ancestors 'none'`, nonce por request aplicado por Next.js 16 + meta CSP espejo en `layout.tsx` | `src/proxy.ts` |
 | HSTS | `max-age=31536000; includeSubDomains; preload` | `src/proxy.ts` |
 | Clickjacking | `X-Frame-Options: DENY` | `src/proxy.ts` |
 | MIME sniffing | `X-Content-Type-Options: nosniff` | `src/proxy.ts` |

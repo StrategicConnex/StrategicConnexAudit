@@ -104,6 +104,30 @@ function ipInCidr(ip: string, cidr: string): boolean {
 }
 
 /**
+ * Extracts the embedded IPv4 address from an IPv4-mapped IPv6 address
+ * (RFC 4291 §2.5.5.2), e.g. `::ffff:127.0.0.1` → `127.0.0.1` or the
+ * hexadecimal form `::ffff:7f00:1` → `127.0.0.1`. Returns null when the
+ * address is not IPv4-mapped.
+ */
+function ipv4MappedToIpv4(ip: string): string | null {
+  const lower = ip.toLowerCase();
+
+  // Dotted-quad form: ::ffff:127.0.0.1
+  const dotted = lower.match(/::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (dotted) return dotted[1];
+
+  // Hexadecimal form: last 32 bits encode the IPv4, e.g. ::ffff:7f00:1
+  const hex = lower.match(/^(?:.*:)?ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hex) {
+    const hi = parseInt(hex[1], 16);
+    const lo = parseInt(hex[2], 16);
+    return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+  }
+
+  return null;
+}
+
+/**
  * Checks if an IP address resides within blocked/private subnets or loopback interfaces.
  * Uses CIDR mathematical matching for precision across all RFC-defined private ranges.
  */
@@ -116,6 +140,11 @@ export function isBlockedAddress(address: string): boolean {
   }
 
   if (net.isIPv6(address)) {
+    // IPv4-mapped IPv6 addresses must be checked against the IPv4 ranges,
+    // otherwise a private IP like ::ffff:127.0.0.1 bypasses the guard (SSRF).
+    const embedded = ipv4MappedToIpv4(address);
+    if (embedded) return isBlockedAddress(embedded);
+
     for (const cidr of PRIVATE_V6_PREFIXES) {
       if (ipInCidr(address, cidr)) return true;
     }

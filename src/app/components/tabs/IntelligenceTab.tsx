@@ -496,7 +496,7 @@ export function IntelligenceTab({
             <select
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full bg-muted border border-border hover:border-primary/20 text-foreground text-xs font-bold rounded-xl py-3 px-4 outline-none transition-all cursor-pointer appearance-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]"
+              className="w-full bg-muted border border-border hover:border-primary/20 text-foreground text-xs font-bold rounded-xl py-3 px-4 outline-none transition-[color,background-color,border-color,box-shadow] cursor-pointer appearance-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]"
             >
               {initialProjects.map((proj) => (
                 <option key={proj.id} value={proj.id} className="bg-muted text-foreground">
@@ -537,7 +537,7 @@ export function IntelligenceTab({
                   <button
                     key={inv.id}
                     onClick={() => setSelectedId(inv.id)}
-                    className={`w-full text-left p-5 transition-all duration-300 relative group flex flex-col gap-2 ${
+                    className={`w-full text-left p-5 transition-colors duration-300 relative group flex flex-col gap-2 ${
                       isActive 
                         ? 'bg-muted/10 border-l-2 border-primary' 
                         : 'hover:bg-muted/5 border-l-2 border-transparent'
@@ -615,7 +615,7 @@ export function IntelligenceTab({
                   value={targetInput}
                   onChange={(e) => setTargetInput(e.target.value)}
                   placeholder="ejemplo.com, 1.1.1.1, https://miweb.com"
-                  className="w-full bg-muted/60 border border-border hover:border-primary/20 focus:border-primary/40 text-foreground font-medium placeholder-muted-fg text-sm rounded-xl py-3.5 pl-5 pr-12 outline-none transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]"
+                  className="w-full bg-muted/60 border border-border hover:border-primary/20 focus:border-primary/40 text-foreground font-medium placeholder-muted-fg text-sm rounded-xl py-3.5 pl-5 pr-12 outline-none transition-[color,background-color,border-color,box-shadow] shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]"
                 />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-fg">
                   <Globe className="w-4 h-4" />
@@ -624,7 +624,7 @@ export function IntelligenceTab({
               <button
                 type="submit"
                 disabled={isScanning}
-                className="bg-foreground text-background hover:bg-foreground/80 transition-all font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-border cursor-pointer active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shrink-0 shadow-[0_2px_12px_rgba(0,0,0,0.3)]"
+                className="bg-foreground text-background hover:bg-foreground/80 transition-[color,background-color,border-color,opacity,box-shadow,transform] font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-border cursor-pointer active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shrink-0 shadow-[0_2px_12px_rgba(0,0,0,0.3)]"
               >
                 {isScanning ? (
                   <>
@@ -718,7 +718,7 @@ export function IntelligenceTab({
               <div className="w-full md:w-72 flex items-center gap-4">
                 <div className="flex-1 h-3 bg-black border border-chartreuse/20 rounded-full overflow-hidden p-0.5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
                   <div 
-                    className="h-full bg-gradient-to-r from-chartreuse to-primary rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(140,200,80,0.4)]"
+                    className="h-full bg-gradient-to-r from-chartreuse to-primary rounded-full transition-[width,background-color,box-shadow] duration-300 shadow-[0_0_10px_rgba(140,200,80,0.4)]"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
@@ -791,7 +791,7 @@ export function IntelligenceTab({
                       {/* Attack Surface toggle */}
                       <button
                         onClick={() => setShowAttackSurface(prev => !prev)}
-                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all duration-200 cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
                           showAttackSurface
                             ? 'bg-primary/15 border-primary/30 text-primary'
                             : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -803,7 +803,7 @@ export function IntelligenceTab({
                       {/* Geo Map toggle */}
                       <button
                         onClick={() => setShowGeoMap(prev => !prev)}
-                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all duration-200 cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
                           showGeoMap
                             ? 'bg-primary/15 border-primary/30 text-primary'
                             : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -815,7 +815,7 @@ export function IntelligenceTab({
                       {/* History toggle */}
                       <button
                         onClick={() => { setHistoryDefaultTab('dns'); setShowHistory(prev => !prev); }}
-                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all duration-200 cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
                           showHistory && historyDefaultTab === 'dns'
                             ? 'bg-primary/15 border-primary/30 text-primary'
                             : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -827,7 +827,7 @@ export function IntelligenceTab({
                       {/* WHOIS History toggle */}
                       <button
                         onClick={() => { setHistoryDefaultTab('whois'); setShowHistory(prev => !prev); }}
-                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-all duration-200 cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
                           showHistory && historyDefaultTab === 'whois'
                             ? 'bg-primary/15 border-primary/30 text-primary'
                             : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -876,7 +876,7 @@ export function IntelligenceTab({
                 {(selectedDetails.findings.filter(f => f.severity === 'critical' || f.severity === 'high').length > 0) && (
                   <button
                     onClick={() => setShowBriefModal(true)}
-                    className="w-full flex items-center justify-center gap-2 bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 hover:border-destructive/40 text-destructive font-extrabold text-xs px-4 py-3 rounded-xl transition-all duration-300 hover:scale-[1.01] cursor-pointer group"
+                    className="w-full flex items-center justify-center gap-2 bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 hover:border-destructive/40 text-destructive font-extrabold text-xs px-4 py-3 rounded-xl transition-[color,background-color,border-color,transform] duration-300 hover:scale-[1.01] cursor-pointer group"
                   >                        <FileText className="w-4 h-4 group-hover:animate-pulse" />
                     {t('generateBrief')}
                     <span className="text-[9px] font-black bg-destructive/20 border border-destructive/30 px-2 py-0.5 rounded uppercase tracking-wider">
@@ -990,11 +990,11 @@ export function IntelligenceTab({
 
                       <div className="space-y-4">
                         {/* SPF Accordion Card */}
-                        <div className="bg-muted/[0.4] border border-border backdrop-blur-xl hover:border-primary/20 rounded-xl overflow-hidden transition-all duration-300">
+                        <div className="bg-muted/[0.4] border border-border backdrop-blur-xl hover:border-primary/20 rounded-xl overflow-hidden transition-colors duration-300">
                           <button 
                             type="button"
                             onClick={() => toggleAccordion('spf')}
-                            className="w-full flex items-center justify-between p-4 cursor-pointer text-left focus:outline-none hover:bg-muted/10 transition-colors"
+                            className="w-full flex items-center justify-between p-4 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40 hover:bg-muted/10 transition-colors"
                           >
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[10px] font-extrabold text-foreground/80 uppercase tracking-widest">
@@ -1021,7 +1021,7 @@ export function IntelligenceTab({
                           </button>
                           
                           {/* Smooth transition container */}
-                          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedAccordions['spf'] ? 'max-h-[600px] border-t border-border' : 'max-h-0'}`}>
+                          <div className={`transition-[max-height,border-color] duration-300 ease-in-out overflow-hidden ${expandedAccordions['spf'] ? 'max-h-[600px] border-t border-border' : 'max-h-0'}`}>
                             <div className="p-5 space-y-4 text-xs bg-muted/20">
                               {meta?.spfParsed ? (
                                 <div className="space-y-4">
@@ -1071,7 +1071,7 @@ export function IntelligenceTab({
                                       <button 
                                         type="button"
                                         onClick={() => handleCopyToClipboard("v=spf1 include:_spf.google.com -all", "spf_remediation")}
-                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-all flex items-center gap-1.5 cursor-pointer"
+                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
                                       >
                                         {copiedId === 'spf_remediation' ? (
                                           <>
@@ -1105,7 +1105,7 @@ export function IntelligenceTab({
                                       <button 
                                         type="button"
                                         onClick={() => handleCopyToClipboard("v=spf1 include:_spf.google.com -all", "spf_unconfigured_remediation")}
-                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-all flex items-center gap-1.5 cursor-pointer"
+                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
                                       >
                                         {copiedId === 'spf_unconfigured_remediation' ? (
                                           <>
@@ -1131,11 +1131,11 @@ export function IntelligenceTab({
                         </div>
 
                         {/* DMARC Accordion Card */}
-                        <div className="bg-muted/[0.4] border border-border backdrop-blur-xl hover:border-primary/20 rounded-xl overflow-hidden transition-all duration-300">
+                        <div className="bg-muted/[0.4] border border-border backdrop-blur-xl hover:border-primary/20 rounded-xl overflow-hidden transition-colors duration-300">
                           <button 
                             type="button"
                             onClick={() => toggleAccordion('dmarc')}
-                            className="w-full flex items-center justify-between p-4 cursor-pointer text-left focus:outline-none hover:bg-muted/10 transition-colors"
+                            className="w-full flex items-center justify-between p-4 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40 hover:bg-muted/10 transition-colors"
                           >
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[10px] font-extrabold text-foreground/80 uppercase tracking-widest">
@@ -1164,7 +1164,7 @@ export function IntelligenceTab({
                           </button>
                           
                           {/* Smooth transition container */}
-                          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expandedAccordions['dmarc'] ? 'max-h-[600px] border-t border-border' : 'max-h-0'}`}>
+                          <div className={`transition-[max-height,border-color] duration-300 ease-in-out overflow-hidden ${expandedAccordions['dmarc'] ? 'max-h-[600px] border-t border-border' : 'max-h-0'}`}>
                             <div className="p-5 space-y-4 text-xs bg-muted/20">
                               {meta?.dmarcParsed && meta.dmarcParsed.policy !== 'invalid' ? (
                                 <div className="space-y-4">
@@ -1219,7 +1219,7 @@ export function IntelligenceTab({
                                       <button 
                                         type="button"
                                         onClick={() => handleCopyToClipboard(`v=DMARC1; p=reject; pct=100; rua=mailto:dmarc-reports@${selectedDetails.investigation.target}`, "dmarc_remediation")}
-                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-all flex items-center gap-1.5 cursor-pointer"
+                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
                                       >
                                         {copiedId === 'dmarc_remediation' ? (
                                           <>
@@ -1253,7 +1253,7 @@ export function IntelligenceTab({
                                       <button 
                                         type="button"
                                         onClick={() => handleCopyToClipboard(`v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc-reports@${selectedDetails.investigation.target}`, "dmarc_unconfigured_remediation")}
-                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-all flex items-center gap-1.5 cursor-pointer"
+                                        className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
                                       >
                                         {copiedId === 'dmarc_unconfigured_remediation' ? (
                                           <>
@@ -1415,7 +1415,7 @@ export function IntelligenceTab({
                                   <button
                                     type="button"
                                     onClick={() => toggleAccordion(header.id)}
-                                    className="w-full flex items-start justify-between gap-4 cursor-pointer text-left focus:outline-none bg-muted/[0.2] border border-border/50 hover:border-border rounded-xl px-4 py-3 transition-all duration-200"
+                                    className="w-full flex items-start justify-between gap-4 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40 bg-muted/[0.2] border border-border/50 hover:border-border rounded-xl px-4 py-3 transition-colors duration-200"
                                   >
                                     <div className="space-y-0.5 flex-1 min-w-0">
                                       <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
@@ -1438,7 +1438,7 @@ export function IntelligenceTab({
                                   </button>
                                   
                                   {/* Collapsable Content */}
-                                  <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[450px] mt-2 mb-3' : 'max-h-0'}`}>
+                                  <div className={`transition-[max-height,margin] duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[450px] mt-2 mb-3' : 'max-h-0'}`}>
                                     <div className="bg-muted/[0.5] border border-border p-4 rounded-xl space-y-3.5 text-[11px] leading-relaxed">
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-1">
@@ -1457,7 +1457,7 @@ export function IntelligenceTab({
                                           <button 
                                             type="button"
                                             onClick={() => handleCopyToClipboard(header.code, copyId)}
-                                            className="text-[9px] font-bold text-muted-fg hover:text-foreground uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all duration-200"
+                                            className="text-[9px] font-bold text-muted-fg hover:text-foreground uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors duration-200"
                                           >
                                             {copiedId === copyId ? (
                                               <>
@@ -1537,7 +1537,7 @@ export function IntelligenceTab({
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     
                     {/* Card 1: WHOIS & Registro de Dominio */}
-                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col gap-5 hover:border-border transition-all duration-300">
+                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col gap-5 hover:border-border transition-colors duration-300">
                       <div className="flex items-center justify-between border-b border-border/50 pb-3">
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
                           <Globe className="w-4 h-4 text-primary" />
@@ -1638,7 +1638,7 @@ export function IntelligenceTab({
                     </div>
 
                     {/* Card 2: Rendimiento y Escudo Perimetral (TCP Ping & CDN/WAF) */}
-                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col justify-between hover:border-border transition-all duration-300 group">
+                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col justify-between hover:border-border transition-colors duration-300 group">
                       <div className="flex items-center justify-between border-b border-border/50 pb-3">
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
                           <Activity className="w-4 h-4 text-chartreuse" />
@@ -1741,7 +1741,7 @@ export function IntelligenceTab({
                     </div>
 
                     {/* Card 3: GeoIP, ASN & PTR (Identidad de Red) */}
-                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col justify-between hover:border-border transition-all duration-300">
+                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col justify-between hover:border-border transition-colors duration-300">
                       <div className="flex items-center justify-between border-b border-border/50 pb-3">
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
                           <Cpu className="w-4 h-4 text-primary" />
@@ -1844,7 +1844,7 @@ export function IntelligenceTab({
                     </div>
 
                     {/* Card 4: DNSBL Historial y Vecindario IP */}
-                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col justify-between hover:border-border transition-all duration-300">
+                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col justify-between hover:border-border transition-colors duration-300">
                       <div className="flex items-center justify-between border-b border-border/50 pb-3">
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
                           <Layers className="w-4 h-4 text-primary" />
@@ -1933,7 +1933,7 @@ export function IntelligenceTab({
                   </div>
 
                   {/* Card 5: Horizontal/Vertical packet traceroute hops transit flow */}
-                  <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 hover:border-border transition-all duration-300">
+                  <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 hover:border-border transition-colors duration-300">
                     <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-6">
                       <div>
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
@@ -2040,7 +2040,7 @@ export function IntelligenceTab({
                                   {/* Pulsing glow ring based on latency */}
                                   <span className={`absolute -inset-1 rounded-full animate-ring-pulse ${pulseRingColor}`} />
                                   
-                                  <div className={`w-[38px] h-[38px] rounded-full border-2 flex items-center justify-center font-black text-[11px] relative z-10 transition-all duration-300 group-hover/hop:scale-115 group-hover/hop:border-primary group-hover/hop:text-primary group-hover/hop:shadow-[0_0_20px_rgba(98,113,196,0.5)] ${latencyColor}`}>
+                                  <div className={`w-[38px] h-[38px] rounded-full border-2 flex items-center justify-center font-black text-[11px] relative z-10 transition-[color,border-color,box-shadow,transform,width,height] duration-300 group-hover/hop:scale-115 group-hover/hop:border-primary group-hover/hop:text-primary group-hover/hop:shadow-[0_0_20px_rgba(98,113,196,0.5)] ${latencyColor}`}>
                                     {hop.hop}
                                   </div>
                                 </div>
@@ -2082,7 +2082,7 @@ export function IntelligenceTab({
                                 </div>
 
                                 {/* PREMIUM HOVER INTERACTIVE TOOLTIP POPOVER */}
-                                <div className="group-hover/hop:opacity-100 group-hover/hop:translate-y-0 opacity-0 translate-y-2 pointer-events-none absolute bottom-[105%] left-1/2 -translate-x-1/2 mb-4 bg-muted/[0.95] backdrop-blur-xl border border-border p-4.5 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.9),0_0_20px_rgba(255,255,255,0.01)] transition-all duration-300 w-64 z-50 flex flex-col gap-3 text-xs select-text text-left font-sans">
+                                <div className="group-hover/hop:opacity-100 group-hover/hop:translate-y-0 opacity-0 translate-y-2 pointer-events-none absolute bottom-[105%] left-1/2 -translate-x-1/2 mb-4 bg-muted/[0.95] backdrop-blur-xl border border-border p-4.5 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.9),0_0_20px_rgba(255,255,255,0.01)] transition-[opacity,transform] duration-300 w-64 z-50 flex flex-col gap-3 text-xs select-text text-left font-sans">
                                   <div className="flex items-center justify-between border-b border-border/70 pb-2">
                                     <span className="text-[8px] font-extrabold text-muted-fg uppercase tracking-widest">DETALLES DEL SALTO #{hop.hop}</span>
                                     <span className="text-[9px] font-mono text-primary font-extrabold">{hop.type?.toUpperCase() || 'UNKNOWN'}</span>
@@ -2121,7 +2121,7 @@ export function IntelligenceTab({
                                       </div>
                                       <div className="w-full h-2 bg-muted border border-border/50 rounded-full overflow-hidden p-0.5">
                                         <div 
-                                          className="h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(255,255,255,0.1)]" 
+                                          className="h-full rounded-full transition-[width,background-color,box-shadow] duration-500 shadow-[0_0_8px_rgba(255,255,255,0.1)]" 
                                           style={{ 
                                             width: `${Math.max(8, Math.min(100, (hop.latencyMs / 300) * 100))}%`, 
                                             backgroundColor: `hsl(${Math.max(0, 120 - (hop.latencyMs / 300) * 120)}, 85%, 48%)` 
@@ -2184,7 +2184,7 @@ export function IntelligenceTab({
                     const config = severityConfig[finding.severity] || { glow: '', bg: 'bg-muted/5', border: 'border-border/50', icon: 'text-muted-fg' };
 
                     return (
-                      <div key={finding.id} className={`p-6 md:p-8 m-4 rounded-xl transition-all duration-300 flex flex-col gap-5 ${config.bg} ${config.border} border ${config.glow} hover:bg-muted/10`}>
+                      <div key={finding.id} className={`p-6 md:p-8 m-4 rounded-xl transition-colors duration-300 flex flex-col gap-5 ${config.bg} ${config.border} border ${config.glow} hover:bg-muted/10`}>
                         
                         {/* Header row */}
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -2351,7 +2351,7 @@ export function IntelligenceTab({
                   <button
                     onClick={handleGenerateCopilot}
                     disabled={isGeneratingCopilot}
-                    className="bg-gradient-to-r from-primary to-primary/80 text-foreground font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-primary/20 cursor-pointer hover:shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed text-center shrink-0 shadow-lg"
+                    className="bg-gradient-to-r from-primary to-primary/80 text-foreground font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-primary/20 cursor-pointer hover:shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:brightness-110 active:scale-95 transition-[color,background-color,border-color,opacity,box-shadow,transform,filter] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed text-center shrink-0 shadow-lg"
                   >
                     Generar Plan IA <Sparkles className="w-3.5 h-3.5" />
                   </button>
@@ -2518,24 +2518,24 @@ export function IntelligenceTab({
                         switch (block.type) {
                           case 'h1':
                             return (
-                              <h1 key={idx} className="text-lg font-extrabold text-foreground flex items-center gap-2 border-b border-border pb-2.5 pt-6 first:pt-0">
-                                <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(98,113,196,0.6)]" />
-                                {renderInlineMarkdown(block.content || '')}
-                              </h1>
-                            );
-                          case 'h2':
-                            return (
-                              <h2 key={idx} className="text-base font-extrabold text-foreground flex items-center gap-2 border-b border-border pb-2 pt-5 first:pt-0">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(98,113,196,0.6)]" />
+                              <h2 key={idx} className="text-lg font-extrabold text-foreground flex items-center gap-2 border-b border-border pb-2.5 pt-6 first:pt-0">
+                                <span aria-hidden="true" className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(98,113,196,0.6)]" />
                                 {renderInlineMarkdown(block.content || '')}
                               </h2>
                             );
-                          case 'h3':
+                          case 'h2':
                             return (
-                              <h3 key={idx} className="text-sm font-bold text-foreground flex items-center gap-2 pt-4 first:pt-0">
-                                <span className="w-1 h-1 rounded-full bg-primary shadow-[0_0_8px_rgba(98,113,196,0.5)]" />
+                              <h3 key={idx} className="text-base font-extrabold text-foreground flex items-center gap-2 border-b border-border pb-2 pt-5 first:pt-0">
+                                <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(98,113,196,0.6)]" />
                                 {renderInlineMarkdown(block.content || '')}
                               </h3>
+                            );
+                          case 'h3':
+                            return (
+                              <h4 key={idx} className="text-sm font-bold text-foreground flex items-center gap-2 pt-4 first:pt-0">
+                                <span aria-hidden="true" className="w-1 h-1 rounded-full bg-primary shadow-[0_0_8px_rgba(98,113,196,0.5)]" />
+                                {renderInlineMarkdown(block.content || '')}
+                              </h4>
                             );
                           case 'ul':
                             return (

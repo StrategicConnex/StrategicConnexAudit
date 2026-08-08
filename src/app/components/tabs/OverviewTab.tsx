@@ -69,10 +69,19 @@ interface OverviewTabProps {
   projectId?: string;
 }
 
-export function OverviewTab({ initialProjects, dashboardData, setActiveTab, projectId }: OverviewTabProps) {
+export function OverviewTab({ dashboardData, setActiveTab, projectId }: OverviewTabProps) {
   const t = useTranslations('overview');
   return (
     <div className="space-y-6">
+
+      {/* Page title — h1 lives in DashboardHeader; this is the in-content h2 */}
+      <div className="flex items-center gap-3">
+        <h2 className="text-xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+          <Activity aria-hidden="true" className="w-5 h-5 text-primary" />
+          {t('pageTitle')}
+        </h2>
+        <p className="text-sm text-muted-fg mt-0.5">{t('pageSubtitle')}</p>
+      </div>
 
       {/* ═══ 1. HERO CARD — Full-width live monitoring ═══ */}
       <div className="glass-card-hero rounded-2xl p-6 sm:p-8">
@@ -102,7 +111,7 @@ export function OverviewTab({ initialProjects, dashboardData, setActiveTab, proj
                 70, 84, 76, 58, 45, 52, 68, 82, 95, 78].map((h, i) => (
                 <div
                   key={i}
-                  className="flex-1 rounded-t-sm transition-all duration-300 hover:opacity-80"
+                  className="flex-1 rounded-t-sm transition-opacity duration-300 hover:opacity-80"
                   style={{
                     height: `${h}%`,
                     background: i === 28

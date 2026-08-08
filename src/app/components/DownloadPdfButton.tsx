@@ -162,7 +162,7 @@ export function DownloadPdfButton({
     <button
       onClick={handleDownload}
       disabled={!projectId || loading}
-      className={`inline-flex items-center gap-2 font-extrabold uppercase tracking-wider border transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${sizeClasses} ${variantClasses}`}
+      className={`inline-flex items-center gap-2 font-extrabold uppercase tracking-wider border transition-[border-color,opacity] duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${sizeClasses} ${variantClasses}`}
     >
       {loading ? (
         <><Loader2 className="w-4 h-4 animate-spin" /> {label}</>

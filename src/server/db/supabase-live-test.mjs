@@ -56,7 +56,6 @@ function loadEnv() {
 loadEnv();
 
 const DIRECT_URL = process.env.DIRECT_URL;
-const DATABASE_URL = process.env.DATABASE_URL;
 
 // Debug info if DIRECT_URL not found
 if (!DIRECT_URL) {
@@ -69,7 +68,6 @@ if (!DIRECT_URL) {
 const PASS = '✅';
 const FAIL = '❌';
 const SKIP = '⏭️';
-const WARN = '⚠️';
 
 let passed = 0;
 let failed = 0;
@@ -429,7 +427,7 @@ async function main() {
     const ownClient = await pool.connect();
     try {
       await ownClient.query('BEGIN');
-      const result = await ownClient.query(query, params || []);
+      await ownClient.query(query, params || []);
       await ownClient.query('ROLLBACK');
       report(label, true);
     } catch (err) {
@@ -502,7 +500,6 @@ async function main() {
   }
 
   // ── Summary ──────────────────────────────────────────────────────
-  const total = passed + failed + skipped;
   const totalTables = ALL_TABLES.length;
 
   console.log('\n══════════════════════════════════════════════════════════');

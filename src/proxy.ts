@@ -13,29 +13,44 @@ import { updateSession } from "@/shared/lib/supabase/middleware";
    ═══════════════════════════════════════════════════════════════════ */
 
 /**
- * Generates a Content-Security-Policy header string.
- * The nonce is generated per-request and passed via x-csp-nonce
- * request header for SSR layouts to read; however, Next.js App Router
- * does not assign nonces to its own <script> tags, so script-src uses
- * 'self' + 'unsafe-inline' (Next.js requirement) + 'strict-dynamic'.
+ * Generates a Content-Security-Policy header string with a per-request nonce.
+ *
+ * The nonce is generated per-request, set on the REQUEST headers (Next.js 16
+ * parses the CSP header from the request during dynamic rendering and applies
+ * the nonce to its own inline scripts/styles automatically), and echoed on the
+ * RESPONSE header so the browser enforces it.
+ *
+ * NOTE: 'unsafe-inline' must NOT appear in script-src: its presence silently
+ * disables nonce enforcement in every CSP3 browser, turning the nonce into a
+ * no-op. 'strict-dynamic' lets the nonce'd Next.js runtime load its
+ * dynamically-created chunk scripts (host-source allowlists are ignored for
+ * dynamically created scripts when strict-dynamic is present).
  */
-function buildCsp(): string {
+function buildCsp(nonce: string): string {
+  const isDev = process.env.NODE_ENV === "development";
   const directives = [
     `default-src 'self'`,
-    // Scripts: self (Next.js bundles) + unsafe-inline (Next.js inline hydration).
-    // NOTE: 'strict-dynamic' is intentionally OMITTED because Next.js App Router
-    // loads chunk scripts via dynamic import() on 'self' origins, and
-    // 'strict-dynamic' overrides host-based allowlisting, breaking chunk loading.
-    // unsafe-eval is required by React DevTools in development mode.
-    `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
-    // Styles: Next.js injects inline styles for CSS-in-JS / CSS modules
+    // Scripts: self (Next.js bundles) + per-request nonce (inline hydration
+    // scripts are nonce'd automatically by Next.js 16) + strict-dynamic
+    // (chunk scripts created by the nonce'd runtime inherit trust).
+    // 'unsafe-eval' is required by React dev tooling in development only.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
+    // Styles: Next.js injects inline styles and components use inline style
+    // attributes. Inline styles cannot execute script, so 'unsafe-inline'
+    // here does not open an XSS bypass.
     `style-src 'self' 'unsafe-inline'`,
+    // Objects (flash/java plugins) — not used anywhere in the app
+    `object-src 'none'`,
     // Images: allow data: URIs (inline images) and HTTPS (external images)
     `img-src 'self' data: https:`,
     // Fonts: allow data: URIs (icon fonts) and self-hosted
     `font-src 'self' data:`,
-    // Connections: Supabase for auth / DB, Vercel for deployment APIs
-    `connect-src 'self' https://*.supabase.co https://apifreellm.com https://sbktqevuyofayyvcctyr.supabase.co https://*.vercel.app`,
+    // Connections: Supabase (auth/DB/realtime) is the only cross-origin
+    // destination the browser needs. LLM providers and SIEM exporters are
+    // called server-side and are not governed by this policy, so their
+    // domains (apifreellm.com, *.vercel.app, …) must NOT be allowlisted here
+    // — they would only widen the data-exfiltration surface.
+    `connect-src 'self' https://*.supabase.co`,
     // Prevent clickjacking
     `frame-ancestors 'none'`,
     // Block mixed content in production
@@ -62,12 +77,16 @@ function buildCsp(): string {
  * 3. Run Supabase session refresh and route guard
  */
 export default async function proxy(request: NextRequest) {
-  // ── 1. Generate CSP nonce ──────────────────────────────────────
+  // ── 1. Generate CSP nonce (unique per request) ──────────────────
   const nonce = crypto.randomUUID();
+  const csp = buildCsp(nonce);
 
-  // ── 2. Clone request with nonce so layouts/routes can read it ──
+  // ── 2. Clone request with nonce + CSP so Next.js can extract the ──
+  // nonce and apply it to its inline scripts during rendering, and so
+  // layouts can read it via next/headers.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-csp-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
 
   const requestWithNonce = new NextRequest(request, {
     headers: requestHeaders,
@@ -77,8 +96,8 @@ export default async function proxy(request: NextRequest) {
   // Returns a response (potentially a redirect for unauthenticated routes)
   const response = await updateSession(requestWithNonce);
 
-  // ── 4. Apply security headers ──────────────────────────────────
-  response.headers.set("Content-Security-Policy", buildCsp());
+  // ── 4. Apply security headers (CSP echoed with the same nonce) ──
+  response.headers.set("Content-Security-Policy", csp);
   response.headers.set(
     "Strict-Transport-Security",
     "max-age=31536000; includeSubDomains; preload"

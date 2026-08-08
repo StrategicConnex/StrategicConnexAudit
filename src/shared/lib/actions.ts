@@ -25,7 +25,6 @@ export type DbTransaction = PgTransaction<NodePgQueryResultHKT, typeof schema, E
 
 // ── Dev bypass helper ────────────────────────────────────────────────────
 // Usa un usuario sintético + directDb (sin RLS) para desarrollo local
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- directDb type is a complex lazy proxy
 async function handleDevBypass<Schema extends z.ZodTypeAny, T>(
   zodSchema: Schema,
   formData: z.infer<Schema> | FormData,

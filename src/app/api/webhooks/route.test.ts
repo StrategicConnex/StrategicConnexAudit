@@ -18,7 +18,6 @@ const mockFindFirst = vi.fn();
 const mockFindMany = vi.fn();
 const mockInsert = vi.fn();
 const mockDeleteQuery = vi.fn();
-const mockReturning = vi.fn();
 
 vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: vi.fn(() => ({

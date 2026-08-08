@@ -49,7 +49,7 @@ export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderP
       <div className="flex items-center gap-6">
         <InstallPwaButton />
         <NewProjectModal />
-        <div className="w-9 h-9 rounded-full bg-muted/20 hover:bg-muted/40 flex items-center justify-center cursor-pointer transition-all duration-300 border border-border/40 relative group">
+        <div className="w-9 h-9 rounded-full bg-muted/20 hover:bg-muted/40 flex items-center justify-center cursor-pointer transition-colors duration-300 border border-border/40 relative group">
           <span className="text-xs font-bold text-foreground/80 group-hover:text-foreground transition-colors">JU</span>
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-chartreuse border-2 border-background rounded-full" />
         </div>

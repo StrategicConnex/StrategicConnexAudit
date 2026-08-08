@@ -145,7 +145,7 @@ export async function DELETE(req: NextRequest) {
  * GET — Retorna la VAPID public key para que el frontend la use al suscribirse.
  *        También retorna el estado de suscripción del usuario autenticado.
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();

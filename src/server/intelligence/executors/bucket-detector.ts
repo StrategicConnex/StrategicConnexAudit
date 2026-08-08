@@ -1,4 +1,5 @@
 import dns from 'dns/promises';
+import { safeFetch } from '../security/egress-guard';
 
 export class BucketDetectorExecutor {
   async execute(domain: string, aggressive: boolean = false) {
@@ -35,7 +36,9 @@ export class BucketDetectorExecutor {
             const timeoutId = setTimeout(() => controller.abort(), 3000);
             
             try {
-              const res = await fetch(`http://${target}`, { signal: controller.signal });
+              // safeFetch: egress-guard SSRF (el host derivado es público, pero
+              // por defensa en profundidad también valida redirects y timeout).
+              const res = await safeFetch(`http://${target}`, { signal: controller.signal });
               clearTimeout(timeoutId);
               
               if (res.status === 200) {
@@ -43,7 +46,7 @@ export class BucketDetectorExecutor {
               } else if (res.status === 403) {
                 findings.push({ bucketUrl: target, provider: provider.name, status: 'protected' });
               }
-            } catch (err) {
+            } catch {
               clearTimeout(timeoutId);
               // Network error, maybe protected or no HTTP
               findings.push({ bucketUrl: target, provider: provider.name, status: 'protected' });

@@ -97,7 +97,7 @@ export function CustomDashboardGrid({ childrenMap }: CustomDashboardGridProps) {
               <button
                 key={widget.id}
                 onClick={() => toggleWidget(widget.id)}
-                className={`flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all ${
+                className={`flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-colors ${
                   widget.enabled
                     ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-300"
                     : "bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700"

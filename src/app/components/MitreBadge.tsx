@@ -32,7 +32,7 @@ export function MitreBadge({ technique, size = 'sm', showTooltip = true }: {
   return (
     <span className="relative inline-flex items-center">
       <span
-        className={`inline-flex items-center ${sizeClasses} rounded-md border font-bold uppercase tracking-wider ${colors.bg} ${colors.text} ${colors.border} transition-all hover:brightness-110 cursor-default`}
+        className={`inline-flex items-center ${sizeClasses} rounded-md border font-bold uppercase tracking-wider ${colors.bg} ${colors.text} ${colors.border} transition-[border-color,filter] hover:brightness-110 cursor-default`}
         onMouseEnter={() => showTooltip && setShowInfo(true)}
         onMouseLeave={() => setShowInfo(false)}
       >

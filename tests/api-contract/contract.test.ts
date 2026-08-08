@@ -134,7 +134,7 @@ describe('OpenAPI 3.0 Spec — public/openapi.json', () => {
     const paths = spec.paths as Record<string, unknown>;
     const validStatuses = ['200', '201', '429'];
     for (const [path, methods] of Object.entries(paths)) {
-      for (const [method, details] of Object.entries(methods as Record<string, unknown>)) {
+      for (const [, details] of Object.entries(methods as Record<string, unknown>)) {
         const responses = (details as Record<string, unknown>).responses as Record<string, unknown>;
         for (const status of validStatuses) {
           const resp = responses[status] as Record<string, unknown> | undefined;

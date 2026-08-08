@@ -1,13 +1,13 @@
 ---
-version: 2.1
-date: 2026-08-02
+version: 2.3
+date: 2026-08-08
 author: Equipo SCAUDIT — Security Review
-status: Aprobado — VULN-004/005 (IDOR High) remediados; VULN-001/002/003/006/007 remediados (P0 TSK-001..006); restan VULN-008/009 (Low, mocks)
+status: Aprobado — VULN-004/005 (IDOR High) remediados; VULN-001/002/003/006/007 remediados (P0 TSK-001..006); v2.3 CSP nonce hardening + fin de render estático; restan VULN-008/009 (Low, mocks)
 ---
 
 # 🔐 SCAUDIT — Reporte de Auditoría de Seguridad (OWASP / DevSecOps)
 
-> **Fecha:** 2026-08-02 · **Versión:** 2.2 · **Autor:** Equipo SCAUDIT (skills `security-review` + `security-auditor`) · **Estado:** ✅ Aprobado — VULN-001/002/003/006/007 **remediados** (P0 TSK-001..006) · VULN-004/005 remediados previamente · restan VULN-008/009 (Low, mocks)
+> **Fecha:** 2026-08-08 · **Versión:** 2.3 · **Autor:** Equipo SCAUDIT (skills `security-review` + `security-auditor`) · **Estado:** ✅ Aprobado — VULN-001/002/003/006/007 **remediados** (P0 TSK-001..006) · VULN-004/005 remediados previamente · **v2.3:** CSP nonce hardening (sin `unsafe-inline`, `strict-dynamic`, `object-src 'none'`, `connect-src` reducido a `'self'` + `*.supabase.co`, fin del render estático) · restan VULN-008/009 (Low, mocks)
 > **Metodología:** OWASP Top 10 + Cheat Sheet Series · trazado de flujo de datos (UI → API → Admin SDK → DB) · adversarial analysis · reporte HIGH-confidence-only.
 > **Alcance de esta revisión:** commit `739e09d` (post-B01). Inventario de las 42 rutas de `src/app/api`, separación de cliente/servidor Supabase, y escaneo de secretos.
 
@@ -281,7 +281,7 @@ flowchart TB
 | `playground/page.tsx:373` highlight | `escapeHtml(text)` **antes** del highlight | ✅ Seguro |
 | Webhook POST SSRF | `assertPublicHostname` en la URL del webhook | ✅ Seguro |
 | `api-auth.ts` / `api-keys.ts` hashing | SHA-256 de key 256-bit aleatoria; lookup por hash indexado | ✅ Seguro |
-| CSP (`proxy.ts`) | HSTS + X-Frame-Options DENY + nosniff + CSP | ✅ Seguro |
+| CSP (`proxy.ts`) | HSTS + X-Frame-Options DENY + nosniff + CSP con nonce por request (`script-src 'self' 'nonce-…' 'strict-dynamic'` sin `unsafe-inline`), `object-src 'none'`, `connect-src 'self' https://*.supabase.co`, meta CSP espejo con el mismo nonce en `layout.tsx` | ✅ Seguro |
 | Dev bypass auth | Gateado por `NODE_ENV === 'development'` | ✅ Seguro |
 | `/api/public/v1/intelligence` POST | API key + `eq(projects.ownerId, userId)` antes de insertar | ✅ Seguro |
 | `webhooks/cicd` | HMAC `crypto.timingSafeEqual` + prefijo `sha256=` | ✅ Seguro (ver fallback dev en §14) |
@@ -408,4 +408,4 @@ Ver §3 (arquitectura) — 1 bloque mermaid, 11 nodos, válido.
 
 ## 18. Resumen ejecutivo
 
-**2 hallazgos (0 críticos, 0 high, 0 medium, 2 low).** La aplicación tiene una postura de seguridad sólida: RLS transaccional, egress-guard con CIDR matching, sandbox sin shell, hashing de API keys, CSP, `CRON_SECRET` en crons y separación cliente/servidor verificada (Service Role nunca en bundle). La **revisión v2.1** detectó dos IDOR cross-tenant HIGH (VULN-004/005) que fueron remediados. La **revisión v2.2** cierra el batch P0: VULN-001 (XSS IA → `escapeHtml` antes del render), VULN-002 (secret webhooks enmascarado + test), VULN-003 (`/intelligence` en middleware), VULN-006 (looker-studio fail-closed + `timingSafeEqual`), VULN-007 (progreso PDF namespaced por usuario con sesión). **Restan solo 2 hallazgos Low** (VULN-008/009) que son endpoints mock sin datos reales — se protegen/eliminan al conectar datos reales (plan MODE C TSK-011/012). No se detectaron secretos reales en el repo (gitleaks es ahora barrera dura en CI).
+**2 hallazgos (0 críticos, 0 high, 0 medium, 2 low).** La aplicación tiene una postura de seguridad sólida: RLS transaccional, egress-guard con CIDR matching, sandbox sin shell, hashing de API keys, CSP, `CRON_SECRET` en crons y separación cliente/servidor verificada (Service Role nunca en bundle). La **revisión v2.1** detectó dos IDOR cross-tenant HIGH (VULN-004/005) que fueron remediados. La **revisión v2.2** cierra el batch P0: VULN-001 (XSS IA → `escapeHtml` antes del render), VULN-002 (secret webhooks enmascarado + test), VULN-003 (`/intelligence` en middleware), VULN-006 (looker-studio fail-closed + `timingSafeEqual`), VULN-007 (progreso PDF namespaced por usuario con sesión). La **revisión v2.3** endurece el CSP: el nonce (antes generado pero **no aplicado**) ahora viaja en los headers del request, Next.js 16 lo aplica a todos sus scripts inline, se eliminó `'unsafe-inline'` de `script-src` (anulaba la validación por nonce), se añadió `'strict-dynamic'` y `object-src 'none'`, y `connect-src` se redujo a `'self'` + `*.supabase.co` (se eliminaron dominios muertos de LLM/SIEM que solo ampliaban la superficie de exfiltración); como los nonces exigen render dinámico, se eliminaron las 2 últimas páginas estáticas (`force-static`/`generateStaticParams`). **Restan solo 2 hallazgos Low** (VULN-008/009) que son endpoints mock sin datos reales — se protegen/eliminan al conectar datos reales (plan MODE C TSK-011/012). No se detectaron secretos reales en el repo (gitleaks es ahora barrera dura en CI).

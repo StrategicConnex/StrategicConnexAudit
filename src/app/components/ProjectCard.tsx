@@ -40,12 +40,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <Link href={`/projects/${project.id}`} className="block h-full cursor-pointer">
-      <div className="glass-card rounded-2xl p-6 group hover:scale-[1.01] transition-all duration-500 flex flex-col justify-between relative overflow-hidden h-full">
+      <div className="glass-card rounded-2xl p-6 group hover:scale-[1.01] transition-transform duration-500 flex flex-col justify-between relative overflow-hidden h-full">
         {/* Neon top highlight */}
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
         {/* Ambient background glow */}
-        <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl pointer-events-none transition-all duration-700 ${healthStyle.glow}`} />
+        <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl pointer-events-none transition-colors duration-700 ${healthStyle.glow}`} />
 
         {/* Header section */}
         <div className="flex items-start justify-between relative z-10 min-w-0 mb-6">
@@ -63,7 +63,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
 
           {/* Health score circular badge */}
-          <div className={`w-12 h-12 rounded-full border flex flex-col items-center justify-center shrink-0 transition-all duration-500 ${healthStyle.badge}`}>
+          <div className={`w-12 h-12 rounded-full border flex flex-col items-center justify-center shrink-0 transition-[color,border-color,opacity] duration-500 ${healthStyle.badge}`}>
             <span className="text-[8px] font-extrabold tracking-wider -mb-0.5 uppercase opacity-80">{healthScore}</span>
           </div>
         </div>
@@ -98,7 +98,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <span className="w-1.5 h-1.5 rounded-full bg-muted-fg/40" />
             Sync: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Never'}
           </span>
-          <span className="text-[10px] uppercase tracking-widest text-primary font-extrabold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+          <span className="text-[10px] uppercase tracking-widest text-primary font-extrabold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-[color,opacity,transform] transform translate-x-2 group-hover:translate-x-0">
             Analizar <ChevronRight size={14} strokeWidth={2.5} />
           </span>
         </div>

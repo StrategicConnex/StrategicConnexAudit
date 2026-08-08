@@ -50,10 +50,29 @@ describe("Proxy — Security Headers", () => {
     expect(csp).toContain("default-src 'self'");
   });
 
-  it("CSP: script-src con self + unsafe-inline", async () => {
+  it("CSP: script-src con nonce + strict-dynamic y SIN unsafe-inline", async () => {
     const response = await proxyFn(createMockRequest("/login"));
-    const csp = response.headers.get("content-security-policy");
-    expect(csp).toContain("script-src 'self' 'unsafe-inline'");
+    const csp = response.headers.get("content-security-policy") ?? "";
+    // Aislar la directiva script-src (style-src sí usa unsafe-inline legítimamente)
+    const scriptSrc = csp.split(";").map((d) => d.trim()).find((d) => d.startsWith("script-src"));
+    expect(scriptSrc).toContain("'self'");
+    expect(scriptSrc).toContain("'nonce-");
+    expect(scriptSrc).toContain("'strict-dynamic'");
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+  });
+
+  it("CSP: script-src usa el MISMO nonce que x-csp-nonce", async () => {
+    await proxyFn(createMockRequest("/login"));
+    const passedRequest = mockUpdateSession.mock.calls[0][0];
+    const nonce = passedRequest.headers.get("x-csp-nonce");
+    const csp = passedRequest.headers.get("content-security-policy");
+    expect(csp).toContain(`'nonce-${nonce}'`);
+  });
+
+  it("CSP: el header viaja en el REQUEST (Next.js extrae el nonce de ahí)", async () => {
+    await proxyFn(createMockRequest("/login"));
+    const passedRequest = mockUpdateSession.mock.calls[0][0];
+    expect(passedRequest.headers.get("content-security-policy")).toContain("default-src 'self'");
   });
 
   it("CSP: style-src con self + unsafe-inline", async () => {
@@ -86,10 +105,20 @@ describe("Proxy — Security Headers", () => {
     expect(csp).toContain("/api/security/csp-report");
   });
 
-  it("CSP: connect-src incluye Supabase", async () => {
+  it("CSP: connect-src solo 'self' + Supabase (sin dominios muertos)", async () => {
     const response = await proxyFn(createMockRequest("/login"));
     const csp = response.headers.get("content-security-policy");
     expect(csp).toContain("https://*.supabase.co");
+    // Los LLM/SIEM corren server-side: allowlistarlos aquí solo ampliaría la
+    // superficie de exfiltración de datos del navegador.
+    expect(csp).not.toContain("apifreellm.com");
+    expect(csp).not.toContain("vercel.app");
+  });
+
+  it("CSP: object-src 'none'", async () => {
+    const response = await proxyFn(createMockRequest("/login"));
+    const csp = response.headers.get("content-security-policy");
+    expect(csp).toContain("object-src 'none'");
   });
 
   it("HSTS: max-age de 1 año + subdominios + preload", async () => {
@@ -135,7 +164,7 @@ describe("Proxy — Security Headers", () => {
     const passedRequest = mockUpdateSession.mock.calls[0][0];
     const nonce = passedRequest.headers.get("x-csp-nonce");
     expect(nonce).toBeDefined();
-    expect(nonce.length).toBeGreaterThan(0);
+    expect(nonce?.length ?? 0).toBeGreaterThan(0);
     expect(nonce).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );

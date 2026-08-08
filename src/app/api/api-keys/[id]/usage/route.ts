@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/shared/lib/supabase/server';
 import { directDb } from '@/shared/db';
 import { securityAuditLogs, developerApiKeys } from '@/shared/db/schemas';
-import { eq, and, desc, sql, gte } from 'drizzle-orm';
+import { eq, and, sql, gte } from 'drizzle-orm';
 import { withRateLimit } from '@/shared/lib/ratelimit';
 
 export const dynamic = 'force-dynamic';

@@ -100,17 +100,17 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
             <button
               onClick={handleSync}
               disabled={syncing}
-              className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-muted-fg hover:text-primary transition-all px-4 py-2.5 rounded-xl bg-muted/10 border border-border hover:border-primary/30 hover:bg-muted/20 cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-muted-fg hover:text-primary transition-[color,background-color,border-color,opacity] px-4 py-2.5 rounded-xl bg-muted/10 border border-border hover:border-primary/30 hover:bg-muted/20 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-primary' : ''}`} />
               {syncing ? t('syncingButton') : t('syncButton')}
             </button>
 
             <div className="flex items-center gap-1.5 border border-border rounded-xl bg-muted/10 p-1">
-              <button className="p-1.5 rounded-lg text-muted-fg hover:text-foreground hover:bg-muted/20 transition-all cursor-pointer">
+              <button className="p-1.5 rounded-lg text-muted-fg hover:text-foreground hover:bg-muted/20 transition-colors cursor-pointer">
                 <Settings size={14} />
               </button>
-              <button className="p-1.5 rounded-lg text-muted-fg hover:text-foreground hover:bg-muted/20 transition-all cursor-pointer">
+              <button className="p-1.5 rounded-lg text-muted-fg hover:text-foreground hover:bg-muted/20 transition-colors cursor-pointer">
                 <MoreVertical size={14} />
               </button>
             </div>
@@ -134,7 +134,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
               </h3>
               <Info className="w-3.5 h-3.5 text-muted-fg cursor-help hover:text-muted-fg/80 transition-colors" />
             </div>
-            <div className="flex items-center gap-1 bg-muted/10 border border-border px-2.5 py-1 rounded-lg text-[10px] text-muted-fg font-bold uppercase tracking-wider cursor-pointer hover:bg-muted/20 transition-all">
+            <div className="flex items-center gap-1 bg-muted/10 border border-border px-2.5 py-1 rounded-lg text-[10px] text-muted-fg font-bold uppercase tracking-wider cursor-pointer hover:bg-muted/20 transition-colors">
               <span>{t('last30m')}</span>
               <ChevronRight size={10} className="rotate-90" />
             </div>
@@ -393,24 +393,22 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
               IconComp = idx % 2 === 0 ? Terminal : Globe;
             }
 
-            const accentColor = isGood ? 'chartreuse' : COLORS.warning;
-
             return (
               <div
                 key={project.id}
-                className="glass-card rounded-2xl p-6 relative overflow-hidden group hover:-translate-y-0.5 transition-all duration-300"
+                className="glass-card rounded-2xl p-6 relative overflow-hidden group hover:-translate-y-0.5 transition-transform duration-300"
               >
                 {/* Hover gradient */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 {/* Left accent bar */}
                 <div
-                  className={`absolute top-0 left-0 w-[3px] h-0 ${isGood ? 'bg-chartreuse' : 'bg-[oklch(75% 0.13 80)]'} group-hover:h-full transition-all duration-300`}
+                  className={`absolute top-0 left-0 w-[3px] h-0 ${isGood ? 'bg-chartreuse' : 'bg-[oklch(75% 0.13 80)]'} group-hover:h-full transition-[height,background-color] duration-300`}
                 />
 
                 <div className="flex items-start justify-between relative z-10">
                   <div className="flex items-center gap-4">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-300 ${
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors duration-300 ${
                         isGood
                           ? 'bg-chartreuse/5 border-chartreuse/10 text-chartreuse group-hover:bg-chartreuse/10 group-hover:border-chartreuse/20'
                           : 'bg-[oklch(75% 0.13 80)]/5 border-[oklch(75% 0.13 80)]/10 text-[oklch(75% 0.13 80)] group-hover:bg-[oklch(75% 0.13 80)]/10 group-hover:border-[oklch(75% 0.13 80)]/20'
@@ -451,7 +449,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
 
                   <Link
                     href={`/projects/${project.id}`}
-                    className="text-[9px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 bg-primary/10 border border-primary/20 px-3.5 py-2 rounded-xl hover:bg-primary/20"
+                    className="text-[9px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-[color,background-color,border-color,opacity,transform] transform translate-x-2 group-hover:translate-x-0 bg-primary/10 border border-primary/20 px-3.5 py-2 rounded-xl hover:bg-primary/20"
                   >
                     {t('viewAudit')} <ChevronRight size={12} strokeWidth={2.5} />
                   </Link>

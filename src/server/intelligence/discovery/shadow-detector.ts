@@ -65,7 +65,7 @@ const CLOUD_BUCKET_PATTERNS: CloudBucketPattern[] = [
   {
     provider: "AWS S3 (EU)",
     testHost: (sub) => `${sub}.s3.eu-west-1.amazonaws.com`,
-    detectResponse: (status, body, _headers) => ({
+    detectResponse: (status, _body, _headers) => ({
       isBucket: status !== 404,
       isPublic: status === 200,
       detail: `Respuesta HTTP ${status}`,
@@ -74,7 +74,7 @@ const CLOUD_BUCKET_PATTERNS: CloudBucketPattern[] = [
   {
     provider: "Google Cloud Storage",
     testHost: (sub) => `${sub}.storage.googleapis.com`,
-    detectResponse: (status, body, _headers) => {
+    detectResponse: (status, _body, _headers) => {
       if (status === 200) {
         return {
           isBucket: true,
