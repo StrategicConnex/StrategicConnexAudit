@@ -206,44 +206,75 @@ Documentación completa en formato **HTML** con diagramas Mermaid, skeletons de 
 
 ## 🏗️ Arquitectura
 
-```
-                          ┌─────────────────────┐
-                          │    Vercel Edge       │
-                          │   (proxy.ts)         │
-                          │  CSP · HSTS · Auth   │
-                          └──────────┬──────────┘
-                                     │
-                    ┌────────────────┼────────────────┐
-                    │                │                │
-              ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
-              │ Next.js    │   │ API Routes │   │ Server    │
-              │ App Router │   │  (50+      │   │ Actions   │
-              │ (pages)    │   │  endpoints)│   │ (auth'd)  │
-              └─────┬─────┘   └─────┬─────┘   └─────┬─────┘
-                    │                │                │
-              ┌─────▼───────────────▼────────────────▼─────┐
-              │              Supabase (Postgres)            │
-              │     · RLS (Row Level Security)              │
-              │     · Auth (Magic Link)                     │
-              │     · 35+ tablas (proyectos, auditorías,    │
-              │       inteligencia, monitoreo, seguridad,   │
-              │       api_keys, audit_logs, health, etc.)   │
-              └──────────────────┬─────────────────────────┘
-                                 │
-                    ┌────────────┴────────────┐
-                    │                         │
-              ┌─────▼─────┐           ┌───────▼──────┐
-              │  Upstash   │           │   Trigger.dev │
-              │  Redis     │           │  (background  │
-              │  (ratelimit│           │   jobs + cron)│
-              │   + cache) │           │               │
-              └───────────┘           └───────┬───────┘
-                    │                         │
-              ┌─────▼─────────────────────────▼──────┐
-              │         OpenRouter AI (free pool)     │
-              │  · Gemini Flash · DeepSeek · Llama 4  │
-              │  · Mistral · Qwen · Nemotron          │
-              └──────────────────────────────────────┘
+Diagrama C4 de containers (nivel L2) del estado actual — verificado contra el código (commit `2ccda08`):
+
+```mermaid
+flowchart TB
+    subgraph PERSONAS["Usuarios"]
+        P1["👤 Analista / CISO"]
+        P2["🔌 Consumidores API v1"]
+        P3["🤖 CI/CD (webhooks)"]
+    end
+
+    subgraph SCAUDIT["SCAUDIT Pro (Vercel)"]
+        EDGE["🛡️ Edge Proxy<br/>proxy.ts · CSP nonce + HSTS<br/>updateSession (auth guard)"]
+
+        subgraph WEB["Web App (Next.js 16 App Router)"]
+            UI["🧩 Componentes<br/>DashboardContainer · IntelligenceShell<br/>features/intelligence"]
+            ACT["⚡ Server Actions<br/>audits.ts · projects.ts · reports.ts"]
+        end
+
+        subgraph API["API Route Handlers (42)"]
+            API_IT["intelligence/* · ai/* · benchmarking<br/>monitoring · plugins · reports/pdf"]
+            API_PUB["public/v1/* (Bearer API key)"]
+            API_WEB["webhooks/* · cicd (HMAC)"]
+            API_CRON["cron/siem · cron/uptime<br/>(CRON_SECRET)"]
+        end
+
+        subgraph DOMAIN["Domain Engine (server-only)"]
+            CORE["dispatcher · rate-limiter<br/>circuit-breaker (fail-open)"]
+            EXEC["14 ejecutores<br/>DNS · OSINT · CVE · TLS · email<br/>tech-profiler · bucket · takeover"]
+            EG["🔒 egress-guard.ts (SSRF)<br/>16 CIDRs v4 + 7 v6 + ::ffff:"]
+            SEC["security/ · siem-exporter<br/>cicd-helper (HMAC) · api-auth"]
+        end
+
+        subgraph JOBS["Background Jobs"]
+            VC["☑️ Vercel Cron (garantizado)<br/>siem */5 · uptime */15"]
+            TD["Trigger.dev (opcional)<br/>12 tasks · deploy no verificado"]
+        end
+
+        subgraph DATA["Data"]
+            DB["🗄️ Supabase Postgres<br/>58 tablas · 22 migraciones · RLS"]
+            REDIS["⚡ Upstash Redis<br/>rate limit + cache (fail-open)"]
+        end
+    end
+
+    subgraph EXT["Servicios externos"]
+        AI["🤖 OpenRouter AI (free pool)<br/>Gemini Flash · DeepSeek · Llama 4<br/>Mistral · Qwen · Nemotron"]
+        SIEM["📡 SIEM<br/>Slack · PagerDuty · Splunk · Email"]
+        OSINT["🌐 APIs OSINT / DNS / CVE"]
+    end
+
+    P1 --> EDGE
+    P2 --> API_PUB
+    P3 --> API_WEB
+    EDGE --> UI
+    EDGE --> API
+    UI --> ACT
+    ACT --> API
+    API --> CORE
+    CORE --> EXEC
+    EXEC --> EG
+    EG --> OSINT
+    CORE --> SEC
+    SEC --> SIEM
+    VC --> API_CRON
+    API_CRON --> CORE
+    TD --> CORE
+    CORE --> DB
+    CORE --> REDIS
+    DB --> AI
+    SEC --> DB
 ```
 
 ### Módulos server
@@ -264,16 +295,19 @@ src/server/
 └── security/                     #   SIEM exporter, audit, API key expiry alerts
 ```
 
-### Background jobs (Trigger.dev)
+### Background jobs
 
-| Task | Schedule | Descripción |
-|------|----------|-------------|
-| `siem.trigger.ts` | Cada 5 min | SIEM exporter + heartbeat |
-| `discovery.trigger.ts` | 🆕 Cada 6h | Descubrimiento continuo de activos |
-| `api-key-expiry.trigger.ts` | 🆕 Diario 09:00 UTC | Alertas de expiración de API Keys |
-| `audit.trigger.ts` | Bajo demanda | Auditorías programadas |
-| `monitoring.trigger.ts` | Bajo demanda | Monitoreo de infraestructura |
-| `uptime.trigger.ts` | Diario | Verificación de uptime |
+**Mecanismo garantizado: Vercel Cron** (`vercel.json`, protegido con `CRON_SECRET`). **Trigger.dev es opcional** (deploy no verificado según `docs/guides/deployment.md`) — 12 tasks definidos en `src/trigger/*.trigger.ts`.
+
+| Fuente | Schedule | Descripción |
+|--------|----------|-------------|
+| Vercel Cron `/api/cron/siem` | Cada 5 min | SIEM exporter + heartbeat |
+| Vercel Cron `/api/cron/uptime` | Cada 15 min | Verificación de uptime |
+| Trigger.dev `discovery.trigger.ts` | 🆕 Cada 6h | Descubrimiento continuo de activos |
+| Trigger.dev `api-key-expiry.trigger.ts` | 🆕 Diario 09:00 UTC | Alertas de expiración de API Keys |
+| Trigger.dev `scheduled-scan.trigger.ts` | Cada hora | Escaneo agendado (`monitoring_schedules` → auditoría) |
+| Trigger.dev `audit.trigger.ts` | Bajo demanda | Auditorías programadas |
+| Trigger.dev `monitoring.trigger.ts` | Bajo demanda | Monitoreo de infraestructura |
 
 ---
 

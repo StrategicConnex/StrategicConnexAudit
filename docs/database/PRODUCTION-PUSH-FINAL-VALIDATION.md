@@ -104,7 +104,7 @@ flowchart TB
 | CI/CD GitHub Actions | Gate previo al push (5 jobs) | `.github/workflows/ci.yml` [VERIFIED] |
 | `drizzle-kit push` | Aplicación de migraciones versionadas vía `DIRECT_URL` | `drizzle.config.ts` [VERIFIED] |
 | Vercel | Deploy de la aplicación (auto-deploy en push a main) | `vercel.json` / `.vercelignore` [VERIFIED] |
-| Trigger.dev | Jobs en producción (12 triggers) — observables tras el push | `src/trigger/*` [VERIFIED] |
+| Trigger.dev | Jobs (12 triggers) — **opcional, deploy no verificado** (deployment.md); Vercel Cron garantiza SIEM 5 min y uptime 15 min vía `vercel.json` | `src/trigger/*` [VERIFIED] · `vercel.json` [VERIFIED] |
 | Supabase Dashboard | Monitoreo de locks, conexiones, deadlocks, Realtime | plataforma [ASSUMPTION] |
 
 **Dependencias:** este engine depende de `PRODUCTION-CHANGE-VERIFICATION.md` (CHANGE-IDs 001..003), `SUPABASE-AUDIT.md` (SB-001..003), `INDEX-STRATEGY.md` (REC-01..07) y del plan MODE C (TSK-007..009). [VERIFIED]
@@ -315,7 +315,7 @@ Smoke tests de los flujos críticos **realmente afectados** por el cambio:
 | 8 | Pagination | ✅ | — | — |
 | 9 | Reports (PDF, export) | — | — | — |
 | 10 | Notifications (push subscribe + envío) | — | ✅ | — |
-| 11 | Background Jobs (12 triggers Trigger.dev) | ✅ | — | — |
+| 11 | Background Jobs (Vercel Cron garantizado: siem/uptime; 12 triggers Trigger.dev opcionales) | ✅ | — | — |
 
 > **Leyenda:** ✅ = el flujo **aplica** a ese CHANGE (se ejecuta post-push; los cambios están PENDING). Solo probar los flujos realmente afectados. [VERIFIED — regla §84.10]
 

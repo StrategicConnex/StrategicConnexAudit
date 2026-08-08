@@ -3,8 +3,8 @@ layout: default
 title: Project Inventory
 nav_order: 3.1
 permalink: /docs/architecture/project-inventory
-version: 1.0
-fecha: 2026-08-02
+version: 1.1
+fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -83,7 +83,7 @@ flowchart TB
 | 5 | `next.config.ts` | OK [VERIFIED] | `next.config.ts` (43 líneas) | LOW | `images.remotePatterns **`; `experimental.optimizePackageImports: lucide-react`; `viewTransition: true`; header `X-Robots-Tag`. Comentario explícito: `output: standalone` removido por conflicto con lambda builder de Vercel (`c8c4871`). |
 | 6 | `eslint.config.mjs` | OK con deuda [VERIFIED] | `eslint.config.mjs` (66 líneas) | MEDIUM | Flat config (`eslint-config-next` core-web-vitals + typescript). `@typescript-eslint/no-explicit-any` OFF para rutas intelligence/plugins y tabs (deuda de tipado acotada a `src/server/intelligence/**`, `src/app/api/intelligence/**`, etc.). Ignora `.trigger/`, `drizzle/`, scripts scratch raíz. |
 | 7 | `postcss.config.mjs` | OK [VERIFIED] | `postcss.config.mjs` (6 líneas) | LOW | Único plugin `@tailwindcss/postcss` (Tailwind v4, CSS-first). |
-| 8 | `vitest.config.ts` | OK con hallazgo [VERIFIED] | `vitest.config.ts` (34 líneas) | MEDIUM | jsdom; umbrales de cobertura 25/20/20/25. Baseline B00: `pnpm test:coverage` **no cumple** (Statements 12.51%) — preexistente, sin regresión. |
+| 8 | `vitest.config.ts` | OK con hallazgo [VERIFIED] | `vitest.config.ts` (34 líneas) | MEDIUM | jsdom; umbrales de cobertura 25/20/20/25. Cobertura actual: Statements 13.72% (TEST-COVERAGE-MATRIX, 2026-08-08) — **no cumple** umbral 25% (preexistente, gap documentado). |
 | 9 | `playwright.config.ts` | OK [VERIFIED] | `playwright.config.ts` (24 líneas) | LOW | `testDir: ./e2e`; proyecto chromium desktop; `webServer: pnpm dev :3000`; retries 2 en CI. |
 | 10 | `drizzle.config.ts` | OK [VERIFIED] | `drizzle.config.ts` (19 líneas) | LOW | Requiere `DIRECT_URL` (falla si falta); schema glob `./src/shared/db/schemas/*.ts`; `ssl.rejectUnauthorized: false`. |
 | 11 | `trigger.config.ts` | OK [VERIFIED] | `trigger.config.ts` (17 líneas) | LOW | Project `proj_vzzxt…`; `runtime: node`; `dirs: [./src/trigger]`; retries default `maxAttempts: 3` (factor 2, randomize); `maxDuration: 3600`. |
@@ -103,9 +103,9 @@ flowchart TB
 | 25 | `src/trigger` | OK [VERIFIED] | `src/trigger/*.trigger.ts` (12 archivos) | MEDIUM | 12 tasks Trigger.dev: siem, uptime, cleanup, anomaly, discovery, adversary, scheduled-scan, monitoring, api-key-expiry, audit, webhook, hello. Ver SYSTEM-MAP flujo B. |
 | 26 | `tests/` | OK [VERIFIED] | `tests/api-contract/contract.test.ts` + `generate-collection.mjs` | LOW | Contract test OpenAPI (Vitest); colección Postman generada; Newman live en CI opcional. |
 | 27 | `e2e/` | OK [VERIFIED] | `e2e/{app,home,pentest-auth-ratelimit,visual-regression}.spec.ts` (4 specs) | LOW | Playwright; 4 specs reales (nótese: `home.spec.ts`, no `login.spec.ts`). |
-| 28 | `docs/` | OK [VERIFIED] | `docs/` (17 `.md` + `docs/html/` manuales) | LOW | 17 docs a 100/100 (QUALITY_GATE_REPORT); ENTERPRISE-ARCHITECTURE v2.0 aprobado; ROADMAP 36/36. |
-| 29 | `drizzle/` | OK con hallazgo [VERIFIED] | `drizzle/` (21 archivos `.sql`), `drizzle/meta/_journal.json` (20 entradas, idx 0–19) | MEDIUM | Journal consistente `0000…0019`. **Hallazgo:** `0001_quota_enforcement.sql` es **huérfano** (no referenciado por `_journal.json`, que usa `0001_silky_ikaris`); hay dos `0001_*` y dos `0002_*` de nombre similar. Ver §11 INCONSISTENCIA-3. |
-| 30 | `src/shared/db/schemas` | OK con hallazgo [VERIFIED] | `schemas/*.ts` (12 archivos + `index.ts` 507 líneas) | MEDIUM | ~56 tablas [ASSUMPTION]. Barrel `index.ts` con fan-in 73 (madge) y **9 ciclos** tipo `index > schema-file` (madge `--circular`). Ver DEPENDENCY-GRAPH §5. |
+| 28 | `docs/` | OK [VERIFIED] | `docs/` (17 `.md` + `docs/html/` manuales) | LOW | 17 docs a 100/100 (QUALITY_GATE_REPORT); ENTERPRISE-ARCHITECTURE v2.1 aprobado; ROADMAP 36/36. |
+| 29 | `drizzle/` | OK con hallazgo [VERIFIED] | `drizzle/` (22 archivos `.sql`), `drizzle/meta/_journal.json` (22 entradas, idx 0–21, última `0021_push_active_boolean`) | MEDIUM | Journal consistente `0000…0021`. **Hallazgo:** `0001_quota_enforcement.sql` es **huérfano** (no referenciado por `_journal.json`, que usa `0001_silky_ikaris`); hay dos `0001_*` y dos `0002_*` de nombre similar. Ver §11 INCONSISTENCIA-3. |
+| 30 | `src/shared/db/schemas` | OK [VERIFIED] | `schemas/*.ts` (12 archivos + `index.ts` 507 líneas) | MEDIUM | **58 tablas** [VERIFIED: conteo `pgTable(` 2026-08-08]. Barrel `index.ts` con fan-in 73 (madge) y **9 ciclos** tipo `index > schema-file` (madge `--circular`). Ver DEPENDENCY-GRAPH §5. |
 | 31 | Scripts de operación (raíz) | OK [VERIFIED] | `db-security-scan.ts`, `rls-fire-test.ts`, `test-rls-root.ts`, `test-db.ts`, `backup-manager.ts`, `configure-upstash-alerts.ts`, `hello.ts` | MEDIUM | Scripts de seguridad/ops en raíz; **excluidos de ESLint** (`eslint.config.mjs` globalIgnores) y **no integrados en CI** — gap para B02. |
 | 32 | `.githooks/` | OK [VERIFIED] | `package.json` script `prepare: git config core.hooksPath .githooks` | LOW | Pre-commit hook ejecuta quality gate (commit `5eb33ff` documenta la suite). |
 
@@ -119,7 +119,7 @@ Cada fila de MAT-009 se verificó con una de estas operaciones (reproducibles):
 |-----------|------------------|-----|
 | Conteo route handlers | `(Get-ChildItem src/app/api -Filter route.ts).Count` → 42 | Fila 19 |
 | Conteo triggers | `Get-ChildItem src/trigger -Filter *.ts` → 12 | Fila 25 |
-| Conteo test files | `Get-ChildItem src,tests,e2e -Recurse -Filter *.test.ts` → 19 archivos; `pnpm test` → 248 tests | Filas 22/26/27 + TEST-001 |
+| Conteo test files | `find src -name "*.test.ts"` → 39 archivos; `pnpm test` → 391 tests (2026-08-08) | Filas 22/26/27 + TEST-001 |
 | Conteo migraciones | `Get-ChildItem drizzle -Filter *.sql` → 21; `_journal.json` → 20 | Fila 29 |
 | Versión de stack | `package.json` dependencies | Fila 1 |
 | Seguridad headers | `src/proxy.ts` buildCsp() | Fila 12 |
@@ -165,8 +165,8 @@ Detalle y controles completos: MAT-002 (ENTERPRISE-ARCHITECTURE §10) y `docs/se
 
 | Suite | Comando | Alcance real | Estado |
 |-------|---------|-------------|--------|
-| Unit (Vitest) | `pnpm test` | 19 archivos `*.test.ts`, **248 tests PASS** (baseline B00) | [VERIFIED] |
-| Coverage | `pnpm test:coverage` | Statements 12.51% — **no cumple** umbral global 25% (preexistente) | [VERIFIED] |
+| Unit (Vitest) | `pnpm test` | 39 archivos `*.test.ts`, **391 tests PASS** (2026-08-08; +26 tests de controles de seguridad en la sesión) | [VERIFIED] |
+| Coverage | `pnpm test:coverage` | Statements 13.72% — **no cumple** umbral global 25% (preexistente, gap en TEST-COVERAGE-MATRIX) | [VERIFIED] |
 | E2E | `pnpm test:e2e` | 4 specs Playwright | [VERIFIED] |
 | Contract | `pnpm test:contract` | `tests/api-contract/contract.test.ts` | [VERIFIED] |
 | Docs gate | `node scripts/quality-gate.mjs --min 80` | 20 checks × 5 pts | [VERIFIED] |
@@ -200,10 +200,10 @@ Casos cubiertos: executors DNS/network/TLS/email/OSINT, egress-guard, ratelimit,
 
 | ID | Valor A (escrito) | Valor B (real) | Resolución |
 |----|-------------------|----------------|------------|
-| INCONSISTENCIA-1 | README "50+ endpoints" | 42 archivos `route.ts` [VERIFIED] | El censo canónico es 42 route handlers; README usa cifra aproximada (mantener 42). |
+| INCONSISTENCIA-1 | README "50+ endpoints" | 42 archivos `route.ts` [VERIFIED] | **RESUELTA (2026-08-08):** README actualizado con diagrama C4 que cita 42 route handlers. |
 | INCONSISTENCIA-2 | Plan maestro lista `src/components` y e2e "login" | `src/app/components` y `e2e/home.spec.ts` | La ruta real es `src/app/components`; el spec de login es `home.spec.ts`. |
-| INCONSISTENCIA-3 | README "35+ tablas"; ENTERPRISE-ARCHITECTURE "56 tablas" | `schemas/*.ts` (12 archivos + index) | "56 tablas" es [ASSUMPTION] derivada de los schemas; confirmar conteo exacto en B03. |
-| INCONSISTENCIA-4 | 20 migraciones (plan B00) | 21 archivos `.sql` en `drizzle/` (journal 20) | `0001_quota_enforcement.sql` huérfano no referenciado por `_journal.json` [VERIFIED]. |
+| INCONSISTENCIA-3 | README "35+ tablas"; ENTERPRISE-ARCHITECTURE "56 tablas" | `schemas/*.ts` (12 archivos + index) | **RESUELTA (2026-08-08):** conteo exacto `pgTable(` = **58 tablas**; README y ENTERPRISE-ARCHITECTURE sincronizados a 58. |
+| INCONSISTENCIA-4 | 20 migraciones (plan B00) | 22 archivos `.sql` en `drizzle/` (journal 22, última `0021_push_active_boolean`) | `0001_quota_enforcement.sql` huérfano no referenciado por `_journal.json` [VERIFIED]. |
 | INCONSISTENCIA-5 | ENTERPRISE-ARCHITECTURE §11 "fuga RLS corregida" | `ffce502` corrigió `withRLS` en benchmarking, intelligence/live, intelligence/anomalies | Patrón `withRLS` como defensa estándar; ver ADR-006. |
 
 ---
@@ -223,7 +223,7 @@ Casos cubiertos: executors DNS/network/TLS/email/OSINT, egress-guard, ratelimit,
 
 | Marcador | Ítem | Estado |
 |----------|------|--------|
-| [ASSUMPTION] | 56 tablas en producción | Conteo de `schemas/*.ts`; las migraciones pueden variar (confirmar en B03). |
+| [VERIFIED] | 58 tablas en producción | Conteo `pgTable(` en `schemas/*.ts` (2026-08-08); 22 migraciones en `drizzle/`. |
 | [ASSUMPTION] | ~650+ keys i18n | README lo afirma; conteo exacto de keys en B09. |
 | [UNKNOWN] | Necesidad de `0001_quota_enforcement.sql` | Huérfano del journal; no se puede afirmar si fue reemplazado o es desechable. |
 | [UNKNOWN] | Configuración real de schedules en dashboard Trigger.dev | Solo el `trigger.config.ts` local está verificado; los crons se leen de los archivos `*.trigger.ts`. |
@@ -245,4 +245,4 @@ Casos cubiertos: executors DNS/network/TLS/email/OSINT, egress-guard, ratelimit,
 ---
 
 {: .note }
-**Fuente de este documento:** commit `0395707` (main, 2026-08-02); comandos `git status`, `git log`, `Get-ChildItem`, `npx madge --circular src`; lectura de `package.json`, `*.config.*`, `.env.example`, `src/shared/config/env.ts`, `src/proxy.ts`, `.github/workflows/*.yml`.
+**Fuente de este documento:** commit `2ccda08` (main, 2026-08-08); comandos `git status`, `git log`, `find`, `npx madge --circular src`; lectura de `package.json`, `*.config.*`, `.env.example`, `src/shared/config/env.ts`, `src/proxy.ts`, `.github/workflows/*.yml`. Datos sincronizados: 39 test files / 391 tests, 58 tablas, 22 migraciones, 14 ejecutores, 3 server actions.

@@ -3,7 +3,7 @@ layout: default
 title: Arquitectura Enterprise
 nav_order: 3
 permalink: /docs/architecture
-version: 2.1
+version: 2.2
 fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
@@ -34,7 +34,7 @@ SCAUDIT (StrategicAudit Pro) es una plataforma **enterprise-grade de inteligenci
 | **Backend** | Next.js Route Handlers, Drizzle ORM, Supabase (PostgreSQL + Auth + RLS) |
 | **Cache/Rate Limit** | Upstash Redis (serverless), fail-open en memoria |
 | **IA** | OpenRouter (pool de modelos `:free` + meta-modelo `openrouter/free`) |
-| **Jobs** | Trigger.dev (12 tasks: SIEM, discovery, anomaly, adversary, uptime, …) |
+| **Jobs** | Vercel Cron (mecanismo garantizado: SIEM 5 min, uptime 15 min) + Trigger.dev **opcional** (12 tasks; deploy no verificado) |
 | **Docs** | GitHub Pages + Jekyll (just-the-docs) |
 | **CI/CD** | GitHub Actions → Vercel (deploy automático) |
 
@@ -72,7 +72,7 @@ flowchart LR
     SUPABASE[("Supabase<br/>PostgreSQL + Auth + RLS")]
     REDIS[("Upstash Redis<br/>rate limit + caché")]
     OPENROUTER["OpenRouter<br/>modelos IA :free"]
-    TRIGGER["Trigger.dev<br/>12 background tasks"]
+    TRIGGER["Trigger.dev (opcional)<br/>12 background tasks"]
     WEBHOOKS["Webhooks SIEM<br/>Slack · PagerDuty · Splunk · Email"]
     GSC["Google Search Console"]
     GA4["Google Analytics 4"]
@@ -134,7 +134,7 @@ flowchart TB
     end
 
     subgraph DATA["Data Layer"]
-        PG[("Supabase Postgres<br/>56 tablas, RLS")]
+        PG[("Supabase Postgres<br/>58 tablas, RLS")]
         REDIS2[("Upstash Redis")]
     end
 
@@ -158,10 +158,10 @@ flowchart TB
 |-------|---------------|----------|-------|
 | Business | Capacidades del producto (dashboard, intel, SIEM, SEO) | `docs/index.md` (capacidades) | L0 |
 | Application | Frontend + API + engine | Container Architecture (§4) | L2 |
-| Data | 56 tablas, ERD núcleo | ERD Núcleo (§9) | L3 |
+| Data | 58 tablas, ERD núcleo | ERD Núcleo (§9) | L3 |
 | Technology | Stack completo | tabla §2 | L1 |
 | Security | Defensa en profundidad | Defense in Depth (§10) | L2 |
-| Deployment | Vercel + Supabase + Upstash + Trigger.dev | Deployment Diagram (§8) | L3 |
+| Deployment | Vercel + Supabase + Upstash (+ Trigger.dev opcional, no verificado) | Deployment Diagram (§8) | L3 |
 | Integration | Webhooks SIEM, GSC/GA4, OpenRouter | System Context (§3) | L2 |
 
 ---
@@ -333,7 +333,7 @@ GitHub ──push main──▶ GitHub Actions ──deploy──▶ Vercel (Pro
 | Supabase | PostgreSQL + Auth (Magic Link) + RLS + Realtime | Free/Pro |
 | Upstash | Redis serverless — rate limit + caché | Free (10k cmds/día) |
 | OpenRouter | Pool de modelos IA gratuitos | Free (50 req/día) |
-| Trigger.dev | 12 tasks background | Free |
+| Trigger.dev | 12 tasks background — **opcional** (deploy no verificado) | Free |
 | GitHub Actions | CI (lint, 198 tests, coverage) | Free |
 
 ---
@@ -720,7 +720,7 @@ sequenceDiagram
 |----------|------|--------|
 | [VERIFIED] | 42 route handlers | Conteo `find src/app/api -name route.ts` en commit main |
 | [VERIFIED] | 198 tests unit verdes | Corrido en CI (job `test-and-coverage`) |
-| [ASSUMPTION] | 56 tablas en producción | Conteo de `schemas/*.ts`; las migraciones Drizzle pueden variar |
+| [VERIFIED] | 58 tablas en producción | Conteo `pgTable(` en `schemas/*.ts` (12 archivos + index); 22 migraciones en `drizzle/` |
 | [UNKNOWN] | Límite exacto de tokens del pool `:free` | No publicado por OpenRouter; caché 5 min como mitigación |
 | [UNKNOWN] | Costo real por usuario de IA | Sin métricas de billing agregadas |
 
@@ -756,7 +756,7 @@ Durante la cross-check de este documento se detectó que la tabla §5 (Architect
 ---
 
 {: .note }
-**Fuentes de este documento:** código fuente en `src/`, `package.json`, `docs/installation.md`, `docs/guides/*`, commits de `main` (verificados: `eda77c4`, `6f04ea5`, `26c8524`, `14ce62d`, `d59543a`, `88b7f2c`).
+**Fuentes de este documento:** código fuente en `src/` (commit `2ccda08`), `package.json`, `docs/installation.md`, `docs/guides/*`, commits de `main` (verificados: `eda77c4`, `6f04ea5`, `26c8524`, `14ce62d`, `d59543a`, `88b7f2c`).
 
 {: .tip }
 **¿Quieres profundizar?** [Instalación](/docs/installation) · [Seguridad](/docs/security) · [API](/docs/api) · [Pipeline DNS/WHOIS](/docs/architecture/pipeline-history) · [Recuperación Redis](/docs/guides/upstash-redis-recovery)
