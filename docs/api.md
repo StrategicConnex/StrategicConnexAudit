@@ -3,8 +3,8 @@ layout: default
 title: API Reference
 nav_order: 3
 permalink: /docs/api
-version: 1.1
-fecha: 2026-08-01
+version: 1.2
+fecha: 2026-08-08
 autor: Equipo SCAUDIT
 estado: Aprobado
 ---
@@ -253,7 +253,7 @@ Endpoint para webhooks de integraciones externas. Validado con HMAC.
 
 | Endpoint | Schedule | Descripción |
 |----------|----------|-------------|
-| `/api/cron/uptime` | `0 0 * * *` (cada 24h) | Verificación de uptime de proyectos |
+| `/api/cron/uptime` | `*/15 * * * *` (cada 15 min) | Verificación de uptime de proyectos |
 | `/api/cron/siem` | `*/5 * * * *` (cada 5min) | SIEM Exporter + Heartbeat |
 | `/api/ai/healthcheck` | `0 */6 * * *` (cada 6h) | Health check de modelos con alertas |
 

@@ -168,7 +168,7 @@ Pooler de Supabase (puerto 6543/5432) soportado vía `DIRECT_URL`; SSL con CA fi
 | Storage Security | 100/100 | N/A — sin buckets propios [VERIFIED] |
 | Realtime | 40/100 | Env inconsistente (SB-003), publicación no verificada [VERIFIED/UNKNOWN] |
 | Edge Functions | 100/100 | N/A — no existen [VERIFIED] |
-| Migrations | 76/100 | 20 migraciones, higiene B03, drift residual documentado [VERIFIED] |
+| Migrations | 76/100 | 22 migraciones (journal 0000–0021), higiene B03, drift residual documentado [VERIFIED] |
 | Observability | 55/100 | Audit logs + RLS_VIOLATION_DETECTED; sin pg_stat queried [VERIFIED] |
 | Backup/Recovery | [UNKNOWN] | No auditado (depende del plan Supabase) |
 | Scalability | 70/100 | Pooler + serverless; max 2 conn en prod [VERIFIED] |

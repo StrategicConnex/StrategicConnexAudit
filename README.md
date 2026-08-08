@@ -352,7 +352,7 @@ src/
 │   │   └── reports.ts            #   Generar reportes
 │   ├── ai/                       # AI Health Dashboard 🆕
 │   │   └── health/               #   Dashboard de salud de modelos
-│   ├── api/                      # API Routes (50+ endpoints)
+│   ├── api/                      # API Routes (42 endpoints)
 │   │   ├── ai/                   #   Copilot, reportes, healthcheck
 │   │   ├── api-keys/             #   🆕 CRUD + usage tracking + expiry
 │   │   ├── auth/                 #   Validate email, callback
@@ -401,7 +401,7 @@ src/
 ├── shared/                       # Shared across app
 │   ├── config/                   #   Env validation
 │   ├── data/                     #   🆕 MITRE mapping data (shared)
-│   ├── db/                       #   Drizzle schemas (35+ tablas)
+│   ├── db/                       #   Drizzle schemas (58 tablas)
 │   │   └── schemas/              #     health, intelligence, monitoring,
 │   │                             #     security-audit, api-keys, push-subscriptions
 │   ├── lib/                      #   Auth, ratelimit, audit-log, withPublicApi
@@ -1175,7 +1175,7 @@ El pipeline de GitHub Actions ejecuta:
 
 | Task | Schedule | Descripción |
 |------|----------|-------------|
-| `api/cron/uptime` | `0 0 * * *` (diario) | Verificación de uptime |
+| `api/cron/uptime` | `*/15 * * * *` (cada 15 min) | Verificación de uptime |
 | `api/cron/siem` | `*/5 * * * *` (cada 5 min) | SIEM exporter |
 | `api/ai/healthcheck` | `0 */6 * * *` (cada 6h) | Health check de modelos AI |
 | `trigger/discovery.trigger` | 🆕 Cada 6h | Descubrimiento continuo de activos |

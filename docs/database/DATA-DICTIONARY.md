@@ -1,8 +1,8 @@
 # DATA DICTIONARY — SCAUDIT Pro
 
 > **Artefacto:** T03-01 del [Engineering Master Plan](../superpowers/plans/2026-08-01-engineering-master-plan.md)
-> **Versión:** 1.0 · **Fecha:** 2026-08-02 · **Autor:** BATCH 03 (B03) · **Estado:** completado
-> **Fuente real:** `src/shared/db/schemas/*.ts` (13 archivos) + migraciones `drizzle/*.sql` [VERIFIED]
+> **Versión:** 1.1 · **Fecha:** 2026-08-08 · **Autor:** BATCH 03 (B03) + auditoría v3.2 · **Estado:** completado
+> **Fuente real:** `src/shared/db/schemas/*.ts` (12 archivos) + migraciones `drizzle/*.sql` (22) [VERIFIED]
 
 ---
 
@@ -11,7 +11,7 @@
 Este diccionario documenta **todas las tablas definidas en los schemas Drizzle** de SCAUDIT Pro,
 generado a partir del código real (fuente única de verdad). No se inventa ninguna tabla, columna,
 constraint ni índice: todo lo que figura aquí fue leído de los archivos `src/shared/db/schemas/*.ts`
-(13 archivos, de los cuales 12 declaran tablas + `index.ts` que las re-exporta) y contrastado contra
+(12 archivos, de los cuales 11 declaran tablas + `index.ts` que las re-exporta) y contrastado contra
 las migraciones SQL en `drizzle/`.
 
 **Objetivos:**

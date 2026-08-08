@@ -3,7 +3,7 @@ layout: default
 title: Test Coverage Matrix
 nav_order: 4.1
 permalink: /docs/testing/test-coverage-matrix
-version: 1.3
+version: 1.4
 fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
@@ -85,8 +85,8 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 
 | Métrica | Valor actual | Δ vs B00 |
 |---------|--------------|----------|
-| Test files | 40 | +21 files |
-| Tests (`pnpm test`) | 360 (360 OK) | +106 |
+| Test files | 43 | +24 files |
+| Tests (`pnpm test`) | 391 (391 OK) | +137 |
 | Coverage (sin suite egress-guard de red) | **~329/329 tests · 39 files** | — |
 | Statements | 13.72% | +1.21pp |
 | Branches | 10.62% | +0.84pp |
@@ -369,6 +369,7 @@ flowchart LR
 | 1.1 | 2026-08-02 | B06 completado: 5 tests P0 nuevos (siem/run, public/v1/intelligence, siem/discovery/uptime trigger) → 34 files · 327 tests · 8 route.test (19.0%) · 3/12 triggers (25%) | Aprobado |
 | 1.2 | 2026-08-02 | P0 de cobertura de triggers: +6 trigger.test (adversary, anomaly, monitoring, scheduled-scan, audit, webhook) → 40 files · 359 tests · **9/12 triggers (75%)** · 3 pendientes (api-key-expiry, cleanup, hello) | Aprobado |
 | 1.3 | 2026-08-08 | Seguridad: gap SSRF IPv4-mapped IPv6 (`::ffff:`) cerrado en egress-guard (+2 tests) → **31/31**; suite de red resiliente (omite tests sin internet); **360/360 tests** | Aprobado |
+| 1.4 | 2026-08-08 | GOLDEN_RULES: +26 tests de controles de seguridad (cicd-helper 10, api-auth 8, safe-next 8) → **43 files · 391 tests** · suite determinista (guard de red en `assertPublicHostname`) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/testing/TEST-COVERAGE-MATRIX.md --min 80` → PASS
 

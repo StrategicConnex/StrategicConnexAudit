@@ -147,7 +147,7 @@ Auditoría de los 97 cambios pendientes (commit `36ebcf8`) bajo el marco SC Plat
 | RSK-08 | `ratelimit.test.ts` + suite AI Router (gap) | 🟡 parcial |
 | RSK-02 | TEST-COVERAGE-MATRIX (documenta el gap) | ✅ documentado |
 
-**Cobertura global:** 40 files · 360 tests (360 OK) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX].
+**Cobertura global:** 43 files · 391 tests (391 OK) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX, medición 2026-08-08].
 
 ---
 

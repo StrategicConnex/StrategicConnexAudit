@@ -3,8 +3,8 @@ layout: default
 title: Despliegue en Vercel
 nav_order: 10
 permalink: /docs/guides/deployment
-version: 2.1
-fecha: 2026-08-01
+version: 2.2
+fecha: 2026-08-08
 autor: Equipo SCAUDIT
 estado: Aprobado
 ---
@@ -451,10 +451,8 @@ Los cron jobs se configuran en `vercel.json`:
 ```json
 {
   "crons": [
-    {
-      "path": "/api/cron/uptime",
-      "schedule": "0 0 * * *"
-    }
+    { "path": "/api/cron/siem", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/uptime", "schedule": "*/15 * * * *" }
   ]
 }
 ```
@@ -463,7 +461,7 @@ Los cron jobs se configuran en `vercel.json`:
 
 | Ruta | Schedule | Propósito |
 |------|----------|-----------|
-| `/api/cron/uptime` | `0 0 * * *` (cada 24h) | Verificación de uptime |
+| `/api/cron/uptime` | `*/15 * * * *` (cada 15 min) | Verificación de uptime |
 | `/api/cron/siem` | `*/5 * * * *` (cada 5min) | SIEM Exporter |
 | `/api/ai/healthcheck` | `0 */6 * * *` (cada 6h) | Health check de modelos IA |
 

@@ -2,7 +2,7 @@
 
 - **Artefacto**: MAT-021 (índices) / MAT-022 (estado de migraciones)
 - **Batch**: B03 — Base de Datos y Datos
-- **Fecha**: 2026-08-02
+- **Fecha**: 2026-08-02 (actualizado 2026-08-08: journal 22 entradas 0000–0021, disco 22/22 sin huérfanos)
 - **Fuentes**: esquemas Drizzle (`src/shared/db/schemas/*.ts`), archivos SQL (`drizzle/*.sql`), `drizzle/meta/_journal.json`, `drizzle/meta/*_snapshot.json`, consultas reales del código
 - **Modo**: análisis/documentación (A→B). No se ejecutó `db:generate` (escribe archivos); solo el chequeo read-only `drizzle-kit check`.
 
@@ -12,12 +12,12 @@
 
 ### 1.1. Journal vs. disco
 
-El `_journal.json` contiene **20 entradas (0000–0019)**. En disco hay **21 archivos SQL**.
+El `_journal.json` contiene **22 entradas (0000–0021)**. En disco hay **22 archivos SQL** (coinciden).
 
 | Fuente | Archivos | Detalle |
 |---|---|---|
-| Journal (idx 0–19) | 20 | 0000–0019 según `_journal.json` v7 |
-| Disco (`drizzle/`) | 20 | `0001_quota_enforcement.sql` **eliminado** (MAT-201 resuelto) |
+| Journal (idx 0–21) | 22 | 0000–0021 según `_journal.json` |
+| Disco (`drizzle/`) | 22 | `0001_quota_enforcement.sql` **eliminado** (MAT-201 resuelto, MODE C post-B03) |
 | **Huérfano** | 0 | — |
 
 ### 1.2. Hallazgo MAT-201 — archivo huérfano `0001_quota_enforcement.sql` — RESUELTO ✅ (MODE C, post-B03)

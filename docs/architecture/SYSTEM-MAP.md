@@ -3,7 +3,7 @@ layout: default
 title: System Map
 nav_order: 3.2
 permalink: /docs/architecture/system-map
-version: 2.0
+version: 2.1
 fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
@@ -156,7 +156,7 @@ sequenceDiagram
 | Circuit breaker | `src/shared/lib/circuit-breaker.ts` | Fail-open con `REDIS_OP_TIMEOUT_MS=1500` | [VERIFIED] |
 | RLS | `src/shared/db/rls.ts` | `withRLS()` → `SET LOCAL ROLE authenticated` + JWT claims | [VERIFIED] |
 | Supabase admin | `src/shared/lib/supabase/admin.ts` | Client service-role solo server | [VERIFIED] |
-| Datos | `src/shared/db/schemas/*` + `drizzle/` (21 migraciones) | Modelo relacional | [VERIFIED] |
+| Datos | `src/shared/db/schemas/*` (58 tablas) + `drizzle/` (22 migraciones) | Modelo relacional | [VERIFIED] |
 
 ---
 

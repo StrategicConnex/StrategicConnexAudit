@@ -3,8 +3,8 @@ layout: default
 title: Dependency Graph
 nav_order: 3.3
 permalink: /docs/architecture/dependency-graph
-version: 1.0
-fecha: 2026-08-02
+version: 1.1
+fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -287,7 +287,7 @@ Detalle completo de contratos y rate limit en [SYSTEM-MAP.md](SYSTEM-MAP.md) §6
 |------------|-------------|-------------------|
 | Detección de ciclos | `madge --circular` (dev) | 9 ciclos conocidos (types-only) |
 | Regresión de acoplamiento | No en CI | **Pendiente de añadir** como job opcional (`npx madge --circular src` con whitelist) |
-| Unit/integración | Vitest — 248 tests PASS | Sin regresión por este análisis (sin cambios de código) |
+| Unit/integración | Vitest — 391 tests PASS (43 files, medición 2026-08-08) | Sin regresión por este análisis (sin cambios de código) |
 
 **Cobertura del análisis:** grafo medido sobre `src/**` completo (282 archivos). Los tests de `executors.test.ts` (fan-out 10) ejercitan el hub C05.
 

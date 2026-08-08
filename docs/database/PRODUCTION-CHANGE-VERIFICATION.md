@@ -100,7 +100,7 @@ Todo cambio debe asociarse a un **CHANGE-ID** antes de ejecutarse. Plantilla obl
 | Data | counts/checksums | `count(*)`, `sum()`, NULL counts por columna afectada |
 | Application | endpoints afectados | listar rutas/actions que tocan el objeto |
 
-**Nota:** en SCAUDIT el baseline parcial ya existe documentado: 58 tablas, 71 índices, 20 migraciones (`DATA-DICTIONARY.md`), estado RLS 5/58 (`SUPABASE-AUDIT.md`) [VERIFIED].
+**Nota:** en SCAUDIT el baseline parcial ya existe documentado: 58 tablas, 71 índices, 22 migraciones (`DATA-DICTIONARY.md`), estado RLS 5/58 (`SUPABASE-AUDIT.md`) [VERIFIED].
 
 ---
 
