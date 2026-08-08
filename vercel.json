@@ -10,8 +10,12 @@
   },
   "crons": [
     {
+      "path": "/api/cron/siem",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/uptime",
-      "schedule": "0 0 * * *"
+      "schedule": "*/15 * * * *"
     }
   ],
   "regions": ["iad1"],

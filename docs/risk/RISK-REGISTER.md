@@ -3,7 +3,7 @@ layout: default
 title: Risk Register
 nav_order: 8.2
 permalink: /docs/risk/risk-register
-version: 1.3
+version: 1.4
 fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
@@ -73,13 +73,13 @@ Registro consolidado de **riesgos de SCAUDIT Pro** a partir de los hallazgos rea
 | RSK-04 | Backup/PITR no confirmado antes de DDL | 3 | 5 | 15 | §6 gate: confirmar PITR + `pg_dump --schema-only` antes del push | Owner | ⛔ OPEN ([UNKNOWN]) |
 | RSK-05 | Rollback Drizzle forward-only sin down-migrations | 3 | 5 | 15 | Planes SQL manuales §17 (DROP INDEX, `::text`, DISABLE RLS) | DBA | 🟡 MITIGADO (planes listos) |
 | RSK-06 | httpbin.org caído → 3 tests ambientales rotos | 5 | 2 | 10 | Suite egress-guard resiliente: sondea conectividad en `beforeAll` y omite los tests sin red; 31/31 en cualquier entorno | Engineering | ✅ CERRADO (2026-08-08) |
-| RSK-07 | Trigger scheduled-scan no operativo silencioso | 4 | 3 | 12 | TSK-022 cierre + trigger tests | Engineering | ⛔ OPEN |
+| RSK-07 | Trigger scheduled-scan no operativo silencioso | 4 | 3 | 12 | `schedules.task` real (cron horario) que procesa `monitoring_schedules` vencidos y encola `run-project-audit`; 5/5 tests; reserva de `nextRunAt` antes del encolado (idempotencia) | Engineering | ✅ CERRADO (2026-08-08) |
 | RSK-08 | IA :free con rate limit (5/60s) degrada experiencia | 4 | 2 | 8 | Fail-open + cache 5min + AI Router fallback | Engineering | 🟡 MITIGADO |
 | RSK-09 | 2 tool-registries duplicados divergen (ADR-001 no fiel al disco) | 3 | 3 | 9 | TD-11: consolidar `core/tool-registry.ts` + `registry/tool-registry.ts` | Engineering | ⛔ OPEN |
 | RSK-10 | RLS solo en 5/58 tablas (SB-001) — tablas sensibles sin política | 3 | 4 | 12 | CHANGE-003 + revisión RLS por tabla crítica | Engineering | ⛔ OPEN |
 | RSK-11 | Gap SSRF IPv4-mapped IPv6 (`::ffff:x.x.x.x`) evadía egress-guard → acceso a red interna/metadata | 4 | 5 | 20 | `ipv4MappedToIpv4()` extrae la IPv4 embebida (RFC 4291, formas decimal y hexadecimal) y la coteja contra los CIDR IPv4; tests dedicados | Engineering | ✅ CERRADO (2026-08-08) |
 
-> **11 riesgos registrados** (≥8 requeridos por T10-02). 7 OPEN · 2 MITIGADO · 2 CERRADO (RSK-06/11, 2026-08-08). [VERIFIED]
+> **11 riesgos registrados** (≥8 requeridos por T10-02). 6 OPEN · 2 MITIGADO · 3 CERRADO (RSK-06/07/11, 2026-08-08). [VERIFIED]
 
 ### 5.1 Auditoría GOLDEN_RULES / RISK_ENGINE v3.1 (2026-08-08)
 
@@ -238,6 +238,7 @@ flowchart LR
 | 1.1 | 2026-08-08 | RSK-06 CERRADO (suite egress-guard resiliente sin red) · RSK-11 CERRADO (gap SSRF IPv4-mapped IPv6 cerrado) | Aprobado |
 | 1.2 | 2026-08-08 | §5.1: auditoría GOLDEN_RULES/RISK_ENGINE v3.1 — score de autonomía 7/35 AUTONOMOUS por grupo de cambios; brechas RULE-001/007 documentadas | Aprobado |
 | 1.3 | 2026-08-08 | §5.1: brechas RULE-001 (env-secrets server-only) y RULE-007 (3 controles con tests) CERRADAS — 2 bugs de seguridad reales corregidos en el camino (HMAC RangeError, bypass backslash open-redirect); suite 363 → 389 tests | Aprobado |
+| 1.4 | 2026-08-08 | RSK-07 CERRADO (plan de producción): `scheduled-scan` implementado como `schedules.task` real (procesa `monitoring_schedules` vencidos + encola `run-project-audit`, 5/5 tests); crons de Vercel registrados (`/api/cron/siem` 5 min + uptime 15 min, modelo canónico Vercel con Trigger.dev opcional); `.env.example` completado con vars de producción (R4) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/risk/RISK-REGISTER.md --min 80` → PASS
 
