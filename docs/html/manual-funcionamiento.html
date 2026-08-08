@@ -87,7 +87,7 @@ flowchart TB
     end
     subgraph Next["Next.js 16 App Router"]
         UI["Dashboard tabs (lazy-loaded)"]
-        API["50+ API Routes"]
+        API["42 API Routes"]
         SA["Server Actions"]
         DOCS["Docs site (markdown)"]
     end
@@ -102,7 +102,7 @@ flowchart TB
         ANOM["anomaly/ (Z-score engine)"]
     end
     subgraph Data["Data Layer"]
-        PG["Supabase Postgres<br/>RLS + 35+ tablas"]
+        PG["Supabase Postgres<br/>RLS + 58 tablas"]
         REDIS["Upstash Redis<br/>rate limit + cache"]
     end
     subgraph Jobs["Trigger.dev"]
@@ -132,7 +132,7 @@ flowchart TB
 src/
 ├── app/                          <span class="cmt"># Next.js App Router</span>
 │   ├── actions/                  <span class="cmt"># Server Actions (audits, projects, reports)</span>
-│   ├── api/                      <span class="cmt"># 50+ API Routes</span>
+│   ├── api/                      <span class="cmt"># 42 API Routes</span>
 │   │   ├── ai/                   <span class="cmt">#   copilot, report, healthcheck</span>
 │   │   ├── intelligence/         <span class="cmt">#   scans, runs, brief, copilot, history,</span>
 │   │   │                         <span class="cmt">#   anomalies, adversary, live, discovery, drift</span>
@@ -160,7 +160,7 @@ src/
 │   │   └── types/                <span class="cmt"># executor.types.ts (interfaces tipadas)</span>
 │   └── security/                 <span class="cmt"># siem-exporter, dns-change-alert, whois-change-alert</span>
 ├── shared/
-│   ├── db/schemas/               <span class="cmt"># Drizzle: 35+ tablas</span>
+│   ├── db/schemas/               <span class="cmt"># Drizzle: 58 tablas</span>
 │   ├── lib/                      <span class="cmt"># ratelimit, auth, audit-log, error-handler, logger</span>
 │   └── config/env.ts             <span class="cmt"># validación de env vars</span>
 ├── trigger/                      <span class="cmt"># Trigger.dev tasks</span>
