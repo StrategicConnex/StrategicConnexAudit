@@ -20,6 +20,14 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+
+      # RULE-001 (GOLDEN_RULES v3.1): FALLA si env-secrets se importa desde
+      # código de cliente o si env.ts vuelve a definir getters de secretos.
+      # Script Node zero-deps (scripts/guard-client-secrets.mjs) — corre
+      # antes del build como barrera dura, sin requerir bundling.
+      - name: Guard RULE-001 (secretos server-only)
+        run: pnpm guard:secrets
+
       - run: pnpm build
 
   secret-scan:
