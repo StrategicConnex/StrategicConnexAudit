@@ -3,8 +3,8 @@ layout: default
 title: System Map
 nav_order: 3.2
 permalink: /docs/architecture/system-map
-version: 1.1
-fecha: 2026-08-02
+version: 2.0
+fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -27,11 +27,11 @@ estado: Aprobado
 Este documento materializa la tarea **T01-02** (BATCH 01) del [Engineering Master Plan](`docs/superpowers/plans/2026-08-01-engineering-master-plan.md`). Traza **los dos flujos de datos principales del sistema** con rutas reales verificadas contra el código, complementando los diagramas de containers §7 de [ENTERPRISE-ARCHITECTURE.md](ENTERPRISE-ARCHITECTURE.md):
 
 - **FLUJO A — Request/Response principal:** `USERS → UI → Next.js → Application → Domain → Data`.
-- **FLUJO B — Eventos → Trigger.dev:** `EVENTS → Trigger.dev → Jobs → Servicios → DB` (12 tasks + cron Vercel).
+- **FLUJO B — Eventos → Jobs:** `EVENTS → Vercel Cron / Trigger.dev → Jobs → Servicios → DB` (12 tasks Trigger.dev + cron Vercel). **Trigger.dev es opcional y su deploy no está verificado; Vercel Cron (`/api/cron/siem`, `/api/cron/uptime`) es el mecanismo garantizado.**
 
 **Objetivo:** que cualquier lector pueda recorrer un request o un evento desde su origen hasta su destino final, citando el archivo real en cada tramo. Toda afirmación lleva marcador de evidencia: `[VERIFIED]` (leído del archivo/comando), `[ASSUMPTION]` (inferencia razonable) o `[UNKNOWN]` (no verificable aquí).
 
-**Alcance:** commit `82b09d3` (HEAD de `main`), 2026-08-02. No se modifica código fuente; este documento es de análisis.
+**Alcance:** commit `2ccda08` (HEAD de `main`), 2026-08-08. No se modifica código fuente; este documento es de análisis.
 
 ---
 
@@ -65,7 +65,7 @@ flowchart LR
         LYT["app/layout.tsx<br/>(i18n · headers)"]
         UI["app/components/*<br/>DashboardContainer · IntelligenceShell<br/>tabs/ · LiveMetricsBar"]
         FEAT["features/intelligence/<br/>components · hooks · stores · lib"]
-        ACT["app/actions/*<br/>audits.ts · projects.ts"]
+        ACT["app/actions/*<br/>audits.ts · projects.ts · reports.ts"]
     end
 
     subgraph API["Route Handlers (42)"]
@@ -150,8 +150,8 @@ sequenceDiagram
 | Actions | `src/app/actions/audits.ts` | Server Actions; lanza `runProjectAudit` vía `tasks.trigger` (L163) | [VERIFIED] |
 | Route Handlers | `src/app/api/**/route.ts` (42 archivos) | Contrato HTTP | [VERIFIED] |
 | Engine | `src/server/intelligence/core/dispatcher.ts` | Orquestación de scans | [VERIFIED] |
-| Ejecutores | `src/server/intelligence/executors/*.ts` (13 archivos) | DNS, OSINT, CVE, TLS, tech-profiler, bucket, subdomain-takeover | [VERIFIED] |
-| SSRF guard | `src/server/intelligence/security/egress-guard.ts` | Bloqueo de IPs privadas (16 CIDRs v4 + 7 v6) | [VERIFIED] |
+| Ejecutores | `src/server/intelligence/executors/*.ts` (14 archivos de ejecución) | DNS, OSINT, CVE, TLS, email, tech-profiler, bucket, subdomain-takeover, network, website | [VERIFIED] |
+| SSRF guard | `src/server/intelligence/security/egress-guard.ts` | Bloqueo de IPs privadas (16 CIDRs v4 + 7 v6) + IPv4-mapped IPv6 (`::ffff:x.x.x.x`, RFC 4291) | [VERIFIED] |
 | Rate limit | `src/shared/lib/ratelimit.ts` | Lazy Redis + allowlist + headers IETF | [VERIFIED] |
 | Circuit breaker | `src/shared/lib/circuit-breaker.ts` | Fail-open con `REDIS_OP_TIMEOUT_MS=1500` | [VERIFIED] |
 | RLS | `src/shared/db/rls.ts` | `withRLS()` → `SET LOCAL ROLE authenticated` + JWT claims | [VERIFIED] |
@@ -167,8 +167,8 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph SCHED["Disparadores"]
-        CRON["Vercel Cron<br/>/api/cron/uptime<br/>0 0 * * *"]
-        SCHED2["Trigger.dev schedules<br/>(9 crons en src/trigger)"]
+        CRON["Vercel Cron (garantizado)<br/>/api/cron/siem · /api/cron/uptime<br/>*/5 · */15 min (CRON_SECRET)"]
+        SCHED2["Trigger.dev schedules (opcional)<br/>(9 crons en src/trigger)"]
         ONDEMAND["On-demand<br/>tasks.trigger (actions)<br/>webhook events"]
     end
 
@@ -179,7 +179,7 @@ flowchart LR
         T_CLEAN["cleanupOldLogs<br/>0 0 h"]
         T_DISC["continuousDiscovery<br/>0 */6 h"]
         T_MON["evaluateMonitorsTask<br/>0 0 h"]
-        T_SCAN["scheduledScanTaskConfig<br/>0 * h"]
+        T_SCAN["scheduledScanTask<br/>0 * h"]
         T_SIEM["siemExporterTask<br/>*/5 min"]
         T_UP["uptimeMonitor<br/>*/15 min"]
         T_AUDIT["runProjectAudit<br/>on-demand"]
@@ -222,7 +222,7 @@ flowchart LR
     T_WEB --> D_EXT
 ```
 
-**Tabla de jobs de Trigger.dev** (evidencia: `src/trigger/*.ts` + `trigger.config.ts`)
+**Tabla de jobs de Trigger.dev** (evidencia: `src/trigger/*.ts` + `trigger.config.ts`) — ⚠️ **deploy no verificado** (opcional según `deployment.md`); los jobs `siem`/`uptime` tienen equivalente garantizado por Vercel Cron.
 
 | Task | Disparador (cron/evento) | Acción principal | Servicio/DB destino | Evidencia |
 |------|--------------------------|------------------|---------------------|-----------|
@@ -232,16 +232,16 @@ flowchart LR
 | `cleanupOldLogs` | cron `0 0 * * *` | Limpieza de logs antiguos | DB (DELETE) | [VERIFIED] |
 | `continuousDiscovery` | cron `0 */6 * * *` | Descubrimiento continuo (DNS/CT/shadow) | `intelligence/discovery/` → `history/` → DB | [VERIFIED] |
 | `evaluateMonitorsTask` | cron `0 0 * * *` | Evaluar monitores | `anomaly/detector.ts` | [VERIFIED] |
-| `scheduledScanTaskConfig` | cron `0 * * * *` | Escaneo de inteligencia horario | `intelligence/` core → DB | [VERIFIED] |
+| `scheduledScanTask` | cron `0 * * * *` | Escaneo agendado: procesa `monitoring_schedules` vencidos → crea audit `pending` → encola `run-project-audit` | `intelligence/` core → DB | [VERIFIED] |
 | `siemExporterTask` | cron `*/5 * * * *` | Exportar a SIEM | `security/siem-exporter.ts` → SIEM externo | [VERIFIED] |
 | `uptimeMonitor` | cron `*/15 * * * *` | Monitoreo de uptime | `anomaly/detector.ts` → DB | [VERIFIED] |
 | `runProjectAudit` | on-demand (`tasks.trigger` desde `src/app/actions/audits.ts:163`) | Auditoría completa de proyecto | `intelligence/` → reportes → DB | [VERIFIED] |
 | `dispatchWebhookTask` | on-demand (eventos de proyecto) | Despacho webhook con HMAC + guard SSRF | `webhookConfigs` + endpoints externos | [VERIFIED] |
 | `helloJob` | manual (dev) | Hello world | — | [VERIFIED] |
 
-**Configuración del runtime Trigger.dev** [VERIFIED]: `trigger.config.ts` → project `proj_vzzxtydwblfhxgmljiai`, `dirs: ["./src/trigger"]`, `retries.maxAttempts = 3` (default), `maxDuration = 3600`.
+**Configuración del runtime Trigger.dev** [VERIFIED]: `trigger.config.ts` → project `proj_vzzxtydwblfhxgmljiai`, `dirs: ["./src/trigger"]`, `retries.maxAttempts = 3` (default), `maxDuration = 3600`. ⚠️ Configuración local verificada; **deploy a Trigger.dev no verificado** (plataforma opcional según `deployment.md`).
 
-**Cron Vercel** [VERIFIED]: `vercel.json` → único cron `/api/cron/uptime` schedule `0 0 * * *`, `regions: ["iad1"]`, respaldado por `src/app/api/cron/uptime/route.ts` (conteo manual diario; no reemplaza `uptimeMonitor`).
+**Cron Vercel — mecanismo garantizado** [VERIFIED]: `vercel.json` → `/api/cron/siem` (`*/5 * * * *`, CRON_SECRET) y `/api/cron/uptime` (`*/15 * * * *`, CRON_SECRET), `regions: ["iad1"]`, respaldados por `src/app/api/cron/siem/route.ts` y `src/app/api/cron/uptime/route.ts`.
 
 ---
 
@@ -305,8 +305,8 @@ Los 42 route handlers de `src/app/api` son el contrato HTTP del sistema. Los mé
 | TB-1 | Cliente → Edge (`proxy.ts`) | Clickjacking, XSS, mixed content, datos en el aire | CSP con nonce por request, `X-Frame-Options: DENY`, HSTS preload, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `report-uri /api/security/csp-report` | [VERIFIED] |
 | TB-2 | Edge → Route Handler | Acceso no autenticado | `updateSession()` (refresh + redirect) | [VERIFIED] |
 | TB-3 | Route Handler → Domain | Abuso de tasa, cascada de fallos | `ratelimit.ts` (fail-open, allowlist) + `circuit-breaker.ts` (fail-open, timeout 1500 ms) | [VERIFIED] |
-| TB-4 | Domain → Externo (executors/webhooks) | SSRF | `egress-guard.ts`: `assertPublicHostname()` bloquea IPs privadas (16 CIDRs v4 + 7 v6) | [VERIFIED] |
-| TB-5 | Domain → DB | Fuga multi-tenant, acceso con privilegios | `rls.ts` `withRLS()` (`SET LOCAL ROLE authenticated` + claims JWT); `admin.ts` (service-role) solo server | [VERIFIED] |
+| TB-4 | Domain → Externo (executors/webhooks) | SSRF | `egress-guard.ts`: `assertPublicHostname()` bloquea IPs privadas (16 CIDRs v4 + 7 v6) y IPv4-mapped IPv6 (`::ffff:`, RFC 4291 — gap cerrado 2026-08-08) | [VERIFIED] |
+| TB-5 | Domain → DB | Fuga multi-tenant, acceso con privilegios | `rls.ts` `withRLS()` (`SET LOCAL ROLE authenticated` + claims JWT); `admin.ts` (service-role) solo server; secretos en `shared/config/env-secrets.ts` (server-only, guard CI `guard:secrets`) | [VERIFIED] |
 | TB-6 | Sistema → Cliente webhook | Endpoint falso / no autenticado | Firma HMAC `X-StrategicAudit-Signature` + comprobación de suscripción de eventos | [VERIFIED] |
 
 **Amenazas consideradas:** SSRF (TB-4), abuso de rate (TB-3), fuga multi-tenant (TB-5), XSS/clickjacking (TB-1), inyección vía webhook (TB-6). No se documentan aquí nuevas amenazas: las detalladas por amenaza están en [ENTERPRISE-ARCHITECTURE.md](ENTERPRISE-ARCHITECTURE.md) §11.
@@ -315,7 +315,7 @@ Los 42 route handlers de `src/app/api` son el contrato HTTP del sistema. Los mé
 
 ## 8. Datos (referencia cruzada)
 
-El modelo de datos vive en `src/shared/db/schemas/` (25+ tablas, índice en `index.ts`) con migraciones en `drizzle/` (21 SQL). El ERD detallado y el dictionary están documentados en:
+El modelo de datos vive en `src/shared/db/schemas/` (12 archivos, 58 tablas `pgTable`, índice en `index.ts`) con migraciones en `drizzle/` (22 SQL). El ERD detallado y el dictionary están documentados en:
 
 - [PIPELINE-HISTORY.md](PIPELINE-HISTORY.md) **FIG-002** — ERD de `dns_history`/`whois_history`.
 - [PROJECT-INVENTORY.md](PROJECT-INVENTORY.md) §5 — matriz de esquemas e inconsistencia de migración huérfana (`0001_quota_enforcement.sql` no referenciado en `_journal.json`).
@@ -329,11 +329,11 @@ Este documento no repite el ERD: su foco es el **flujo** de datos entre capas, n
 
 | Ámbito | Herramienta | Evidencia |
 |--------|-------------|-----------|
-| Unit / integración | Vitest 4 (jsdom) — 19 archivos `*.test.ts` | [VERIFIED] |
-| Resultado unit actual | 248 tests PASS (`pnpm test`) | [VERIFIED] |
+| Unit / integración | Vitest 4 (jsdom) — 39 archivos `*.test.ts` | [VERIFIED] |
+| Resultado unit actual | 391 tests PASS (`pnpm test`) | [VERIFIED] |
 | E2E | Playwright 1.59 — 4 specs en `e2e/` | [VERIFIED] |
 | Contrato API | `tests/api-contract/` | [VERIFIED] |
-| Cobertura | Baseline B00: Statements 12.51% (por debajo del umbral, no es regresión B01) | [VERIFIED] |
+| Cobertura | Statements 13.72% (por debajo del umbral 25% — gap documentado en TEST-COVERAGE-MATRIX, no es regresión de esta sesión) | [VERIFIED] |
 
 **Casos representativos [VERIFIED]:** `scan-response.test.ts`, `executors.test.ts`, `egress-guard.test.ts`, `sandbox-executor.test.ts`, `pipeline-test.ts` (historia), `markdown.test.ts`/`severity.test.ts` (feature), `report-utils.test.ts` (UI). La cobertura unitaria se concentra en `src/server` y `shared/lib`; `src/modules/` no tiene tests (ver §5).
 
@@ -343,7 +343,7 @@ Este documento no repite el ERD: su foco es el **flujo** de datos entre capas, n
 
 | Área | Mecanismo real | Evidencia |
 |------|----------------|-----------|
-| Monitoring de uptime | `uptimeMonitor` (Trigger.dev, cada 15 min) + cron Vercel diario `/api/cron/uptime` | [VERIFIED] |
+| Monitoring de uptime | Cron Vercel garantizado `/api/cron/uptime` (cada 15 min, CRON_SECRET) + `uptimeMonitor` (Trigger.dev opcional, cada 15 min) | [VERIFIED] |
 | Detección de anomalías | `periodicAnomalyDetection` (`*/15`) y `evaluateMonitorsTask` (diario) | [VERIFIED] |
 | Exportación a SIEM | `siemExporterTask` (`*/5`) → `security/siem-exporter.ts` | [VERIFIED] |
 | Reporte de violación CSP | `report-uri /api/security/csp-report` (endpoint `src/app/api/security/csp-report/route.ts`) | [VERIFIED] |
@@ -416,6 +416,7 @@ Este documento no repite el ERD: su foco es el **flujo** de datos entre capas, n
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Creación inicial (T01-02, BATCH 01) | Aprobado |
 | 1.1 | 2026-08-02 | Secciones de API/Seguridad/Testing/Operaciones para cumplir el gate; IDs de diagramas únicos | Aprobado |
+| 2.0 | 2026-08-08 | Refresco al estado real (commit `2ccda08`): FLUJO B con Vercel Cron como mecanismo garantizado (siem/uptime) + Trigger.dev opcional; `scheduledScanTask` real (procesa `monitoring_schedules` → encola `run-project-audit`); secretos server-only `env-secrets.ts` + guard CI; egress-guard con IPv4-mapped IPv6; 391 tests · 39 archivos; 58 tablas · 22 migraciones; 3 server actions (reports.ts) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/architecture/SYSTEM-MAP.md --min 80` → resultado en la tabla siguiente.
 
