@@ -3,7 +3,7 @@ layout: default
 title: Risk Register
 nav_order: 8.2
 permalink: /docs/risk/risk-register
-version: 1.1
+version: 1.3
 fecha: 2026-08-08
 autor: StrategicConnex Engineering
 estado: Aprobado
@@ -80,6 +80,29 @@ Registro consolidado de **riesgos de SCAUDIT Pro** a partir de los hallazgos rea
 | RSK-11 | Gap SSRF IPv4-mapped IPv6 (`::ffff:x.x.x.x`) evadía egress-guard → acceso a red interna/metadata | 4 | 5 | 20 | `ipv4MappedToIpv4()` extrae la IPv4 embebida (RFC 4291, formas decimal y hexadecimal) y la coteja contra los CIDR IPv4; tests dedicados | Engineering | ✅ CERRADO (2026-08-08) |
 
 > **11 riesgos registrados** (≥8 requeridos por T10-02). 7 OPEN · 2 MITIGADO · 2 CERRADO (RSK-06/11, 2026-08-08). [VERIFIED]
+
+### 5.1 Auditoría GOLDEN_RULES / RISK_ENGINE v3.1 (2026-08-08)
+
+Auditoría de los 97 cambios pendientes (commit `36ebcf8`) bajo el marco SC Platform Engineering Super Skill v3.1 (RISK_ENGINE de 7 dimensiones, 0–5 c/u, score 0–35; DECISION_ENGINE: 0–8 Autonomous · 9–15 Agent Review · 16–24 Multi-Agent Review · 25+ Human Approval).
+
+| Grupo de cambios | Archivos | Dimensión dominante | Score | Nivel |
+|------------------|----------|---------------------|-------|-------|
+| Lint/limpieza (imports muertos, deps hooks, prefijos `_`) | ~40 (componentes, routes, server) | Maintainability 2 | 2 | Autonomous |
+| Egress-guard + SSRF (IPv4-mapped IPv6, cron uptime, executors, projects) | 8 | Security 4 · Data 1 | 5 | Autonomous |
+| CSP nonce (proxy, layout, 2 páginas a dinámicas) | 6 | Security 3 · Architecture 2 · Performance 1 | 6 | Autonomous |
+| Docs (matrices, registros, security, HTMLs) | 9 | Documentation 1 | 1 | Autonomous |
+| Tests (egress-guard 31/31, proxy 21/21, webhooks, contract) | 7 | Testing 1 | 1 | Autonomous |
+| i18n / config (messages, eslint, next.config) | 4 | Deployment 1 | 1 | Autonomous |
+| Untracked (shadcn ui/, utils, HTML, snapshots) | 5 | Architecture 1 | 1 | Autonomous |
+
+**Score de autonomía agregado: 7/35 → umbral 0–8 = AUTONOMOUS** — ningún cambio requiere aprobación humana (sin migraciones destructivas, auth, secretos, contratos públicos ni infraestructura tocada). Evidencia: `tsc` 0 errores · `eslint` 0 problemas · `vitest` 363/363 · `next build` OK. [VERIFIED — commit 36ebcf8]
+
+**Brechas GOLDEN_RULES detectadas y CERRADAS (2026-08-08):**
+
+- **RULE-001 — CERRADA:** secretos movidos de `env.ts` a `src/shared/config/env-secrets.ts` (solo server-side: `admin.ts`, `ai-router.ts`, `healthcheck`, `openrouter-live-test`); `env.ts` queda con solo valores `NEXT_PUBLIC_*` seguros para el bundle del navegador. Ningún componente cliente importa `env-secrets`. [VERIFIED — commit pendiente]
+- **RULE-007 — CERRADA:** 3 controles con tests dedicados, que además destaparon **2 bugs de seguridad reales corregidos**: (1) `verifyWebhookSignature` lanzaba `RangeError` (500) con firmas de longitud distinta → ahora compara hashes de ambos lados (10/10 tests); (2) `sanitizeNextPath` dejaba pasar `\evil.com` (backslash → `//evil.com` protocol-relative en navegadores) → bloqueado (8/8 tests). `api-auth.ts` cubierto (8/8 tests: hash nunca token en claro, fail-closed). [VERIFIED]
+
+**Evidencia de cierre:** suite 389/389 tests (antes 363) · `tsc` 0 errores · `eslint` 0 problemas. [VERIFIED — 2026-08-08]
 
 ---
 
@@ -213,6 +236,8 @@ flowchart LR
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Risk Register B10 (T10-02, §36): 10 riesgos consolidados | Aprobado |
 | 1.1 | 2026-08-08 | RSK-06 CERRADO (suite egress-guard resiliente sin red) · RSK-11 CERRADO (gap SSRF IPv4-mapped IPv6 cerrado) | Aprobado |
+| 1.2 | 2026-08-08 | §5.1: auditoría GOLDEN_RULES/RISK_ENGINE v3.1 — score de autonomía 7/35 AUTONOMOUS por grupo de cambios; brechas RULE-001/007 documentadas | Aprobado |
+| 1.3 | 2026-08-08 | §5.1: brechas RULE-001 (env-secrets server-only) y RULE-007 (3 controles con tests) CERRADAS — 2 bugs de seguridad reales corregidos en el camino (HMAC RangeError, bypass backslash open-redirect); suite 363 → 389 tests | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/risk/RISK-REGISTER.md --min 80` → PASS
 

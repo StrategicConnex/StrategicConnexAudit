@@ -13,7 +13,7 @@
  * ✅ Graceful degradation: returns contextual messages even without API key
  */
 
-import { env } from "@/shared/config/env";
+import { envSecrets } from "@/shared/config/env-secrets";
 import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -190,8 +190,8 @@ async function callModel(
   maxTokens: number,
   timeoutMs: number
 ): Promise<string> {
-  const baseUrl = env.openRouterBaseUrl || "https://openrouter.ai/api/v1";
-  const apiKey = env.openRouterApiKey;
+  const baseUrl = envSecrets.openRouterBaseUrl || "https://openrouter.ai/api/v1";
+  const apiKey = envSecrets.openRouterApiKey;
 
   if (!apiKey) {
     throw new Error(
@@ -287,7 +287,7 @@ export async function callAIWithFallback(
   }
 
   // 2. Check if API key is configured
-  if (!env.openRouterApiKey) {
+  if (!envSecrets.openRouterApiKey) {
     return {
       success: false,
       content: "",

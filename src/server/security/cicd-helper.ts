@@ -8,10 +8,17 @@ export function verifyWebhookSignature(
   if (!signature || !secret) return false;
   const hmac = crypto.createHmac("sha256", secret);
   const expectedSignature = `sha256=${hmac.update(payload).digest("hex")}`;
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+  // timingSafeEqual requiere buffers del MISMO byte length; comparar los
+  // strings crudos lanzaría RangeError cuando la firma recibida tiene una
+  // longitud distinta (p.ej. firma truncada por un atacante → 500 en vez de
+  // rechazo). Hashear ambos lados antes de comparar: longitudes siempre
+  // iguales (32 bytes), sin filtrar la longitud de la firma esperada.
+  const received = crypto.createHash("sha256").update(signature).digest();
+  const expected = crypto
+    .createHash("sha256")
+    .update(expectedSignature)
+    .digest();
+  return crypto.timingSafeEqual(received, expected);
 }
 
 export function generateGithubWorkflowSnippet(webhookUrl: string): string {

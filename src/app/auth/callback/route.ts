@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { env } from '@/shared/config/env'
 import { extractClientIp, checkCallbackRateLimit, rateLimitResponse, isEmailAllowlisted } from '@/shared/lib/ratelimit'
 import { logSecurityEvent, eventFromRequest } from '@/shared/lib/audit-log'
+import { sanitizeNextPath } from '@/shared/lib/safe-next'
 
 /**
  * Auth callback (code exchange) con rate limiting por IP.
@@ -21,7 +22,9 @@ export async function GET(request: Request): Promise<Response> {
   const next = searchParams.get('next') ?? '/'
 
   // SECURITY: Validar que next sea una ruta relativa (no @evil.com, //evil.com)
-  const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/'
+  // Lógica extraída a sanitizeNextPath (src/shared/lib/safe-next.ts) — cubierta
+  // por tests dedicados (RULE-007 v3.1).
+  const safeNext = sanitizeNextPath(next)
 
   // Auditar intentos de open redirect
   if (safeNext !== next) {

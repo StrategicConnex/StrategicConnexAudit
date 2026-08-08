@@ -15,7 +15,7 @@
  * Requiere OPENROUTER_API_KEY en .env
  */
 
-import { env } from "@/shared/config/env";
+import { envSecrets } from "@/shared/config/env-secrets";
 
 interface ModelTestResult {
   model: string;
@@ -106,7 +106,7 @@ async function main() {
   console.log("══════════════════════════════════════════════════════════\n");
 
   // 1. Check API key
-  const apiKey = env.openRouterApiKey;
+  const apiKey = envSecrets.openRouterApiKey;
   if (!apiKey) {
     console.error("❌ OPENROUTER_API_KEY no está configurada.");
     console.error("   Get a FREE key at https://openrouter.ai/keys");
@@ -115,12 +115,12 @@ async function main() {
   console.log(
     `✅ API Key presente: ${apiKey.slice(0, 12)}...${apiKey.slice(-4)}`
   );
-  console.log(`🔗 Base URL: ${env.openRouterBaseUrl}`);
+  console.log(`🔗 Base URL: ${envSecrets.openRouterBaseUrl}`);
   console.log(`📡 Timeout: 15s por modelo\n`);
 
   // 2. Test each model
   const results: ModelTestResult[] = [];
-  const baseUrl = env.openRouterBaseUrl || "https://openrouter.ai/api/v1";
+  const baseUrl = envSecrets.openRouterBaseUrl || "https://openrouter.ai/api/v1";
 
   for (const { id, label } of MODELS_TO_TEST) {
     process.stdout.write(`  ${label.padEnd(42)} ... `);

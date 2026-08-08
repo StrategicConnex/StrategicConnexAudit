@@ -20,7 +20,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { env } from "@/shared/config/env";
+import { envSecrets } from "@/shared/config/env-secrets";
 import { directDb } from "@/shared/db";
 import { aiHealthLogs } from "@/shared/db/schemas/health";
 import { logSecurityEvent } from "@/shared/lib/audit-log";
@@ -66,7 +66,7 @@ async function testModel(modelId: string, timeoutMs = 15_000): Promise<ModelResu
   const start = Date.now();
 
   try {
-    const apiKey = env.openRouterApiKey;
+    const apiKey = envSecrets.openRouterApiKey;
     if (!apiKey) {
       return {
         modelId,
@@ -76,7 +76,7 @@ async function testModel(modelId: string, timeoutMs = 15_000): Promise<ModelResu
       };
     }
 
-    const baseUrl = env.openRouterBaseUrl || "https://openrouter.ai/api/v1";
+    const baseUrl = envSecrets.openRouterBaseUrl || "https://openrouter.ai/api/v1";
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
