@@ -162,7 +162,7 @@ export function ReportsTab({
             <button
               onClick={aiReport.generate}
               disabled={aiReport.state.isGenerating || !selectedProjectId}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-[color,background-color,opacity,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.45)] transition-[color,background-color,opacity,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
             >
               {aiReport.state.isGenerating ? (
                 <>
@@ -171,7 +171,7 @@ export function ReportsTab({
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-black group-hover:scale-110 transition-transform" />
+                  <Sparkles className="w-4 h-4 text-primary-foreground group-hover:scale-110 transition-transform" />
                   {t('generateAi')}
                 </>
               )}
@@ -200,7 +200,7 @@ export function ReportsTab({
                 <button
                   onClick={() => setViewMode('visual')}
                   className={`px-5 py-2 text-[10px] font-extrabold uppercase tracking-widest rounded-lg transition-[color,background-color,box-shadow] cursor-pointer ${
-                    viewMode === 'visual' ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/10' : 'text-muted-fg hover:text-foreground/80'
+                    viewMode === 'visual' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/10' : 'text-muted-fg hover:text-foreground/80'
                   }`}
                 >
                   {t('visualView')}
@@ -208,7 +208,7 @@ export function ReportsTab({
                 <button
                   onClick={() => setViewMode('markdown')}
                   className={`px-5 py-2 text-[10px] font-extrabold uppercase tracking-widest rounded-lg transition-[color,background-color,box-shadow] cursor-pointer ${
-                    viewMode === 'markdown' ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/10' : 'text-muted-fg hover:text-foreground/80'
+                    viewMode === 'markdown' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/10' : 'text-muted-fg hover:text-foreground/80'
                   }`}
                 >
                   {t('markdownRaw')}
@@ -220,8 +220,8 @@ export function ReportsTab({
                   {aiReport.state.isCopied ? <Check className="w-3.5 h-3.5 text-chartreuse" /> : <Copy className="w-3.5 h-3.5" />}
                   {aiReport.state.isCopied ? t('copied') : t('copy')}
                 </button>
-                <button onClick={aiReport.downloadHtml} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500 text-black hover:bg-cyan-400 text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.2)] cursor-pointer">
-                  <Download className="w-3.5 h-3.5 text-black" /> {t('downloadHtml')}
+                <button onClick={aiReport.downloadHtml} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_15px_rgba(99,102,241,0.25)] cursor-pointer">
+                  <Download className="w-3.5 h-3.5 text-primary-foreground" /> {t('downloadHtml')}
                 </button>
               </div>
             </div>

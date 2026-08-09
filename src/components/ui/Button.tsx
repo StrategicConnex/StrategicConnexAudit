@@ -35,9 +35,10 @@ export const buttonVariants = cva(
           "bg-muted/30 text-foreground hover:bg-muted/60 hover:text-foreground border border-border/30 shadow-sm hover:shadow-md",
         inverted:
           "bg-foreground text-background hover:bg-foreground/90 border border-border shadow-md",
-        cyan: "bg-cyan-500 text-black hover:bg-cyan-400 border border-transparent shadow-md",
+        cyan:
+          "bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 shadow-md",
         light:
-          "bg-zinc-100 hover:bg-white text-black border border-transparent shadow-[0_4px_12px_rgba(255,255,255,0.1)]",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/60 shadow-sm",
       },
       size: {
         xs: "h-7 px-2.5 text-[9px] rounded-md gap-1.5",

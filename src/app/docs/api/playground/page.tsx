@@ -768,7 +768,7 @@ export default function ApiPlaygroundPage() {
                       className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-xs font-bold tracking-wider transition-all cursor-pointer ${
                         loading
                           ? 'bg-primary/20 text-primary/50 cursor-not-allowed'
-                          : 'bg-primary hover:bg-primary/90 text-primary-fg shadow-lg shadow-primary/20 hover:shadow-primary/30'
+                          : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30'
                       }`}
                     >
                       {loading ? (

@@ -103,12 +103,12 @@ export function AiCopilotSidebar({
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder="Pregunta sobre puertos, SPF..."
-            className="flex-1 bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-lg text-xs text-foreground placeholder-[#52525b] py-2.5 px-3"
+            className="flex-1 bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-lg text-xs text-foreground placeholder:text-muted-fg py-2.5 px-3"
           />
           <button
             type="submit"
             disabled={!inputValue.trim()}
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-100 text-background hover:bg-foreground active:scale-95 disabled:opacity-30 disabled:scale-100 transition-[color,background-color,opacity,transform]"
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 active:scale-95 disabled:opacity-30 disabled:scale-100 transition-[color,background-color,opacity,transform]"
           >
             <ArrowRight className="w-3.5 h-3.5" />
           </button>

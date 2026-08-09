@@ -77,7 +77,7 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
           </div>
           <button 
             type="submit" 
-            className="px-8 py-3.5 bg-cyan-500 text-black text-[11px] font-extrabold uppercase tracking-widest rounded-xl hover:bg-cyan-400 transition-[color,background-color,box-shadow] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] cursor-pointer"
+            className="px-8 py-3.5 bg-primary text-primary-foreground text-[11px] font-extrabold uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-[color,background-color,box-shadow] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] cursor-pointer"
           >
             <Plus className="w-4 h-4" /> {t('startTrackingButton')}
           </button>

@@ -13,15 +13,15 @@ import {
 // ─── Tactic color mapping ─────────────────────────────────────────────────────
 
 const TACTIC_COLORS: Record<string, { bar: string; text: string; light: string }> = {
-  Reconnaissance:       { bar: "bg-blue-500",   text: "text-blue-400",   light: "bg-blue-500/10" },
-  "Resource Development": { bar: "bg-purple-500", text: "text-purple-400", light: "bg-purple-500/10" },
-  Discovery:           { bar: "bg-cyan-500",   text: "text-cyan-400",   light: "bg-cyan-500/10" },
-  Collection:          { bar: "bg-indigo-500",  text: "text-indigo-400",  light: "bg-indigo-500/10" },
-  "Command and Control": { bar: "bg-violet-500",  text: "text-violet-400", light: "bg-violet-500/10" },
+  Reconnaissance:       { bar: "bg-accent-blue",   text: "text-accent-blue",   light: "bg-accent-blue/10" },
+  "Resource Development": { bar: "bg-accent-purple", text: "text-accent-purple", light: "bg-accent-purple/10" },
+  Discovery:           { bar: "bg-accent-cyan",   text: "text-accent-cyan",   light: "bg-accent-cyan/10" },
+  Collection:          { bar: "bg-accent-indigo",  text: "text-accent-indigo",  light: "bg-accent-indigo/10" },
+  "Command and Control": { bar: "bg-accent-violet",  text: "text-accent-violet", light: "bg-accent-violet/10" },
 };
 
 function getColor(tactic: string) {
-  return TACTIC_COLORS[tactic] || { bar: "bg-zinc-500", text: "text-zinc-400", light: "bg-zinc-500/10" };
+  return TACTIC_COLORS[tactic] || { bar: "bg-muted", text: "text-muted-foreground", light: "bg-muted/50" };
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ function MiniDonut({ value, max, color }: { value: number; max: number; color: s
   const offset = circumference * (1 - pct);
   return (
     <svg width={72} height={72} viewBox="0 0 72 72" className="shrink-0">
-      <circle cx={36} cy={36} r={r} fill="none" stroke="oklch(0.2 0 0)" strokeWidth={5} />
+      <circle cx={36} cy={36} r={r} fill="none" stroke="var(--chart-grid)" strokeWidth={5} />
       <circle
         cx={36} cy={36} r={r}
         fill="none"
@@ -85,7 +85,7 @@ function MiniDonut({ value, max, color }: { value: number; max: number; color: s
         className="transition-all duration-1000"
       />
       <text x={36} y={36} textAnchor="middle" dominantBaseline="central"
-        className="fill-zinc-100 text-[13px] font-bold font-mono">
+        className="fill-foreground text-[13px] font-bold font-mono">
         {value}
       </text>
     </svg>
@@ -98,17 +98,17 @@ export default function MitreCoveragePage() {
   const { coverage, tacticData, maxTools, allTechniques } = buildCoverageData();
 
   return (
-    <div className="min-h-screen bg-[#050505] text-zinc-100 selection:bg-blue-500/20">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
       {/* Header */}
-      <header className="border-b border-zinc-800/60 bg-[#070707]">
+      <header className="border-b border-border bg-surface">
         <div className="max-w-6xl mx-auto px-6 py-6">
           <div className="flex items-center gap-3 mb-1">
             <span className="text-2xl">🎯</span>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-zinc-100">
+              <h1 className="text-lg font-semibold tracking-tight text-foreground">
                 MITRE ATT&CK Coverage
               </h1>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Mapeo de herramientas de inteligencia contra el framework MITRE ATT&CK Enterprise v15
               </p>
             </div>
@@ -124,36 +124,36 @@ export default function MitreCoveragePage() {
         <section>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Total Techniques */}
-            <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-6 flex items-center gap-5">
-              <MiniDonut value={coverage.totalTechniques} max={coverage.totalTechniques} color="oklch(0.55 0.15 260)" />
+            <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5">
+              <MiniDonut value={coverage.totalTechniques} max={coverage.totalTechniques} color="var(--accent-blue)" />
               <div>
-                <p className="text-2xl font-bold text-blue-400 font-mono">{coverage.totalTechniques}</p>
-                <p className="text-xs text-zinc-500 font-medium mt-0.5">Técnicas MITRE Cubiertas</p>
-                <p className="text-[10px] text-zinc-600 mt-1">
+                <p className="text-2xl font-bold text-accent-blue font-mono">{coverage.totalTechniques}</p>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">Técnicas MITRE Cubiertas</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
                   De 700+ técnicas en MITRE ATT&CK Enterprise v15
                 </p>
               </div>
             </div>
 
             {/* Total Tactics */}
-            <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-6 flex items-center gap-5">
-              <MiniDonut value={coverage.totalTactics} max={14} color="oklch(0.6 0.15 300)" />
+            <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5">
+              <MiniDonut value={coverage.totalTactics} max={14} color="var(--accent-purple)" />
               <div>
-                <p className="text-2xl font-bold text-purple-400 font-mono">{coverage.totalTactics}</p>
-                <p className="text-xs text-zinc-500 font-medium mt-0.5">Tácticas Alcanzadas</p>
-                <p className="text-[10px] text-zinc-600 mt-1">
+                <p className="text-2xl font-bold text-accent-purple font-mono">{coverage.totalTactics}</p>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">Tácticas Alcanzadas</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
                   De 14 tácticas en la matriz Enterprise
                 </p>
               </div>
             </div>
 
             {/* Total Tools */}
-            <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-6 flex items-center gap-5">
-              <MiniDonut value={coverage.totalTools} max={coverage.totalTools} color="oklch(0.65 0.12 180)" />
+            <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5">
+              <MiniDonut value={coverage.totalTools} max={coverage.totalTools} color="var(--accent-cyan)" />
               <div>
-                <p className="text-2xl font-bold text-cyan-400 font-mono">{coverage.totalTools}</p>
-                <p className="text-xs text-zinc-500 font-medium mt-0.5">Herramientas de Escaneo</p>
-                <p className="text-[10px] text-zinc-600 mt-1">
+                <p className="text-2xl font-bold text-accent-cyan font-mono">{coverage.totalTools}</p>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">Herramientas de Escaneo</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
                   Cada una mapeada a 1+ técnica MITRE
                 </p>
               </div>
@@ -166,10 +166,10 @@ export default function MitreCoveragePage() {
            ═══════════════════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <span className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[11px]">📊</span>
+            <span className="w-6 h-6 rounded-full bg-accent-blue/15 flex items-center justify-center text-[11px]">📊</span>
             <div>
-              <h2 className="text-sm font-semibold text-zinc-100">Cobertura por Táctica</h2>
-              <p className="text-[10px] text-zinc-500">Cantidad de herramientas de escaneo que aportan a cada táctica MITRE</p>
+              <h2 className="text-sm font-semibold text-foreground">Cobertura por Táctica</h2>
+              <p className="text-[10px] text-muted-foreground">Cantidad de herramientas de escaneo que aportan a cada táctica MITRE</p>
             </div>
           </div>
 
@@ -178,16 +178,16 @@ export default function MitreCoveragePage() {
               const c = getColor(tactic.name);
               const pct = Math.round((toolCount / maxTools) * 100);
               return (
-                <details key={tactic.id} className="group bg-zinc-900/40 border border-zinc-800/40 rounded-lg overflow-hidden transition-all duration-200 hover:border-zinc-700/60">
-                  <summary className="flex items-center gap-4 px-5 py-3.5 cursor-pointer list-none hover:bg-zinc-800/20 transition-colors select-none">
+                <details key={tactic.id} className="group bg-card border border-border rounded-lg overflow-hidden transition-all duration-200 hover:border-foreground/20">
+                  <summary className="flex items-center gap-4 px-5 py-3.5 cursor-pointer list-none hover:bg-surface-muted transition-colors select-none">
                     {/* Tactic badge */}
                     <span className={`w-2 h-2 rounded-full shrink-0 ${c.bar}`} />
 
                     {/* Tactic name */}
-                    <span className="text-sm font-medium text-zinc-200 min-w-[160px]">{tactic.name}</span>
+                    <span className="text-sm font-medium text-foreground min-w-[160px]">{tactic.name}</span>
 
                     {/* Bar */}
-                    <div className="flex-1 h-4 bg-zinc-800/60 rounded-full overflow-hidden">
+                    <div className="flex-1 h-4 bg-surface-muted rounded-full overflow-hidden">
                       <div
                         className={`h-full ${c.bar} rounded-full transition-all duration-700 opacity-80`}
                         style={{ width: `${pct}%` }}
@@ -196,23 +196,23 @@ export default function MitreCoveragePage() {
 
                     {/* Numbers */}
                     <div className="flex items-center gap-4 shrink-0 text-xs">
-                      <span className="font-mono font-bold text-zinc-300 min-w-[3ch] text-right">{toolCount}</span>
-                      <span className="text-zinc-600">tools</span>
-                      <span className="font-mono text-zinc-500 min-w-[3ch] text-right">{techniqueCount}</span>
-                      <span className="text-zinc-600">técnicas</span>
+                      <span className="font-mono font-bold text-foreground min-w-[3ch] text-right">{toolCount}</span>
+                      <span className="text-muted-foreground">tools</span>
+                      <span className="font-mono text-muted-foreground min-w-[3ch] text-right">{techniqueCount}</span>
+                      <span className="text-muted-foreground">técnicas</span>
                     </div>
 
                     {/* Expand indicator */}
-                    <span className="text-zinc-600 text-xs group-open:rotate-180 transition-transform duration-200 shrink-0">
+                    <span className="text-muted-foreground text-xs group-open:rotate-180 transition-transform duration-200 shrink-0">
                       ▼
                     </span>
                   </summary>
 
                   {/* Expanded content: tool list + technique cards */}
-                  <div className="border-t border-zinc-800/40 px-5 py-4 space-y-4 bg-zinc-900/20">
+                  <div className="border-t border-border px-5 py-4 space-y-4 bg-surface-muted/60">
                     {/* Technique badges */}
                     <div>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mb-2.5">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2.5">
                         Técnicas MITRE ({techniques.length})
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -222,7 +222,7 @@ export default function MitreCoveragePage() {
                             href={tech.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-medium transition-colors hover:brightness-110 ${getColor(tech.tactic).light} ${getColor(tech.tactic).text} border-zinc-700/50 hover:border-zinc-600`}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-medium transition-colors hover:brightness-110 ${getColor(tech.tactic).light} ${getColor(tech.tactic).text} border-border hover:border-foreground/20`}
                           >
                             <span className="font-mono font-bold text-[10px]">{tech.id}</span>
                             <span className="opacity-70">·</span>
@@ -234,7 +234,7 @@ export default function MitreCoveragePage() {
 
                     {/* Tools list */}
                     <div>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mb-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">
                         Herramientas ({toolCount})
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -243,7 +243,7 @@ export default function MitreCoveragePage() {
                           ?.tools.map((toolId) => (
                             <span
                               key={toolId}
-                              className="px-2 py-0.5 rounded text-[10px] font-mono text-zinc-400 bg-zinc-800/40 border border-zinc-800/30"
+                              className="px-2 py-0.5 rounded text-[10px] font-mono text-muted-foreground bg-surface-muted border border-border"
                             >
                               {toolId}
                             </span>
@@ -262,27 +262,27 @@ export default function MitreCoveragePage() {
            ═══════════════════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <span className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[11px]">📋</span>
+            <span className="w-6 h-6 rounded-full bg-accent-purple/15 flex items-center justify-center text-[11px]">📋</span>
             <div>
-              <h2 className="text-sm font-semibold text-zinc-100">Catálogo Completo de Técnicas</h2>
-              <p className="text-[10px] text-zinc-500">Todas las técnicas MITRE cubiertas con herramientas asociadas</p>
+              <h2 className="text-sm font-semibold text-foreground">Catálogo Completo de Técnicas</h2>
+              <p className="text-[10px] text-muted-foreground">Todas las técnicas MITRE cubiertas con herramientas asociadas</p>
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-zinc-800/50">
+          <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-zinc-900/80 border-b border-zinc-800/60">
-                  <th className="text-left py-3 px-4 text-zinc-500 font-semibold tracking-wider uppercase text-[10px]">Técnica</th>
-                  <th className="text-left py-3 px-4 text-zinc-500 font-semibold tracking-wider uppercase text-[10px]">Nombre</th>
-                  <th className="text-left py-3 px-4 text-zinc-500 font-semibold tracking-wider uppercase text-[10px]">Táctica</th>
-                  <th className="text-left py-3 px-4 text-zinc-500 font-semibold tracking-wider uppercase text-[10px]">Herramientas</th>
-                  <th className="text-left py-3 px-4 text-zinc-500 font-semibold tracking-wider uppercase text-[10px]">Descripción</th>
+                <tr className="bg-surface-muted border-b border-border">
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Técnica</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Nombre</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Táctica</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Herramientas</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Descripción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/30">
+              <tbody className="divide-y divide-border">
                 {allTechniques.map(({ technique: tech, tools }) => (
-                  <tr key={tech.id} className="hover:bg-zinc-800/20 transition-colors group">
+                  <tr key={tech.id} className="hover:bg-surface-muted transition-colors group">
                     <td className="py-3 px-4">
                       <a
                         href={tech.url}
@@ -293,7 +293,7 @@ export default function MitreCoveragePage() {
                         {tech.id}
                       </a>
                     </td>
-                    <td className="py-3 px-4 text-zinc-200 font-medium whitespace-nowrap">{tech.name}</td>
+                    <td className="py-3 px-4 text-foreground font-medium whitespace-nowrap">{tech.name}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium ${getColor(tech.tactic).light} ${getColor(tech.tactic).text}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${getColor(tech.tactic).bar}`} />
@@ -303,16 +303,16 @@ export default function MitreCoveragePage() {
                     <td className="py-3 px-4">
                       <div className="flex flex-wrap gap-1 max-w-[280px]">
                         {tools.slice(0, 4).map((t) => (
-                          <span key={t} className="px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-500 bg-zinc-800/40 border border-zinc-800/30">
+                          <span key={t} className="px-1.5 py-0.5 rounded text-[9px] font-mono text-muted-foreground bg-surface-muted border border-border">
                             {t}
                           </span>
                         ))}
                         {tools.length > 4 && (
-                          <span className="text-[9px] text-zinc-600 px-1.5 py-0.5">+{tools.length - 4}</span>
+                          <span className="text-[9px] text-muted-foreground px-1.5 py-0.5">+{tools.length - 4}</span>
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-zinc-400 max-w-[300px] truncate" title={tech.description}>
+                    <td className="py-3 px-4 text-muted-foreground max-w-[300px] truncate" title={tech.description}>
                       {tech.description}
                     </td>
                   </tr>
@@ -326,23 +326,23 @@ export default function MitreCoveragePage() {
            Section 4: Legend / Notes
            ═══════════════════════════════════════════════════════════════ */}
         <section className="pb-12">
-          <div className="bg-zinc-900/30 border border-zinc-800/30 rounded-xl p-6 text-xs text-zinc-500 space-y-2">
+          <div className="bg-surface-muted/60 border border-border rounded-xl p-6 text-xs text-muted-foreground space-y-2">
             <p className="flex items-center gap-2">
-              <span className="text-zinc-600">🔗</span>
+              <span className="text-muted-foreground">🔗</span>
               Todos los IDs de técnica enlazan a la documentación oficial de{" "}
-              <a href="https://attack.mitre.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+              <a href="https://attack.mitre.org/" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:underline">
                 MITRE ATT&CK
               </a>
             </p>
             <p className="flex items-center gap-2">
-              <span className="text-zinc-600">📊</span>
+              <span className="text-muted-foreground">📊</span>
               {coverage.totalTechniques} técnicas únicas cubiertas por {coverage.totalTools} herramientas en {coverage.totalTactics} tácticas.
               Las herramientas se asignan manualmente según su propósito de detección.
             </p>
             <p className="flex items-center gap-2">
-              <span className="text-zinc-600">🔄</span>
+              <span className="text-muted-foreground">🔄</span>
               El mapeo se actualiza cuando se agregan nuevas herramientas de escaneo. Fuente:{" "}
-              <code className="text-zinc-400 font-mono text-[10px] bg-zinc-800/40 px-1.5 py-0.5 rounded">src/shared/data/mitre-mapping.ts</code>
+              <code className="text-muted-foreground font-mono text-[10px] bg-surface-muted px-1.5 py-0.5 rounded">src/shared/data/mitre-mapping.ts</code>
             </p>
           </div>
         </section>

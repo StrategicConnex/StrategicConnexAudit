@@ -23,7 +23,7 @@ export default async function AiHealthPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white selection:bg-cyan-500/20">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
       <Suspense fallback={<LoadingSkeleton />}>
         <AiHealthDashboardClient
           recent={recent}
@@ -39,16 +39,16 @@ export default async function AiHealthPage() {
 function LoadingSkeleton() {
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-8 animate-pulse">
-      <div className="h-8 w-64 bg-white/5 rounded-lg" />
+      <div className="h-8 w-64 bg-surface-muted rounded-lg" />
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-32 bg-white/5 rounded-xl" />
+          <div key={i} className="h-32 bg-surface-muted rounded-xl" />
         ))}
       </div>
-      <div className="h-80 bg-white/5 rounded-xl" />
+      <div className="h-80 bg-surface-muted rounded-xl" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="h-64 bg-white/5 rounded-xl" />
-        <div className="h-64 bg-white/5 rounded-xl" />
+        <div className="h-64 bg-surface-muted rounded-xl" />
+        <div className="h-64 bg-surface-muted rounded-xl" />
       </div>
     </div>
   );

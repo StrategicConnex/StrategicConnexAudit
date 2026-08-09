@@ -49,6 +49,13 @@
   --color-chart-warning: var(--chart-warning);
   --color-chart-danger: var(--chart-danger);
   --color-chart-tooltip: var(--chart-tooltip);
+
+  /* Acentos multi-hue (info/tactics/data-viz) — theme-scoped */
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-indigo: var(--accent-indigo);
+  --color-accent-violet: var(--accent-violet);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -162,6 +169,13 @@
   --gradient-primary: linear-gradient(135deg, oklch(55% 0.16 250), oklch(45% 0.13 300));
   --gradient-accent: linear-gradient(135deg, oklch(72% 0.15 140), oklch(62% 0.14 95));
 
+  /* Acentos multi-hue — brillantes sobre dark */
+  --accent-blue: oklch(72% 0.15 250);
+  --accent-purple: oklch(70% 0.15 300);
+  --accent-cyan: oklch(75% 0.12 200);
+  --accent-indigo: oklch(69% 0.16 265);
+  --accent-violet: oklch(67% 0.16 285);
+
   /* Efectos atmosféricos */
   --grid-line: oklch(100% 0 0 / 0.008);
   --shimmer-a: oklch(100% 0 0 / 0.02);
@@ -226,6 +240,13 @@
   --gradient-surface-hero: linear-gradient(160deg, oklch(100% 0 0 / 0.9), oklch(95% 0.01 265 / 0.95));
   --gradient-primary: linear-gradient(135deg, oklch(48% 0.15 258), oklch(42% 0.13 300));
   --gradient-accent: linear-gradient(135deg, oklch(52% 0.13 130), oklch(48% 0.12 90));
+
+  /* Acentos multi-hue — oscuros sobre light (AA) */
+  --accent-blue: oklch(48% 0.15 250);
+  --accent-purple: oklch(46% 0.15 300);
+  --accent-cyan: oklch(44% 0.12 200);
+  --accent-indigo: oklch(45% 0.16 265);
+  --accent-violet: oklch(43% 0.16 285);
 
   --grid-line: oklch(17% 0.02 265 / 0.06);
   --shimmer-a: oklch(17% 0.02 265 / 0.04);

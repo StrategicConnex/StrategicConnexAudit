@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { Mail, Loader2, CheckCircle2, AlertCircle, ArrowRight, Shield, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher';
+import { ThemeSwitcher } from '@/shared/design-system';
 import AiCoreVisual from '../components/AiCoreVisual';
 
 // ─── Placeholder rotativo ──────────────────────────────────────────
@@ -290,7 +291,7 @@ function LoginContent() {
                   autoFocus
                   autoComplete="email"
                   aria-describedby={validationReason ? 'email-validation-msg' : undefined}
-                  className={`block w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 bg-black/40 border rounded-xl text-sm sm:text-base text-foreground placeholder-transparent focus:outline-none focus:ring-2 transition-all duration-300 ${
+                  className={`block w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 bg-input/50 border rounded-xl text-sm sm:text-base text-foreground placeholder-transparent focus:outline-none focus:ring-2 transition-all duration-300 ${
                     validationState === 'valid'
                       ? 'border-chartreuse/50 focus:ring-chartreuse/30 focus:border-chartreuse shadow-[0_0_20px_-8px_oklch(0.78_0.18_140/0.15)]'
                       : validationState === 'invalid'
@@ -374,7 +375,7 @@ function LoginContent() {
                   message.type === 'error'
                     ? 'bg-destructive/10 text-destructive border border-destructive/15'
                     : message.type === 'warning'
-                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/15'
+                    ? 'bg-chart-warning/10 text-chart-warning border border-chart-warning/15'
                     : 'bg-chartreuse/10 text-chartreuse border border-chartreuse/15'
                 }`}>
                   <div className={`shrink-0 transition-transform duration-300 ${
@@ -394,10 +395,10 @@ function LoginContent() {
             <button
               type="submit"
               disabled={loading || validationState === 'invalid' || !email.trim()}
-              className={`group relative w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 px-4 rounded-xl text-primary-fg font-semibold focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all duration-300 active:scale-[0.97] overflow-hidden ${
+              className={`group relative w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 px-4 rounded-xl font-semibold focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all duration-300 active:scale-[0.97] overflow-hidden ${
                 loading || validationState === 'invalid' || !email.trim()
-                  ? 'opacity-40 cursor-not-allowed bg-white/5'
-                  : 'bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-primary/30'
+                  ? 'cursor-not-allowed bg-muted text-muted-foreground'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-primary/30'
               }`}
             >
               {/* Shimmer overlay solo en hover (cuando está habilitado) */}
@@ -439,7 +440,8 @@ function LoginContent() {
               <span>{t('footerEnterprise')}</span>
             </div>
           </div>
-        </div>          <div className="mt-3 flex justify-center">
+        </div>          <div className="mt-3 flex items-center justify-center gap-2">
+            <ThemeSwitcher />
             <LanguageSwitcher mini />
           </div>
           <p className="mt-2 text-center text-[10px] sm:text-xs text-muted-fg/40">

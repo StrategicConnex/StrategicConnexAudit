@@ -338,7 +338,7 @@ export function SettingsTab({
     const days = (new Date(expiresAt).getTime() - now) / 86400000;
     if (days <= 7 && days >= 0) {
       return (
-        <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+        <span className="text-[9px] bg-chart-warning/10 text-chart-warning border border-chart-warning/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
           {Math.ceil(days)}d
         </span>
       );
@@ -354,7 +354,7 @@ export function SettingsTab({
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="mb-12 relative z-10">
-          <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
+          <h2 className="text-2xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
             <Settings className="w-6 h-6 text-primary" />
             {t('pageTitle')}
           </h2>
@@ -367,7 +367,7 @@ export function SettingsTab({
             <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">{t('sectionAi')}</h3>
             <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-colors">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[15px] font-bold text-white tracking-tight">{t('aiGatewayLabel')}</span>
+                <span className="text-[15px] font-bold text-foreground tracking-tight">{t('aiGatewayLabel')}</span>
                 <span className="text-[9px] font-bold bg-chartreuse/10 text-chartreuse px-3 py-1 rounded-full border border-chartreuse/20 uppercase tracking-wider">{t('aiGatewayBadge')}</span>
               </div>
               <p className="text-xs text-muted-fg mb-6 leading-relaxed">{t('aiGatewayDesc')}</p>
@@ -394,7 +394,7 @@ export function SettingsTab({
                   <input 
                     type="text" 
                     placeholder={t('brandingNamePlaceholder')} 
-                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder:text-muted-fg focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                     id="branding-name-input"
                     value={agencyName}
                     onChange={(e) => setAgencyName(e.target.value)}
@@ -416,7 +416,7 @@ export function SettingsTab({
                         type="text" 
                         id="branding-color-text"
                         placeholder={t('brandingColorPlaceholder')} 
-                        className="flex-1 bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm font-bold text-foreground/80 focus:outline-none transition-colors uppercase placeholder-zinc-700"
+                        className="flex-1 bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm font-bold text-foreground/80 focus:outline-none transition-colors uppercase placeholder:text-muted-fg"
                         value={primaryColor}
                         onChange={(e) => setPrimaryColor(e.target.value)}
                       />
@@ -428,7 +428,7 @@ export function SettingsTab({
                     <input 
                       type="text" 
                       placeholder={t('brandingLogoPlaceholder')} 
-                      className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+                      className="w-full bg-card border border-border focus:border-primary rounded-xl px-6 py-3.5 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder:text-muted-fg focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                       value={logoUrl}
                       onChange={(e) => setLogoUrl(e.target.value)}
                     />
@@ -439,9 +439,9 @@ export function SettingsTab({
               <div className="mt-12 flex justify-end">
                 <button 
                   onClick={handleSaveBranding}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black px-10 py-3.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-[color,background-color,box-shadow] flex items-center gap-3 group cursor-pointer"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-3.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-[color,background-color,box-shadow] flex items-center gap-3 group cursor-pointer"
                 >
-                  <Save className="w-4 h-4 group-hover:scale-110 transition-transform text-black" /> {t('brandingSaveButton')}
+                  <Save className="w-4 h-4 group-hover:scale-110 transition-transform text-primary-foreground" /> {t('brandingSaveButton')}
                 </button>
               </div>
             </div>
@@ -456,7 +456,7 @@ export function SettingsTab({
         <div className="mb-12 relative z-10">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
+              <h2 className="text-2xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
                 <Key className="w-6 h-6 text-primary" />
                 {t('apiKeysTitle')}
               </h2>
@@ -466,7 +466,7 @@ export function SettingsTab({
             </div>
             <a
               href="/settings/api-keys"
-              className="shrink-0 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-[color,background-color,box-shadow] flex items-center gap-2 cursor-pointer"
+              className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-[color,background-color,box-shadow] flex items-center gap-2 cursor-pointer"
             >
               <BarChart3 className="w-4 h-4" /> {t('apiKeysDashboardButton')}
             </a>
@@ -489,7 +489,7 @@ export function SettingsTab({
                   placeholder={t('apiKeysNamePlaceholder')} 
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
-                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+                  className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder:text-muted-fg focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                 />
               </div>
 
@@ -519,15 +519,15 @@ export function SettingsTab({
               <button
                 type="submit"
                 disabled={creatingKey || !newKeyName.trim()}
-                className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
+                className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
               >
                 {creatingKey ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-black" /> {t('apiKeysGenerating')}
+                    <Loader2 className="w-4 h-4 animate-spin text-primary-foreground" /> {t('apiKeysGenerating')}
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4 h-4 text-black" /> {t('apiKeysGenerateButton')}
+                    <Plus className="w-4 h-4 text-primary-foreground" /> {t('apiKeysGenerateButton')}
                   </>
                 )}
               </button>
@@ -560,7 +560,7 @@ export function SettingsTab({
                       placeholder={t('apiKeysSearchPlaceholder')}
                       value={keySearch}
                       onChange={(e) => setKeySearch(e.target.value)}
-                      className="w-full bg-card border border-border focus:border-primary rounded-xl pl-10 pr-4 py-2.5 text-xs text-foreground/80 font-medium focus:outline-none transition-colors placeholder-zinc-600"
+                      className="w-full bg-card border border-border focus:border-primary rounded-xl pl-10 pr-4 py-2.5 text-xs text-foreground/80 font-medium focus:outline-none transition-colors placeholder:text-muted-fg"
                     />
                   </div>
                   <div className="flex items-center gap-3">
@@ -569,9 +569,9 @@ export function SettingsTab({
                         type="checkbox"
                         checked={showExpiringSoon}
                         onChange={(e) => setShowExpiringSoon(e.target.checked)}
-                        className="rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
+                        className="rounded border-border text-primary focus:ring-primary/20 bg-card"
                       />
-                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      <Clock className="w-3.5 h-3.5 text-chart-warning" />
                       <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">{t('apiKeysFilterExpiringSoon')}</span>
                     </label>
                     <button
@@ -603,7 +603,7 @@ export function SettingsTab({
                         <th className="p-4 text-right uppercase tracking-wider text-[9px]">{t('apiKeysColAction')}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/[0.04]">
+                    <tbody className="divide-y divide-border">
                       {visibleKeys.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="p-6 text-center text-xs text-muted-fg">
@@ -614,7 +614,7 @@ export function SettingsTab({
                       ) : (
                         visibleKeys.map((key) => (
                           <tr key={key.id} className="hover:bg-muted/1 transition-colors text-foreground/80 font-medium">
-                            <td className="p-4 text-white font-bold flex items-center gap-2">
+                            <td className="p-4 text-foreground font-bold flex items-center gap-2">
                               {key.name}
                               {renderExpiryBadge(key.expiresAt)}
                             </td>
@@ -637,7 +637,7 @@ export function SettingsTab({
                             <td className="p-4 text-right">
                               <button
                                 onClick={() => handleRevokeApiKey(key.id)}
-                                className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-lg border border-destructive/20 transition-colors cursor-pointer"
+                                className="text-destructive hover:text-destructive/80 bg-destructive/10 hover:bg-destructive/20 p-2 rounded-lg border border-destructive/20 transition-colors cursor-pointer"
                                 title={t('apiKeysRevokeTitle')}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -661,7 +661,7 @@ export function SettingsTab({
         <div className="mb-12 relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-3">
+              <h2 className="text-2xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
                 <Globe className="w-6 h-6 text-primary" />
                 {t('webhooksTitle')}
               </h2>
@@ -677,7 +677,7 @@ export function SettingsTab({
                 <select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId && setSelectedProjectId(e.target.value)}
-                  className="bg-card border border-border focus:border-primary rounded-xl px-4 py-2.5 text-xs text-white font-bold focus:outline-none transition-colors cursor-pointer"
+                  className="bg-card border border-border focus:border-primary rounded-xl px-4 py-2.5 text-xs text-foreground font-bold focus:outline-none transition-colors cursor-pointer"
                 >
                   {initialProjects.map(proj => (
                     <option key={proj.id} value={proj.id}>{proj.name} ({proj.domain})</option>
@@ -705,7 +705,7 @@ export function SettingsTab({
                     placeholder={t('webhooksNamePlaceholder')} 
                     value={newWebhookName}
                     onChange={(e) => setNewWebhookName(e.target.value)}
-                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
+                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder:text-muted-fg focus:shadow-[0_0_15px_rgba(98,113,196,0.15)]"
                   />
                 </div>
 
@@ -717,7 +717,7 @@ export function SettingsTab({
                     placeholder={t('webhooksUrlPlaceholder')} 
                     value={newWebhookUrl}
                     onChange={(e) => setNewWebhookUrl(e.target.value)}
-                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-700 focus:shadow-[0_0_15px_rgba(98,113,196,0.15)] font-mono"
+                    className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-bold focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder:text-muted-fg focus:shadow-[0_0_15px_rgba(98,113,196,0.15)] font-mono"
                   />
                 </div>
               </div>
@@ -731,10 +731,10 @@ export function SettingsTab({
                       type="checkbox"
                       checked={webhookEvents.includes('audit.completed')}
                       onChange={() => handleToggleEvent('audit.completed')}
-                      className="mt-0.5 rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
+                      className="mt-0.5 rounded border-border text-primary focus:ring-primary/20 bg-card"
                     />
                     <div>
-                      <span className="text-xs font-bold text-white block font-mono">audit.completed</span>
+                      <span className="text-xs font-bold text-foreground block font-mono">audit.completed</span>
                       <span className="text-[10px] text-muted-fg">{t('webhooksEventAuditDesc')}</span>
                     </div>
                   </label>
@@ -744,10 +744,10 @@ export function SettingsTab({
                       type="checkbox"
                       checked={webhookEvents.includes('alert.triggered')}
                       onChange={() => handleToggleEvent('alert.triggered')}
-                      className="mt-0.5 rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
+                      className="mt-0.5 rounded border-border text-primary focus:ring-primary/20 bg-card"
                     />
                     <div>
-                      <span className="text-xs font-bold text-white block font-mono">alert.triggered</span>
+                      <span className="text-xs font-bold text-foreground block font-mono">alert.triggered</span>
                       <span className="text-[10px] text-muted-fg">{t('webhooksEventAlertDesc')}</span>
                     </div>
                   </label>
@@ -767,7 +767,7 @@ export function SettingsTab({
                     type="checkbox"
                     checked={webhookActive}
                     onChange={(e) => setWebhookActive(e.target.checked)}
-                    className="rounded border-zinc-700 text-primary focus:ring-cyan-500/20 bg-black"
+                    className="rounded border-border text-primary focus:ring-primary/20 bg-card"
                   />
                   <span className="text-xs text-muted-fg font-bold uppercase tracking-wider">{t('webhooksActiveLabel')}</span>
                 </label>
@@ -775,15 +775,15 @@ export function SettingsTab({
                 <button
                   type="submit"
                   disabled={creatingWebhook || !newWebhookName.trim() || !newWebhookUrl.trim() || webhookEvents.length === 0}
-                  className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
+                  className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
                 >
                   {creatingWebhook ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-black" /> {t('webhooksRegistering')}
+                      <Loader2 className="w-4 h-4 animate-spin text-primary-foreground" /> {t('webhooksRegistering')}
                     </>
                   ) : (
                     <>
-                      <Plus className="w-4 h-4 text-black" /> {t('webhooksRegisterButton')}
+                      <Plus className="w-4 h-4 text-primary-foreground" /> {t('webhooksRegisterButton')}
                     </>
                   )}
                 </button>
@@ -821,11 +821,11 @@ export function SettingsTab({
                     >
                       <div className="space-y-3 flex-1 min-w-0">
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-bold text-white truncate">{wh.name}</span>
+                          <span className="text-sm font-bold text-foreground truncate">{wh.name}</span>
                           <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
                             wh.active 
                               ? 'bg-chartreuse/10 text-chartreuse border-chartreuse/20' 
-                              : 'bg-zinc-500/10 text-muted-fg border-border/50'
+                              : 'bg-muted/60 text-muted-fg border-border/50'
                           }`}>
                             {wh.active ? t('webhooksActiveBadge') : t('webhooksPausedBadge')}
                           </span>
@@ -851,7 +851,7 @@ export function SettingsTab({
                             Se muestra completo UNA sola vez al crear el webhook (modal POST). */}
                         {wh.secretTokenPreview && (
                           <span
-                            className="bg-zinc-500/10 border border-border text-muted-fg px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider"
+                            className="bg-muted/60 border border-border text-muted-fg px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider"
                             title={t('webhooksSecretMasked')}
                           >
                             {wh.secretTokenPreview}
@@ -860,7 +860,7 @@ export function SettingsTab({
 
                         <button
                           onClick={() => handleDeleteWebhook(wh.id)}
-                          className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-xl border border-destructive/20 transition-colors cursor-pointer"
+                          className="text-destructive hover:text-destructive/80 bg-destructive/10 hover:bg-destructive/20 p-2 rounded-xl border border-destructive/20 transition-colors cursor-pointer"
                           title={t('webhooksDeleteTitle')}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -877,19 +877,19 @@ export function SettingsTab({
 
       {/* 4. MODAL: API Key Plaintext Secret Revealed (Once) */}
       {showKeyModal && revealedClearKey && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-50 bg-overlay backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
           <div className="bg-card border border-border w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl p-8 relative space-y-6">
             <div className="text-center space-y-2">
               <div className="w-12 h-12 bg-primary/15 border border-primary/30 rounded-full flex items-center justify-center mx-auto text-primary shadow-[0_0_15px_rgba(98,113,196,0.1)]">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">{t('apiKeysModalTitle')}</h3>
+              <h3 className="text-lg font-bold text-foreground">{t('apiKeysModalTitle')}</h3>
               <p className="text-xs text-muted-fg leading-relaxed">
                 {t('apiKeysModalDesc')}
               </p>
             </div>
 
-            <div className="bg-black border border-border rounded-xl p-5 space-y-4">
+            <div className="bg-muted border border-border rounded-xl p-5 space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysModalSecretLabel')}</span>
                 <button
@@ -919,7 +919,7 @@ export function SettingsTab({
                   setShowKeyModal(false);
                   setRevealedClearKey(null);
                 }}
-                className="bg-zinc-100 hover:bg-white text-black font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(255,255,255,0.1)] transition-[color,background-color,box-shadow] cursor-pointer"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl border border-border/60 shadow-sm transition-[color,background-color,box-shadow] cursor-pointer"
               >
                 {t('apiKeysModalButton')}
               </button>
@@ -930,19 +930,19 @@ export function SettingsTab({
 
       {/* 5. MODAL: Webhook Signing Secret Revealed (Once) */}
       {showWebhookModal && revealedWebhookSecret && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-50 bg-overlay backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
           <div className="bg-card border border-border w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl p-8 relative space-y-6">
             <div className="text-center space-y-2">
               <div className="w-12 h-12 bg-primary/15 border border-primary/30 rounded-full flex items-center justify-center mx-auto text-primary shadow-[0_0_15px_rgba(98,113,196,0.1)]">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">{t('webhooksModalTitle')}</h3>
+              <h3 className="text-lg font-bold text-foreground">{t('webhooksModalTitle')}</h3>
               <p className="text-xs text-muted-fg leading-relaxed">
                 {t('webhooksModalDesc')}
               </p>
             </div>
 
-            <div className="bg-black border border-border rounded-xl p-5 space-y-4">
+            <div className="bg-muted border border-border rounded-xl p-5 space-y-4">
               {/* VULN-002 fix: sin botón de copiar — el secreto solo se muestra una
                   vez (creación) para minimizar la superficie de exposición. */}
               <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksModalSecretLabel')}</span>
@@ -960,7 +960,7 @@ export function SettingsTab({
                   setShowWebhookModal(false);
                   setRevealedWebhookSecret(null);
                 }}
-                className="bg-zinc-100 hover:bg-white text-black font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(255,255,255,0.1)] transition-[color,background-color,box-shadow] cursor-pointer"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl border border-border/60 shadow-sm transition-[color,background-color,box-shadow] cursor-pointer"
               >
                 {t('webhooksModalButton')}
               </button>

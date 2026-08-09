@@ -69,13 +69,13 @@ interface SiemAlertsApiResponse {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const EVENT_LABELS: Record<string, { label: string; color: string; icon: string }> = {
-  rate_limit_hit:       { label: "Rate Limit Hit",        color: "text-amber-400 border-amber-500/30 bg-amber-500/10",        icon: "⚠" },
-  open_redirect_attempt:{ label: "Open Redirect Attempt", color: "text-red-400 border-red-500/30 bg-red-500/10",              icon: "↗" },
-  csp_violation:        { label: "CSP Violation",         color: "text-orange-400 border-orange-500/30 bg-orange-500/10",     icon: "🔒" },
-  auth_failure:         { label: "Auth Failure",          color: "text-rose-400 border-rose-500/30 bg-rose-500/10",           icon: "✗" },
+  rate_limit_hit:       { label: "Rate Limit Hit",        color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10",        icon: "⚠" },
+  open_redirect_attempt:{ label: "Open Redirect Attempt", color: "text-destructive border-destructive/30 bg-destructive/10",              icon: "↗" },
+  csp_violation:        { label: "CSP Violation",         color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10",     icon: "🔒" },
+  auth_failure:         { label: "Auth Failure",          color: "text-destructive border-destructive/30 bg-destructive/10",           icon: "✗" },
   auth_success:         { label: "Auth Success",          color: "text-chartreuse border-chartreuse/30 bg-chartreuse/10",  icon: "✓" },
-  rate_limit_bypass:    { label: "Rate Limit Bypass",     color: "text-purple-400 border-purple-500/30 bg-purple-500/10",     icon: "⚡" },
-  invalid_input:        { label: "Invalid Input",         color: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10",    icon: "⛔" },
+  rate_limit_bypass:    { label: "Rate Limit Bypass",     color: "text-accent-purple border-accent-purple/30 bg-accent-purple/10",     icon: "⚡" },
+  invalid_input:        { label: "Invalid Input",         color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10",    icon: "⛔" },
 };
 
 function formatDate(iso: string): string {
@@ -118,12 +118,12 @@ function Filters({
   return (
     <div className="flex flex-wrap gap-3 items-end">
       <div className="flex flex-col gap-1 min-w-40">
-        <label className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">Tipo de Evento</label>
+        <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Tipo de Evento</label>
         <select
           value={filters.eventType}
           onChange={e => onChange({ ...filters, eventType: e.target.value })}
-          className="bg-zinc-900/80 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-200 
-                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-chartreuse/50
+          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground 
+                     focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50
                      transition-all duration-150 cursor-pointer"
         >
           <option value="all">Todos</option>
@@ -133,46 +133,46 @@ function Filters({
         </select>
       </div>
       <div className="flex flex-col gap-1 min-w-36">
-        <label className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">IP</label>
+        <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">IP</label>
         <input
           type="text"
           placeholder="Filtrar por IP…"
           value={filters.ip}
           onChange={e => onChange({ ...filters, ip: e.target.value })}
-          className="bg-zinc-900/80 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600
-                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-chartreuse/50
+          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground
+                     focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50
                      transition-all duration-150"
         />
       </div>
       <div className="flex flex-col gap-1 min-w-32">
-        <label className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">Desde</label>
+        <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Desde</label>
         <input
           type="date"
           value={filters.from}
           max={today}
           onChange={e => onChange({ ...filters, from: e.target.value })}
-          className="bg-zinc-900/80 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-200
-                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-chartreuse/50
+          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground
+                     focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50
                      transition-all duration-150"
         />
       </div>
       <div className="flex flex-col gap-1 min-w-32">
-        <label className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">Hasta</label>
+        <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Hasta</label>
         <input
           type="date"
           value={filters.to}
           max={today}
           onChange={e => onChange({ ...filters, to: e.target.value })}
-          className="bg-zinc-900/80 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-200
-                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-chartreuse/50
+          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground
+                     focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50
                      transition-all duration-150"
         />
       </div>
       {(filters.eventType !== "all" || filters.ip || filters.from || filters.to) && (
         <button
           onClick={() => onChange({ eventType: "all", ip: "", from: "", to: "" })}
-          className="px-3 py-2 text-xs text-zinc-400 hover:text-zinc-200 transition-colors duration-150
-                     border border-zinc-800 hover:border-zinc-700 rounded-md"
+          className="px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors duration-150
+                     border border-border hover:border-foreground/20 rounded-md"
         >
           Limpiar
         </button>
@@ -196,8 +196,8 @@ function EventRow({ entry, isExpanded, onToggle }: {
     <>
       <tr
         onClick={hasMetadata ? onToggle : undefined}
-        className={`group border-b border-zinc-800/50 transition-colors duration-100
-          ${isExpanded ? "bg-zinc-800/40" : "hover:bg-zinc-800/20"}
+        className={`group border-b border-border transition-colors duration-100
+          ${isExpanded ? "bg-surface-muted" : "hover:bg-surface-muted"}
           ${hasMetadata ? "cursor-pointer" : ""}`}
       >
         <td className="py-3 px-4">
@@ -206,17 +206,17 @@ function EventRow({ entry, isExpanded, onToggle }: {
             {meta.label}
           </span>
         </td>
-        <td className="py-3 px-4 font-mono text-xs text-zinc-300">{entry.ip}</td>
+        <td className="py-3 px-4 font-mono text-xs text-foreground">{entry.ip}</td>
         <td className="py-3 px-4">
-          <span className="font-mono text-[11px] text-zinc-500 bg-zinc-800/60 px-2 py-0.5 rounded">
+          <span className="font-mono text-[11px] text-muted-foreground bg-surface-muted px-2 py-0.5 rounded">
             {entry.method}
           </span>
-          <span className="ml-2 text-xs text-zinc-400">{truncate(entry.path, 40)}</span>
+          <span className="ml-2 text-xs text-muted-foreground">{truncate(entry.path, 40)}</span>
         </td>
-        <td className="py-3 px-4 text-xs text-zinc-500 font-mono whitespace-nowrap">
+        <td className="py-3 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">
           <span title={formatDate(entry.createdAt)}>{timeAgo(entry.createdAt)}</span>
         </td>
-        <td className="py-3 px-4 text-right text-xs text-zinc-600">
+        <td className="py-3 px-4 text-right text-xs text-muted-foreground">
           {hasMetadata && (
             <span className={`inline-block transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
               ▼
@@ -225,15 +225,15 @@ function EventRow({ entry, isExpanded, onToggle }: {
         </td>
       </tr>
       {isExpanded && hasMetadata && (
-        <tr className="bg-zinc-900/40 border-b border-zinc-800/30">
+        <tr className="bg-surface-muted border-b border-border">
           <td colSpan={5} className="py-4 px-8">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {metadataKeys.map(k => {
                 const v = entry.metadata[k];
                 return (
-                  <div key={k} className="bg-zinc-900/60 rounded-md px-3 py-2 border border-zinc-800/40">
-                    <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1">{k}</div>
-                    <div className="text-xs text-zinc-300 font-mono break-all">
+                  <div key={k} className="bg-card rounded-md px-3 py-2 border border-border">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">{k}</div>
+                    <div className="text-xs text-foreground font-mono break-all">
                       {typeof v === "object" ? JSON.stringify(v) : String(v)}
                     </div>
                   </div>
@@ -259,22 +259,22 @@ function StatsBar({ logs, total }: { logs: AuditLogEntry[]; total: number }) {
   }, [logs]);
 
   return (
-    <div className="flex items-center gap-4 text-xs text-zinc-400 flex-wrap">
-      <span className="text-zinc-500 font-semibold">
+    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+      <span className="text-muted-foreground font-semibold">
         {total} evento{total !== 1 ? "s" : ""}
       </span>
-      <span className="text-zinc-700">|</span>
+      <span className="text-muted-foreground">|</span>
       {counts.slice(0, 5).map(([type, count]) => {
         const m = EVENT_LABELS[type];
         return (
           <span key={type} className="flex items-center gap-1">
             <span className="text-[11px]">{m?.icon || "•"}</span>
-            <span className="text-zinc-300">{count}</span>
-            <span className="text-zinc-600">{m?.label || type}</span>
+            <span className="text-foreground">{count}</span>
+            <span className="text-muted-foreground">{m?.label || type}</span>
           </span>
         );
       })}
-      {counts.length > 5 && <span className="text-zinc-600">+{counts.length - 5} más</span>}
+      {counts.length > 5 && <span className="text-muted-foreground">+{counts.length - 5} más</span>}
     </div>
   );
 }
@@ -285,13 +285,13 @@ type Tab = "events" | "siem" | "whois" | "dns";
 
 function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
-    <div className="flex gap-1 mb-4 border-b border-zinc-800/60">
+    <div className="flex gap-1 mb-4 border-b border-border">
       <button
         onClick={() => onChange("events")}
         className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
           active === "events"
             ? "text-chartreuse border-chartreuse"
-            : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-zinc-700"
+            : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
         }`}
       >
         🛡️ Security Events
@@ -301,7 +301,7 @@ function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
         className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
           active === "siem"
             ? "text-chartreuse border-chartreuse"
-            : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-zinc-700"
+            : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
         }`}
       >
         📡 SIEM Alerts
@@ -311,7 +311,7 @@ function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
         className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
           active === "whois"
             ? "text-chartreuse border-chartreuse"
-            : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-zinc-700"
+            : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
         }`}
       >
         🔍 WHOIS Alerts
@@ -321,7 +321,7 @@ function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
         className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
           active === "dns"
             ? "text-chartreuse border-chartreuse"
-            : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-zinc-700"
+            : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
         }`}
       >
         🌐 DNS Alerts
@@ -333,16 +333,16 @@ function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
 // ─── SIEM Alert Card (desde siem_alert_logs) ──────────────────────────────────
 
 const SEVERITY_COLORS: Record<string, { label: string; color: string; icon: string }> = {
-  critical: { label: "Critical", color: "text-red-400 border-red-500/30 bg-red-500/10", icon: "🔴" },
-  warning:  { label: "Warning",  color: "text-amber-400 border-amber-500/30 bg-amber-500/10", icon: "🟡" },
-  info:     { label: "Info",     color: "text-blue-400 border-blue-500/30 bg-blue-500/10", icon: "🔵" },
+  critical: { label: "Critical", color: "text-destructive border-destructive/30 bg-destructive/10", icon: "🔴" },
+  warning:  { label: "Warning",  color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10", icon: "🟡" },
+  info:     { label: "Info",     color: "text-accent-blue border-accent-blue/30 bg-accent-blue/10", icon: "🔵" },
 };
 
 const TARGET_BADGES: Record<string, { label: string; color: string }> = {
-  Slack:      { label: "Slack",      color: "text-purple-400 border-purple-500/30 bg-purple-500/10" },
-  PagerDuty:  { label: "PagerDuty",  color: "text-green-400 border-green-500/30 bg-green-500/10" },
-  Splunk:     { label: "Splunk",     color: "text-blue-400 border-blue-500/30 bg-blue-500/10" },
-  Email:      { label: "Email",      color: "text-rose-400 border-rose-500/30 bg-rose-500/10" },
+  Slack:      { label: "Slack",      color: "text-accent-purple border-accent-purple/30 bg-accent-purple/10" },
+  PagerDuty:  { label: "PagerDuty",  color: "text-chart-success border-chart-success/30 bg-chart-success/10" },
+  Splunk:     { label: "Splunk",     color: "text-accent-blue border-accent-blue/30 bg-accent-blue/10" },
+  Email:      { label: "Email",      color: "text-destructive border-destructive/30 bg-destructive/10" },
 };
 
 function SiemCard({ entry }: { entry: SiemAlertEntry }) {
@@ -357,7 +357,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
     return (
       <div className={`rounded-lg border px-5 py-4 transition-all duration-300 ${
         isFailed
-          ? "bg-red-900/10 border-red-800/30"
+          ? "bg-destructive/10 border-destructive/30"
           : "bg-chartreuse/10 border-chartreuse/20 hover:border-chartreuse/40 hover:bg-chartreuse/15"
       }`}>
         <div className="flex items-start justify-between gap-4">
@@ -367,25 +367,25 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
               {/* Animated pulse dot */}
               {!isFailed && (
                 <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-success opacity-75" />
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-chartreuse" />
                 </span>
               )}
               {isFailed && (
-                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-chart-danger" />
               )}
-              <span className={`text-sm font-medium ${isFailed ? "text-red-300" : "text-chartreuse"} truncate`}>
+              <span className={`text-sm font-medium ${isFailed ? "text-destructive" : "text-chartreuse"} truncate`}>
                 💓 {isFailed ? "Heartbeat Failed" : "Heartbeat OK"}
               </span>
               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                 isFailed
-                  ? "text-red-400 border-red-500/30 bg-red-500/10"
+                  ? "text-destructive border-destructive/30 bg-destructive/10"
                   : "text-chartreuse border-chartreuse/30 bg-chartreuse/10"
               }`}>
                 {entry.target}
               </span>
               {isFailed ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-red-400 border-red-500/30 bg-red-500/10">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-destructive border-destructive/30 bg-destructive/10">
                   ✗ Failed
                 </span>
               ) : (
@@ -397,22 +397,22 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
 
             {/* Heartbeat details — uptime + env */}
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
-              <span className="text-zinc-500">
-                Uptime: <span className="text-zinc-300 font-mono">{uptime}</span>
+              <span className="text-muted-foreground">
+                Uptime: <span className="text-foreground font-mono">{uptime}</span>
               </span>
-              <span className="text-zinc-500">
-                Env: <span className="text-zinc-300 font-mono">{nodeEnv}</span>
+              <span className="text-muted-foreground">
+                Env: <span className="text-foreground font-mono">{nodeEnv}</span>
               </span>
               {entry.responseCode != null && (
-                <span className="text-zinc-500">
-                  HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-red-400" : "text-chartreuse"}`}>{entry.responseCode}</span>
+                <span className="text-muted-foreground">
+                  HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-destructive" : "text-chartreuse"}`}>{entry.responseCode}</span>
                 </span>
               )}
             </div>
 
             {/* Error message */}
             {isFailed && entry.errorMessage && (
-              <p className="text-xs text-red-400/80 font-mono mt-2 break-all bg-red-950/30 rounded px-2 py-1 border border-red-900/30">
+              <p className="text-xs text-destructive/80 font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
                 {entry.errorMessage}
               </p>
             )}
@@ -420,7 +420,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
 
           {/* Time */}
           <div className="shrink-0 text-right">
-            <p className="text-xs text-zinc-500 font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
+            <p className="text-xs text-muted-foreground font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
               {timeAgo(entry.createdAt)}
             </p>
           </div>
@@ -431,13 +431,13 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
 
   // Regular alert card
   const sev = SEVERITY_COLORS[entry.severity] || SEVERITY_COLORS.info;
-  const targetBadge = TARGET_BADGES[entry.target] || { label: entry.target, color: "text-zinc-400 border-zinc-600/30 bg-zinc-500/10" };
+  const targetBadge = TARGET_BADGES[entry.target] || { label: entry.target, color: "text-muted-foreground border-border/60 bg-muted/60" };
 
   return (
     <div className={`rounded-lg border px-5 py-4 transition-colors duration-150 ${
       isFailed
-        ? "bg-red-900/10 border-red-800/30 hover:bg-red-900/15"
-        : "bg-zinc-900/60 border-zinc-800/50 hover:bg-zinc-900/70"
+        ? "bg-destructive/10 border-destructive/30 hover:bg-destructive/15"
+        : "bg-card border-border hover:bg-surface-muted"
     }`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -446,14 +446,14 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${sev.color}`}>
               {sev.icon} {sev.label}
             </span>
-            <span className="text-sm font-medium text-zinc-100 truncate">
+            <span className="text-sm font-medium text-foreground truncate">
               {entry.label}
             </span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${targetBadge.color}`}>
               {targetBadge.label}
             </span>
             {isFailed && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-red-400 border-red-500/30 bg-red-500/10">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-destructive border-destructive/30 bg-destructive/10">
                 ✗ Failed
               </span>
             )}
@@ -466,28 +466,28 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
 
           {/* Details row */}
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
-            <span className="text-zinc-500">
-              Tipo: <span className="text-zinc-300 font-mono">{entry.ruleEventType}</span>
+            <span className="text-muted-foreground">
+              Tipo: <span className="text-foreground font-mono">{entry.ruleEventType}</span>
             </span>
-            <span className="text-zinc-500">
-              Eventos: <span className="text-zinc-300 font-semibold">{entry.count}</span>
+            <span className="text-muted-foreground">
+              Eventos: <span className="text-foreground font-semibold">{entry.count}</span>
             </span>
-            <span className="text-zinc-500">
-              Ventana: <span className="text-zinc-300">{entry.windowMinutes} min</span>
+            <span className="text-muted-foreground">
+              Ventana: <span className="text-foreground">{entry.windowMinutes} min</span>
             </span>
-            <span className="text-zinc-500">
-              IP: <span className="text-zinc-300 font-mono">{entry.ip}</span>
+            <span className="text-muted-foreground">
+              IP: <span className="text-foreground font-mono">{entry.ip}</span>
             </span>
             {entry.responseCode != null && (
-              <span className="text-zinc-500">
-                HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-red-400" : "text-chartreuse"}`}>{entry.responseCode}</span>
+              <span className="text-muted-foreground">
+                HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-destructive" : "text-chartreuse"}`}>{entry.responseCode}</span>
               </span>
             )}
           </div>
 
           {/* Error message */}
           {isFailed && entry.errorMessage && (
-            <p className="text-xs text-red-400/80 font-mono mt-2 break-all bg-red-950/30 rounded px-2 py-1 border border-red-900/30">
+            <p className="text-xs text-destructive/80 font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
               {entry.errorMessage}
             </p>
           )}
@@ -495,7 +495,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
 
         {/* Time */}
         <div className="shrink-0 text-right">
-          <p className="text-xs text-zinc-500 font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
+          <p className="text-xs text-muted-foreground font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
             {timeAgo(entry.createdAt)}
           </p>
         </div>
@@ -549,8 +549,8 @@ interface DnsChangeMetadata {
 
 const CHANGE_TYPE_COLORS: Record<string, { label: string; color: string }> = {
   added:   { label: "Añadido", color: "text-chartreuse border-chartreuse/30 bg-chartreuse/10" },
-  changed: { label: "Modificado", color: "text-amber-400 border-amber-500/30 bg-amber-500/10" },
-  removed: { label: "Eliminado", color: "text-red-400 border-red-500/30 bg-red-500/10" },
+  changed: { label: "Modificado", color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10" },
+  removed: { label: "Eliminado", color: "text-destructive border-destructive/30 bg-destructive/10" },
 };
 
 // ─── DNS Alerts Section ────────────────────────────────────────────────────
@@ -566,7 +566,7 @@ function DnsAlertsSection({
     return (
       <div className="space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-32 bg-zinc-900/40 rounded-lg animate-pulse" />
+          <div key={i} className="h-32 bg-surface-muted rounded-lg animate-pulse" />
         ))}
       </div>
     );
@@ -574,7 +574,7 @@ function DnsAlertsSection({
 
   if (error) {
     return (
-      <div className="mb-4 px-5 py-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-300">
+      <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
         {error}
       </div>
     );
@@ -582,10 +582,10 @@ function DnsAlertsSection({
 
   if (alerts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-zinc-600">
+      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
         <span className="text-4xl mb-4">🌐</span>
         <p className="text-sm font-medium">No hay alertas DNS registradas</p>
-        <p className="text-xs mt-1 text-zinc-700 max-w-md text-center">
+        <p className="text-xs mt-1 text-muted-foreground max-w-md text-center">
           Las alertas de cambios DNS aparecerán aquí cuando el sistema detecte
           modificaciones en registros A, AAAA, MX, NS, TXT u otros tipos
           de los dominios auditados.
@@ -602,18 +602,18 @@ function DnsAlertsSection({
   return (
     <div className="space-y-3">
       {/* Summary bar */}
-      <div className="flex items-center gap-4 text-xs text-zinc-500 mb-4">
-        <span className="text-zinc-400 font-semibold">{alerts.length} alertas</span>
-        <span className="text-zinc-700">·</span>
-        <span className="text-zinc-500">{totalChanges} cambios detectados</span>
-        <span className="text-zinc-700">·</span>
-        <span className="text-zinc-500">
+      <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+        <span className="text-muted-foreground font-semibold">{alerts.length} alertas</span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-muted-foreground">{totalChanges} cambios detectados</span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-muted-foreground">
           {alerts.filter(a => a.status === "success").length} entregados
         </span>
         {alerts.filter(a => a.status === "failed").length > 0 && (
           <>
-            <span className="text-zinc-700">·</span>
-            <span className="text-red-400">
+            <span className="text-muted-foreground">·</span>
+            <span className="text-destructive">
               {alerts.filter(a => a.status === "failed").length} fallidos
             </span>
           </>
@@ -632,34 +632,34 @@ function DnsAlertsSection({
             key={entry.id}
             className={`rounded-lg border px-5 py-4 transition-colors duration-150 ${
               isFailed
-                ? "bg-red-900/10 border-red-800/30"
-                : "bg-zinc-900/60 border-zinc-800/50 hover:bg-zinc-900/70"
+                ? "bg-destructive/10 border-destructive/30"
+                : "bg-card border-border hover:bg-surface-muted"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start justify-between gap-4 mb-3">
               <div className="flex items-center gap-2.5 flex-wrap min-w-0">
                 <span className="text-lg shrink-0">🌐</span>
-                <span className="text-sm font-semibold text-zinc-100 font-mono truncate">
+                <span className="text-sm font-semibold text-foreground font-mono truncate">
                   {domain}
                 </span>
                 {/* Delivery channel badge */}
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                   entry.target === "Slack"
-                    ? "text-purple-400 border-purple-500/30 bg-purple-500/10"
+                    ? "text-accent-purple border-accent-purple/30 bg-accent-purple/10"
                     : entry.target === "PagerDuty"
-                      ? "text-green-400 border-green-500/30 bg-green-500/10"
+                      ? "text-chart-success border-chart-success/30 bg-chart-success/10"
                       : entry.target === "Splunk"
-                        ? "text-blue-400 border-blue-500/30 bg-blue-500/10"
+                        ? "text-accent-blue border-accent-blue/30 bg-accent-blue/10"
                         : entry.target === "Email"
-                          ? "text-rose-400 border-rose-500/30 bg-rose-500/10"
-                          : "text-zinc-400 border-zinc-600/30 bg-zinc-500/10"
+                          ? "text-destructive border-destructive/30 bg-destructive/10"
+                          : "text-muted-foreground border-border/60 bg-muted/60"
                 }`}>
                   {entry.target === "Slack" ? "💬" : entry.target === "PagerDuty" ? "🚨" : entry.target === "Splunk" ? "📊" : entry.target === "Email" ? "📧" : "🔗"} {entry.target}
                 </span>
                 {/* Status badge */}
                 {isFailed ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-red-400 border-red-500/30 bg-red-500/10">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-destructive border-destructive/30 bg-destructive/10">
                     ✗ Failed
                   </span>
                 ) : (
@@ -670,7 +670,7 @@ function DnsAlertsSection({
               </div>
               {/* Time */}
               <div className="shrink-0 text-right">
-                <p className="text-xs text-zinc-500 font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
+                <p className="text-xs text-muted-foreground font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
                   {timeAgo(entry.createdAt)}
                 </p>
               </div>
@@ -684,14 +684,14 @@ function DnsAlertsSection({
                   return (
                     <div
                       key={i}
-                      className="flex items-start gap-3 bg-zinc-900/40 rounded-lg px-3 py-2.5 border border-zinc-800/30"
+                      className="flex items-start gap-3 bg-surface-muted rounded-lg px-3 py-2.5 border border-border"
                     >
                       <span className="text-base shrink-0 mt-0.5">
                         {s.emoji || "📋"}
                       </span>
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
+                          <span className="text-[11px] font-semibold text-foreground uppercase tracking-wide">
                             {s.recordType}
                           </span>
                           {/* Change type badge */}
@@ -703,10 +703,10 @@ function DnsAlertsSection({
                           {/* Severity badge */}
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
                             s.severity === "critical"
-                              ? "text-red-400 border-red-500/30 bg-red-500/10"
+                              ? "text-destructive border-destructive/30 bg-destructive/10"
                               : s.severity === "warning"
-                                ? "text-amber-400 border-amber-500/30 bg-amber-500/10"
-                                : "text-blue-400 border-blue-500/30 bg-blue-500/10"
+                                ? "text-chart-warning border-chart-warning/30 bg-chart-warning/10"
+                                : "text-accent-blue border-accent-blue/30 bg-accent-blue/10"
                           }`}>
                             {s.severity}
                           </span>
@@ -718,20 +718,20 @@ function DnsAlertsSection({
                 })}
               </div>
             ) : (
-              <p className="text-xs text-zinc-600 italic ml-1">
+              <p className="text-xs text-muted-foreground italic ml-1">
                 Detalles de cambio no disponibles (datos pre-migración)
               </p>
             )}
 
             {/* Error message */}
             {isFailed && entry.errorMessage && (
-              <p className="text-xs text-red-400/80 font-mono mt-2 break-all bg-red-950/30 rounded px-2 py-1 border border-red-900/30">
+              <p className="text-xs text-destructive/80 font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
                 {entry.errorMessage}
               </p>
             )}
 
             {/* Footer: count + window */}
-            <div className="mt-2 flex items-center gap-3 text-[10px] text-zinc-600">
+            <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground">
               <span>{entry.count} cambio{entry.count !== 1 ? "s" : ""}</span>
               <span>ventana: {entry.windowMinutes} min</span>
               {entry.responseCode != null && (
@@ -750,10 +750,10 @@ function DnsAlertsSection({
 function DiffBadge({ prev, curr }: { prev: string; curr: string }) {
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="font-mono text-red-400 line-through bg-red-950/30 px-2 py-0.5 rounded border border-red-900/30 max-w-[200px] truncate" title={prev}>
+      <span className="font-mono text-destructive line-through bg-destructive/10 px-2 py-0.5 rounded border border-destructive/30 max-w-[200px] truncate" title={prev}>
         {prev || "(vacío)"}
       </span>
-      <span className="text-zinc-600 text-[10px]">→</span>
+      <span className="text-muted-foreground text-[10px]">→</span>
       <span className="font-mono text-chartreuse bg-chartreuse/30 px-2 py-0.5 rounded border border-chartreuse/30 max-w-[200px] truncate" title={curr}>
         {curr || "(vacío)"}
       </span>
@@ -772,7 +772,7 @@ function WhoisAlertsSection({
     return (
       <div className="space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-32 bg-zinc-900/40 rounded-lg animate-pulse" />
+          <div key={i} className="h-32 bg-surface-muted rounded-lg animate-pulse" />
         ))}
       </div>
     );
@@ -780,7 +780,7 @@ function WhoisAlertsSection({
 
   if (error) {
     return (
-      <div className="mb-4 px-5 py-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-300">
+      <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
         {error}
       </div>
     );
@@ -788,10 +788,10 @@ function WhoisAlertsSection({
 
   if (alerts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-zinc-600">
+      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
         <span className="text-4xl mb-4">🔍</span>
         <p className="text-sm font-medium">No hay alertas WHOIS registradas</p>
-        <p className="text-xs mt-1 text-zinc-700 max-w-md text-center">
+        <p className="text-xs mt-1 text-muted-foreground max-w-md text-center">
           Las alertas de cambios WHOIS aparecerán aquí cuando el sistema detecte
           modificaciones en registrador, expiración, nameservers u organización registrante
           de los dominios auditados.
@@ -808,18 +808,18 @@ function WhoisAlertsSection({
   return (
     <div className="space-y-3">
       {/* Summary bar */}
-      <div className="flex items-center gap-4 text-xs text-zinc-500 mb-4">
-        <span className="text-zinc-400 font-semibold">{alerts.length} alertas</span>
-        <span className="text-zinc-700">·</span>
-        <span className="text-zinc-500">{totalChanges} cambios detectados</span>
-        <span className="text-zinc-700">·</span>
-        <span className="text-zinc-500">
+      <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+        <span className="text-muted-foreground font-semibold">{alerts.length} alertas</span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-muted-foreground">{totalChanges} cambios detectados</span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-muted-foreground">
           {alerts.filter(a => a.status === "success").length} entregados
         </span>
         {alerts.filter(a => a.status === "failed").length > 0 && (
           <>
-            <span className="text-zinc-700">·</span>
-            <span className="text-red-400">
+            <span className="text-muted-foreground">·</span>
+            <span className="text-destructive">
               {alerts.filter(a => a.status === "failed").length} fallidos
             </span>
           </>
@@ -838,34 +838,34 @@ function WhoisAlertsSection({
             key={entry.id}
             className={`rounded-lg border px-5 py-4 transition-colors duration-150 ${
               isFailed
-                ? "bg-red-900/10 border-red-800/30"
-                : "bg-zinc-900/60 border-zinc-800/50 hover:bg-zinc-900/70"
+                ? "bg-destructive/10 border-destructive/30"
+                : "bg-card border-border hover:bg-surface-muted"
             }`}
           >
             {/* Header row */}
             <div className="flex items-start justify-between gap-4 mb-3">
               <div className="flex items-center gap-2.5 flex-wrap min-w-0">
                 <span className="text-lg shrink-0">🌐</span>
-                <span className="text-sm font-semibold text-zinc-100 font-mono truncate">
+                <span className="text-sm font-semibold text-foreground font-mono truncate">
                   {domain}
                 </span>
                 {/* Delivery channel badge */}
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                   entry.target === "Slack"
-                    ? "text-purple-400 border-purple-500/30 bg-purple-500/10"
+                    ? "text-accent-purple border-accent-purple/30 bg-accent-purple/10"
                     : entry.target === "PagerDuty"
-                      ? "text-green-400 border-green-500/30 bg-green-500/10"
+                      ? "text-chart-success border-chart-success/30 bg-chart-success/10"
                       : entry.target === "Splunk"
-                        ? "text-blue-400 border-blue-500/30 bg-blue-500/10"
+                        ? "text-accent-blue border-accent-blue/30 bg-accent-blue/10"
                         : entry.target === "Email"
-                          ? "text-rose-400 border-rose-500/30 bg-rose-500/10"
-                          : "text-zinc-400 border-zinc-600/30 bg-zinc-500/10"
+                          ? "text-destructive border-destructive/30 bg-destructive/10"
+                          : "text-muted-foreground border-border/60 bg-muted/60"
                 }`}>
                   {entry.target === "Slack" ? "💬" : entry.target === "PagerDuty" ? "🚨" : entry.target === "Splunk" ? "📊" : entry.target === "Email" ? "📧" : "🔗"} {entry.target}
                 </span>
                 {/* Status badge */}
                 {isFailed ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-red-400 border-red-500/30 bg-red-500/10">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-destructive border-destructive/30 bg-destructive/10">
                     ✗ Failed
                   </span>
                 ) : (
@@ -876,7 +876,7 @@ function WhoisAlertsSection({
               </div>
               {/* Time */}
               <div className="shrink-0 text-right">
-                <p className="text-xs text-zinc-500 font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
+                <p className="text-xs text-muted-foreground font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
                   {timeAgo(entry.createdAt)}
                 </p>
               </div>
@@ -888,22 +888,22 @@ function WhoisAlertsSection({
                 {samples.map((s, i) => (
                   <div
                     key={i}
-                    className="flex items-start gap-3 bg-zinc-900/40 rounded-lg px-3 py-2.5 border border-zinc-800/30"
+                    className="flex items-start gap-3 bg-surface-muted rounded-lg px-3 py-2.5 border border-border"
                   >
                     <span className="text-base shrink-0 mt-0.5">
                       {s.emoji || "📋"}
                     </span>
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
+                        <span className="text-[11px] font-semibold text-foreground uppercase tracking-wide">
                           {s.label}
                         </span>
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
                           s.severity === "critical"
-                            ? "text-red-400 border-red-500/30 bg-red-500/10"
+                            ? "text-destructive border-destructive/30 bg-destructive/10"
                             : s.severity === "warning"
-                              ? "text-amber-400 border-amber-500/30 bg-amber-500/10"
-                              : "text-blue-400 border-blue-500/30 bg-blue-500/10"
+                              ? "text-chart-warning border-chart-warning/30 bg-chart-warning/10"
+                              : "text-accent-blue border-accent-blue/30 bg-accent-blue/10"
                         }`}>
                           {s.severity}
                         </span>
@@ -914,20 +914,20 @@ function WhoisAlertsSection({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-zinc-600 italic ml-1">
+              <p className="text-xs text-muted-foreground italic ml-1">
                 Detalles de cambio no disponibles (datos pre-migración)
               </p>
             )}
 
             {/* Error message */}
             {isFailed && entry.errorMessage && (
-              <p className="text-xs text-red-400/80 font-mono mt-2 break-all bg-red-950/30 rounded px-2 py-1 border border-red-900/30">
+              <p className="text-xs text-destructive/80 font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
                 {entry.errorMessage}
               </p>
             )}
 
             {/* Footer: count + window */}
-            <div className="mt-2 flex items-center gap-3 text-[10px] text-zinc-600">
+            <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground">
               <span>{entry.count} cambio{entry.count !== 1 ? "s" : ""}</span>
               <span>ventana: {entry.windowMinutes} min</span>
               {entry.responseCode != null && (
@@ -955,23 +955,23 @@ function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismi
 
   return (
     <div className={`fixed top-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] rounded-xl border shadow-2xl 
-      ${allOk ? "bg-zinc-900 border-chartreuse/30" : "bg-zinc-900 border-red-500/30"} 
+      ${allOk ? "bg-popover border-chartreuse/30" : "bg-popover border-destructive/30"} 
       animate-in slide-in-from-right-4 duration-300`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800/60">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <span className="text-lg">{allOk ? "✅" : "⚠️"}</span>
-          <span className="text-sm font-medium text-zinc-100">Webhook Test</span>
+          <span className="text-sm font-medium text-foreground">Webhook Test</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[11px] text-zinc-500">
+          <span className="text-[11px] text-muted-foreground">
             {result.targetsAttempted} target{result.targetsAttempted !== 1 ? "s" : ""}
-            {!allOk && <span className="text-red-400 ml-1">({errorCount} fail{errorCount !== 1 ? "s" : ""})</span>}
+            {!allOk && <span className="text-destructive ml-1">({errorCount} fail{errorCount !== 1 ? "s" : ""})</span>}
           </span>
           <button
             onClick={onDismiss}
-            className="text-zinc-600 hover:text-zinc-300 transition-colors text-sm leading-none"
+            className="text-muted-foreground hover:text-foreground transition-colors text-sm leading-none"
           >
             ✕
           </button>
@@ -986,30 +986,30 @@ function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismi
             className={`flex items-start gap-3 rounded-lg px-3 py-2.5 text-xs border ${
               d.status === "ok"
                 ? "bg-chartreuse/5 border-chartreuse/20"
-                : "bg-red-500/5 border-red-500/20"
+                : "bg-destructive/5 border-destructive/20"
             }`}
           >
             <span className="text-base shrink-0 mt-0.5">{TARGET_ICONS[d.name] || "🔗"}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-semibold text-zinc-200">{d.name}</span>
+                <span className="font-semibold text-foreground">{d.name}</span>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                   d.status === "ok"
                     ? "text-chartreuse bg-chartreuse/10"
-                    : "text-red-400 bg-red-500/10"
+                    : "text-destructive bg-destructive/10"
                 }`}>
                   {d.status === "ok" ? "✓ OK" : "✗ FAIL"}
                 </span>
               </div>
-              <p className="text-zinc-500 font-mono break-all">{d.message}</p>
+              <p className="text-muted-foreground font-mono break-all">{d.message}</p>
             </div>
           </div>
         ))}
       </div>
 
       {/* Timestamp */}
-      <div className="px-5 py-2 border-t border-zinc-800/40">
-        <p className="text-[10px] text-zinc-700 font-mono">
+      <div className="px-5 py-2 border-t border-border">
+        <p className="text-[10px] text-muted-foreground font-mono">
           {new Date(result.timestamp).toLocaleTimeString("es-ES")}
         </p>
       </div>
@@ -1064,13 +1064,13 @@ function SiemSection({
       onClick={handleTestWebhooks}
       disabled={testing}
       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium 
-                 text-zinc-300 bg-zinc-900/80 border border-zinc-800 
-                 rounded-md hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50
+                 text-foreground bg-card border border-border 
+                 rounded-md hover:bg-surface-muted hover:text-foreground disabled:opacity-50
                  transition-all duration-150 active:scale-[0.97]"
     >
       {testing ? (
         <>
-          <span className="inline-block w-3 h-3 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
+          <span className="inline-block w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
           Probando…
         </>
       ) : (
@@ -1093,7 +1093,7 @@ function SiemSection({
         {toast}
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-zinc-900/40 rounded-lg animate-pulse" />
+            <div key={i} className="h-28 bg-surface-muted rounded-lg animate-pulse" />
           ))}
         </div>
       </>
@@ -1104,7 +1104,7 @@ function SiemSection({
     return (
       <>
         {toast}
-        <div className="mb-4 px-5 py-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-300">
+        <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
           {error}
         </div>
       </>
@@ -1115,13 +1115,13 @@ function SiemSection({
     return (
       <>
         {toast}
-        <div className="flex flex-col items-center justify-center py-24 text-zinc-600">
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
           <span className="text-4xl mb-4">📡</span>
           <p className="text-sm font-medium">No hay alertas SIEM registradas</p>
-          <p className="text-xs mt-1 text-zinc-700 max-w-md text-center">
+          <p className="text-xs mt-1 text-muted-foreground max-w-md text-center">
             Las alertas aparecerán aquí cuando el SIEM exporter detecte patrones sospechosos
             y envíe notificaciones a los webhooks configurados.
-            Los datos se persisten en la tabla <span className="font-mono text-zinc-500">siem_alert_logs</span>.
+            Los datos se persisten en la tabla <span className="font-mono text-muted-foreground">siem_alert_logs</span>.
           </p>
           <div className="mt-6">{testButton}</div>
         </div>
@@ -1135,13 +1135,13 @@ function SiemSection({
       <div className="space-y-3">
         {/* Summary bar + test button */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4 text-xs text-zinc-500">
-            <span className="text-zinc-400 font-semibold">{alerts.length} envíos</span>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="text-muted-foreground font-semibold">{alerts.length} envíos</span>
             {breakdown.success > 0 && (
               <span className="text-chartreuse">{breakdown.success} entregados</span>
             )}
             {breakdown.failed > 0 && (
-              <span className="text-red-400">{breakdown.failed} fallidos</span>
+              <span className="text-destructive">{breakdown.failed} fallidos</span>
             )}
           </div>
           {testButton}
@@ -1290,36 +1290,36 @@ export default function SecurityAuditDashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-zinc-100 selection:bg-chartreuse/20">
+    <div className="min-h-screen bg-background text-foreground selection:bg-chartreuse/20">
       {/* Header */}
-      <header className="border-b border-zinc-800/60 bg-[#070707]">
+      <header className="border-b border-border bg-surface">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-zinc-100">
+              <h1 className="text-lg font-semibold tracking-tight text-foreground">
                 🛡️ Security Operations
               </h1>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Monitoreo de seguridad en tiempo real — eventos estructurados y alertas SIEM
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-zinc-500 cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={autoRefresh}
                   onChange={e => setAutoRefresh(e.target.checked)}
-                  className="rounded border-zinc-700 bg-zinc-900 text-chartreuse 
-                             focus:ring-emerald-500/30 focus:ring-offset-0
-                             accent-emerald-500"
+                  className="rounded border-border bg-popover text-chartreuse 
+                             focus:ring-chart-success/30 focus:ring-offset-0
+                             accent-chart-success"
                 />
                 Auto-refresh (15s)
               </label>
               <button
                 onClick={() => fetchLogs(filters, tab)}
                 disabled={loading}
-                className="px-4 py-2 text-xs font-medium text-zinc-300 bg-zinc-900/80 border border-zinc-800 
-                           rounded-md hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50 
+                className="px-4 py-2 text-xs font-medium text-foreground bg-card border border-border 
+                           rounded-md hover:bg-surface-muted hover:text-foreground disabled:opacity-50 
                            transition-all duration-150 active:scale-[0.97]"
               >
                 {loading ? "Cargando…" : "↻ Refresh"}
@@ -1345,7 +1345,7 @@ export default function SecurityAuditDashboard() {
 
             {/* Error */}
             {error && (
-              <div className="mb-4 px-5 py-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-300">
+              <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                 {error}
               </div>
             )}
@@ -1354,17 +1354,17 @@ export default function SecurityAuditDashboard() {
             {loading && (
               <div className="space-y-2">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-14 bg-zinc-900/40 rounded-lg animate-pulse" />
+                  <div key={i} className="h-14 bg-surface-muted rounded-lg animate-pulse" />
                 ))}
               </div>
             )}
 
             {/* Empty */}
             {!loading && !error && logs.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-24 text-zinc-600">
+              <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
                 <span className="text-4xl mb-4">📭</span>
                 <p className="text-sm font-medium">No hay eventos de seguridad registrados</p>
-                <p className="text-xs mt-1 text-zinc-700">
+                <p className="text-xs mt-1 text-muted-foreground">
                   Los eventos aparecerán aquí cuando ocurran rate limits, CSP violations u otros eventos de seguridad
                 </p>
               </div>
@@ -1372,10 +1372,10 @@ export default function SecurityAuditDashboard() {
 
             {/* Table */}
             {!loading && logs.length > 0 && (
-              <div className="border border-zinc-800/60 rounded-xl overflow-hidden bg-[#080808]">
+              <div className="border border-border rounded-xl overflow-hidden bg-surface">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-zinc-800/60 text-[10px] uppercase tracking-widest text-zinc-600 font-semibold">
+                    <tr className="border-b border-border text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
                       <th className="text-left py-3 px-4 w-44">Evento</th>
                       <th className="text-left py-3 px-4 w-36">IP</th>
                       <th className="text-left py-3 px-4">Ruta</th>
@@ -1399,7 +1399,7 @@ export default function SecurityAuditDashboard() {
 
             {/* Footer */}
             {!loading && logs.length > 0 && (
-              <div className="mt-4 text-center text-[10px] text-zinc-700">
+              <div className="mt-4 text-center text-[10px] text-muted-foreground">
                 Mostrando {logs.length} de {total} eventos
               </div>
             )}

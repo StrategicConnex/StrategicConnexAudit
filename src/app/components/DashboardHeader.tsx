@@ -1,5 +1,6 @@
 import React from 'react';
 import { InstallPwaButton } from './InstallPwaButton';
+import { ThemeSwitcher } from "@/shared/design-system";
 
 interface DashboardHeaderProps {
   activeTab: string;
@@ -36,20 +37,21 @@ export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderP
   };
 
   return (
-    <header className="h-20 bg-background/60 backdrop-blur-xl border-b border-border/50 flex items-center justify-between px-10 sticky top-0 z-20 shrink-0">
+    <header className="h-20 bg-background/60 backdrop-blur-xl border-b border-border/50 flex items-center justify-between px-3 sm:px-10 sticky top-0 z-20 shrink-0">
       <div key={activeTab} className="flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-300">
         <h1 className="text-xl font-bold tracking-tight text-foreground">
           {getTitle()}
         </h1>
-        <p className="text-[9px] font-extrabold text-primary uppercase tracking-widest mt-0.5">
+        <p className="hidden sm:block text-[9px] font-extrabold text-primary uppercase tracking-widest mt-0.5">
           {getSubtitle()}
         </p>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-1.5 sm:gap-6">
         <InstallPwaButton />
+        <ThemeSwitcher compact />
         <NewProjectModal />
-        <div className="w-9 h-9 rounded-full bg-muted/20 hover:bg-muted/40 flex items-center justify-center cursor-pointer transition-colors duration-300 border border-border/40 relative group">
+        <div className="hidden sm:flex w-9 h-9 rounded-full bg-muted/20 hover:bg-muted/40 items-center justify-center cursor-pointer transition-colors duration-300 border border-border/40 relative group">
           <span className="text-xs font-bold text-foreground/80 group-hover:text-foreground transition-colors">JU</span>
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-chartreuse border-2 border-background rounded-full" />
         </div>
