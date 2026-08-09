@@ -42,7 +42,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | REQ | Requisito | Cumplimiento |
 |-----|-----------|--------------|
 | REQ-201 | Suite unit completa en verde (`pnpm test`) | ✅ 327/327 (ejecución real 2026-08-02) |
-| REQ-202 | Cobertura global por encima del umbral de CI | ❌ Statements 13.72% vs umbral 25% (preexistente, baseline B00) |
+| REQ-202 | Cobertura global por encima del umbral de CI | ✅ Statements 27.21% ≥ 25% · Lines 27.41% ≥ 25% · Funcs 22.83% ≥ 20% · Branches 20.67% ≥ 20% (2026-08-08) |
 | REQ-203 | Ruta crítica de seguridad con test propio | ✅ rls (5) · AiCopilot XSS (6) · webhooks (15) · egress-guard (31) |
 | REQ-204 | Cada endpoint público/crítico con `route.test.ts` | ❌ 8/42 rutas (19.0%) |
 | REQ-205 | Cada trigger con test (src/trigger/*) | ❌ 9/12 triggers (75%) |
@@ -81,19 +81,19 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | Functions | 8.8% | MASTER-INDEX §Baseline [VERIFIED] |
 | Lines | 12.46% | MASTER-INDEX §Baseline [VERIFIED] |
 
-### 4.2. Estado actual (medición real 2026-08-02, este reporte)
+### 4.2. Estado actual (medición real 2026-08-08, este reporte)
 
 | Métrica | Valor actual | Δ vs B00 |
 |---------|--------------|----------|
-| Test files | 43 | +24 files |
-| Tests (`pnpm test`) | 391 (391 OK) | +137 |
-| Coverage (sin suite egress-guard de red) | **~329/329 tests · 39 files** | — |
-| Statements | 13.72% | +1.21pp |
-| Branches | 10.62% | +0.84pp |
-| Functions | 10.2% | +1.40pp |
-| Lines | 13.71% | +1.25pp |
+| Test files | 65 | +46 files |
+| Tests (`pnpm test`) | 611 (611 OK) | +357 |
+| Coverage (sin suite egress-guard de red) | **~602/602 tests · 61 files** | — |
+| Statements | 27.21% | +14.70pp |
+| Branches | 20.67% | +10.89pp |
+| Functions | 22.83% | +14.03pp |
+| Lines | 27.41% | +14.95pp |
 
-> **Interpretación:** la cobertura subió en las 4 métricas vs baseline (no-regresión ✅) pero sigue **bajo los umbrales de CI** (25/20/20/25). Los 40 test files están concentrados en 13 carpetas; el 55% del código (triggers restantes, módulos de negocio, 34 rutas) permanece sin tests.
+> **Interpretación:** con el batch RSK-02 (2026-08-08, +22 test files · +220 tests) la cobertura **supera los 4 umbrales de CI** (25/20/20/25) por primera vez — statements 27.21%, branches 20.67%, functions 22.83%, lines 27.41%. Se cubrieron módulos puros (mitre-mapping, cache, circuit-breakers, audit-log, api-keys, env-secrets), seguridad (siem-exporter, change-alerts, health-checker, shadow-detector) y componentes React (HistoryPanel, MonitoringTab, useAiReport). Gaps residuales documentados: rutas API sin `route.test` (34/42), triggers sin test (3/12), y los componentes grandes restantes (IntelligenceTab, SettingsTab, audit page) — próximos batches.
 
 ---
 
@@ -370,6 +370,7 @@ flowchart LR
 | 1.2 | 2026-08-02 | P0 de cobertura de triggers: +6 trigger.test (adversary, anomaly, monitoring, scheduled-scan, audit, webhook) → 40 files · 359 tests · **9/12 triggers (75%)** · 3 pendientes (api-key-expiry, cleanup, hello) | Aprobado |
 | 1.3 | 2026-08-08 | Seguridad: gap SSRF IPv4-mapped IPv6 (`::ffff:`) cerrado en egress-guard (+2 tests) → **31/31**; suite de red resiliente (omite tests sin internet); **360/360 tests** | Aprobado |
 | 1.4 | 2026-08-08 | GOLDEN_RULES: +26 tests de controles de seguridad (cicd-helper 10, api-auth 8, safe-next 8) → **43 files · 391 tests** · suite determinista (guard de red en `assertPublicHostname`) | Aprobado |
+| 1.5 | 2026-08-08 | **RSK-02 batch**: +22 test files · +220 tests → **65 files · 611 tests** · umbrales de CI superados (Stmts 27.21% · Branch 20.67% · Funcs 22.83% · Lines 27.41%) · fix de bug real en `cookie-utils.getCookie` (regex `\s` en template literal) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/testing/TEST-COVERAGE-MATRIX.md --min 80` → PASS
 

@@ -139,7 +139,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | Executors | `src/server/intelligence/executors/executors.test.ts` | ✅ |
 | Cron SIEM/Uptime | `src/app/api/cron/{siem,uptime}/route.test.ts` | ✅ |
 
-**Cobertura global:** 43 files · 391 tests (391 OK) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX, medición 2026-08-08].
+**Cobertura global:** 65 files · 611 tests (611 OK) · Stmts 27.21% · Branch 20.67% · Funcs 22.83% · Lines 27.41% — umbrales de CI superados [VERIFIED — TEST-COVERAGE-MATRIX v1.5, medición 2026-08-08].
 
 ---
 

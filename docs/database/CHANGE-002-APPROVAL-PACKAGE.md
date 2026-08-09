@@ -171,7 +171,7 @@ flowchart LR
 | `push.test.ts` (3) | Semántica boolean de `active` | ✅ PASS |
 | `rls.test.ts` (5/5) | Políticas RLS tras cambio de tipo | ✅ PASS |
 | `tsc --noEmit` | Tipos de consumidores (`eq(active, true)`) | ✅ 0 errores |
-| `vitest run` | Suite completa (43 files) | ✅ 391/391 |
+| `vitest run` | Suite completa (65 files) | ✅ 611/611 |
 
 **Casos post-push (§9.2):** queries de schema (`information_schema`), integridad de datos (counts, NULLs), health check §78 (Connectivity/Schema/Data/Indexes/Constraints/Queries).
 
@@ -200,7 +200,7 @@ flowchart LR
 
 | Check | Comando | Esperado |
 |-------|---------|----------|
-| Suite tests | `npx vitest run` | 391/391 PASS |
+| Suite tests | `npx vitest run` | 611/611 PASS |
 | Push subscriptions | `push.test.ts` (3) | PASS (semántica boolean) |
 | Health check §78 | Connectivity/Schema/Data/Indexes/Constraints/Queries | 6× PASS |
 

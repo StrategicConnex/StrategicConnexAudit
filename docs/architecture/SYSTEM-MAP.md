@@ -330,7 +330,7 @@ Este documento no repite el ERD: su foco es el **flujo** de datos entre capas, n
 | Ámbito | Herramienta | Evidencia |
 |--------|-------------|-----------|
 | Unit / integración | Vitest 4 (jsdom) — 39 archivos `*.test.ts` | [VERIFIED] |
-| Resultado unit actual | 391 tests PASS (`pnpm test`) | [VERIFIED] |
+| Resultado unit actual | 611 tests PASS (`pnpm test`) | [VERIFIED] |
 | E2E | Playwright 1.59 — 4 specs en `e2e/` | [VERIFIED] |
 | Contrato API | `tests/api-contract/` | [VERIFIED] |
 | Cobertura | Statements 13.72% (por debajo del umbral 25% — gap documentado en TEST-COVERAGE-MATRIX, no es regresión de esta sesión) | [VERIFIED] |
@@ -417,6 +417,7 @@ Este documento no repite el ERD: su foco es el **flujo** de datos entre capas, n
 | 1.0 | 2026-08-02 | Creación inicial (T01-02, BATCH 01) | Aprobado |
 | 1.1 | 2026-08-02 | Secciones de API/Seguridad/Testing/Operaciones para cumplir el gate; IDs de diagramas únicos | Aprobado |
 | 2.0 | 2026-08-08 | Refresco al estado real (commit `2ccda08`): FLUJO B con Vercel Cron como mecanismo garantizado (siem/uptime) + Trigger.dev opcional; `scheduledScanTask` real (procesa `monitoring_schedules` → encola `run-project-audit`); secretos server-only `env-secrets.ts` + guard CI; egress-guard con IPv4-mapped IPv6; 391 tests · 39 archivos; 58 tablas · 22 migraciones; 3 server actions (reports.ts) | Aprobado |
+| 2.1 | 2026-08-08 | RSK-02: umbrales de cobertura superados — **611 tests · 65 files** · Stmts 27.21% · Branch 20.67% · Funcs 22.83% · Lines 27.41% | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/architecture/SYSTEM-MAP.md --min 80` → resultado en la tabla siguiente.
 

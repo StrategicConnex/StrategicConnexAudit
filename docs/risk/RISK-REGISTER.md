@@ -57,7 +57,7 @@ Registro consolidado de **riesgos de SCAUDIT Pro** a partir de los hallazgos rea
 |---------|--------|---------|
 | Seguridad | SECURITY-AUDIT v2.2 · SUPABASE-AUDIT | SB-002 realtime, RLS 5/58, VULN remanentes |
 | Base de datos | PRODUCTION-CHANGE-VERIFICATION | CHANGE-002 ALTER TYPE, rollback forward-only |
-| Testing | TEST-COVERAGE-MATRIX | cobertura 13.72%, triggers 0/12, rutas 6/42 |
+| Testing | TEST-COVERAGE-MATRIX | cobertura 27.21% (umbrales CI superados), triggers 9/12, rutas 8/42 |
 | Operaciones | PRODUCTION-PUSH-FINAL-VALIDATION | backup [UNKNOWN], httpbin caído |
 | Dependencias | ENTERPRISE-ARCHITECTURE §11 | IA :free rate limit |
 
@@ -68,7 +68,7 @@ Registro consolidado de **riesgos de SCAUDIT Pro** a partir de los hallazgos rea
 | ID | Risk | Prob (1–5) | Impact (1–5) | Score | Mitigation | Owner | Status |
 |----|------|-----------|--------------|-------|------------|-------|--------|
 | RSK-01 | CHANGE-002 (ALTER TYPE `active` boolean) corrompe datos existentes | 2 | 5 | 10 | Migración con UPDATE normalizador + `USING`; rollback `::text`; data integrity §10 post-push | Owner + DBA | ⛔ OPEN (PENDING push) |
-| RSK-02 | Cobertura de tests insuficiente (Stmts 13.72% < 25%) enmascara regresión | 4 | 4 | 16 | TEST-COVERAGE-MATRIX + no-regresión por batch + route.test P0/P1 | Engineering | ⛔ OPEN |
+| RSK-02 | Cobertura de tests insuficiente enmascara regresión | 4 | 4 | 16 | Batch RSK-02 (2026-08-08): +22 files · +220 tests → **65 files · 611 tests** · umbrales CI superados (Stmts 27.21% · Branch 20.67% · Funcs 22.83% · Lines 27.41%) | Engineering | ✅ CERRADO (2026-08-08) |
 | RSK-03 | Realtime sin RLS (SB-002) filtra datos cross-tenant | 3 | 5 | 15 | CHANGE-003 (publicación realtime con RLS) | Engineering | ⛔ OPEN |
 | RSK-04 | Backup/PITR no confirmado antes de DDL | 3 | 5 | 15 | §6 gate: confirmar PITR + `pg_dump --schema-only` antes del push | Owner | ⛔ OPEN ([UNKNOWN]) |
 | RSK-05 | Rollback Drizzle forward-only sin down-migrations | 3 | 5 | 15 | Planes SQL manuales §17 (DROP INDEX, `::text`, DISABLE RLS) | DBA | 🟡 MITIGADO (planes listos) |
@@ -147,7 +147,7 @@ Auditoría de los 97 cambios pendientes (commit `36ebcf8`) bajo el marco SC Plat
 | RSK-08 | `ratelimit.test.ts` + suite AI Router (gap) | 🟡 parcial |
 | RSK-02 | TEST-COVERAGE-MATRIX (documenta el gap) | ✅ documentado |
 
-**Cobertura global:** 43 files · 391 tests (391 OK) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX, medición 2026-08-08].
+**Cobertura global:** 65 files · 611 tests (611 OK) · Stmts 27.21% · Branch 20.67% · Funcs 22.83% · Lines 27.41% — **umbrales de CI superados** [VERIFIED — TEST-COVERAGE-MATRIX v1.5, medición 2026-08-08].
 
 ---
 

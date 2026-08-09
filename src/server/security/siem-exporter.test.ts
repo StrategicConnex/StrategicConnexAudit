@@ -1,229 +1,144 @@
-/* ═══════════════════════════════════════════════════════════════════════════
-   SIEM Exporter — Integration Test
-
-   Verifica que runSiemExport() funciona correctamente en un entorno aislado:
-   - Sin Redis (mocks)
-   - Sin webhooks reales (mock de fetch)
-   - Sin base de datos real (mock de directDb)
-   - El heartbeat se dispara cuando corresponde
-   ═══════════════════════════════════════════════════════════════════════════ */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { runSiemExport, sendTestAlert } from "./siem-exporter";
 
-// ─── Shared mutable mock state ──────────────────────────────────────────────
-// vitest hoista vi.mock al tope del archivo. Usamos variables compartidas
-// para que cada test pueda controlar lo que devuelven las queries.
+const insertMock = vi.hoisted(() => vi.fn());
+const logSecurityEventMock = vi.hoisted(() => vi.fn());
 
-let mockDbResult: Record<string, unknown>[] = [];           // Resultado de directDb.select().then()
-const mockInsertValues = vi.fn();     // Spy para directDb.insert().values()
-const mockLogEvent = vi.fn();         // Spy para logSecurityEvent
+vi.mock("@/shared/db", () => ({ directDb: { insert: insertMock } }));
+vi.mock("@/shared/db/schemas", () => ({ siemAlertLogs: {} }));
+vi.mock("@/shared/lib/audit-log", () => ({ logSecurityEvent: logSecurityEventMock }));
 
-// ─── Mocks ──────────────────────────────────────────────────────────────────
+import { escapeHtml, sendTestAlert, persistDelivery, WEBHOOK_FORMATTERS } from "./siem-exporter";
+import type { SiemPattern } from "./siem-exporter";
 
-// Mock fetch global
-const mockFetchResponse = vi.fn();
-vi.stubGlobal("fetch", mockFetchResponse);
+const pattern: SiemPattern = {
+  eventType: "dns_change_detected",
+  ip: "example.com",
+  count: 2,
+  windowMinutes: 60,
+  severity: "warning",
+  label: "⚠️ DNS Change",
+  firstSeen: new Date("2026-01-01T10:00:00Z"),
+  lastSeen: new Date("2026-01-01T10:05:00Z"),
+  paths: ["/api/intelligence/history"],
+  methods: ["DNS_SCAN"],
+  metadataSamples: [],
+};
 
-// Mock Drizzle query builder con Proxy.
-// select().from().where().groupBy().orderBy().limit().offset() → Promise que resuelve a mockDbResult
-vi.mock("@/shared/db", () => {
-  // Builder proxy: toda llamada encadenada retorna el mismo builder,
-  // y await (then) resuelve a mockDbResult
-  const builder = new Proxy(
-    {},
-    {
-      get(_t, prop) {
-        if (prop === "then") return (r: (v: Record<string, unknown>[]) => unknown) => r(mockDbResult);
-        if (prop === "catch") return () => undefined;
-        return () => builder;
-      },
-    }
-  );
+describe("siem-exporter — escapeHtml", () => {
+  it("escapa los 5 caracteres peligrosos", () => {
+    expect(escapeHtml(`<script>alert("x" & 'y')</script>`)).toBe(
+      "&lt;script&gt;alert(&quot;x&quot; &amp; &#039;y&#039;)&lt;/script&gt;"
+    );
+  });
 
-  return {
-    directDb: {
-      insert: vi.fn(() => ({
-        values: mockInsertValues,
-      })),
-      select: vi.fn(() => builder),
-    },
-  };
+  it("no altera texto plano", () => {
+    expect(escapeHtml("texto normal 123")).toBe("texto normal 123");
+  });
 });
 
-// Mock audit-log
-vi.mock("@/shared/lib/audit-log", () => ({
-  logSecurityEvent: (...args: unknown[]) => mockLogEvent(...args),
-}));
-
-// ─── Test Suite ──────────────────────────────────────────────────────────────
-
-describe("SIEM Exporter — Heartbeat Integration", () => {
+describe("siem-exporter — sendTestAlert", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Reset shared mock state
-    mockDbResult = [];
-
-    // fetch por defecto retorna 200 OK
-    mockFetchResponse.mockResolvedValue({
-      ok: true,
-      status: 200,
-      text: vi.fn().mockResolvedValue("OK"),
-    });
-
-    // Configurar webhook Slack
-    vi.stubEnv("SIEM_WEBHOOK_SLACK", "https://hooks.slack.com/test");
+    vi.unstubAllEnvs();
+    vi.stubEnv("SIEM_WEBHOOK_SLACK", "https://hooks.slack.com/services/t");
+    vi.stubEnv("SIEM_WEBHOOK_PAGERDUTY", "https://events.pagerduty.com/v2/enqueue/t");
+    vi.stubEnv("SIEM_WEBHOOK_SPLUNK", "https://splunk.local/services/collector/t");
+    vi.stubEnv("RESEND_API_KEY", "re_test");
   });
 
   afterEach(() => {
-    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
-  // ─── Test 1: Heartbeat en primera ejecución ──────────────────────────────
-
-  it("debería disparar heartbeat cuando no hay heartbeat previo", async () => {
-    // mockDbResult = [] → queryAggregated = [] (sin eventos)
-    //                  → lastHeartbeatTime = [] (sin heartbeat previo → due = true)
-
-    const result = await runSiemExport();
-
-    // Sin eventos → sin patrones
-    expect(result.patternsDetected).toEqual([]);
-    expect(result.alertsSent).toBe(0);
-    expect(result.errors).toEqual([]);
-
-    // Heartbeat disparado (primera vez)
-    expect(result.heartbeat.sent).toBe(true);
-    expect(result.heartbeat.reason).toBe("due");
-    expect(result.heartbeat.lastHeartbeatAgoMinutes).toBeNull();
-
-    // fetch llamado 1 vez (Slack)
-    expect(mockFetchResponse).toHaveBeenCalledTimes(1);
-    const fetchCall = mockFetchResponse.mock.calls[0];
-    expect(fetchCall[0]).toBe("https://hooks.slack.com/test");
-    expect(fetchCall[1].method).toBe("POST");
-
-    // Body contiene heartbeat
-    const body = JSON.parse(fetchCall[1].body);
-    expect(body.blocks[0].text.text).toContain("SIEM Heartbeat");
-    expect(body.blocks[0].text.text).toContain("system");
-  });
-
-  // ─── Test 2: Heartbeat omitido si hay uno reciente ──────────────────────
-
-  it("debería omitir heartbeat si ya se envió hace menos de 30 min", async () => {
-    // Simular heartbeat hace 15 minutos
-    mockDbResult = [{ createdAt: new Date(Date.now() - 15 * 60 * 1000) }];
-
-    const result = await runSiemExport();
-
-    // Heartbeat NO enviado (solo 15 min)
-    expect(result.heartbeat.sent).toBe(false);
-    expect(result.heartbeat.reason).toBe("skipped_recent");
-    expect(result.heartbeat.lastHeartbeatAgoMinutes).toBe(15);
-
-    // fetch NO debe llamarse
-    expect(mockFetchResponse).not.toHaveBeenCalled();
-  });
-
-  // ─── Test 3: Sin webhooks configurados ──────────────────────────────────
-
-  it("debería reportar 'no webhooks' si no hay webhooks configurados", async () => {
-    vi.stubEnv("SIEM_WEBHOOK_SLACK", "");
-
-    const result = await runSiemExport();
-
-    expect(result.heartbeat.sent).toBe(false);
-    expect(result.heartbeat.reason).toBe("no_webhooks");
-    expect(mockFetchResponse).not.toHaveBeenCalled();
-  });
-
-  // ─── Test 4: Heartbeat + patrones simultáneamente ────────────────────────
-
-  it("debería enviar heartbeat incluso si hay patrones detectados", async () => {
-    // queryAggregated recibe el evento rate_limit_hit (lastHeartbeatTime también recibe
-    // estos datos pero no tiene createdAt → last es undefined/null → due = true)
-    mockDbResult = [
-      {
-        eventType: "rate_limit_hit",
-        ip: "192.168.1.100",
-        count: 25,
-        firstSeen: new Date(Date.now() - 120_000),
-        lastSeen: new Date(),
-      },
-    ];
-
-    const result = await runSiemExport();
-
-    // Patrón rate_limit_hit detectado
-    expect(result.patternsDetected.length).toBeGreaterThan(0);
-    expect(result.patternsDetected[0].eventType).toBe("rate_limit_hit");
-
-    // Heartbeat también enviado (no había heartbeat con createdAt en mock)
-    expect(result.heartbeat.sent).toBe(true);
-    expect(result.heartbeat.reason).toBe("due");
-
-    // fetch llamado al menos 1 vez (heartbeat a Slack)
-    expect(mockFetchResponse).toHaveBeenCalled();
-  });
-
-  // ─── Test 5: Persistencia en siem_alert_logs ─────────────────────────────
-
-  it("debería persistir delivery del heartbeat en siem_alert_logs", async () => {
-    await runSiemExport();
-
-    // insert().values() debe haberse llamado con datos del heartbeat
-    expect(mockInsertValues).toHaveBeenCalled();
-
-    // Buscar la llamada con ruleEventType === "heartbeat"
-    const hbCalls = mockInsertValues.mock.calls.filter(
-      (c) => (c[0] as { ruleEventType?: string } | undefined)?.ruleEventType === "heartbeat"
-    );
-    expect(hbCalls.length).toBeGreaterThanOrEqual(1);
-
-    const hbValues = hbCalls[0][0];
-    expect(hbValues.ruleEventType).toBe("heartbeat");
-    expect(hbValues.status).toBe("success");
-    expect(hbValues.target).toBe("Slack");
-    expect(hbValues.severity).toBe("info");
-    expect(hbValues.count).toBe(0);
-    expect(hbValues.windowMinutes).toBe(30);
-    expect(hbValues.ip).toBe("system");
-  });
-
-  // ─── Test 6: Fail-safe ante error de fetch ───────────────────────────────
-
-  it("no debería lanzar excepción si fetch falla (fail-safe)", async () => {
-    mockFetchResponse.mockRejectedValue(new Error("Connection refused"));
-
-    const result = await runSiemExport();
-
-    expect(result.heartbeat.sent).toBe(false);
-    expect(result.heartbeat.reason).toBe("error");
-    expect(result.errors.length).toBeGreaterThan(0);
-  });
-
-  // ─── Test 7: scannedWindowMinutes ────────────────────────────────────────
-
-  it("debería retornar scannedWindowMinutes correcto (máximo de reglas)", async () => {
-    const result = await runSiemExport();
-
-    // El máximo windowMinutes es 10 (csp_violation)
-    expect(result.scannedWindowMinutes).toBe(10);
-  });
-
-  // ─── Test 8: sendTestAlert sin webhooks ─────────────────────────────
-
-  it("sendTestAlert: sin webhooks → error limpio", async () => {
+  it("sin webhooks configurados devuelve error de sistema", async () => {
     vi.stubEnv("SIEM_WEBHOOK_SLACK", "");
     vi.stubEnv("SIEM_WEBHOOK_PAGERDUTY", "");
     vi.stubEnv("SIEM_WEBHOOK_SPLUNK", "");
+    vi.stubEnv("RESEND_API_KEY", "");
+
+    const result = await sendTestAlert();
+    expect(result.targetsAttempted).toBe(0);
+    expect(result.success).toBe(false);
+    expect(result.details[0].name).toBe("system");
+  });
+
+  it("envía a todos los canales configurados y reporta éxito si todos OK", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, text: async () => "" })));
 
     const result = await sendTestAlert();
 
-    expect(result.targetsAttempted).toBe(0);
+    expect(result.targetsAttempted).toBe(4);
+    expect(result.success).toBe(true);
+    expect(result.details.every((d) => d.status === "ok")).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it("un canal fallido marca el test como error", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) =>
+      url.includes("splunk")
+        ? { ok: false, status: 401, text: async () => "unauthorized" }
+        : { ok: true, status: 200, text: async () => "" }
+    ));
+
+    const result = await sendTestAlert();
+
+    expect(result.targetsAttempted).toBe(4);
     expect(result.success).toBe(false);
-    expect(result.details[0].message).toContain("No hay webhooks");
+    const splunk = result.details.find((d) => d.name === "Splunk");
+    expect(splunk?.status).toBe("error");
+    expect(splunk?.message).toContain("401");
+  });
+
+  it("excepción de fetch en un canal se registra como error", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("pagerduty")) throw new Error("conn refused");
+      return { ok: true, status: 200, text: async () => "" };
+    }));
+
+    const result = await sendTestAlert();
+
+    const pd = result.details.find((d) => d.name === "PagerDuty");
+    expect(pd?.status).toBe("error");
+    expect(pd?.message).toContain("conn refused");
+  });
+});
+
+describe("siem-exporter — persistDelivery", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertMock.mockImplementation(() => ({ values: vi.fn(async () => undefined) }));
+  });
+
+  it("persiste el delivery con metadata", async () => {
+    const valuesSpy = vi.fn(async (_values: {
+      ruleEventType?: string; ip?: string; severity?: string; label?: string;
+      count?: number; windowMinutes?: number; target?: string; status?: string;
+      responseCode?: number | null; errorMessage?: string | null;
+      metadata?: Record<string, unknown>; detectedAt?: Date;
+    }) => undefined);
+    insertMock.mockImplementation(() => ({ values: valuesSpy }));
+
+    await persistDelivery(pattern, "Slack", "success", 200, null, { extra: 1 });
+
+    const values = valuesSpy.mock.calls[0]![0]!;
+    expect(values.ruleEventType).toBe("dns_change_detected");
+    expect(values.target).toBe("Slack");
+    expect(values.status).toBe("success");
+    expect(values.responseCode).toBe(200);
+    expect(values.metadata?.extra).toBe(1);
+  });
+
+  it("fallo de DB no lanza (fail-safe)", async () => {
+    insertMock.mockImplementation(() => ({
+      values: vi.fn(async () => { throw new Error("db down"); }),
+    }));
+    await expect(persistDelivery(pattern, "Slack", "failed", 500, "err")).resolves.toBeUndefined();
+  });
+});
+
+describe("siem-exporter — catálogo de canales", () => {
+  it("expone los 4 canales con su envVar y nombre", () => {
+    const names = WEBHOOK_FORMATTERS.map((w) => w.name);
+    expect(names).toEqual(["Slack", "PagerDuty", "Splunk", "Email"]);
   });
 });

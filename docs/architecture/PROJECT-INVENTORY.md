@@ -119,7 +119,7 @@ Cada fila de MAT-009 se verificó con una de estas operaciones (reproducibles):
 |-----------|------------------|-----|
 | Conteo route handlers | `(Get-ChildItem src/app/api -Filter route.ts).Count` → 42 | Fila 19 |
 | Conteo triggers | `Get-ChildItem src/trigger -Filter *.ts` → 12 | Fila 25 |
-| Conteo test files | `find src -name "*.test.ts"` → 39 archivos; `pnpm test` → 391 tests (2026-08-08) | Filas 22/26/27 + TEST-001 |
+| Conteo test files | `find src -name "*.test.ts"` → 65 archivos; `pnpm test` → 611 tests (2026-08-08) | Filas 22/26/27 + TEST-001 |
 | Conteo migraciones | `Get-ChildItem drizzle -Filter *.sql` → 21; `_journal.json` → 20 | Fila 29 |
 | Versión de stack | `package.json` dependencies | Fila 1 |
 | Seguridad headers | `src/proxy.ts` buildCsp() | Fila 12 |
@@ -165,7 +165,7 @@ Detalle y controles completos: MAT-002 (ENTERPRISE-ARCHITECTURE §10) y `docs/se
 
 | Suite | Comando | Alcance real | Estado |
 |-------|---------|-------------|--------|
-| Unit (Vitest) | `pnpm test` | 39 archivos `*.test.ts`, **391 tests PASS** (2026-08-08; +26 tests de controles de seguridad en la sesión) | [VERIFIED] |
+| Unit (Vitest) | `pnpm test` | 65 archivos `*.test.ts`, **611 tests PASS** (2026-08-08; +220 tests del batch RSK-02 sobre módulos puros, seguridad y componentes React) | [VERIFIED] |
 | Coverage | `pnpm test:coverage` | Statements 13.72% — **no cumple** umbral global 25% (preexistente, gap en TEST-COVERAGE-MATRIX) | [VERIFIED] |
 | E2E | `pnpm test:e2e` | 4 specs Playwright | [VERIFIED] |
 | Contract | `pnpm test:contract` | `tests/api-contract/contract.test.ts` | [VERIFIED] |
@@ -245,4 +245,4 @@ Casos cubiertos: executors DNS/network/TLS/email/OSINT, egress-guard, ratelimit,
 ---
 
 {: .note }
-**Fuente de este documento:** commit `2ccda08` (main, 2026-08-08); comandos `git status`, `git log`, `find`, `npx madge --circular src`; lectura de `package.json`, `*.config.*`, `.env.example`, `src/shared/config/env.ts`, `src/proxy.ts`, `.github/workflows/*.yml`. Datos sincronizados: 39 test files / 391 tests, 58 tablas, 22 migraciones, 14 ejecutores, 3 server actions.
+**Fuente de este documento:** commit `2ccda08` (main, 2026-08-08); comandos `git status`, `git log`, `find`, `npx madge --circular src`; lectura de `package.json`, `*.config.*`, `.env.example`, `src/shared/config/env.ts`, `src/proxy.ts`, `.github/workflows/*.yml`. Datos sincronizados: 65 test files / 611 tests, 58 tablas, 22 migraciones, 14 ejecutores, 3 server actions.
