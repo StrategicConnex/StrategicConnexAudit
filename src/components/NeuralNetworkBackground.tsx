@@ -91,12 +91,20 @@ export function NeuralNetworkBackground({ listening = false }: NeuralNetworkBack
 
   const colorsRef = useRef({ node: "#7C3AED", line: "rgba(124,58,237,0.15)" });
   useEffect(() => {
-    // Re-leer tokens CSS al cambiar de tema (barato: 1 vez por cambio).
-    const cs = getComputedStyle(document.documentElement);
-    colorsRef.current = {
-      node: cs.getPropertyValue("--neural-node").trim() || "#7C3AED",
-      line: cs.getPropertyValue("--neural-line").trim() || "rgba(124,58,237,0.15)",
-    };
+    // Re-leer tokens CSS al cambiar de tema. Importante: se lee DENTRO de un
+    // requestAnimationFrame porque React ejecuta los effects de los hijos ANTES
+    // que los del padre — el ThemeProvider (padre) aplica `data-theme` al DOM
+    // en su propio effect, así que leer getComputedStyle en el effect del hijo
+    // devolvería el token del tema ANTERIOR (race condition). El rAF corre
+    // después de que todos los effects hayan mutado el DOM.
+    const raf = requestAnimationFrame(() => {
+      const cs = getComputedStyle(document.documentElement);
+      colorsRef.current = {
+        node: cs.getPropertyValue("--neural-node").trim() || "#7C3AED",
+        line: cs.getPropertyValue("--neural-line").trim() || "rgba(124,58,237,0.15)",
+      };
+    });
+    return () => cancelAnimationFrame(raf);
   }, [theme]);
 
   useEffect(() => {

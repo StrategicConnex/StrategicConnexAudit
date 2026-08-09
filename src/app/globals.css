@@ -248,11 +248,11 @@
   --gradient-primary: linear-gradient(135deg, oklch(48% 0.15 258), oklch(42% 0.13 300));
   --gradient-accent: linear-gradient(135deg, oklch(52% 0.13 130), oklch(48% 0.12 90));
 
-  /* Fondo de red neuronal — violeta medio, legible sobre light.
+  /* Fondo de red neuronal — azul eléctrico intenso, legible sobre light.
      Opacidad base = móvil (menos densa); sm/lg la suben vía media query. */
-  --neural-node: #7C3AED;
-  --neural-node-glow: rgba(124, 58, 237, 0.55);
-  --neural-line: rgba(124, 58, 237, 0.4);
+  --neural-node: #1D4ED8;
+  --neural-node-glow: rgba(29, 78, 216, 0.6);
+  --neural-line: rgba(37, 99, 235, 0.45);
   --neural-canvas-opacity: 0.3;
 
   /* Acentos multi-hue — oscuros sobre light (AA) */
