@@ -22,7 +22,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-gradient-to-r from-primary to-primary/80 text-foreground border border-primary/20",
+          "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border border-primary/20",
         accent:
           "bg-chartreuse/10 text-chartreuse border border-chartreuse/20 hover:bg-chartreuse/20",
         destructive:
@@ -32,7 +32,7 @@ export const buttonVariants = cva(
         ghost:
           "bg-transparent text-muted-fg border border-transparent hover:bg-muted/20 hover:text-foreground",
         muted:
-          "bg-muted/30 text-foreground hover:bg-muted/60 hover:text-white border border-border/30 shadow-sm hover:shadow-md",
+          "bg-muted/30 text-foreground hover:bg-muted/60 hover:text-foreground border border-border/30 shadow-sm hover:shadow-md",
         inverted:
           "bg-foreground text-background hover:bg-foreground/90 border border-border shadow-md",
         cyan: "bg-cyan-500 text-black hover:bg-cyan-400 border border-transparent shadow-md",

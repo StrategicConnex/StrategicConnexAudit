@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher';
 import { loadIntelligenceTab } from './tab-loaders';
+import { ThemeSwitcher } from "@/shared/design-system";
 
 
 const AiCoreVisual = dynamic(() => import('./AiCoreVisual'), { ssr: false });
@@ -65,7 +66,7 @@ function NavButton({ tab, activeTab, icon, label, badge, onClick, onHover }: Nav
 export function DashboardSidebar({ activeTab, onTabChange, projectCount }: DashboardSidebarProps) {
   const t = useTranslations('sidebar');
   return (
-    <aside className="w-66 bg-[#040406]/60 backdrop-blur-2xl border-r border-border hidden md:flex flex-col shrink-0 relative overflow-hidden">
+    <aside className="w-66 bg-surface/60 backdrop-blur-2xl border-r border-border hidden md:flex flex-col shrink-0 relative overflow-hidden">
       {/* Top Ambient Glow in Sidebar */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-24 bg-gradient-to-b from-primary/5 to-transparent rounded-full blur-2xl pointer-events-none" />
 
@@ -217,7 +218,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         >
           <Crosshair size={18} strokeWidth={2} className="text-muted-fg" />
           <span className="tracking-tight">{t('links.mitre')}</span>
-          <span className="ml-auto text-[9px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.mitreBadge')}</span>
+          <span className="ml-auto text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.mitreBadge')}</span>
         </Link>
         <Link
           href="/docs/api"
@@ -245,10 +246,13 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         </Link>
       </div>
 
-      {/* Settings Footer */}
-      <div className="px-4 pb-2 z-10">
+      {/* Settings Footer — idioma + tema */}
+      <div className="px-4 pb-2 z-10 space-y-2">
         <div className="flex items-center justify-between px-1">
           <LanguageSwitcher mini />
+        </div>
+        <div className="flex items-center justify-center px-1">
+          <ThemeSwitcher />
         </div>
       </div>
 

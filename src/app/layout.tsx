@@ -5,6 +5,7 @@ import "./globals.css";
 import { ToasterProvider } from "@/app/components/ToasterProvider";
 import { I18nProvider } from "@/app/components/I18nProvider";
 import { RegisterServiceWorker } from "@/app/components/RegisterServiceWorker";
+import { ThemeProvider, themeInitScript } from "@/shared/design-system";
 
 
 const inter = Inter({
@@ -75,6 +76,7 @@ export default async function RootLayout({
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable} ${dmSans.variable} h-full antialiased`}
     >
       <head>
@@ -93,6 +95,18 @@ export default async function RootLayout({
           />
         ) : null}
         <link rel="manifest" href="/manifest.json" />
+        {/**
+         * Theme anti-FOUC — corre antes del paint y fija data-theme en <html>.
+         * Lleva el nonce CSP (igual que la meta CSP): sin nonce no se inyecta
+         * (fallback: el provider aplica la preferencia en el mount).
+         */}
+        {nonce ? (
+          <script
+            nonce={nonce}
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: themeInitScript }}
+          />
+        ) : null}
       </head>
       <body className="min-h-full flex flex-col">
         <a
@@ -102,9 +116,11 @@ export default async function RootLayout({
           Saltar al contenido principal
         </a>
         <RegisterServiceWorker />
-        <I18nProvider>
-          {children}
-        </I18nProvider>
+        <ThemeProvider>
+          <I18nProvider>
+            {children}
+          </I18nProvider>
+        </ThemeProvider>
         <ToasterProvider />
       </body>
     </html>

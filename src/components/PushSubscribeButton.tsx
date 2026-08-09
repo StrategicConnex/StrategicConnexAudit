@@ -126,7 +126,7 @@ export function PushSubscribeButton() {
   // States that don't render a button
   if (state === "unsupported") {
     return (
-      <div className="flex items-center gap-2 text-[11px] text-white/30">
+      <div className="flex items-center gap-2 text-[11px] text-muted-fg/70">
         <BellOff size={14} />
         Push no soportado en este navegador
       </div>
@@ -135,7 +135,7 @@ export function PushSubscribeButton() {
 
   if (state === "denied") {
     return (
-      <div className="flex items-center gap-2 text-[11px] text-amber-400/60">
+      <div className="flex items-center gap-2 text-[11px] text-chart-warning/80">
         <BellOff size={14} />
         Notificaciones bloqueadas
       </div>
@@ -146,28 +146,11 @@ export function PushSubscribeButton() {
     <button
       onClick={state === "subscribed" ? unsubscribe : subscribe}
       disabled={state === "loading" || state === "error"}
-      className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg border transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-      style={{
-        borderColor: state === "subscribed"
-          ? "rgba(34, 197, 94, 0.2)"
-          : "rgba(255, 255, 255, 0.08)",
-        backgroundColor: state === "subscribed"
-          ? "rgba(34, 197, 94, 0.05)"
-          : "rgba(255, 255, 255, 0.04)",
-        color: state === "subscribed"
-          ? "rgb(34, 197, 94)"
-          : "rgba(255, 255, 255, 0.6)",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = state === "subscribed"
-          ? "rgba(34, 197, 94, 0.1)"
-          : "rgba(255, 255, 255, 0.08)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = state === "subscribed"
-          ? "rgba(34, 197, 94, 0.05)"
-          : "rgba(255, 255, 255, 0.04)";
-      }}
+      className={`flex items-center gap-2 text-xs px-4 py-2 rounded-lg border transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+        state === "subscribed"
+          ? "bg-chart-success/10 border-chart-success/30 text-chart-success hover:bg-chart-success/15"
+          : "bg-muted/30 border-border/60 text-muted-fg hover:bg-muted/50 hover:text-foreground"
+      }`}
     >
       {state === "loading" ? (
         <Loader2 size={14} className="animate-spin" />

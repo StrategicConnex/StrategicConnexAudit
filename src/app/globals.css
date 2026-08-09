@@ -33,7 +33,22 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-indigo: oklch(68% 0.14 230);
-  --color-chartreuse: oklch(78% 0.18 140);
+  --color-chartreuse: var(--chartreuse);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-overlay: var(--overlay);
+  --color-muted-fg: var(--muted-fg);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-axis: var(--chart-axis);
+  --color-chart-label: var(--chart-label);
+  --color-chart-primary: var(--chart-primary);
+  --color-chart-secondary: var(--chart-secondary);
+  --color-chart-success: var(--chart-success);
+  --color-chart-warning: var(--chart-warning);
+  --color-chart-danger: var(--chart-danger);
+  --color-chart-tooltip: var(--chart-tooltip);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -86,7 +101,12 @@
 
 /* ─── Design Tokens (OKLCH) ───────────────────────────────────────────── */
 
-:root {
+/* ─── DARK THEME (default — sin cambio visual respecto a la v2) ────────── */
+/* `:root` + `[data-theme="dark"]`: el script anti-FOUC fija data-theme en
+   <html> antes del paint; sin JS, :root garantiza el look actual. */
+
+:root,
+[data-theme="dark"] {
   --bg: oklch(1.8% 0.003 265);
   --fg: oklch(93% 0.008 265);
   --card: oklch(3% 0.006 265);
@@ -98,7 +118,9 @@
   --secondary: oklch(40% 0.025 260);
   --secondary-fg: oklch(93% 0.008 265);
   --muted: oklch(6% 0.005 265);
-  --muted-fg: oklch(35% 0.02 260);
+  /* text-muted-fg/text-muted-foreground — AA sobre --bg (≈5.5:1).
+     El valor original (35%) daba ~2:1 con text-muted-fg activo. */
+  --muted-fg: oklch(60% 0.02 260);
   --accent: oklch(78% 0.18 140);
   --accent-fg: oklch(98% 0.005 265);
   --destructive: oklch(55% 0.22 25);
@@ -107,7 +129,126 @@
   --input: oklch(12% 0.006 265);
   --ring: oklch(68% 0.14 230);
   --radius: 12px;
+
+  /* Superficies — jerarquía background → surface → elevated → muted → overlay */
+  --surface: oklch(3% 0.006 265);
+  --surface-elevated: oklch(5% 0.008 265);
+  --surface-muted: oklch(7% 0.008 265);
+  --surface-overlay: oklch(3% 0.006 265 / 0.75);
+  --overlay: oklch(0% 0 0 / 0.6);
+
+  /* Acento chartreuse — theme-scoped (light usa un chartreuse oscuro) */
+  --chartreuse: oklch(78% 0.18 140);
+
+  /* Charts / data-viz */
+  --chart-grid: oklch(15% 0.008 265 / 0.5);
+  --chart-axis: oklch(40% 0.02 260);
+  --chart-label: oklch(62% 0.02 260);
+  --chart-primary: oklch(68% 0.14 230);
+  --chart-secondary: oklch(60% 0.12 230);
+  --chart-success: oklch(72% 0.15 150);
+  --chart-warning: oklch(78% 0.14 85);
+  --chart-danger: oklch(55% 0.22 25);
+  --chart-tooltip: oklch(10% 0.01 265 / 0.95);
+
+  /* Glass + shadows + gradients */
+  --glass-border: oklch(15% 0.008 265 / 0.5);
+  --glass-border-strong: oklch(68% 0.14 230 / 0.08);
+  --shadow-card: 0 8px 30px -8px oklch(0% 0 0 / 0.8);
+  --shadow-hero: 0 12px 40px -12px oklch(68% 0.14 230 / 0.08),
+                inset 0 1px 0 oklch(100% 0 0 / 0.02);
+  --gradient-surface: linear-gradient(160deg, oklch(3.5% 0.006 265 / 0.7), oklch(2.5% 0.004 265 / 0.8));
+  --gradient-surface-hero: linear-gradient(160deg, oklch(4% 0.01 265 / 0.8), oklch(2.5% 0.005 265 / 0.9));
+  --gradient-primary: linear-gradient(135deg, oklch(55% 0.16 250), oklch(45% 0.13 300));
+  --gradient-accent: linear-gradient(135deg, oklch(72% 0.15 140), oklch(62% 0.14 95));
+
+  /* Efectos atmosféricos */
+  --grid-line: oklch(100% 0 0 / 0.008);
+  --shimmer-a: oklch(100% 0 0 / 0.02);
+  --shimmer-b: oklch(100% 0 0 / 0.06);
   --scan-line: rgba(255, 255, 255, 0.008);
+  --selection-bg: oklch(68% 0.14 230 / 0.15);
+  --selection-fg: oklch(93% 0.008 265);
+  --scroll-thumb: oklch(15% 0.008 265);
+  --scroll-thumb-hover: oklch(22% 0.01 265);
+}
+
+/* ─── LIGHT THEME — superficies limpias, contraste controlado ────────── */
+/* Misma arquitectura semántica; profundidad por sombras sutiles + bordes. */
+
+[data-theme="light"] {
+  --bg: oklch(96.5% 0.006 265);
+  --fg: oklch(17% 0.02 265);
+  --card: oklch(100% 0 0);
+  --card-fg: oklch(17% 0.02 265);
+  --popover: oklch(100% 0 0);
+  --popover-fg: oklch(17% 0.02 265);
+  --primary: oklch(48% 0.15 258);
+  --primary-fg: oklch(99% 0.003 265);
+  --secondary: oklch(92% 0.012 265);
+  --secondary-fg: oklch(22% 0.02 265);
+  --muted: oklch(93% 0.01 265);
+  /* AA sobre superficies claras (≈5:1) */
+  --muted-fg: oklch(43% 0.02 260);
+  --accent: oklch(50% 0.13 130);
+  --accent-fg: oklch(15% 0.02 265);
+  --destructive: oklch(52% 0.21 25);
+  --destructive-fg: oklch(99% 0.003 265);
+  --border: oklch(87% 0.012 265);
+  --input: oklch(93% 0.01 265);
+  --ring: oklch(48% 0.15 258);
+  --radius: 12px;
+
+  --surface: oklch(100% 0 0);
+  --surface-elevated: oklch(100% 0 0);
+  --surface-muted: oklch(94% 0.01 265);
+  --surface-overlay: oklch(98% 0.005 265 / 0.8);
+  --overlay: oklch(12% 0.01 265 / 0.45);
+
+  --chartreuse: oklch(47% 0.13 130);
+
+  --chart-grid: oklch(87% 0.012 265 / 0.7);
+  --chart-axis: oklch(55% 0.02 260);
+  --chart-label: oklch(45% 0.02 260);
+  --chart-primary: oklch(48% 0.15 258);
+  --chart-secondary: oklch(55% 0.12 230);
+  --chart-success: oklch(45% 0.14 150);
+  --chart-warning: oklch(55% 0.14 85);
+  --chart-danger: oklch(52% 0.21 25);
+  --chart-tooltip: oklch(100% 0 0 / 0.97);
+
+  --glass-border: oklch(87% 0.012 265 / 0.75);
+  --glass-border-strong: oklch(48% 0.15 258 / 0.14);
+  --shadow-card: 0 8px 24px -8px oklch(20% 0.02 265 / 0.14);
+  --shadow-hero: 0 12px 40px -12px oklch(48% 0.15 258 / 0.18),
+                 inset 0 1px 0 oklch(100% 0 0 / 0.85);
+  --gradient-surface: linear-gradient(160deg, oklch(100% 0 0 / 0.85), oklch(96% 0.008 265 / 0.9));
+  --gradient-surface-hero: linear-gradient(160deg, oklch(100% 0 0 / 0.9), oklch(95% 0.01 265 / 0.95));
+  --gradient-primary: linear-gradient(135deg, oklch(48% 0.15 258), oklch(42% 0.13 300));
+  --gradient-accent: linear-gradient(135deg, oklch(52% 0.13 130), oklch(48% 0.12 90));
+
+  --grid-line: oklch(17% 0.02 265 / 0.06);
+  --shimmer-a: oklch(17% 0.02 265 / 0.04);
+  --shimmer-b: oklch(17% 0.02 265 / 0.09);
+  --scan-line: oklch(17% 0.02 265 / 0.05);
+  --selection-bg: oklch(48% 0.15 258 / 0.16);
+  --selection-fg: oklch(17% 0.02 265);
+  --scroll-thumb: oklch(82% 0.012 265);
+  --scroll-thumb-hover: oklch(72% 0.015 265);
+}
+
+/* ─── color-scheme + transición de tema ──────────────────────────────── */
+
+:root,
+[data-theme="dark"] { color-scheme: dark; }
+[data-theme="light"] { color-scheme: light; }
+
+@media (prefers-reduced-motion: no-preference) {
+  *, ::before, ::after {
+    transition-property: background-color, border-color, color, box-shadow, opacity;
+    transition-duration: 0.2s;
+    transition-timing-function: ease;
+  }
 }
 
 /* ─── Keyframes globales (no referenciados por animate-*) ────────────── */
@@ -178,25 +319,24 @@
 /* ─── Glass utilities ─────────────────────────────────────────────────── */
 
 @utility glass-panel {
-  background: oklch(3% 0.006 265 / 0.85);
+  background: var(--surface-overlay);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid oklch(15% 0.008 265 / 0.5);
+  border: 1px solid var(--glass-border);
 }
 
 @utility glass-card {
-  background: linear-gradient(160deg, oklch(3.5% 0.006 265 / 0.7), oklch(2.5% 0.004 265 / 0.8));
+  background: var(--gradient-surface);
   backdrop-filter: blur(24px);
-  border: 1px solid oklch(15% 0.008 265 / 0.5);
-  box-shadow: 0 8px 30px -8px oklch(0% 0 0 / 0.8);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-card);
 }
 
 @utility glass-card-hero {
-  background: linear-gradient(160deg, oklch(4% 0.01 265 / 0.8), oklch(2.5% 0.005 265 / 0.9));
+  background: var(--gradient-surface-hero);
   backdrop-filter: blur(32px);
-  border: 1px solid oklch(68% 0.14 230 / 0.08);
-  box-shadow: 0 12px 40px -12px oklch(68% 0.14 230 / 0.08),
-              inset 0 1px 0 oklch(100% 0 0 / 0.02);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow: var(--shadow-hero);
 }
 
 @utility scan-pulse {
@@ -205,14 +345,22 @@
 
 @utility radar-grid {
   background-size: 40px 40px;
-  background-image: linear-gradient(to right, oklch(100% 0 0 / 0.008) 1px, transparent 1px),
-                    linear-gradient(to bottom, oklch(100% 0 0 / 0.008) 1px, transparent 1px);
+  background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+                    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
 }
 
 @utility tech-shimmer {
-  background: linear-gradient(90deg, oklch(100% 0 0 / 0.02) 25%, oklch(100% 0 0 / 0.06) 50%, oklch(100% 0 0 / 0.02) 75%);
+  background: linear-gradient(90deg, var(--shimmer-a) 25%, var(--shimmer-b) 50%, var(--shimmer-a) 75%);
   background-size: 200% 100%;
   animation: shimmer 2.5s infinite linear;
+}
+
+@utility gradient-primary {
+  background-image: var(--gradient-primary);
+}
+
+@utility gradient-accent {
+  background-image: var(--gradient-accent);
 }
 
 body {
@@ -224,6 +372,18 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
+/* Fallback de glassmorphism: si backdrop-filter no existe, la superficie
+   sigue siendo legible (fondo opaco del token en lugar de translúcido). */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel, .glass-card, .glass-card-hero {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .glass-panel { background: var(--surface); }
+  .glass-card { background: var(--gradient-surface); }
+  .glass-card-hero { background: var(--gradient-surface-hero); }
+}
+
 /* Display headings use DM Sans for character */
 h1, h2, h3, h4,
 .text-display, .text-hero,
@@ -232,14 +392,14 @@ h1, h2, h3, h4,
 }
 
 ::selection {
-  background: oklch(68% 0.14 230 / 0.15);
-  color: oklch(93% 0.008 265);
+  background: var(--selection-bg);
+  color: var(--selection-fg);
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: oklch(15% 0.008 265); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: oklch(22% 0.01 265); }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
 
 /* ─── Typography utilities ──────────────────────────────────────────── */
 
