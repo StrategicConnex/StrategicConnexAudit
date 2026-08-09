@@ -1,8 +1,12 @@
 'use client';
 
+import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
+
 export function DashboardSkeleton() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex animate-pulse">
+    <div className="min-h-screen bg-background text-foreground flex animate-pulse relative overflow-hidden">
+      {/* Red neuronal de fondo — misma capa base que el dashboard (loading state) */}
+      <NeuralNetworkBackground />
       {/* Sidebar Skeleton */}
       <aside className="w-72 border-r border-border/50 bg-muted/80 hidden md:flex flex-col shrink-0">
         <div className="h-20 flex items-center px-8 border-b border-border/50">

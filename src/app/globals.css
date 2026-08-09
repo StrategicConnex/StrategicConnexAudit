@@ -169,11 +169,12 @@
   --gradient-primary: linear-gradient(135deg, oklch(55% 0.16 250), oklch(45% 0.13 300));
   --gradient-accent: linear-gradient(135deg, oklch(72% 0.15 140), oklch(62% 0.14 95));
 
-  /* Fondo de red neuronal (login) — violeta tech con glow sutil */
-  --neural-node: #7C3AED;
-  --neural-node-glow: rgba(124, 58, 237, 0.35);
-  --neural-line: rgba(124, 58, 237, 0.15);
-  --neural-canvas-opacity: 0.2;
+  /* Fondo de red neuronal — violeta luminoso visible sobre dark.
+     Opacidad base = móvil (menos densa); sm/lg la suben vía media query. */
+  --neural-node: #A78BFA;
+  --neural-node-glow: rgba(167, 139, 250, 0.5);
+  --neural-line: rgba(167, 139, 250, 0.35);
+  --neural-canvas-opacity: 0.25;
 
   /* Acentos multi-hue — brillantes sobre dark */
   --accent-blue: oklch(72% 0.15 250);
@@ -247,11 +248,12 @@
   --gradient-primary: linear-gradient(135deg, oklch(48% 0.15 258), oklch(42% 0.13 300));
   --gradient-accent: linear-gradient(135deg, oklch(52% 0.13 130), oklch(48% 0.12 90));
 
-  /* Fondo de red neuronal (login) — violeta mate, menor opacidad */
-  --neural-node: #6D28D9;
-  --neural-node-glow: rgba(109, 40, 217, 0.3);
-  --neural-line: rgba(109, 40, 217, 0.08);
-  --neural-canvas-opacity: 0.12;
+  /* Fondo de red neuronal — violeta medio, legible sobre light.
+     Opacidad base = móvil (menos densa); sm/lg la suben vía media query. */
+  --neural-node: #7C3AED;
+  --neural-node-glow: rgba(124, 58, 237, 0.4);
+  --neural-line: rgba(124, 58, 237, 0.28);
+  --neural-canvas-opacity: 0.18;
 
   /* Acentos multi-hue — oscuros sobre light (AA) */
   --accent-blue: oklch(48% 0.15 250);
@@ -268,6 +270,22 @@
   --selection-fg: oklch(17% 0.02 265);
   --scroll-thumb: oklch(82% 0.012 265);
   --scroll-thumb-hover: oklch(72% 0.015 265);
+}
+
+/* ─── Red neuronal — opacidad del canvas por breakpoint ───────────────
+   Móvil: menos densa (no compite con el contenido de pantallas pequeñas).
+   Desktop: más visible (el fondo es un elemento de identidad).
+   Los overrides van DESPUÉS de los bloques de tema para ganar la cascada
+   (misma especificidad [data-theme], aparece más tarde en el archivo). */
+
+@media (min-width: 640px) {
+  [data-theme="dark"] { --neural-canvas-opacity: 0.32; }
+  [data-theme="light"] { --neural-canvas-opacity: 0.24; }
+}
+
+@media (min-width: 1024px) {
+  [data-theme="dark"] { --neural-canvas-opacity: 0.4; }
+  [data-theme="light"] { --neural-canvas-opacity: 0.3; }
 }
 
 /* ─── color-scheme + transición de tema ──────────────────────────────── */

@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * NeuralNetworkBackground — fondo animado de red neuronal para la página de login.
+ * NeuralNetworkBackground — fondo animado de red neuronal theme-aware (login,
+ * dashboard y loading states).
  *
  * Canvas 2D puro (cero dependencias, ~3KB gzip). Estética Cyber-Intelligence:
  * nodos pequeños (1-2.5px) con pulsación lenta, conexiones dinámicas por

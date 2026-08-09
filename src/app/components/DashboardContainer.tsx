@@ -4,6 +4,7 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { DashboardSidebar, type DashboardTab } from './DashboardSidebar';
 import { DashboardHeader } from './DashboardHeader';
+import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
 import { OverviewTab } from './tabs/OverviewTab';
 import { TabSkeleton } from './TabSkeleton';
 import { loadIntelligenceTab } from './tab-loaders';
@@ -115,7 +116,10 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="min-h-screen bg-background text-foreground flex relative overflow-hidden">
+      {/* Red neuronal de fondo — z-0, pointer-events none, theme-aware (mismo estándar del login) */}
+      <NeuralNetworkBackground />
+
       {/* Sidebar Component */}
       <DashboardSidebar
         activeTab={activeTab}
@@ -123,8 +127,8 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
         projectCount={initialProjects.length}
       />
 
-      {/* Main Content Area */}
-      <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col h-screen overflow-hidden bg-background">
+      {/* Main Content Area — bg transparente para dejar ver la red neuronal de fondo */}
+      <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header Component */}
         <DashboardHeader 
           activeTab={activeTab} 
@@ -132,7 +136,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
         />
 
         {/* Dynamic Content Panel */}
-        <div className="flex-1 overflow-y-auto p-10 bg-muted/30">
+        <div className="flex-1 overflow-y-auto p-10 bg-muted/30 relative z-10">
           <div key={activeTab} className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {activeTab === 'overview' && (
