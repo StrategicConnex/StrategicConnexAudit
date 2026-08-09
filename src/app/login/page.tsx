@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher';
 import { ThemeSwitcher } from '@/shared/design-system';
 import AiCoreVisual from '../components/AiCoreVisual';
+import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
 
 // ─── Placeholder rotativo ──────────────────────────────────────────
 const PLACEHOLDER_TEXTS = [
@@ -56,6 +57,7 @@ function LoginContent() {
   const [validationReason, setValidationReason] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [showContent, setShowContent] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/';
   const supabase = createClient();
@@ -164,6 +166,9 @@ function LoginContent() {
   if (emailSent) {
     return (
       <div className="min-h-dvh w-full flex items-center justify-center bg-background relative overflow-hidden">
+        {/* Red neuronal de fondo — z-0, pointer-events none, sin reducir legibilidad */}
+        <NeuralNetworkBackground />
+
         {/* Background orbs */}
         <div className="absolute top-[-15%] left-[-15%] w-[50%] h-[50%] bg-indigo-600/10 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '8s', animationDelay: '0s' }} />
         <div className="absolute bottom-[-15%] right-[-15%] w-[50%] h-[50%] bg-chartreuse/8 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '10s', animationDelay: '-3s' }} />
@@ -222,6 +227,9 @@ function LoginContent() {
   // ═════════════════════════════════════════════════════════════════
   return (
     <div className="min-h-dvh w-full flex items-center justify-center bg-background relative overflow-hidden">
+      {/* ── Red neuronal de fondo — z-0, pointer-events none, sin reducir legibilidad ── */}
+      <NeuralNetworkBackground listening={emailFocused} />
+
       {/* ── Background orbs animadas ── */}
       <div className="absolute top-[-15%] left-[-15%] w-[50%] h-[50%] bg-indigo-600/12 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '8s', animationDelay: '0s' }} />
       <div className="absolute bottom-[-15%] right-[-15%] w-[50%] h-[50%] bg-chartreuse/8 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '10s', animationDelay: '-3s' }} />
@@ -287,6 +295,8 @@ function LoginContent() {
                   required
                   value={email}
                   onChange={handleEmailChange}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
                   placeholder=" "
                   autoFocus
                   autoComplete="email"

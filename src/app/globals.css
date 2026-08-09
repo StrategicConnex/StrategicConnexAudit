@@ -169,6 +169,12 @@
   --gradient-primary: linear-gradient(135deg, oklch(55% 0.16 250), oklch(45% 0.13 300));
   --gradient-accent: linear-gradient(135deg, oklch(72% 0.15 140), oklch(62% 0.14 95));
 
+  /* Fondo de red neuronal (login) — violeta tech con glow sutil */
+  --neural-node: #7C3AED;
+  --neural-node-glow: rgba(124, 58, 237, 0.35);
+  --neural-line: rgba(124, 58, 237, 0.15);
+  --neural-canvas-opacity: 0.2;
+
   /* Acentos multi-hue — brillantes sobre dark */
   --accent-blue: oklch(72% 0.15 250);
   --accent-purple: oklch(70% 0.15 300);
@@ -240,6 +246,12 @@
   --gradient-surface-hero: linear-gradient(160deg, oklch(100% 0 0 / 0.9), oklch(95% 0.01 265 / 0.95));
   --gradient-primary: linear-gradient(135deg, oklch(48% 0.15 258), oklch(42% 0.13 300));
   --gradient-accent: linear-gradient(135deg, oklch(52% 0.13 130), oklch(48% 0.12 90));
+
+  /* Fondo de red neuronal (login) — violeta mate, menor opacidad */
+  --neural-node: #6D28D9;
+  --neural-node-glow: rgba(109, 40, 217, 0.3);
+  --neural-line: rgba(109, 40, 217, 0.08);
+  --neural-canvas-opacity: 0.12;
 
   /* Acentos multi-hue — oscuros sobre light (AA) */
   --accent-blue: oklch(48% 0.15 250);
