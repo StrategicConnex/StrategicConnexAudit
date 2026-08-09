@@ -1,7 +1,7 @@
 # CHANGE-003 — Paquete de aprobación: RLS en tablas de inteligencia + publicación realtime
 
-> **Estado:** PENDIENTE DE APROBACIÓN — requiere firma del owner (§17)
-> **Fecha de preparación:** 2026-08-08
+> **Estado:** ✅ **APROBADO Y APLICADO** (2026-08-09)
+> **Fecha de preparación:** 2026-08-08 · **Ejecución:** 2026-08-09 (MAT-505 post-push)
 > **Evidencia recopilada:** lectura de disco (migraciones, schemas, hooks de realtime, env) — no de memoria
 
 ---
@@ -66,7 +66,7 @@
 | TEST RESULTS | `drizzle-kit check` + `rls.test.ts` (5/5) + tests nuevos §8 |
 | RISK | MEDIUM (según PRODUCTION-CHANGE-VERIFICATION §3, fila CHANGE-003) |
 | ROLLBACK PLAN | §5.3 de este documento |
-| APPROVAL | **PENDIENTE — requiere firma del owner** |
+| APPROVAL | ✅ **FIRMADO** (owner, 2026-08-09) |
 | EXECUTION WINDOW | `[UNKNOWN]` — ventana de baja actividad a definir |
 
 **Fuente:** plantilla MAT-400 de `PRODUCTION-CHANGE-VERIFICATION.md` §3 [VERIFIED].
@@ -290,7 +290,8 @@ flowchart LR
 
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
-| 1.0 | 2026-08-08 | Creación del paquete de aprobación CHANGE-003 (evidencia SB-001/002/003 + plan de verificación) | Pendiente de aprobación |
+| 1.0 | 2026-08-08 | Creación del paquete de aprobación CHANGE-003 (evidencia SB-001/002/003 + plan de verificación) | Aprobado |
+| 1.1 | 2026-08-09 | **Ejecutado en producción**: push 0022 (17 statements, COMMIT) + ALTER PUBLICATION + verificación 4/4 (policies 9, publicación 4/4, RLS activo) | ✅ APLICADO |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/CHANGE-003-APPROVAL-PACKAGE.md --min 80` → resultado en la tabla siguiente.
 
@@ -302,4 +303,4 @@ flowchart LR
 
 ---
 
-**Fuentes primarias:** `drizzle/0016_rls_policies.sql` · `drizzle/0017_adversary_ptt.sql` · `drizzle/meta/_journal.json` (22 entradas) · `src/shared/db/schemas/intelligence.ts` · `src/shared/hooks/useRealtimeMetrics.ts` · `src/features/intelligence/hooks/useInvestigationRealtime.ts` · `src/shared/db/rls.ts` · `src/shared/config/env.ts` · `docs/database/SUPABASE-AUDIT.md` (SB-001..005) · `docs/database/PRODUCTION-CHANGE-VERIFICATION.md` (MAT-400, §3 fila CHANGE-003) · `docs/risk/RISK-REGISTER.md` (RSK-03/10)
+**Fuentes primarias:** `drizzle/0016_rls_policies.sql` · `drizzle/0017_adversary_ptt.sql` · `drizzle/0022_rls_intelligence_realtime.sql` · `drizzle/meta/_journal.json` (23 entradas) · `src/shared/db/schemas/intelligence.ts` · `src/shared/hooks/useRealtimeMetrics.ts` · `src/features/intelligence/hooks/useInvestigationRealtime.ts` · `src/shared/db/rls.ts` · `src/shared/config/env.ts` · `docs/database/SUPABASE-AUDIT.md` (SB-001..005) · `docs/database/PRODUCTION-CHANGE-VERIFICATION.md` (MAT-400, §3 fila CHANGE-003) · `docs/database/MAT-505-CHANGE-003-POST-PUSH-REPORT.md` (nuevo) · `docs/risk/RISK-REGISTER.md` (RSK-03/10)

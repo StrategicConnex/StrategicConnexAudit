@@ -69,14 +69,14 @@ Registro consolidado de **riesgos de SCAUDIT Pro** a partir de los hallazgos rea
 |----|------|-----------|--------------|-------|------------|-------|--------|
 | RSK-01 | CHANGE-002 (ALTER TYPE `active` boolean) corrompe datos existentes | 2 | 5 | 10 | Migración con UPDATE normalizador + `USING`; rollback `::text`; data integrity §10 post-push | Owner + DBA | ⛔ OPEN (PENDING push) |
 | RSK-02 | Cobertura de tests insuficiente enmascara regresión | 4 | 4 | 16 | Batch RSK-02 (2026-08-08): +22 files · +220 tests → **65 files · 611 tests** · umbrales CI superados (Stmts 27.21% · Branch 20.67% · Funcs 22.83% · Lines 27.41%) | Engineering | ✅ CERRADO (2026-08-08) |
-| RSK-03 | Realtime sin RLS (SB-002) filtra datos cross-tenant | 3 | 5 | 15 | CHANGE-003 (publicación realtime con RLS) | Engineering | ⛔ OPEN |
+| RSK-03 | Realtime sin RLS (SB-002) filtra datos cross-tenant | 3 | 5 | 15 | CHANGE-003 (publicación realtime con RLS) — aplicado 2026-08-09: RLS activo en las 4 tablas + publicación + guards client-side | Engineering | ✅ CERRADO (2026-08-09, MAT-505 4/4) |
 | RSK-04 | Backup/PITR no confirmado antes de DDL | 3 | 5 | 15 | §6 gate: confirmar PITR + `pg_dump --schema-only` antes del push | Owner | ⛔ OPEN ([UNKNOWN]) |
 | RSK-05 | Rollback Drizzle forward-only sin down-migrations | 3 | 5 | 15 | Planes SQL manuales §17 (DROP INDEX, `::text`, DISABLE RLS) | DBA | 🟡 MITIGADO (planes listos) |
 | RSK-06 | httpbin.org caído → 3 tests ambientales rotos | 5 | 2 | 10 | Suite egress-guard resiliente: sondea conectividad en `beforeAll` y omite los tests sin red; 31/31 en cualquier entorno | Engineering | ✅ CERRADO (2026-08-08) |
 | RSK-07 | Trigger scheduled-scan no operativo silencioso | 4 | 3 | 12 | `schedules.task` real (cron horario) que procesa `monitoring_schedules` vencidos y encola `run-project-audit`; 5/5 tests; reserva de `nextRunAt` antes del encolado (idempotencia) | Engineering | ✅ CERRADO (2026-08-08) |
 | RSK-08 | IA :free con rate limit (5/60s) degrada experiencia | 4 | 2 | 8 | Fail-open + cache 5min + AI Router fallback | Engineering | 🟡 MITIGADO |
 | RSK-09 | 2 tool-registries duplicados divergen (ADR-001 no fiel al disco) | 3 | 3 | 9 | TD-11: consolidar `core/tool-registry.ts` + `registry/tool-registry.ts` | Engineering | ⛔ OPEN |
-| RSK-10 | RLS solo en 5/58 tablas (SB-001) — tablas sensibles sin política | 3 | 4 | 12 | CHANGE-003 + revisión RLS por tabla crítica | Engineering | ⛔ OPEN |
+| RSK-10 | RLS solo en 5/58 tablas (SB-001) — tablas sensibles sin política | 3 | 4 | 12 | CHANGE-003 aplicado (5→9 policies); revisión RLS incremental del resto (53 tablas server-side) | Engineering | 🔄 PARCIAL (5→9/58; resto sin política — acceso solo server-side) |
 | RSK-11 | Gap SSRF IPv4-mapped IPv6 (`::ffff:x.x.x.x`) evadía egress-guard → acceso a red interna/metadata | 4 | 5 | 20 | `ipv4MappedToIpv4()` extrae la IPv4 embebida (RFC 4291, formas decimal y hexadecimal) y la coteja contra los CIDR IPv4; tests dedicados | Engineering | ✅ CERRADO (2026-08-08) |
 
 > **11 riesgos registrados** (≥8 requeridos por T10-02). 6 OPEN · 2 MITIGADO · 3 CERRADO (RSK-06/07/11, 2026-08-08). [VERIFIED]
