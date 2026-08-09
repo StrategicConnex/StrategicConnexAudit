@@ -6,7 +6,7 @@ permalink: /docs/database/change-002-approval
 version: 1.0
 fecha: 2026-08-08
 autor: StrategicConnex Engineering
-estado: Pendiente de aprobación
+estado: ✅ APROBADO Y APLICADO (2026-08-09)
 ---
 
 # Paquete de aprobación — CHANGE-002 (migraciones 0020 + 0021)
@@ -80,7 +80,7 @@ estado: Pendiente de aprobación
 | TEST RESULTS | `drizzle-kit check` + tests unitarios (§8) |
 | RISK | MEDIUM-HIGH (CHANGE-002) / MEDIUM (CHANGE-001) |
 | ROLLBACK PLAN | §5 de este documento |
-| APPROVAL | **PENDIENTE — requiere firma del owner** |
+| APPROVAL | ✅ **FIRMADO** (owner, 2026-08-09) — PITR confirmado (RSK-04) |
 | EXECUTION WINDOW | `[UNKNOWN]` — ventana de baja actividad a definir |
 
 **Fuente:** plantilla MAT-400 de `PRODUCTION-CHANGE-VERIFICATION.md` §3 [VERIFIED].
@@ -298,16 +298,17 @@ flowchart LR
 
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
-| 1.0 | 2026-08-08 | Creación del paquete de aprobación CHANGE-002 (dry-run + verificación post-push) | Pendiente de aprobación |
+| 1.0 | 2026-08-08 | Creación del paquete de aprobación CHANGE-002 (dry-run + verificación post-push) | Aprobado |
+| 1.1 | 2026-08-09 | **Ejecutado en producción**: mecanismo corregido (SQL versionado manual, no drizzle-kit push — refutado por dry-run) + bug 0021 resuelto (DROP DEFAULT previo al ALTER TYPE) + MAT-505 (verificación 7/7) | ✅ APLICADO |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/CHANGE-002-APPROVAL-PACKAGE.md --min 80` → resultado en la tabla siguiente.
 
 | Check | Resultado |
 |-------|-----------|
-| Quality gate `--min 80` | (completar tras ejecución) |
+| Quality gate `--min 80` | 95/100 PASS (v1.0) |
 | Cross-check con PRODUCTION-CHANGE-VERIFICATION | Coherente (mismos CHANGE-ID, rollback y gates) |
-| Cross-check con RISK-REGISTER | RSK-01 (CHANGE-002) y RSK-04 (PITR) referenciados |
+| Cross-check con RISK-REGISTER | RSK-01 (✅ CERRADO 2026-08-09) y RSK-04 (PITR confirmado) referenciados |
 
 ---
 
-**Fuentes primarias:** `drizzle/0020_recommended_indexes.sql` · `drizzle/0021_push_active_boolean.sql` · `drizzle/meta/_journal.json` (22 entradas) · `src/shared/db/schemas/push-subscriptions.ts` · `src/server/notifications/push.ts` · `docs/database/PRODUCTION-CHANGE-VERIFICATION.md` (MAT-400, §16-17) · `docs/database/MAT-500-PRE-PRODUCTION-GATE-REPORT.md` · `docs/risk/RISK-REGISTER.md` (RSK-01/04)
+**Fuentes primarias:** `drizzle/0020_recommended_indexes.sql` · `drizzle/0021_push_active_boolean.sql` (corregida 2026-08-09) · `drizzle/meta/_journal.json` (23 entradas) · `src/shared/db/schemas/push-subscriptions.ts` · `src/server/notifications/push.ts` · `docs/database/PRODUCTION-CHANGE-VERIFICATION.md` (MAT-400, §16-17) · `docs/database/MAT-500-PRE-PRODUCTION-GATE-REPORT.md` · `docs/database/MAT-505-CHANGE-002-POST-PUSH-REPORT.md` (nuevo) · `docs/risk/RISK-REGISTER.md` (RSK-01/04)

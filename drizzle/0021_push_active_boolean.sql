@@ -25,13 +25,21 @@ END
 WHERE active IS NOT NULL;
 --> statement-breakpoint
 
--- 2. Cambiar el tipo de columna (PostgreSQL convierte 'true'/'false' → boolean)
+-- 2. Quitar el DEFAULT text preexistente ('true'::text, migración 0009) ANTES del
+--    ALTER TYPE: Postgres intenta castear el default junto con la columna y falla
+--    (42804: default for column "active" cannot be cast automatically to type
+--    boolean). Con el drop previo, el USING cubre solo la columna. [bug 2026-08-09]
+ALTER TABLE push_subscriptions
+  ALTER COLUMN active DROP DEFAULT;
+--> statement-breakpoint
+
+-- 3. Cambiar el tipo de columna (PostgreSQL convierte 'true'/'false' → boolean)
 ALTER TABLE push_subscriptions
   ALTER COLUMN active TYPE boolean
   USING (active = 'true');
 --> statement-breakpoint
 
--- 3. Reforzar NOT NULL y DEFAULT (equivalente a boolean().notNull().default(true))
+-- 4. Reforzar NOT NULL y DEFAULT (equivalente a boolean().notNull().default(true))
 ALTER TABLE push_subscriptions
   ALTER COLUMN active SET DEFAULT true;
 --> statement-breakpoint

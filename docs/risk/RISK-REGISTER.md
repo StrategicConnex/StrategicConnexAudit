@@ -67,7 +67,7 @@ Registro consolidado de **riesgos de SCAUDIT Pro** a partir de los hallazgos rea
 
 | ID | Risk | Prob (1–5) | Impact (1–5) | Score | Mitigation | Owner | Status |
 |----|------|-----------|--------------|-------|------------|-------|--------|
-| RSK-01 | CHANGE-002 (ALTER TYPE `active` boolean) corrompe datos existentes | 2 | 5 | 10 | Migración con UPDATE normalizador + `USING`; rollback `::text`; data integrity §10 post-push | Owner + DBA | ⛔ OPEN (PENDING push) |
+| RSK-01 | CHANGE-002 (ALTER TYPE `active` boolean) corrompe datos existentes | 2 | 5 | 10 | Migración con UPDATE normalizador + `USING` + DROP DEFAULT (bug corregido 2026-08-09); rollback `::text`; data integrity §10 post-push | Owner + DBA | ✅ CERRADO (2026-08-09, MAT-505 7/7) |
 | RSK-02 | Cobertura de tests insuficiente enmascara regresión | 4 | 4 | 16 | Batch RSK-02 (2026-08-08): +22 files · +220 tests → **65 files · 611 tests** · umbrales CI superados (Stmts 27.21% · Branch 20.67% · Funcs 22.83% · Lines 27.41%) | Engineering | ✅ CERRADO (2026-08-08) |
 | RSK-03 | Realtime sin RLS (SB-002) filtra datos cross-tenant | 3 | 5 | 15 | CHANGE-003 (publicación realtime con RLS) — aplicado 2026-08-09: RLS activo en las 4 tablas + publicación + guards client-side | Engineering | ✅ CERRADO (2026-08-09, MAT-505 4/4) |
 | RSK-04 | Backup/PITR no confirmado antes de DDL | 3 | 5 | 15 | §6 gate: confirmar PITR + `pg_dump --schema-only` antes del push | Owner | ⛔ OPEN ([UNKNOWN]) |
