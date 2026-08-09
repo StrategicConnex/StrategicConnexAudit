@@ -32,9 +32,14 @@ interface NeuralNetworkBackgroundProps {
 }
 
 /* ─── Parámetros de la simulación ─────────────────────────────────────────── */
-const NODE_COUNT = 60;
+// Densidad responsive: en móvil (<640px) la red es REALMENTE menos densa
+// (menos nodos y conexiones más cortas), no solo más transparente — el
+// consumo de CPU del emparejamiento O(n²) también baja.
+const NODE_COUNT = 60;              // desktop / tablet
+const NODE_COUNT_MOBILE = 34;       // móvil — ~43% menos nodos
 const CLUSTER_COUNT = 3;
-const LINK_DISTANCE = 150;          // px — umbral de proximidad para dibujar conexión
+const LINK_DISTANCE = 150;          // px — umbral de proximidad (desktop)
+const LINK_DISTANCE_MOBILE = 100;   // px — umbral móvil (conexiones más cortas)
 const LINK_SPARSE = 0.6;            // factor de distancia en el frame estático
 const DRIFT_MIN = 4;                // px/s — deriva ultra-lenta (<0.1 px/frame a 60fps)
 const DRIFT_MAX = 12;               // px/s — (<0.2 px/frame a 60fps)
@@ -74,6 +79,16 @@ export function NeuralNetworkBackground({ listening = false }: NeuralNetworkBack
     listeningRef.current = listening;
   }, [listening]);
 
+  // Densidad compacta (móvil): re-monta la simulación al cruzar el breakpoint.
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    const apply = () => setCompact(!mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
   const colorsRef = useRef({ node: "#7C3AED", line: "rgba(124,58,237,0.15)" });
   useEffect(() => {
     // Re-leer tokens CSS al cambiar de tema (barato: 1 vez por cambio).
@@ -93,11 +108,15 @@ export function NeuralNetworkBackground({ listening = false }: NeuralNetworkBack
   }, []);
 
   // ─── Simulación — montada UNA vez, lee los refs mutables ─────────────────
+  // Se re-monta solo al cruzar el breakpoint móvil (compact) o con reduced-motion.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const nodeCount = compact ? NODE_COUNT_MOBILE : NODE_COUNT;
+    const linkDistance = compact ? LINK_DISTANCE_MOBILE : LINK_DISTANCE;
 
     let width = 0;
     let height = 0;
@@ -124,8 +143,8 @@ export function NeuralNetworkBackground({ listening = false }: NeuralNetworkBack
       y: 0.3 + Math.random() * 0.4,
     }));
 
-    const nodes: SimNode[] = Array.from({ length: NODE_COUNT }, (_, i) => {
-      const isCluster = i < NODE_COUNT * 0.4;
+    const nodes: SimNode[] = Array.from({ length: nodeCount }, (_, i) => {
+      const isCluster = i < nodeCount * 0.4;
       let x: number;
       let y: number;
       if (isCluster) {
@@ -186,7 +205,7 @@ export function NeuralNetworkBackground({ listening = false }: NeuralNetworkBack
           const bx = b.x * w;
           const by = b.y * h;
           const d = Math.hypot(bx - ax, by - ay);
-          const maxD = LINK_DISTANCE * (staticFrame ? LINK_SPARSE : 1);
+          const maxD = linkDistance * (staticFrame ? LINK_SPARSE : 1);
           if (d < maxD) {
             // α = cercanía relativa (1 en contacto, 0 en el umbral)
             const alpha = (1 - d / maxD) * 0.9;
@@ -270,7 +289,7 @@ export function NeuralNetworkBackground({ listening = false }: NeuralNetworkBack
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, [reducedMotion]);
+  }, [reducedMotion, compact]);
 
   return (
     <canvas

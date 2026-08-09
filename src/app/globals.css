@@ -171,10 +171,10 @@
 
   /* Fondo de red neuronal — violeta luminoso visible sobre dark.
      Opacidad base = móvil (menos densa); sm/lg la suben vía media query. */
-  --neural-node: #A78BFA;
-  --neural-node-glow: rgba(167, 139, 250, 0.5);
-  --neural-line: rgba(167, 139, 250, 0.35);
-  --neural-canvas-opacity: 0.25;
+  --neural-node: #C4B5FD;
+  --neural-node-glow: rgba(196, 181, 253, 0.65);
+  --neural-line: rgba(196, 181, 253, 0.5);
+  --neural-canvas-opacity: 0.4;
 
   /* Acentos multi-hue — brillantes sobre dark */
   --accent-blue: oklch(72% 0.15 250);
@@ -251,9 +251,9 @@
   /* Fondo de red neuronal — violeta medio, legible sobre light.
      Opacidad base = móvil (menos densa); sm/lg la suben vía media query. */
   --neural-node: #7C3AED;
-  --neural-node-glow: rgba(124, 58, 237, 0.4);
-  --neural-line: rgba(124, 58, 237, 0.28);
-  --neural-canvas-opacity: 0.18;
+  --neural-node-glow: rgba(124, 58, 237, 0.55);
+  --neural-line: rgba(124, 58, 237, 0.4);
+  --neural-canvas-opacity: 0.3;
 
   /* Acentos multi-hue — oscuros sobre light (AA) */
   --accent-blue: oklch(48% 0.15 250);
@@ -279,13 +279,13 @@
    (misma especificidad [data-theme], aparece más tarde en el archivo). */
 
 @media (min-width: 640px) {
-  [data-theme="dark"] { --neural-canvas-opacity: 0.32; }
-  [data-theme="light"] { --neural-canvas-opacity: 0.24; }
+  [data-theme="dark"] { --neural-canvas-opacity: 0.5; }
+  [data-theme="light"] { --neural-canvas-opacity: 0.38; }
 }
 
 @media (min-width: 1024px) {
-  [data-theme="dark"] { --neural-canvas-opacity: 0.4; }
-  [data-theme="light"] { --neural-canvas-opacity: 0.3; }
+  [data-theme="dark"] { --neural-canvas-opacity: 0.6; }
+  [data-theme="light"] { --neural-canvas-opacity: 0.45; }
 }
 
 /* ─── color-scheme + transición de tema ──────────────────────────────── */
