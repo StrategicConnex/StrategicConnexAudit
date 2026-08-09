@@ -88,6 +88,10 @@ export function useInvestigationRealtime(investigationId: string | null) {
           filter: `investigation_id=eq.${investigationId}`
         },
         (payload) => {
+          const row = payload.new as { investigation_id?: string; id?: string };
+          // Aislamiento multi-tenant (CHANGE-003): los eventos llevan
+          // investigation_id; ignorar los de otras investigaciones/tenants.
+          if (row.investigation_id && row.investigation_id !== investigationId) return;
           setEvents((prev) => {
             if (prev.some((e) => e.id === payload.new.id)) return prev;
             return [payload.new as RunEventData, ...prev];
@@ -104,6 +108,10 @@ export function useInvestigationRealtime(investigationId: string | null) {
           filter: `investigation_id=eq.${investigationId}`
         },
         (payload) => {
+          const row = payload.new as { investigation_id?: string; id?: string };
+          // Aislamiento multi-tenant (CHANGE-003): ignorar findings de otras
+          // investigaciones/tenants.
+          if (row.investigation_id && row.investigation_id !== investigationId) return;
           setFindings((prev) => {
             if (prev.some((f) => f.id === payload.new.id)) return prev;
             return [payload.new as FindingData, ...prev];
@@ -120,6 +128,10 @@ export function useInvestigationRealtime(investigationId: string | null) {
           filter: `id=eq.${investigationId}`
         },
         (payload) => {
+          const row = payload.new as { id?: string };
+          // Aislamiento multi-tenant (CHANGE-003): las actualizaciones de la
+          // investigación llevan id; ignorar las de otras investigaciones.
+          if (row.id && row.id !== investigationId) return;
           setInvestigation(payload.new as InvestigationData);
         }
       )
