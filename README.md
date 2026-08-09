@@ -202,6 +202,8 @@ Documentación completa en formato **HTML** con diagramas Mermaid, skeletons de 
 
 > ℹ️ **Nota:** estos archivos se abren localmente desde el repositorio. El sitio `scaudit.vercel.app/docs` renderiza los Markdown de `docs/` (instalación, API, seguridad, roadmap).
 
+> 🤖 **AI Copilot:** la doctrina de ingeniería del Copilot (arquitectura, contratos, seguridad, UX, roadmap) vive en [`docs/CORE_SYSTEM.md`](docs/CORE_SYSTEM.md), con agentes especializados en [`agents/`](agents/README.md).
+
 ---
 
 ## 🏗️ Arquitectura
