@@ -189,7 +189,7 @@ const response = await safeFetch("https://example.com/api", {
 ```
 Evento de seguridad → logSecurityEvent() → security_audit_logs (DB)
                                                       │
-                                              cada 5 min (cron)
+                                              diario 03:00 (cron Vercel)
                                                       ▼
                                               runSiemExport()
                                                       │
@@ -351,7 +351,7 @@ flowchart TB
   E --> F[Supabase Auth Magic Link]
   F --> G[API Handlers]
   G --> H[security_audit_logs]
-  H --> I[SIEM Exporter cada 5 min]
+  H --> I[SIEM Exporter diario 03:00]
   I --> J[Slack / Email / PagerDuty / Splunk]
 ```
 

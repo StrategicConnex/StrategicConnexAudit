@@ -451,18 +451,20 @@ Los cron jobs se configuran en `vercel.json`:
 ```json
 {
   "crons": [
-    { "path": "/api/cron/siem", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/uptime", "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/siem", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/uptime", "schedule": "30 3 * * *" }
   ]
 }
 ```
+
+> ⚠️ **Límite Hobby:** Vercel permite **máximo 1 ejecución de cron por día** en el plan Hobby. Frecuencias sub-minuto (p. ej. `*/5`) exigen el plan Pro. El proyecto usa **frecuencia diaria** (03:00 SIEM, 03:30 uptime) para pasar el deploy en Hobby.
 
 ### Cron jobs disponibles
 
 | Ruta | Schedule | Propósito |
 |------|----------|-----------|
-| `/api/cron/uptime` | `*/15 * * * *` (cada 15 min) | Verificación de uptime |
-| `/api/cron/siem` | `*/5 * * * *` (cada 5min) | SIEM Exporter |
+| `/api/cron/uptime` | `30 3 * * *` (diario 03:30) | Verificación de uptime |
+| `/api/cron/siem` | `0 3 * * *` (diario 03:00) | SIEM Exporter |
 | `/api/ai/healthcheck` | `0 */6 * * *` (cada 6h) | Health check de modelos IA |
 
 ### Probar un cron manualmente
@@ -760,7 +762,7 @@ flowchart LR
 | GET | `/api/public/v1/health` | Público | Verificación post-deploy |
 | GET | `/api/monitoring` | Sesión | Estado de monitoreo |
 | GET | `/api/intelligence/health` | Sesión | Health del engine |
-| POST | `/api/cron/uptime` | `Bearer <CRON_SECRET>` | Cron cada 15 min |
+| POST | `/api/cron/uptime` | `Bearer <CRON_SECRET>` | Cron diario 03:30 |
 
 ---
 

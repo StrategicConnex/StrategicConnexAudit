@@ -253,8 +253,8 @@ Endpoint para webhooks de integraciones externas. Validado con HMAC.
 
 | Endpoint | Schedule | Descripción |
 |----------|----------|-------------|
-| `/api/cron/uptime` | `*/15 * * * *` (cada 15 min) | Verificación de uptime de proyectos |
-| `/api/cron/siem` | `*/5 * * * *` (cada 5min) | SIEM Exporter + Heartbeat |
+| `/api/cron/uptime` | `30 3 * * *` (diario 03:30) | Verificación de uptime de proyectos |
+| `/api/cron/siem` | `0 3 * * *` (diario 03:00) | SIEM Exporter + Heartbeat |
 | `/api/ai/healthcheck` | `0 */6 * * *` (cada 6h) | Health check de modelos con alertas |
 
 Protegidos con `CRON_SECRET` en el header `x-cron-secret`.

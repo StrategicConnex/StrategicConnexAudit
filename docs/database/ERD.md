@@ -181,7 +181,7 @@ Cuando un eslabón no aplica se marca `N/A`; cuando no es verificable, `[UNKNOWN
 | Paso | Componente | Evidencia |
 |------|-----------|-----------|
 | SOURCE | Probe HTTP HEAD sobre `projects.domain` | `src/trigger/uptime.trigger.ts:32`, `src/app/api/cron/uptime/route.ts:51` |
-| INGEST | Cron Vercel garantizado (`/api/cron/uptime` `*/15 * * * *`, `CRON_SECRET`) + Trigger.dev `*/15 * * * *` (opcional, deploy no verificado) | `src/app/api/cron/uptime/route.ts:72`, `src/trigger/uptime.trigger.ts:53` |
+| INGEST | Cron Vercel garantizado (`/api/cron/uptime` `30 3 * * *` diario 03:30, `CRON_SECRET` — límite Hobby) + Trigger.dev `*/15 * * * *` (opcional, deploy no verificado) | `src/app/api/cron/uptime/route.ts:72`, `src/trigger/uptime.trigger.ts:53` |
 | VALIDATE | `normalizeUrl` + `validateSafeUrl` (egress-guard) | `src/trigger/uptime.trigger.ts:29` |
 | TRANSFORM | statusCode → `is_up`, `response_time_ms` | `uptime.trigger.ts:40-51` |
 | DB | `uptime_logs` | migraciones `0001_silky_ikaris.sql` (tabla), `0015_core_fk_indexes.sql` (índices), `0016_rls_policies.sql` (RLS) |
@@ -237,7 +237,7 @@ Cuando un eslabón no aplica se marca `N/A`; cuando no es verificable, `[UNKNOWN
 | Paso | Componente | Evidencia |
 |------|-----------|-----------|
 | SOURCE | `security_audit_logs` (auth failures, CSP violations, rate limit, open redirect) | `src/server/security/siem-exporter.ts` |
-| INGEST | `runSiemExport()` cada 5 min — Vercel Cron garantizado (`/api/cron/siem`) + Trigger.dev opcional (deploy no verificado) | `src/app/api/cron/siem/route.ts`, `src/trigger/siem.trigger.ts:21-29`, `siem-exporter.ts:319` |
+| INGEST | `runSiemExport()` diario 03:00 — Vercel Cron garantizado (`/api/cron/siem` `0 3 * * *`, límite Hobby) + Trigger.dev opcional (deploy no verificado) | `src/app/api/cron/siem/route.ts`, `src/trigger/siem.trigger.ts:21-29`, `siem-exporter.ts:319` |
 | VALIDATE | Reglas de correlación (6 reglas × destinos) | `siem-exporter.ts` (reglas), `src/app/api/security/siem/test/route.ts` |
 | TRANSFORM | Agregación count/window + severidad + target | `siem-exporter.ts:319` |
 | DB | `siem_alert_logs` | migración `0007_siem_alert_logs.sql` |

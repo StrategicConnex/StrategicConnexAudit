@@ -60,7 +60,7 @@ Cuando `persistWhoisSnapshot()` detecta diferencias con el snapshot anterior:
 
 ### Eventos de seguridad (SIEM)
 
-Detectados por `runSiemExport()` cada 5 minutos:
+Detectados por `runSiemExport()` (cron Vercel diario 03:00 — límite Hobby):
 
 | Patrón | Threshold | Ventana |
 |--------|-----------|---------|
@@ -322,7 +322,7 @@ flowchart LR
   A[Evento: DNS / WHOIS / SIEM / API key]
   B[logSecurityEvent / persistWhoisSnapshot / processDnsResults]
   C[DB: security_audit_logs + siem_alert_logs]
-  D[runSiemExport cada 5 min]
+  D[runSiemExport diario 03:00]
   E[Heartbeat cada 30 min]
   F[Slack]
   G[Email Resend]
@@ -387,7 +387,7 @@ sequenceDiagram
 |-----|-----------|------|--------|
 | REQ-001 Alertas DNS | `processDnsResults` | diff de snapshots | Trigger.dev |
 | REQ-002 Alertas WHOIS | `persistWhoisSnapshot` | diff de snapshots | Trigger.dev |
-| REQ-003 SIEM 7 reglas | `runSiemExport` | `siem-alerts` | Cron cada 5 min |
+| REQ-003 SIEM 7 reglas | `runSiemExport` | `siem-alerts` | Cron Vercel diario 03:00 |
 | REQ-004 Expiración de keys | `api-key-expiry.trigger.ts` | Alerta diaria 09:00 UTC | Trigger.dev |
 | REQ-005 Canales paralelos | `siem/*` exporters | `Test Webhooks` | Env vars Vercel |
 

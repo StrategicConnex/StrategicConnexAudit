@@ -241,7 +241,7 @@ flowchart LR
 
 **Configuración del runtime Trigger.dev** [VERIFIED]: `trigger.config.ts` → project `proj_vzzxtydwblfhxgmljiai`, `dirs: ["./src/trigger"]`, `retries.maxAttempts = 3` (default), `maxDuration = 3600`. ⚠️ Configuración local verificada; **deploy a Trigger.dev no verificado** (plataforma opcional según `deployment.md`).
 
-**Cron Vercel — mecanismo garantizado** [VERIFIED]: `vercel.json` → `/api/cron/siem` (`*/5 * * * *`, CRON_SECRET) y `/api/cron/uptime` (`*/15 * * * *`, CRON_SECRET), `regions: ["iad1"]`, respaldados por `src/app/api/cron/siem/route.ts` y `src/app/api/cron/uptime/route.ts`.
+**Cron Vercel — mecanismo garantizado** [VERIFIED]: `vercel.json` → `/api/cron/siem` (`0 3 * * *` diario 03:00, CRON_SECRET) y `/api/cron/uptime` (`30 3 * * *` diario 03:30, CRON_SECRET) — frecuencia diaria por límite Hobby (máx. 1 ejecución/día); `regions: ["iad1"]`, respaldados por `src/app/api/cron/siem/route.ts` y `src/app/api/cron/uptime/route.ts`.
 
 ---
 
@@ -343,7 +343,7 @@ Este documento no repite el ERD: su foco es el **flujo** de datos entre capas, n
 
 | Área | Mecanismo real | Evidencia |
 |------|----------------|-----------|
-| Monitoring de uptime | Cron Vercel garantizado `/api/cron/uptime` (cada 15 min, CRON_SECRET) + `uptimeMonitor` (Trigger.dev opcional, cada 15 min) | [VERIFIED] |
+| Monitoring de uptime | Cron Vercel garantizado `/api/cron/uptime` (diario 03:30, CRON_SECRET — límite Hobby) + `uptimeMonitor` (Trigger.dev opcional, cada 15 min) | [VERIFIED] |
 | Detección de anomalías | `periodicAnomalyDetection` (`*/15`) y `evaluateMonitorsTask` (diario) | [VERIFIED] |
 | Exportación a SIEM | `siemExporterTask` (`*/5`) → `security/siem-exporter.ts` | [VERIFIED] |
 | Reporte de violación CSP | `report-uri /api/security/csp-report` (endpoint `src/app/api/security/csp-report/route.ts`) | [VERIFIED] |
