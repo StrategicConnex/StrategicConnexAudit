@@ -40,7 +40,7 @@ export function AiCopilotSidebar({
       {/* Header */}
       <div className="p-4 border-b border-border bg-background flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-2">
-          <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <Sparkles className="w-4 h-4 text-chartreuse animate-pulse" />
           <h3 className="text-xs font-semibold text-foreground tracking-wider uppercase font-mono">
             Asistente IA
           </h3>
@@ -59,7 +59,7 @@ export function AiCopilotSidebar({
           <button
             onClick={onRequestRemediation}
             disabled={isGenerating || !canRequestPlan}
-            className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-mono hover:bg-emerald-500/20 active:scale-98 transition-[color,background-color,border-color,opacity,transform] disabled:opacity-40 disabled:scale-100"
+            className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg border border-chartreuse/20 bg-chartreuse/10 text-chartreuse text-xs font-mono hover:bg-chartreuse/20 active:scale-98 transition-[color,background-color,border-color,opacity,transform] disabled:opacity-40 disabled:scale-100"
           >
             {isGenerating ? (
               <>

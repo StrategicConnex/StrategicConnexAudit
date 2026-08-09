@@ -14,8 +14,8 @@ export function QuickMetricsHud({ investigation }: QuickMetricsHudProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div className="bg-card border border-border rounded-xl p-4 flex items-center space-x-3.5">
-        <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-          <ShieldCheck className="w-5 h-5 text-emerald-400" />
+        <div className="w-10 h-10 rounded-lg bg-chartreuse/10 flex items-center justify-center">
+          <ShieldCheck className="w-5 h-5 text-chartreuse" />
         </div>
         <div>
           <span className="text-[10px] font-mono text-muted-fg uppercase tracking-wider">Firewall Status</span>

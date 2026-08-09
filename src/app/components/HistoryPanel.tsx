@@ -82,7 +82,7 @@ const RECORD_TYPE_COLORS: Record<string, { bg: string; text: string; border: str
   NS: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
   TXT: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
   CNAME: { bg: 'bg-pink-500/10', text: 'text-pink-400', border: 'border-pink-500/20' },
-  SOA: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
+  SOA: { bg: 'bg-chartreuse/10', text: 'text-chartreuse', border: 'border-chartreuse/20' },
 };
 
 function getRecordColor(type: string) {
@@ -163,7 +163,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
   const allChanges: TimelineDisplay[] = [...(timeline?.dnsChanges || []), ...(timeline?.whoisChanges || [])];
 
   return (
-    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-400">
+    <div className="glass-card overflow-hidden animate-in fade-in slide-in-from-top-4 duration-400">
       {/* Header */}
       <div className="p-5 border-b border-border flex items-center justify-between">
         <div>

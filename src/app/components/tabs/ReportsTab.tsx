@@ -51,7 +51,7 @@ export function ReportsTab({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Card 1 */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 flex flex-col justify-between gap-10 group hover:border-primary/20 transition-colors ">
+        <div className="glass-card p-10 flex flex-col justify-between gap-10 group hover:border-primary/20 transition-colors ">
           <div className="flex flex-col gap-6">
             <div className="w-14 h-14 rounded-xl bg-muted/10 flex items-center justify-center text-muted-fg group-hover:text-primary group-hover:bg-primary/10 group-hover:border-primary/20 transition-colors border border-border">
               <FileText className="w-7 h-7" />
@@ -69,7 +69,7 @@ export function ReportsTab({
         </div>
 
         {/* Card 2 */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 flex flex-col justify-between gap-10 group hover:border-chartreuse/20 transition-colors ">
+        <div className="glass-card p-10 flex flex-col justify-between gap-10 group hover:border-chartreuse/20 transition-colors ">
           <div className="flex flex-col gap-6">
             <div className="w-14 h-14 rounded-xl bg-muted/10 flex items-center justify-center text-muted-fg group-hover:text-chartreuse group-hover:bg-chartreuse/10 group-hover:border-chartreuse/20 transition-colors border border-border">
               <BarChart3 className="w-7 h-7" />
@@ -108,14 +108,14 @@ export function ReportsTab({
                 alert(t('csvError'));
               }
             }}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-chartreuse/10 border border-chartreuse/20 hover:border-chartreuse/40 text-chartreuse rounded-xl hover:bg-emerald-500/20 transition-[color,background-color,border-color,box-shadow] text-[11px] font-bold uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(140,200,80,0.1)] hover:shadow-[0_0_20px_rgba(140,200,80,0.2)]"
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-chartreuse/10 border border-chartreuse/20 hover:border-chartreuse/40 text-chartreuse rounded-xl hover:bg-chartreuse/20 transition-[color,background-color,border-color,box-shadow] text-[11px] font-bold uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(140,200,80,0.1)] hover:shadow-[0_0_20px_rgba(140,200,80,0.2)]"
           >
             <Download className="w-4 h-4" /> {t('downloadCsv')}
           </button>
         </div>
 
         {/* Card 3: AI Intelligence Card */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 relative overflow-hidden  md:col-span-1">
+        <div className="glass-card p-10 relative overflow-hidden  md:col-span-1">
           <div className="absolute -top-12 -left-12 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
           <div className="flex flex-col gap-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[9px] uppercase font-bold text-primary tracking-widest w-fit">
@@ -128,7 +128,7 @@ export function ReportsTab({
       </div>
 
       {/* AI Section */}
-      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 relative overflow-hidden ">
+      <div className="glass-card p-10 relative overflow-hidden ">
         <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-10 border-b border-border pb-10 mb-10 relative z-10">
           <div className="space-y-3">
@@ -246,7 +246,7 @@ export function ReportsTab({
       </div>
 
       {/* Historial */}
-      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden ">
+      <div className="glass-card overflow-hidden ">
         <div className="p-8 border-b border-border bg-muted/1 font-extrabold text-white text-base">{t('historyTitle')}</div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">

@@ -59,7 +59,7 @@ function classifyTarget(val: string): TargetType {
 const targetTypeStyles: Record<TargetType, { bg: string; text: string; icon: LucideIcon; label: string }> = {
   domain: { bg: "bg-blue-500/10 border-blue-500/20", text: "text-blue-400", icon: Globe, label: "Dominio" },
   url: { bg: "bg-teal-500/10 border-teal-500/20", text: "text-teal-400", icon: Globe, label: "Enlace Web" },
-  ip: { bg: "bg-emerald-500/10 border-emerald-500/20", text: "text-emerald-400", icon: Binary, label: "Dirección IP" },
+  ip: { bg: "bg-chartreuse/10 border-chartreuse/20", text: "text-chartreuse", icon: Binary, label: "Dirección IP" },
   email: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", icon: Mail, label: "Correo Electrónico" },
   asn: { bg: "bg-purple-500/10 border-purple-500/20", text: "text-purple-400", icon: Cpu, label: "Sistema Autónomo (ASN)" },
   cidr: { bg: "bg-indigo-500/10 border-indigo-500/20", text: "text-indigo-400", icon: Binary, label: "Rango CIDR" },
@@ -121,7 +121,7 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
         <div className="relative flex items-center bg-background/80 backdrop-blur-md border border-border rounded-2xl p-1.5 focus-within:border-border focus-within:ring-1 focus-within:ring-border shadow-2xl transition-[color,background-color,border-color,box-shadow,filter] duration-300">
           <div className="flex items-center justify-center w-12 h-12 text-muted-fg">
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+              <Loader2 className="w-5 h-5 animate-spin text-chartreuse" />
             ) : (
               <Terminal className="w-5 h-5 group-focus-within:text-foreground transition-colors" />
             )}
@@ -132,7 +132,7 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
             value={inputVal}
             onChange={(e) => { setInputVal(e.target.value); setLocalError(null); }}
             placeholder="Ingrese un dominio, IP, ASN o Email (ej. google.com, 8.8.8.8)..."
-            className="flex-1 bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 rounded-lg text-sm text-foreground placeholder-[#52525b] py-3.5 px-1 font-sans selection:bg-emerald-500/20"
+            className="flex-1 bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 rounded-lg text-sm text-foreground placeholder-[#52525b] py-3.5 px-1 font-sans selection:bg-chartreuse/20"
             disabled={isLoading}
             autoFocus
           />
@@ -161,12 +161,12 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
       {inputVal.trim() && !localError && !apiError && (
         <div className="flex flex-wrap items-center justify-between px-3 text-[11px] text-muted-fg font-mono gap-y-2">
           <div className="flex items-center space-x-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-chartreuse animate-pulse" />
             <span>Target activo: <strong className="text-muted-fg font-normal">{inputVal}</strong></span>
           </div>
           <div className="flex items-center space-x-1.5">
             <span className="text-muted-fg">SSRF Shield:</span>
-            <span className="text-emerald-400 font-medium">PROTEGIDO</span>
+            <span className="text-chartreuse font-medium">PROTEGIDO</span>
           </div>
         </div>
       )}

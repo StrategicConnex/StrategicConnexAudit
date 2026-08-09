@@ -138,12 +138,12 @@ const applyIntelligenceExportTheme = (clonedDoc: Document, _branding?: Intellige
         color: #b45309 !important;
       }
 
-      .bg-emerald-500\/10 {
+      .bg-chartreuse\/10 {
         background-color: #d1fae5 !important;
         border-color: #6ee7b7 !important;
         color: #047857 !important;
       }
-      .text-emerald-400 {
+      .text-chartreuse {
         color: #047857 !important;
       }
 

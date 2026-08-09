@@ -11,7 +11,7 @@ export default function IntelligenceLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#09090b] selection:bg-emerald-500/20 antialiased">
+    <div className="min-h-screen bg-[#09090b] selection:bg-chartreuse/20 antialiased">
       {children}
     </div>
   );

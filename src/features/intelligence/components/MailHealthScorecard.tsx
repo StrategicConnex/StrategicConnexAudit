@@ -32,8 +32,8 @@ export function MailHealthScorecard({ status }: MailHealthScorecardProps) {
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5 max-w-md">
           <div className="flex items-center space-x-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest font-semibold">
+            <span className="h-2 w-2 rounded-full bg-chartreuse animate-pulse" />
+            <span className="text-[10px] font-mono text-chartreuse uppercase tracking-widest font-semibold">
               Telemática de Correo
             </span>
           </div>

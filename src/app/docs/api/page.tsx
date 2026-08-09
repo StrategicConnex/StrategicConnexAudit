@@ -554,7 +554,7 @@ export default function DocsApiPage() {
         </div>
 
         {/* Overview */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 space-y-4">
+        <div className="glass-card p-8 space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Zap className="w-5 h-5 text-primary" /> Quick Overview
           </h2>
@@ -646,7 +646,7 @@ export default function DocsApiPage() {
         </div>
 
         {/* Authentication Guide */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 space-y-4">
+        <div className="glass-card p-8 space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-primary" /> Authentication Guide
           </h2>
@@ -714,7 +714,7 @@ export default function DocsApiPage() {
         </div>
 
         {/* Error Codes */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 space-y-4">
+        <div className="glass-card p-8 space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-destructive" /> Error Codes
           </h2>

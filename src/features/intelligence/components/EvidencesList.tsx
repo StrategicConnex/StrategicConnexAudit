@@ -63,7 +63,7 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, 
                 onClick={() => onSelectEvidence(isSelected ? null : item.id)}
                 className={`p-4 border rounded-xl cursor-pointer transition-colors duration-300 ${
                   isSelected
-                    ? "bg-card border-emerald-500/40 shadow-lg"
+                    ? "bg-card border-chartreuse/40 shadow-lg"
                     : "bg-card border-border hover:border-border"
                 } ${isDemo ? "opacity-60" : ""}`}
               >
@@ -86,7 +86,7 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, 
                   {item.description || item.desc}
                 </p>
                 {item.recommendation && (
-                  <div className="mt-3 p-2.5 bg-background rounded-lg border border-border text-[11px] font-mono text-emerald-400/90 leading-normal">
+                  <div className="mt-3 p-2.5 bg-background rounded-lg border border-border text-[11px] font-mono text-chartreuse/90 leading-normal">
                     <span className="text-[10px] text-muted-fg block mb-1">RECOMENDACIÓN DE REMEDIACIÓN:</span>
                     {item.recommendation}
                   </div>

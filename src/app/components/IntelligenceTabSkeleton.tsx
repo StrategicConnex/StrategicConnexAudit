@@ -8,13 +8,13 @@ export function IntelligenceTabSkeleton() {
       {/* ─── LEFT PANEL Skeleton ─────────────────── */}
       <div className="w-full lg:w-72 shrink-0 flex flex-col gap-6">
         {/* Project Selector */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-5 space-y-3">
+        <div className="glass-card p-5 space-y-3">
           <div className="h-3 w-24 bg-foreground/5 rounded-full" />
           <div className="h-11 w-full bg-foreground/5 rounded-xl" />
         </div>
 
         {/* History List */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl flex-1 flex flex-col overflow-hidden">
+        <div className="glass-card flex-1 flex flex-col overflow-hidden">
           <div className="p-5 border-b border-border">
             <div className="h-3 w-32 bg-foreground/5 rounded-full" />
           </div>
@@ -35,7 +35,7 @@ export function IntelligenceTabSkeleton() {
       {/* ─── RIGHT PANEL Skeleton ─────────── */}
       <div className="flex-1 flex flex-col gap-8 min-w-0">
         {/* Scan Launcher */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 space-y-6">
+        <div className="glass-card p-8 space-y-6">
           <div className="space-y-2">
             <div className="h-5 w-48 bg-foreground/5 rounded-full" />
             <div className="h-3 w-36 bg-foreground/5 rounded-full" />
@@ -49,13 +49,13 @@ export function IntelligenceTabSkeleton() {
         {/* Posture Score + Vulnerabilities */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Score Gauge skeleton */}
-          <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 flex flex-col items-center gap-4">
+          <div className="glass-card p-8 flex flex-col items-center gap-4">
             <div className="h-3 w-20 bg-foreground/5 rounded-full" />
             <div className="w-36 h-36 rounded-full border-4 border-dashed border-border/30" />
           </div>
 
           {/* Summary skeleton */}
-          <div className="md:col-span-2 backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 space-y-6">
+          <div className="md:col-span-2 glass-card p-8 space-y-6">
             <div className="space-y-3">
               <div className="h-3 w-24 bg-foreground/5 rounded-full" />
               <div className="h-5 w-64 bg-foreground/5 rounded-full" />

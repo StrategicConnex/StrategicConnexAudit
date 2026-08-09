@@ -606,7 +606,7 @@ export default function ApiPlaygroundPage() {
           <div className="lg:col-span-2 space-y-5">
 
             {/* API Key Input */}
-            <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-5 space-y-3">
+            <div className="glass-card p-5 space-y-3">
               <h3 className="text-xs font-bold flex items-center gap-2">
                 <Key className="w-3.5 h-3.5 text-purple-400" /> API Key
               </h3>
@@ -619,7 +619,7 @@ export default function ApiPlaygroundPage() {
             </div>
 
             {/* Base URL */}
-            <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-5 space-y-2">
+            <div className="glass-card p-5 space-y-2">
               <h3 className="text-xs font-bold flex items-center gap-2">
                 <Server className="w-3.5 h-3.5 text-chartreuse" /> Base URL
               </h3>
@@ -629,7 +629,7 @@ export default function ApiPlaygroundPage() {
             </div>
 
             {/* History */}
-            <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-5">
+            <div className="glass-card p-5">
               <HistoryLog entries={history} onClear={handleClearHistory} onReplay={handleReplay} />
               {history.length === 0 && (
                 <div className="text-center py-6">
@@ -645,7 +645,7 @@ export default function ApiPlaygroundPage() {
           <div className="lg:col-span-3 space-y-5">
 
             {/* Endpoint Selector + Send */}
-            <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-5 space-y-4">
+            <div className="glass-card p-5 space-y-4">
               <h3 className="text-xs font-bold flex items-center gap-2">
                 <Globe className="w-3.5 h-3.5 text-primary" /> Endpoint
               </h3>
@@ -662,7 +662,7 @@ export default function ApiPlaygroundPage() {
             </div>
 
             {/* Tabs: Params / Response / cURL */}
-            <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden">
+            <div className="glass-card overflow-hidden">
               {/* Tab bar */}
               <div className="flex border-b border-border">
                 {(['params', 'response', 'curl'] as Tab[]).map((tab) => (
@@ -876,7 +876,7 @@ export default function ApiPlaygroundPage() {
             </div>
 
             {/* Quick Tips */}
-            <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-5">
+            <div className="glass-card p-5">
               <h4 className="text-[9px] font-bold text-muted-fg uppercase tracking-widest mb-3">Tips</h4>
               <ul className="space-y-2 text-[10px] text-muted-fg/70">
                 <li className="flex items-start gap-2">

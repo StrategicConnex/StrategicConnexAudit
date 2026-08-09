@@ -488,7 +488,7 @@ export function IntelligenceTab({
       <div className="w-full lg:w-72 shrink-0 flex flex-col gap-6">
         
         {/* Project Selector inside Workspace */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-5">
+        <div className="glass-card p-5">
           <label className="block text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-2">
             {t('activeProject')}
           </label>
@@ -511,7 +511,7 @@ export function IntelligenceTab({
         </div>
 
         {/* History List Card */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl flex-1 flex flex-col min-h-[300px] overflow-hidden">
+        <div className="glass-card flex-1 flex flex-col min-h-[300px] overflow-hidden">
           <div className="p-5 border-b border-border flex items-center justify-between bg-muted/1">
             <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-2">
               <History className="w-3.5 h-3.5" /> {t('analysisHistory')}
@@ -595,7 +595,7 @@ export function IntelligenceTab({
         )}
 
         {/* Dynamic target launcher header */}
-        <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 relative overflow-hidden group">
+        <div className="glass-card p-8 relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
           
           <div className="relative z-10 flex flex-col gap-6">
@@ -738,7 +738,7 @@ export function IntelligenceTab({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               
               {/* Score Gauge — Velocímetro SVG Cinematico */}
-              <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4 md:col-span-1">
+              <div className="glass-card p-8 flex flex-col items-center justify-center text-center gap-4 md:col-span-1">
                 <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">
                   {t('securityIndex')}
                 </h3>
@@ -778,7 +778,7 @@ export function IntelligenceTab({
               </div>
 
               {/* Vulnerabilities counts, Summary & Target Info */}
-              <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 flex flex-col justify-between gap-6 md:col-span-2">
+              <div className="glass-card p-8 flex flex-col justify-between gap-6 md:col-span-2">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest">
@@ -890,7 +890,7 @@ export function IntelligenceTab({
 
             {/* Attack Surface Graph — toggleable panel */}
             {showAttackSurface && (
-              <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 animate-in slide-in-from-top-4 fade-in duration-400">
+              <div className="glass-card p-6 animate-in slide-in-from-top-4 fade-in duration-400">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-sm font-extrabold text-foreground tracking-tight flex items-center gap-2">
@@ -918,7 +918,7 @@ export function IntelligenceTab({
 
             {/* Geo Map — toggleable panel */}
             {showGeoMap && (
-              <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 animate-in slide-in-from-top-4 fade-in duration-400">
+              <div className="glass-card p-6 animate-in slide-in-from-top-4 fade-in duration-400">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-sm font-extrabold text-foreground tracking-tight flex items-center gap-2">
@@ -960,7 +960,7 @@ export function IntelligenceTab({
               const infraScore = meta?.infrastructureScore ?? null;
               
               return (
-                <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 flex flex-col gap-6">
+                <div className="glass-card p-8 flex flex-col gap-6">
                   <div>                        <h3 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
                           <Shield className="w-5 h-5 text-primary" />
                           {t('emailWebSecurity')}
@@ -1537,7 +1537,7 @@ export function IntelligenceTab({
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     
                     {/* Card 1: WHOIS & Registro de Dominio */}
-                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col gap-5 hover:border-border transition-colors duration-300">
+                    <div className="glass-card p-6 flex flex-col gap-5 hover:border-border transition-colors duration-300">
                       <div className="flex items-center justify-between border-b border-border/50 pb-3">
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
                           <Globe className="w-4 h-4 text-primary" />
@@ -1638,7 +1638,7 @@ export function IntelligenceTab({
                     </div>
 
                     {/* Card 2: Rendimiento y Escudo Perimetral (TCP Ping & CDN/WAF) */}
-                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col justify-between hover:border-border transition-colors duration-300 group">
+                    <div className="glass-card p-6 flex flex-col justify-between hover:border-border transition-colors duration-300 group">
                       <div className="flex items-center justify-between border-b border-border/50 pb-3">
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
                           <Activity className="w-4 h-4 text-chartreuse" />
@@ -1741,7 +1741,7 @@ export function IntelligenceTab({
                     </div>
 
                     {/* Card 3: GeoIP, ASN & PTR (Identidad de Red) */}
-                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col justify-between hover:border-border transition-colors duration-300">
+                    <div className="glass-card p-6 flex flex-col justify-between hover:border-border transition-colors duration-300">
                       <div className="flex items-center justify-between border-b border-border/50 pb-3">
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
                           <Cpu className="w-4 h-4 text-primary" />
@@ -1844,7 +1844,7 @@ export function IntelligenceTab({
                     </div>
 
                     {/* Card 4: DNSBL Historial y Vecindario IP */}
-                    <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 flex flex-col justify-between hover:border-border transition-colors duration-300">
+                    <div className="glass-card p-6 flex flex-col justify-between hover:border-border transition-colors duration-300">
                       <div className="flex items-center justify-between border-b border-border/50 pb-3">
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
                           <Layers className="w-4 h-4 text-primary" />
@@ -1933,7 +1933,7 @@ export function IntelligenceTab({
                   </div>
 
                   {/* Card 5: Horizontal/Vertical packet traceroute hops transit flow */}
-                  <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 hover:border-border transition-colors duration-300">
+                  <div className="glass-card p-6 hover:border-border transition-colors duration-300">
                     <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-6">
                       <div>
                         <h4 className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
@@ -2153,7 +2153,7 @@ export function IntelligenceTab({
             })()}
 
             {/* Bento-Row 2: Findings List Accordions */}
-            <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden">
+            <div className="glass-card overflow-hidden">
               <div className="p-8 border-b border-border bg-muted/1">
                 <h3 className="font-extrabold text-foreground text-base tracking-tight">Hallazgos e Ineficiencias de Red</h3>
                 <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
@@ -2258,7 +2258,7 @@ export function IntelligenceTab({
 
             {/* Bento-Row 2.5: Event Timeline */}
             {selectedDetails.events && selectedDetails.events.length > 0 && (
-              <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden mt-8">
+              <div className="glass-card overflow-hidden mt-8">
                 <div className="p-8 border-b border-border bg-muted/1">
                   <h3 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
                     <History className="w-4 h-4 text-primary" /> Timeline de Ejecución
@@ -2300,7 +2300,7 @@ export function IntelligenceTab({
 
             {/* Bento-Row 3: Discovered Assets Grid */}
             {selectedDetails.assets && selectedDetails.assets.length > 0 && (
-              <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden">
+              <div className="glass-card overflow-hidden">
                 <div className="p-8 border-b border-border bg-muted/1">
                   <h3 className="font-extrabold text-foreground text-base tracking-tight">Activos Técnicos Descubiertos</h3>
                   <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
@@ -2336,7 +2336,7 @@ export function IntelligenceTab({
             )}
 
             {/* Bento-Row 4: IA Remediation Copilot Console */}
-            <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden relative">
+            <div className="glass-card overflow-hidden relative">
               <div className="p-8 border-b border-border bg-muted/1 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                   <h3 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
@@ -2618,7 +2618,7 @@ export function IntelligenceTab({
 
         {/* ─── CASE C: Sin análisis seleccionado / Estado inicial ─────────── */}
         {!isScanning && !selectedDetails && (
-          <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-16 text-center flex flex-col items-center justify-center gap-6 animate-in fade-in duration-500 flex-1">
+          <div className="glass-card p-16 text-center flex flex-col items-center justify-center gap-6 animate-in fade-in duration-500 flex-1">
             <div className="w-16 h-16 rounded-2xl bg-muted/10 border border-border flex items-center justify-center text-muted-fg relative">
               <ShieldCheck className="w-8 h-8 text-muted-fg animate-pulse" />
               <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-lg animate-ping" />

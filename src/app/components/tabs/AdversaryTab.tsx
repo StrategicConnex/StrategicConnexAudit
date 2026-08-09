@@ -166,7 +166,7 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
     <div className="space-y-8 animate-in fade-in duration-500">
 
       {/* Header */}
-      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8">
+      <div className="glass-card p-8">
         {/* Project selector — permite cargar un proyecto distinto sin salir del tab */}
         {(initialProjects.length > 0 || setSelectedProjectId) && (
           <div className="mb-6 border-b border-border/50 pb-6">
@@ -297,7 +297,7 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
             : scenario.detectionRate >= 50 ? 'text-primary' : 'text-destructive';
 
           return (
-            <div key={scenario.mitreId} className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden transition-colors duration-300 hover:border-primary/15">
+            <div key={scenario.mitreId} className="glass-card overflow-hidden transition-colors duration-300 hover:border-primary/15">
               <button onClick={() => setExpandedScenario(isExpanded ? null : scenario.mitreId)}
                 className="w-full p-6 flex items-center justify-between text-left cursor-pointer hover:bg-muted/5 transition-colors">
                 <div className="flex items-center gap-4 flex-1">

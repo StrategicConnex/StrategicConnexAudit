@@ -76,7 +76,7 @@ export function BulkCommandDialog({ isOpen, onClose, projectId }: BulkCommandDia
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-gray-900 border border-gray-800 p-6 rounded-lg shadow-xl w-full max-w-lg text-white font-mono">
-        <h2 className="text-xl font-semibold mb-4 text-emerald-400">⚡ Bulk Intelligence Analysis</h2>
+        <h2 className="text-xl font-semibold mb-4 text-chartreuse">⚡ Bulk Intelligence Analysis</h2>
         
         <p className="text-sm text-gray-400 mb-4">
           Ingresa múltiples dominios o direcciones IP (uno por línea). Límite de 50 por lote.
@@ -84,7 +84,7 @@ export function BulkCommandDialog({ isOpen, onClose, projectId }: BulkCommandDia
         </p>
 
         {message && (
-          <div className={`p-3 mb-4 rounded text-sm ${message.type === 'success' ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-800' : 'bg-red-900/50 text-red-300 border border-red-800'}`}>
+          <div className={`p-3 mb-4 rounded text-sm ${message.type === 'success' ? 'bg-emerald-900/50 text-chartreuse border border-emerald-800' : 'bg-red-900/50 text-red-300 border border-red-800'}`}>
             {message.text}
           </div>
         )}
@@ -94,7 +94,7 @@ export function BulkCommandDialog({ isOpen, onClose, projectId }: BulkCommandDia
             value={targets}
             onChange={(e) => setTargets(e.target.value)}
             placeholder="google.com&#10;8.8.8.8&#10;microsoft.com"
-            className="w-full h-40 p-3 bg-gray-950 border border-gray-800 rounded focus:border-emerald-500 focus:outline-none mb-4 font-mono text-sm resize-none"
+            className="w-full h-40 p-3 bg-gray-950 border border-gray-800 rounded focus:border-chartreuse focus:outline-none mb-4 font-mono text-sm resize-none"
             disabled={loading}
           />
           
@@ -110,7 +110,7 @@ export function BulkCommandDialog({ isOpen, onClose, projectId }: BulkCommandDia
             <button
               type="submit"
               disabled={loading || targets.trim() === ""}
-              className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-[background-color,opacity]"
+              className="px-4 py-2 text-sm bg-emerald-600 hover:bg-chartreuse text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-[background-color,opacity]"
             >
               {loading ? "Despachando..." : "Ejecutar Lote"}
             </button>

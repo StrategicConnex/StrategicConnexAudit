@@ -21,7 +21,7 @@ export interface MailHealthStatusConfig {
 }
 
 export const MAIL_HEALTH_STYLES: Record<MailStatus, MailHealthStatusConfig> = {
-  secure: { bg: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400", label: "Óptimo", subText: "Configuración Correcta", ring: "ring-emerald-500/30" },
+  secure: { bg: "bg-chartreuse/10 border-chartreuse/20 text-chartreuse", label: "Óptimo", subText: "Configuración Correcta", ring: "ring-emerald-500/30" },
   warning: { bg: "bg-amber-500/10 border-amber-500/20 text-amber-400", label: "Aviso", subText: "Configuración Insegura", ring: "ring-amber-500/30" },
   missing: { bg: "bg-red-500/10 border-red-500/20 text-red-400", label: "Crítico", subText: "Falta Protocolo", ring: "ring-red-500/30" },
   pending: { bg: "bg-muted border-border text-muted-fg", label: "Pendiente", subText: "Esperando Escaneo", ring: "ring-zinc-700/30" },

@@ -79,7 +79,7 @@ const planStyles: Record<string, string> = {
 };
 
 const riskStyles: Record<ToolRisk, { bg: string; text: string; label: string }> = {
-  passive: { bg: "bg-emerald-500/5 border-emerald-500/10", text: "text-emerald-400", label: "Pasivo" },
+  passive: { bg: "bg-chartreuse/5 border-chartreuse/10", text: "text-chartreuse", label: "Pasivo" },
   "active-safe": { bg: "bg-yellow-500/5 border-yellow-500/10", text: "text-yellow-400", label: "Activo Seguro" },
   "active-intrusive": { bg: "bg-red-500/5 border-red-500/10", text: "text-red-400", label: "Activo Intrusivo" }
 };
@@ -109,7 +109,7 @@ export default function ToolCatalog() {
       {/* Search Header */}
       <div className="p-4 border-b border-border space-y-3 bg-card">
         <div className="flex items-center space-x-2">
-          <Compass className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <Compass className="w-4 h-4 text-chartreuse animate-pulse" />
           <h3 className="text-xs font-semibold text-foreground tracking-wider uppercase font-mono">
             Catálogo de Herramientas
           </h3>
@@ -172,17 +172,17 @@ export default function ToolCatalog() {
                 onClick={() => selectTool(isSelected ? null : tool.id)}
                 className={`relative flex flex-col p-3.5 border rounded-xl cursor-pointer group transition-colors duration-300 ${
                   isSelected
-                    ? "bg-card border-emerald-500/30 shadow-lg shadow-emerald-950/10"
+                    ? "bg-card border-chartreuse/30 shadow-lg shadow-emerald-950/10"
                     : "bg-card/60 border-border hover:border-border hover:bg-card"
                 }`}
               >
                 {/* Active Indicator Bar */}
                 {isSelected && (
-                  <div className="absolute top-0 left-0 bottom-0 w-1 rounded-l-xl bg-emerald-500" />
+                  <div className="absolute top-0 left-0 bottom-0 w-1 rounded-l-xl bg-chartreuse" />
                 )}
 
                 <div className="flex items-start justify-between w-full mb-1">
-                  <span className="text-xs font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
+                  <span className="text-xs font-semibold text-foreground group-hover:text-chartreuse transition-colors">
                     {tool.name}
                   </span>
                   

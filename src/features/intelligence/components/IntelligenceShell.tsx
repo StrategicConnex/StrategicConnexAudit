@@ -128,7 +128,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
       <button
         onClick={() => setIsMobileCatalogOpen(!isMobileCatalogOpen)}
         aria-label={isMobileCatalogOpen ? "Cerrar catálogo de herramientas" : "Abrir catálogo de herramientas"}
-        className="lg:hidden fixed bottom-5 right-5 z-50 flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500 text-background shadow-2xl hover:scale-105 active:scale-95 transition-[color,background-color,box-shadow,transform]"
+        className="lg:hidden fixed bottom-5 right-5 z-50 flex items-center justify-center w-12 h-12 rounded-full bg-chartreuse text-background shadow-2xl hover:scale-105 active:scale-95 transition-[color,background-color,box-shadow,transform]"
       >
         {isMobileCatalogOpen ? <X aria-hidden="true" className="w-5 h-5" /> : <Menu aria-hidden="true" className="w-5 h-5" />}
       </button>
@@ -170,7 +170,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
               </Link>
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-foreground font-mono flex items-center space-x-2 group/title">
-                  <Terminal className="w-5 h-5 text-emerald-400 scan-pulse" />
+                  <Terminal className="w-5 h-5 text-chartreuse scan-pulse" />
                   <span className="group-hover/title:animate-glitch transition-colors">Auditoría de Red Activa</span>
                 </h1>
                 <p className="text-xs text-muted-fg mt-0.5">Consola diagnóstica modular de seguridad perimetral y DNS.</p>
@@ -187,7 +187,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
                 title="Exportar reporte PDF"
               >
                 {isExportingPdf ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-chartreuse" />
                 ) : (
                   <Download className="w-3.5 h-3.5" />
                 )}
@@ -198,7 +198,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
                 onClick={toggleAiSidebar}
                 className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors ${
                   aiSidebarOpen
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    ? "bg-chartreuse/10 text-chartreuse border-chartreuse/20"
                     : "bg-muted border-border text-muted-fg hover:text-foreground"
                 }`}
               >
@@ -232,7 +232,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
                   onClick={() => setActiveTab(tab.id)}
                   className={`pb-2.5 text-xs font-mono uppercase tracking-wide border-b-2 transition-colors ${
                     activeTab === tab.id
-                      ? "border-emerald-500 text-foreground font-semibold"
+                      ? "border-chartreuse text-foreground font-semibold"
                       : "border-transparent text-muted-fg hover:text-muted-fg"
                   }`}
                 >

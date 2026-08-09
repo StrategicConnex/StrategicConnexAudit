@@ -350,7 +350,7 @@ export function SettingsTab({
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl font-sans text-foreground relative z-10 space-y-10">
       
       {/* 1. Main System Settings Card */}
-      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 relative overflow-hidden ">
+      <div className="glass-card p-10 relative overflow-hidden ">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="mb-12 relative z-10">
@@ -450,7 +450,7 @@ export function SettingsTab({
       </div>
 
       {/* 2. Developer Integrations - API Keys */}
-      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 relative overflow-hidden ">
+      <div className="glass-card p-10 relative overflow-hidden ">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="mb-12 relative z-10">
@@ -655,7 +655,7 @@ export function SettingsTab({
       </div>
 
       {/* 3. Developer Integrations - Webhooks */}
-      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10 relative overflow-hidden ">
+      <div className="glass-card p-10 relative overflow-hidden ">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="mb-12 relative z-10">

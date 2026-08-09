@@ -54,7 +54,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   threat: 'bg-destructive/10 text-destructive border-destructive/20',
   osint: 'bg-primary/10 text-primary border-primary/20',
   email: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  compliance: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  compliance: 'bg-chartreuse/10 text-chartreuse border-chartreuse/20',
 };
 
 export function MarketplaceTab() {
@@ -164,7 +164,7 @@ export function MarketplaceTab() {
 
     return (
       <div key={pkg.id}
-        className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-6 transition-colors duration-300 hover:border-primary/15 hover:bg-muted/10 flex flex-col">
+        className="glass-card p-6 transition-colors duration-300 hover:border-primary/15 hover:bg-muted/10 flex flex-col">
 
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -252,7 +252,7 @@ export function MarketplaceTab() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
 
-      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8">
+      <div className="glass-card p-8">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-extrabold text-foreground tracking-tight flex items-center gap-3">

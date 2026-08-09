@@ -312,7 +312,7 @@ function ModelTable({ models }: { models: ModelHealthSummary[] }) {
               <tr key={m.modelId} className="border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors">
                 <td className="p-3 font-mono text-[11px]">{shortModelId(m.modelId)}</td>
                 <td className="p-3 text-right">{m.totalChecks}</td>
-                <td className="p-3 text-right text-emerald-400">{m.healthyCount}</td>
+                <td className="p-3 text-right text-chartreuse">{m.healthyCount}</td>
                 <td className="p-3 text-right text-amber-400">{m.degradedCount}</td>
                 <td className="p-3 text-right text-red-400">{m.failedCount}</td>
                 <td className="p-3 text-right">
@@ -320,7 +320,7 @@ function ModelTable({ models }: { models: ModelHealthSummary[] }) {
                 </td>
                 <td className="p-3 text-right">
                   <span className={`inline-flex items-center gap-1 ${
-                    m.lastStatus === "healthy" ? "text-emerald-400" :
+                    m.lastStatus === "healthy" ? "text-chartreuse" :
                     m.lastStatus === "degraded" ? "text-amber-400" : "text-red-400"
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${
@@ -378,7 +378,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                     <td className="p-3">
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         r.overallStatus === "healthy"
-                          ? "bg-emerald-500/10 text-emerald-400"
+                          ? "bg-chartreuse/10 text-chartreuse"
                           : r.overallStatus === "degraded"
                           ? "bg-amber-500/10 text-amber-400"
                           : "bg-red-500/10 text-red-400"
@@ -390,7 +390,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                         {r.overallStatus}
                       </span>
                     </td>
-                    <td className="p-3 text-right text-emerald-400">{r.modelsHealthy}</td>
+                    <td className="p-3 text-right text-chartreuse">{r.modelsHealthy}</td>
                     <td className="p-3 text-right text-red-400">{r.modelsFailed}</td>
                     <td className="p-3 text-right">{r.modelsTotal}</td>
                     <td className="p-3 text-right">
@@ -413,7 +413,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                               }`} />
                               <span className="text-white/60 w-40 truncate">{shortModelId(mr.modelId)}</span>
                               <span className={
-                                mr.status === "healthy" ? "text-emerald-400" :
+                                mr.status === "healthy" ? "text-chartreuse" :
                                 mr.status === "degraded" ? "text-amber-400" : "text-red-400"
                               }>
                                 {mr.status}

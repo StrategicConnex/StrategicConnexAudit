@@ -73,7 +73,7 @@ const EVENT_LABELS: Record<string, { label: string; color: string; icon: string 
   open_redirect_attempt:{ label: "Open Redirect Attempt", color: "text-red-400 border-red-500/30 bg-red-500/10",              icon: "↗" },
   csp_violation:        { label: "CSP Violation",         color: "text-orange-400 border-orange-500/30 bg-orange-500/10",     icon: "🔒" },
   auth_failure:         { label: "Auth Failure",          color: "text-rose-400 border-rose-500/30 bg-rose-500/10",           icon: "✗" },
-  auth_success:         { label: "Auth Success",          color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",  icon: "✓" },
+  auth_success:         { label: "Auth Success",          color: "text-chartreuse border-chartreuse/30 bg-chartreuse/10",  icon: "✓" },
   rate_limit_bypass:    { label: "Rate Limit Bypass",     color: "text-purple-400 border-purple-500/30 bg-purple-500/10",     icon: "⚡" },
   invalid_input:        { label: "Invalid Input",         color: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10",    icon: "⛔" },
 };
@@ -123,7 +123,7 @@ function Filters({
           value={filters.eventType}
           onChange={e => onChange({ ...filters, eventType: e.target.value })}
           className="bg-zinc-900/80 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-200 
-                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-chartreuse/50
                      transition-all duration-150 cursor-pointer"
         >
           <option value="all">Todos</option>
@@ -140,7 +140,7 @@ function Filters({
           value={filters.ip}
           onChange={e => onChange({ ...filters, ip: e.target.value })}
           className="bg-zinc-900/80 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600
-                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-chartreuse/50
                      transition-all duration-150"
         />
       </div>
@@ -152,7 +152,7 @@ function Filters({
           max={today}
           onChange={e => onChange({ ...filters, from: e.target.value })}
           className="bg-zinc-900/80 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-200
-                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-chartreuse/50
                      transition-all duration-150"
         />
       </div>
@@ -164,7 +164,7 @@ function Filters({
           max={today}
           onChange={e => onChange({ ...filters, to: e.target.value })}
           className="bg-zinc-900/80 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-200
-                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                     focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-chartreuse/50
                      transition-all duration-150"
         />
       </div>
@@ -290,7 +290,7 @@ function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
         onClick={() => onChange("events")}
         className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
           active === "events"
-            ? "text-emerald-400 border-emerald-500"
+            ? "text-chartreuse border-chartreuse"
             : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-zinc-700"
         }`}
       >
@@ -300,7 +300,7 @@ function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
         onClick={() => onChange("siem")}
         className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
           active === "siem"
-            ? "text-emerald-400 border-emerald-500"
+            ? "text-chartreuse border-chartreuse"
             : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-zinc-700"
         }`}
       >
@@ -310,7 +310,7 @@ function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
         onClick={() => onChange("whois")}
         className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
           active === "whois"
-            ? "text-emerald-400 border-emerald-500"
+            ? "text-chartreuse border-chartreuse"
             : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-zinc-700"
         }`}
       >
@@ -320,7 +320,7 @@ function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
         onClick={() => onChange("dns")}
         className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
           active === "dns"
-            ? "text-emerald-400 border-emerald-500"
+            ? "text-chartreuse border-chartreuse"
             : "text-zinc-500 border-transparent hover:text-zinc-300 hover:border-zinc-700"
         }`}
       >
@@ -358,7 +358,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
       <div className={`rounded-lg border px-5 py-4 transition-all duration-300 ${
         isFailed
           ? "bg-red-900/10 border-red-800/30"
-          : "bg-emerald-950/10 border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-950/15"
+          : "bg-chartreuse/10 border-chartreuse/20 hover:border-chartreuse/40 hover:bg-chartreuse/15"
       }`}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -368,19 +368,19 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
               {!isFailed && (
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-chartreuse" />
                 </span>
               )}
               {isFailed && (
                 <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
               )}
-              <span className={`text-sm font-medium ${isFailed ? "text-red-300" : "text-emerald-200"} truncate`}>
+              <span className={`text-sm font-medium ${isFailed ? "text-red-300" : "text-chartreuse"} truncate`}>
                 💓 {isFailed ? "Heartbeat Failed" : "Heartbeat OK"}
               </span>
               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                 isFailed
                   ? "text-red-400 border-red-500/30 bg-red-500/10"
-                  : "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                  : "text-chartreuse border-chartreuse/30 bg-chartreuse/10"
               }`}>
                 {entry.target}
               </span>
@@ -389,7 +389,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
                   ✗ Failed
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
                   ✓ Delivered
                 </span>
               )}
@@ -405,7 +405,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
               </span>
               {entry.responseCode != null && (
                 <span className="text-zinc-500">
-                  HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-red-400" : "text-emerald-300"}`}>{entry.responseCode}</span>
+                  HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-red-400" : "text-chartreuse"}`}>{entry.responseCode}</span>
                 </span>
               )}
             </div>
@@ -458,7 +458,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
               </span>
             )}
             {entry.status === "success" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
                 ✓ Delivered
               </span>
             )}
@@ -480,7 +480,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
             </span>
             {entry.responseCode != null && (
               <span className="text-zinc-500">
-                HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-red-400" : "text-emerald-300"}`}>{entry.responseCode}</span>
+                HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-red-400" : "text-chartreuse"}`}>{entry.responseCode}</span>
               </span>
             )}
           </div>
@@ -548,7 +548,7 @@ interface DnsChangeMetadata {
 }
 
 const CHANGE_TYPE_COLORS: Record<string, { label: string; color: string }> = {
-  added:   { label: "Añadido", color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" },
+  added:   { label: "Añadido", color: "text-chartreuse border-chartreuse/30 bg-chartreuse/10" },
   changed: { label: "Modificado", color: "text-amber-400 border-amber-500/30 bg-amber-500/10" },
   removed: { label: "Eliminado", color: "text-red-400 border-red-500/30 bg-red-500/10" },
 };
@@ -663,7 +663,7 @@ function DnsAlertsSection({
                     ✗ Failed
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
                     ✓ Delivered
                   </span>
                 )}
@@ -754,7 +754,7 @@ function DiffBadge({ prev, curr }: { prev: string; curr: string }) {
         {prev || "(vacío)"}
       </span>
       <span className="text-zinc-600 text-[10px]">→</span>
-      <span className="font-mono text-emerald-400 bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-900/30 max-w-[200px] truncate" title={curr}>
+      <span className="font-mono text-chartreuse bg-chartreuse/30 px-2 py-0.5 rounded border border-chartreuse/30 max-w-[200px] truncate" title={curr}>
         {curr || "(vacío)"}
       </span>
     </div>
@@ -869,7 +869,7 @@ function WhoisAlertsSection({
                     ✗ Failed
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
                     ✓ Delivered
                   </span>
                 )}
@@ -955,7 +955,7 @@ function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismi
 
   return (
     <div className={`fixed top-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] rounded-xl border shadow-2xl 
-      ${allOk ? "bg-zinc-900 border-emerald-500/30" : "bg-zinc-900 border-red-500/30"} 
+      ${allOk ? "bg-zinc-900 border-chartreuse/30" : "bg-zinc-900 border-red-500/30"} 
       animate-in slide-in-from-right-4 duration-300`}
     >
       {/* Header */}
@@ -985,7 +985,7 @@ function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismi
             key={d.name}
             className={`flex items-start gap-3 rounded-lg px-3 py-2.5 text-xs border ${
               d.status === "ok"
-                ? "bg-emerald-500/5 border-emerald-500/20"
+                ? "bg-chartreuse/5 border-chartreuse/20"
                 : "bg-red-500/5 border-red-500/20"
             }`}
           >
@@ -995,7 +995,7 @@ function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismi
                 <span className="font-semibold text-zinc-200">{d.name}</span>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                   d.status === "ok"
-                    ? "text-emerald-400 bg-emerald-500/10"
+                    ? "text-chartreuse bg-chartreuse/10"
                     : "text-red-400 bg-red-500/10"
                 }`}>
                   {d.status === "ok" ? "✓ OK" : "✗ FAIL"}
@@ -1138,7 +1138,7 @@ function SiemSection({
           <div className="flex items-center gap-4 text-xs text-zinc-500">
             <span className="text-zinc-400 font-semibold">{alerts.length} envíos</span>
             {breakdown.success > 0 && (
-              <span className="text-emerald-400">{breakdown.success} entregados</span>
+              <span className="text-chartreuse">{breakdown.success} entregados</span>
             )}
             {breakdown.failed > 0 && (
               <span className="text-red-400">{breakdown.failed} fallidos</span>
@@ -1290,7 +1290,7 @@ export default function SecurityAuditDashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-zinc-100 selection:bg-emerald-500/20">
+    <div className="min-h-screen bg-[#050505] text-zinc-100 selection:bg-chartreuse/20">
       {/* Header */}
       <header className="border-b border-zinc-800/60 bg-[#070707]">
         <div className="max-w-7xl mx-auto px-6 py-5">
@@ -1309,7 +1309,7 @@ export default function SecurityAuditDashboard() {
                   type="checkbox"
                   checked={autoRefresh}
                   onChange={e => setAutoRefresh(e.target.checked)}
-                  className="rounded border-zinc-700 bg-zinc-900 text-emerald-500 
+                  className="rounded border-zinc-700 bg-zinc-900 text-chartreuse 
                              focus:ring-emerald-500/30 focus:ring-offset-0
                              accent-emerald-500"
                 />

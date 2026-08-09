@@ -38,7 +38,7 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
           { label: t('metricCtr'), value: '6.74%', change: t('metricStable'), trend: 'stable' },
           { label: t('metricPosition'), value: '4.2', change: '+0.4', trend: 'up' },
         ].map((metric, i) => (
-          <div key={i} className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-8 flex flex-col gap-4 ">
+          <div key={i} className="glass-card p-8 flex flex-col gap-4 ">
             <div className="flex items-center justify-between">
               <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{metric.label}</h3>
               <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 border ${
@@ -58,7 +58,7 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
       </div>
 
       {/* Add keyword form */}
-      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl p-10  relative overflow-hidden">
+      <div className="glass-card p-10  relative overflow-hidden">
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         <div className="mb-8">
           <h3 className="font-extrabold text-white text-lg tracking-tight">{t('monitorTitle')}</h3>
@@ -85,7 +85,7 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
       </div>
 
       {/* Tracked keywords list */}
-      <div className="backdrop-blur-xl border border-border bg-muted/5 rounded-2xl overflow-hidden ">
+      <div className="glass-card overflow-hidden ">
         <div className="p-8 border-b border-border bg-muted/1">
           <h3 className="font-extrabold text-white text-base tracking-tight">{t('tableTitle')}</h3>
           <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">{t('tableDesc')}</p>

@@ -23,7 +23,7 @@ interface TelemetryTimelineProps {
 
 const EVENT_STYLES: Record<string, string> = {
   error: "bg-red-500/10 border-red-500/20 text-red-400",
-  success: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+  success: "bg-chartreuse/10 border-chartreuse/20 text-chartreuse",
   warning: "bg-amber-500/10 border-amber-500/20 text-amber-400",
   info: "bg-card border-border text-muted-fg",
 };

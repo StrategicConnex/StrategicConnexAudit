@@ -223,7 +223,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   </h2>
                   {/* Executive Compliance Badges */}
                   <div className="hidden xl:flex items-center gap-2">
-                    <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">SOC 2 Type II</span>
+                    <span className="text-[8px] font-bold text-chartreuse bg-chartreuse/10 border border-chartreuse/20 px-2 py-0.5 rounded-full uppercase tracking-wider">SOC 2 Type II</span>
                     <span className="text-[8px] font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">OWASP Top 10</span>
                   </div>
                 </div>
@@ -376,7 +376,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <ReportCard 
                 title="Dataset de Rankings (CSV)" 
                 desc="Exportación completa de palabras clave, volúmenes de búsqueda, CTR promedio y posiciones históricas del dominio para análisis avanzado en hojas de cálculo."
-                icon={<FileSpreadsheet className="w-5 h-5 text-emerald-400" />}
+                icon={<FileSpreadsheet className="w-5 h-5 text-chartreuse" />}
                 accent="green"
                 action={<div className="mt-6"><ExportCsvButton projectId={projectId} /></div>}
               />
@@ -404,7 +404,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   
                   if (audit.status === 'completed') {
                     statusLabel = "Completado";
-                    statusStyle = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]";
+                    statusStyle = "bg-chartreuse/10 text-chartreuse border-chartreuse/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]";
                   } else if (audit.status === 'failed') {
                     statusLabel = "Fallido";
                     statusStyle = "bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]";
@@ -505,7 +505,7 @@ function VitalsCard({ label, value, status, desc }: { label: string; value: stri
 function ReportCard({ title, desc, icon, accent, action, disabled = false }: { title: string; desc: string; icon: React.ReactNode; accent: 'red' | 'green'; action?: React.ReactNode; disabled?: boolean }) {
   const colors = {
     red: "bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.15)]",
-    green: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.15)]"
+    green: "bg-chartreuse/10 text-chartreuse border-chartreuse/20 shadow-[0_0_15px_rgba(52,211,153,0.15)]"
   };
 
   return (
