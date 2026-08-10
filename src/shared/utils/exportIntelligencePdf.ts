@@ -62,7 +62,8 @@ const applyIntelligenceExportTheme = (clonedDoc: Document, _branding?: Intellige
 
     const themeStyle = clonedDoc.createElement('style');
     themeStyle.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+      /* Fuentes del SISTEMA — sin @import de font CDNs de terceros: evitar
+         fuga de IP + Referer en cada export de PDF. */
 
       body {
         font-family: 'Inter', sans-serif !important;

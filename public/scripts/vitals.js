@@ -254,7 +254,12 @@
   /* ===================== WEB VITALS ===================== */
   function loadWebVitals(callback) {
     const s = document.createElement('script');
-    s.src = 'https://unpkg.com/web-vitals@3/dist/web-vitals.iife.js';
+    // Self-hosted en el MISMO origin que este script (public/vendor/web-vitals
+    // .iife.js) — no contactar a unpkg: un CDN de terceros vería IP + Referer
+    // de cada visitante del cliente. script.src ya es la URL absoluta del
+    // snippet (p. ej. https://scaudit.vercel.app/scripts/vitals.js).
+    const origin = (script.src || '').split('/scripts/vitals.js')[0];
+    s.src = origin ? `${origin}/vendor/web-vitals.iife.js` : '/vendor/web-vitals.iife.js';
     s.onload = function () {
       if (window.webVitals) {
         window.webVitals.onCLS(v => { vitals.cls = v.value; vitals.clsRating = v.rating; });

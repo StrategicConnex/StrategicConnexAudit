@@ -1378,7 +1378,7 @@ export function IntelligenceTab({
                                 description: 'Mitiga inyecciones XSS y secuestro de datos definiendo orígenes autorizados.',
                                 diagnostic: 'CSP restringe los recursos (scripts, estilos, fuentes) que el navegador tiene permitido cargar. Si un atacante inyecta un script malicioso (XSS), CSP impide su ejecución si no está explícitamente autorizado en la directiva.',
                                 risk: 'Crítico. Sin CSP, tu sitio es totalmente vulnerable al secuestro de tokens de sesión, lectura de cookies desprotegidas y alteración visual mediante ataques Cross-Site Scripting.',
-                                code: `# Directiva Nginx sugerida para bloques de servidor:\nadd_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:;" always;`
+                                code: `# Directiva Nginx sugerida para bloques de servidor (CSP estricto, sin terceros):\nadd_header Content-Security-Policy "default-src 'self'; script-src 'self' 'nonce-<RANDOM>' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self'; frame-ancestors 'self';" always;`
                               },
                               { 
                                 id: 'hsts',

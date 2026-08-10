@@ -63,8 +63,10 @@ const applyAuditExportTheme = (clonedDoc: Document, branding?: AgencyBranding) =
 
     const themeStyle = clonedDoc.createElement('style');
     themeStyle.textContent = `
-      /* High-impact PDF export theme */
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap');
+      /* High-impact PDF export theme.
+         Fuentes del SISTEMA (sin @import de font CDNs de terceros): el export
+         se genera en el navegador del usuario y un @import externo filtraría
+         IP + Referer a un tercero en cada descarga de PDF. */
 
       body {
         font-family: 'Inter', 'Roboto', sans-serif !important;

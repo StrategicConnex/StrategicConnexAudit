@@ -30,6 +30,13 @@ jobs:
 
       - run: pnpm build
 
+      # VULN-010 (SECURITY-AUDIT-REPORT v2.4): FALLA si el bundle cliente
+      # compilado (.next/static + .next/server/app) contiene URLs de CDNs de
+      # terceros (unpkg, jsdelivr, cartocdn, fonts.googleapis/gstatic) que
+      # exfiltrarían IP/referrer/geolocalización. Barrera dura post-build.
+      - name: Guard VULN-010 (bundle sin CDNs de terceros)
+        run: pnpm guard:cdn
+
   secret-scan:
     name: Secret Scan (gitleaks)
     runs-on: ubuntu-latest

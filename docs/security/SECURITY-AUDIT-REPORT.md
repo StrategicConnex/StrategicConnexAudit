@@ -1,13 +1,13 @@
 ---
-version: 2.3
-date: 2026-08-08
+version: 2.4
+date: 2026-08-09
 author: Equipo SCAUDIT — Security Review
-status: Aprobado — VULN-004/005 (IDOR High) remediados; VULN-001/002/003/006/007 remediados (P0 TSK-001..006); v2.3 CSP nonce hardening + fin de render estático; restan VULN-008/009 (Low, mocks)
+status: Aprobado — VULN-001..007/010 remediados; restan VULN-008/009 (Low, mocks); v2.4 cierre de fugas a terceros (CDNs + Google Fonts + tiles)
 ---
 
 # 🔐 SCAUDIT — Reporte de Auditoría de Seguridad (OWASP / DevSecOps)
 
-> **Fecha:** 2026-08-08 · **Versión:** 2.3 · **Autor:** Equipo SCAUDIT (skills `security-review` + `security-auditor`) · **Estado:** ✅ Aprobado — VULN-001/002/003/006/007 **remediados** (P0 TSK-001..006) · VULN-004/005 remediados previamente · **v2.3:** CSP nonce hardening (sin `unsafe-inline`, `strict-dynamic`, `object-src 'none'`, `connect-src` reducido a `'self'` + `*.supabase.co`, fin del render estático) · restan VULN-008/009 (Low, mocks)
+> **Fecha:** 2026-08-09 · **Versión:** 2.4 · **Autor:** Equipo SCAUDIT (skills `security-review` + `security-auditor`) · **Estado:** ✅ Aprobado — VULN-001..007 **remediados** · **v2.4:** cierre de fugas a terceros (VULN-010: tiles/markers self-hosted, web-vitals self-hosted, Google Fonts fuera de PDFs) · restan VULN-008/009 (Low, mocks)
 > **Metodología:** OWASP Top 10 + Cheat Sheet Series · trazado de flujo de datos (UI → API → Admin SDK → DB) · adversarial analysis · reporte HIGH-confidence-only.
 > **Alcance de esta revisión:** commit `739e09d` (post-B01). Inventario de las 42 rutas de `src/app/api`, separación de cliente/servidor Supabase, y escaneo de secretos.
 
@@ -261,13 +261,22 @@ flowchart TB
 - **Impact:** Nulo hoy (mock); riesgo futuro si se conecta a datos reales sin auth.
 - **Fix:** Autenticar sesión + RBAC (`canPerformAction`) antes de implementar datos reales.
 
-### VULN-009 — Mock traversal sin auth (Low) — NUEVO
+### VULN-010 — Fugas de datos a terceros vía CDNs/recursos externos (Medium) — REMEDIADO ✅
 
-- **Location:** `src/app/api/intelligence/graph/route.ts`
-- **Confidence:** High (solo mock, sin datos reales)
-- **Issue:** Endpoint sin auth que devuelve nodos fabricados (mock). No filtra datos reales hoy. [VERIFIED, código leído]
-- **Impact:** Nulo (sin datos); debería eliminarse o protegerse al reemplazar el mock.
-- **Fix:** Eliminar la ruta mock o autenticarla cuando se implemente con datos reales.
+- **Location:** `src/app/components/GeoMap.tsx` (markers unpkg + tiles CartoCDN) · `public/scripts/vitals.js` (web-vitals unpkg) · `src/shared/utils/exportPdf.ts` / `exportIntelligencePdf.ts` / `src/app/components/report-utils.ts` (Google Fonts)
+- **Confidence:** High [VERIFIED, código leído + grep]
+- **Issue:** Cuatro puntos contactaban terceros desde el navegador del usuario final:
+  1. **GeoMap → `basemaps.cartocdn.com`** (tiles) — **el más grave**: cada vista del mapa de inteligencia revela a CartoDB la IP del analista y la **región geográfica consultada** (geolocalización del área de investigación).
+  2. **GeoMap → `unpkg.com`** (markers de Leaflet) — IP + Referer del analista.
+  3. **vitals.js → `unpkg.com`** (web-vitals) — IP + Referer de cada visitante del sitio del cliente que inserta el snippet RUM.
+  4. **Export de PDFs/reportes → `fonts.googleapis.com`** — IP + Referer del usuario en cada export (los PDFs se generan en el navegador).
+  El CSP los permitía parcialmente: `img-src 'self' data: https:` habilitaba los tiles/markers; `script-src` con `strict-dynamic` habilitaba el script dinámico de unpkg; los `@import`/`<link>` de Google Fonts se resolvían en el contexto del export.
+- **Impact:** Exposición de IP, User-Agent, Referer (mitigado a origin por `Referrer-Policy: strict-origin-when-cross-origin`) y —crítico en ciberseguridad— la **zona geográfica que el analista está investigando** a terceros.
+- **Fix aplicado (auditoría 2026-08-09):**
+  1. **GeoMap:** markers self-hosted (`/vendor/leaflet/*.png` desde `node_modules/leaflet`) + tiles de CartoCDN **reemplazados por una cuadrícula local** (meridianos/paralelos + pane `grid`, estética SOC del design system) — **cero peticiones a terceros** al abrir el mapa.
+  2. **vitals.js:** web-vitals self-hosted (`/vendor/web-vitals.iife.js`, URL derivada del origin del propio snippet) — sin unpkg.
+  3. **PDFs/reportes:** Google Fonts eliminado → font stack de sistema (Inter/JetBrains fallback), sin `@import` ni `<link>` externo.
+- **Estado:** Resuelto. Verificado con grep (0 referencias activas a `unpkg`/`cartocdn`/`fonts.googleapis` en src+public, salvo el snippet de ejemplo Nginx que es texto de ayuda). Nota residual resuelta: `docs/html/*.html` y `docs/scaudit-documentacion-unificada.html` usaban mermaid desde `cdn.jsdelivr.net` — self-hosted en `docs/vendor/mermaid.min.js` (mismo bundle v11, copiado de `node_modules`). 0 referencias activas a CDNs de terceros en todo el repo.
 
 ### Hallazgos investigados y NO reportados (HIGH-confidence research)
 

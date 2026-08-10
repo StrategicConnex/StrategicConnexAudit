@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "test:contract": "vitest run tests/api-contract",
     "guard:secrets": "node scripts/guard-client-secrets.mjs",
+    "guard:cdn": "node scripts/guard-client-cdns.mjs",
     "generate:collection": "node tests/api-contract/generate-collection.mjs",
     "setup-admin": "npx tsx --env-file=.env.local src/scripts/setup-admin.ts",
     "e2e:report": "npx tsx --env-file=.env.local src/scripts/e2e-ai-report.ts",

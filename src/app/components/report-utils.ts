@@ -255,7 +255,9 @@ export function generateHtmlReportDocument(data: ParsedReport): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reporte Estratégico SEO - ${sanitizedTitle}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Fuentes del sistema (sin CDN de fuentes de terceros): el reporte se
+       renderiza en el navegador del usuario y un <link> a un font CDN
+       filtraría IP + Referer a un tercero. -->
   <style>
     :root {
       --bg: #F8FAFC;

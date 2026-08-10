@@ -245,10 +245,13 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
         await import('leaflet/dist/leaflet.css');
 
         delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+        // Markers self-hosted (public/vendor/leaflet) — sin CDN de terceros:
+        // un <img> de unpkg/leaflet filtraría IP + Referer (y el área del mapa
+        // que el analista está viendo) a un tercero.
         L.Icon.Default.mergeOptions({
-          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          iconRetinaUrl: '/vendor/leaflet/marker-icon-2x.png',
+          iconUrl: '/vendor/leaflet/marker-icon.png',
+          shadowUrl: '/vendor/leaflet/marker-shadow.png',
         });
 
         const map = L.map(mapContainerRef.current!, {
@@ -257,10 +260,39 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
           attributionControl: false,
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19,
-          subdomains: 'abcd',
+        // Fondo de cuadrícula LOCAL (estética SOC/radar del design system) en
+        // vez de tiles de CartoCDN: los tiles de terceros revelan la región
+        // geográfica consultada por el analista (IP + zona del mapa visible).
+        // Sin terceros: cero fuga de geolocalización. Leaflet renderiza igual
+        // los markers/polylines; solo se pierde el basemap cartográfico.
+        map.createPane('grid');
+        const gridPane = map.getPane('grid');
+        if (gridPane) gridPane.style.zIndex = '1';
+        L.rectangle([[90, -180], [-90, 180]], {
+          color: 'rgba(129,140,248,0.12)',
+          weight: 0,
+          fill: true,
+          fillOpacity: 0,
+          interactive: false,
         }).addTo(map);
+        // Líneas de meridiano/paralelo cada ~30° — referencia visual mínima
+        for (let lon = -150; lon <= 150; lon += 30) {
+          L.polyline([[90, lon], [-90, lon]], {
+            color: 'rgba(129,140,248,0.08)',
+            weight: 1,
+            interactive: false,
+            pane: 'grid',
+          }).addTo(map);
+        }
+        for (let lat = -60; lat <= 60; lat += 30) {
+          L.polyline([[lat, -180], [lat, 180]], {
+            color: 'rgba(129,140,248,0.08)',
+            weight: 1,
+            interactive: false,
+            pane: 'grid',
+          }).addTo(map);
+        }
+        map.fitWorld();
 
         mapInstanceRef.current = map;
       } catch (err) {
