@@ -82,7 +82,7 @@ flowchart TB
 
 - `src/shared/lib/supabase/client.ts` usa SOLO `env.supabaseUrl` + `env.supabaseAnonKey` (NEXT_PUBLIC). **Nunca** importa `admin.ts` [VERIFIED, código leído].
 - `src/shared/lib/supabase/admin.ts` (service role) se importa únicamente en server-only code: `env.ts` expone el getter leyendo `process.env.SUPABASE_SERVICE_ROLE_KEY` (no `NEXT_PUBLIC_*` → no inline en cliente) [VERIFIED].
-- Grep `SUPABASE_SERVICE_ROLE_KEY`: aparece solo en `env.ts`, `admin.ts`, `scripts/setup-admin.ts` y el health-check booleano de `api/public/v1/health` (no imprime valor) [VERIFIED].
+- Grep `SUPABASE_SERVICE_ROLE_KEY`: aparece solo en `env.ts`, `admin.ts` y `scripts/setup-admin.ts` (no imprime valor) [VERIFIED]. El health público ya NO lo referencia: `api/public/v1/health` verifica `DATABASE_URL` + `NEXT_PUBLIC_SUPABASE_URL` (la config real; `createAdminClient` no se usa en ninguna ruta) — corrección 2026-08-10 que elimina el 503 `degraded` en producción por `SUPABASE_SERVICE_ROLE_KEY` ausente en Vercel.
 - Grep `NEXT_PUBLIC_` en `src/` (24 matches): todas públicas (`SUPABASE_URL`, `PUBLISHABLE_KEY`, `SITE_URL`, `DEV_BYPASS_AUTH`) — ninguna secreta [VERIFIED].
 - ✅ **Criterio de aceptación T02-01 §3 cumplido.**
 
