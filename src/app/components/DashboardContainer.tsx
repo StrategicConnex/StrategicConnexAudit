@@ -93,6 +93,8 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
     { id: '5', keyword: 'optimizacion pagespeed nextjs', volume: '320', difficulty: 15, position: 2, change: '+1', trend: 'up', project: 'Vercel App' },
   ]);
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjects[0]?.id || '');
+  // El copilot "escucha" mientras genera → la red neuronal acelera su pulso
+  const [copilotGenerating, setCopilotGenerating] = useState(false);
 
   // AI Report state and actions live in the hook
   const aiReport = useAiReport(selectedProjectId);
@@ -117,8 +119,9 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
 
   return (
     <div className="min-h-screen bg-background text-foreground flex relative overflow-hidden">
-      {/* Red neuronal de fondo — z-0, pointer-events none, theme-aware (mismo estándar del login) */}
-      <NeuralNetworkBackground />
+      {/* Red neuronal de fondo — z-0, pointer-events none, theme-aware. El
+          micro-detalle "listening" se activa mientras el copilot genera. */}
+      <NeuralNetworkBackground listening={copilotGenerating} />
 
       {/* Sidebar Component */}
       <DashboardSidebar
@@ -223,7 +226,10 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
       </main>
 
       {/* Floating AI Copilot Widget */}
-      <AiCopilot contextData={dashboardData} />
+      <AiCopilot
+        contextData={dashboardData}
+        onGeneratingChange={setCopilotGenerating}
+      />
     </div>
   );
 }

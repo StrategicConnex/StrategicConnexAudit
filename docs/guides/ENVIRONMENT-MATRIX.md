@@ -122,6 +122,7 @@ flowchart LR
 | Región | `iad1` |
 | Cron | `/api/cron/siem` diario 03:00 + `/api/cron/uptime` diario 03:30 (protegidos por `Bearer CRON_SECRET`; frecuencia diaria por límite Hobby) |
 | CI/CD | GitHub Actions: lint-and-build, secret-scan, docs-gate, tests, api-contract |
+| Deploy | Auto-deploy Vercel en push a `main` (flujo recomendado). Deploy manual `vercel --prod` solo tras el auto-deploy (deployment.md §6 — evita el 403 transitorio y subir el working tree sucio) |
 
 ---
 
@@ -198,6 +199,7 @@ Ver §3 — 1 bloque mermaid, válido.
 |---|---|
 | Nombres de variables | [VERIFIED] grep `process.env.*` en `src/` + `.env.example` |
 | Ambientes Vercel | [VERIFIED] `vercel.json` + `docs/guides/deployment.md` |
+| Flujo deploy manual | [VERIFIED] `docs/guides/deployment.md` §6 — esperar al auto-deploy antes de `vercel --prod` |
 | Inconsistencia ANON_KEY | [VERIFIED] `useRealtimeMetrics.ts:12` |
 | Gitleaks en CI | [VERIFIED] `.github/workflows/ci.yml` (job `secret-scan`) |
 

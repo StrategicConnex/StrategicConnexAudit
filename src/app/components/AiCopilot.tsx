@@ -11,7 +11,11 @@ interface Message {
 
 type CopilotMode = 'copilot' | 'analyst';
 
-export function AiCopilot({ contextData }: { contextData: unknown }) {
+export function AiCopilot({ contextData, onGeneratingChange }: {
+  contextData: unknown;
+  /** Notifica al exterior (ej. red neuronal) cuando empieza/termina una generación. */
+  onGeneratingChange?: (generating: boolean) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [mode, setMode] = useState<CopilotMode>('copilot');
@@ -38,6 +42,7 @@ export function AiCopilot({ contextData }: { contextData: unknown }) {
     const newMessages: Message[] = [...messages, { role: 'user', content: userMsg }];
     setMessages(newMessages);
     setIsLoading(true);
+    onGeneratingChange?.(true);
 
     try {
       const response = await fetch('/api/ai/copilot', {
@@ -61,6 +66,7 @@ export function AiCopilot({ contextData }: { contextData: unknown }) {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Lo siento, ocurrió un error de conexión.' }]);
     } finally {
       setIsLoading(false);
+      onGeneratingChange?.(false);
     }
   };
 

@@ -338,6 +338,21 @@ Para evitar deploys accidentales, puedes configurar **Git Protection** en Vercel
 1. **Settings → Git → Production Branch**: `main`
 2. **Ignore Build Step**: `[ "$VERCEL_GIT_COMMIT_REF" != "main" ]`
 
+### Deploy manual desde el CLI (`vercel --prod`) — esperar al auto-deploy
+
+El deploy automático de GitHub es el flujo **recomendado**. Si igualmente necesitas desplegar manualmente desde el CLI, **espera a que termine el auto-deploy disparado por el push antes de lanzar `vercel --prod`**:
+
+```bash
+git push origin main          # 1. dispara el auto-deploy de GitHub
+git ls-remote origin -h main  # 2. (opcional) espera a que el push esté en el remoto
+vercel ls --prod              # 3. espera a que el deployment del SHA pusheado esté ● Ready
+vercel --prod --yes           # 4. recién ahora un deploy manual por CLI
+```
+
+**Por qué:** si `vercel --prod` corre en paralelo con el deploy que la integración GitHub está creando para el mismo commit, la API de Vercel puede devolver un 403 transitorio `Error: Not authorized` (incidente observado el 2026-08-10: el token era válido — `whoami`/preview/`alias set` funcionaban — y el mismo comando funcionó al reintentar segundos después, sin tocar credenciales). Un 403 aislado justo después de un push no es un problema de permisos: verifica el estado con `vercel ls --prod` y reintenta.
+
+**Nota:** el deploy por CLI sube el **working tree local** (incluye cambios sin commitear — el deployment aparece con `gitDirty: 1`), así que para que producción coincida exactamente con git, verifica con `git status` que el árbol esté limpio (o commitea antes de desplegar).
+
 ---
 
 ## 7. Docs Quality Gate (CI)

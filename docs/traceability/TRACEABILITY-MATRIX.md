@@ -148,7 +148,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | Paso | Mecanismo | Evidencia |
 |------|-----------|-----------|
 | CI | 5 jobs (lint-and-build, secret-scan, docs-quality-gate --min 80, test-and-coverage, api-contract-test) | ci.yml |
-| Deploy | Vercel auto-deploy en push a main | vercel.json |
+| Deploy | Vercel auto-deploy en push a main (recomendado); CLI `vercel --prod` solo tras el auto-deploy | vercel.json + docs/guides/deployment.md §6 |
 | Migraciones | `drizzle-kit push` (NUNCA run-migration.ts legacy) | drizzle.config.ts |
 | Jobs | Trigger.dev (12 triggers) | docs/jobs/ |
 
