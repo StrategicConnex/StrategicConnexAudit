@@ -69,7 +69,7 @@ export function SettingsTab({
 
   // Global agency branding settings (localStorage)
   const [agencyName, setAgencyName] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('oklch(68% 0.14 230)');
+  const [primaryColor, setPrimaryColor] = useState("var(--primary)");
   const [logoUrl, setLogoUrl] = useState('');
 
   // Clipboard copied tracker
@@ -124,7 +124,7 @@ export function SettingsTab({
         try {
           const parsed = JSON.parse(stored);
           setAgencyName(parsed.name || '');
-          setPrimaryColor(parsed.color || 'oklch(68% 0.14 230)');
+          setPrimaryColor(parsed.color || "var(--primary)");
           setLogoUrl(parsed.logoUrl || '');
         } catch (e) {
           console.error("Failed to parse branding config", e);

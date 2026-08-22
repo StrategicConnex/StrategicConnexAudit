@@ -222,18 +222,18 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
                 <PolarGrid stroke="oklch(100% 0 0 / 0.06)" />
                 <PolarAngleAxis dataKey="dimension" tick={{ fill: "oklch(60% 0.01 265)", fontSize: 10, fontWeight: 700 }} />
                 <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: "oklch(40% 0.01 265)", fontSize: 8 }} tickCount={5} />
-                <RechartsRadar name="Industria" dataKey="Industria" stroke="oklch(78% 0.18 140)" fill="oklch(78% 0.18 140)" fillOpacity={0.08} strokeWidth={1.5} dot={{ fill: "oklch(78% 0.18 140)", r: 2 }} />
-                <RechartsRadar name="Tu proyecto" dataKey="Tu" stroke="oklch(68% 0.14 230)" fill="oklch(68% 0.14 230)" fillOpacity={0.12} strokeWidth={2} dot={{ fill: "oklch(68% 0.14 230)", r: 3 }} />
+                <RechartsRadar name="Industria" dataKey="Industria" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.08} strokeWidth={1.5} dot={{ fill: "var(--accent)", r: 2 }} />
+                <RechartsRadar name="Tu proyecto" dataKey="Tu" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.12} strokeWidth={2} dot={{ fill: "var(--primary)", r: 3 }} />
                 <Tooltip contentStyle={{ background: "oklch(8% 0.005 265)", border: "1px solid oklch(15% 0.008 265 / 0.3)", borderRadius: 8, fontSize: 11, color: "oklch(85% 0 0)" }} formatter={(value) => [String(value) + '/100', 'Puntaje']} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
           <div className="flex items-center justify-center gap-6 mt-2">
             <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-fg uppercase tracking-widest">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: "oklch(78% 0.18 140)" }} /> Industria
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--accent)" }} /> Industria
             </span>
             <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-fg uppercase tracking-widest">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: "oklch(68% 0.14 230)" }} /> Tu proyecto
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--primary)" }} /> Tu proyecto
             </span>
           </div>
         </div>

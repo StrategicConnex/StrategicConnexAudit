@@ -24,7 +24,7 @@ interface ScheduledScanResult {
 interface ScheduledScanConfig {
   id: string;
   cron: string;
-  run: (payload: { timestamp: string }) => Promise<ScheduledScanResult>;
+  run: (payload: { timestamp: Date }) => Promise<ScheduledScanResult>;
 }
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ vi.mock("./audit.trigger", () => ({
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe("Trigger: Scheduled Scan (real)", () => {
-  const payload = { timestamp: "2026-08-08T10:00:00.000Z" };
+  const payload = { timestamp: new Date("2026-08-08T10:00:00.000Z") };
 
   beforeEach(() => {
     vi.clearAllMocks();

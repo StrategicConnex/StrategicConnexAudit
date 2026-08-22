@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 interface MonitorTaskConfig {
   id: string;
   cron: string;
-  run: (payload: unknown, ctx: unknown) => Promise<Record<string, unknown>>;
+  run: (payload: { timestamp: Date }) => Promise<Record<string, unknown>>;
 }
 
 interface ToolResult {
@@ -68,8 +68,7 @@ vi.mock("@trigger.dev/sdk/v3", () => ({
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe("Trigger: Monitor Evaluation", () => {
-  const payload = {};
-  const ctx = {};
+  const payload = { timestamp: new Date("2026-08-08T10:00:00.000Z") };
   const monitor = { id: "m1", projectId: "p1", enabled: true };
   const project = { id: "p1", domain: "https://acme.com", ownerId: "u1" };
 
@@ -89,7 +88,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
     const { evaluateMonitorsTask } = await import("./monitoring.trigger");
     const task = evaluateMonitorsTask as unknown as MonitorTaskConfig;
-    const result = await task.run(payload, ctx);
+    const result = await task.run(payload);
 
     expect(result.evaluated).toBe(0);
     expect(mockExecuteTool).not.toHaveBeenCalled();
@@ -110,7 +109,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
     const { evaluateMonitorsTask } = await import("./monitoring.trigger");
     const task = evaluateMonitorsTask as unknown as MonitorTaskConfig;
-    const result = await task.run(payload, ctx);
+    const result = await task.run(payload);
 
     // hostname resuelto desde https://acme.com → acme.com
     expect(mockExecuteTool).toHaveBeenCalledWith(
@@ -142,7 +141,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
     const { evaluateMonitorsTask } = await import("./monitoring.trigger");
     const task = evaluateMonitorsTask as unknown as MonitorTaskConfig;
-    const result = await task.run(payload, ctx);
+    const result = await task.run(payload);
 
     expect(result.evaluated).toBe(1);
     expect(mockInsertValues).not.toHaveBeenCalled();
@@ -155,7 +154,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
     const { evaluateMonitorsTask } = await import("./monitoring.trigger");
     const task = evaluateMonitorsTask as unknown as MonitorTaskConfig;
-    const result = await task.run(payload, ctx);
+    const result = await task.run(payload);
 
     expect(result.evaluated).toBe(1);
     expect(mockExecuteTool).not.toHaveBeenCalled();
@@ -169,7 +168,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
     const { evaluateMonitorsTask } = await import("./monitoring.trigger");
     const task = evaluateMonitorsTask as unknown as MonitorTaskConfig;
-    const result = await task.run(payload, ctx);
+    const result = await task.run(payload);
 
     expect(result.evaluated).toBe(1);
     // el error cae en el catch → ni alerta ni update de lastRunAt

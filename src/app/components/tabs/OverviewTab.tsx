@@ -134,19 +134,19 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
 
           {/* KPI stack */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: 'oklch(100% 0 0 / 0.02)', border: '1px solid oklch(15% 0.008 265 / 0.3)' }}>
+            <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
               <span className="text-[9px] uppercase tracking-widest font-bold text-muted-fg">Latencia</span>
               <span className="font-display text-xl font-extrabold text-foreground mt-0.5">1.8<span className="text-xs font-mono text-muted-fg ml-0.5">ms</span></span>
             </div>
-            <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: 'oklch(100% 0 0 / 0.02)', border: '1px solid oklch(15% 0.008 265 / 0.3)' }}>
+            <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
               <span className="text-[9px] uppercase tracking-widest font-bold text-muted-fg">Uptime</span>
               <span className="font-display text-xl font-extrabold text-foreground mt-0.5">127<span className="text-xs font-mono text-muted-fg ml-0.5">d</span></span>
             </div>
-            <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: 'oklch(100% 0 0 / 0.02)', border: '1px solid oklch(15% 0.008 265 / 0.3)' }}>
+            <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
               <span className="text-[9px] uppercase tracking-widest font-bold text-muted-fg">SLA</span>
-              <span className="font-display text-xl font-extrabold mt-0.5" style={{ color: 'oklch(78% 0.18 140)' }}>99.9<span className="text-xs font-mono text-muted-fg ml-0.5">%</span></span>
+              <span className="font-display text-xl font-extrabold mt-0.5" style={{ color: 'var(--accent)' }}>99.9<span className="text-xs font-mono text-muted-fg ml-0.5">%</span></span>
             </div>
-            <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: 'oklch(100% 0 0 / 0.02)', border: '1px solid oklch(15% 0.008 265 / 0.3)' }}>
+            <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
               <span className="text-[9px] uppercase tracking-widest font-bold text-muted-fg">Modelos IA</span>
               <span className="font-display text-xl font-extrabold text-foreground mt-0.5">3<span className="text-xs font-mono text-chartreuse ml-0.5">activos</span></span>
             </div>
@@ -183,18 +183,18 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
             <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
               <defs>
                 <linearGradient id="gradientPrimary" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="oklch(68% 0.14 230)" stopOpacity="0.15" />
-                  <stop offset="100%" stopColor="oklch(68% 0.14 230)" stopOpacity="0" />
+                  <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
                 </linearGradient>
                 <linearGradient id="gradientAccent" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="oklch(78% 0.18 140)" stopOpacity="0.15" />
-                  <stop offset="100%" stopColor="oklch(78% 0.18 140)" stopOpacity="0" />
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
                 </linearGradient>
               </defs>
               <path d="M0 25 H100 M0 50 H100 M0 75 H100" stroke="oklch(100% 0 0 / 0.02)" strokeWidth="0.5" fill="none" />
-              <path d="M0 80 Q 10 70, 20 75 T 40 60 T 60 40 T 80 50 T 100 30" stroke="oklch(68% 0.14 230)" strokeWidth="1.5" fill="none" />
+              <path d="M0 80 Q 10 70, 20 75 T 40 60 T 60 40 T 80 50 T 100 30" stroke="var(--primary)" strokeWidth="1.5" fill="none" />
               <path d="M0 80 Q 10 70, 20 75 T 40 60 T 60 40 T 80 50 T 100 30 L 100 100 L 0 100 Z" fill="url(#gradientPrimary)" />
-              <path d="M0 60 Q 15 50, 30 65 T 50 45 T 70 55 T 90 35 T 100 40" stroke="oklch(78% 0.18 140)" strokeWidth="1.5" fill="none" />
+              <path d="M0 60 Q 15 50, 30 65 T 50 45 T 70 55 T 90 35 T 100 40" stroke="var(--accent)" strokeWidth="1.5" fill="none" />
               <path d="M0 60 Q 15 50, 30 65 T 50 45 T 70 55 T 90 35 T 100 40 L 100 100 L 0 100 Z" fill="url(#gradientAccent)" />
             </svg>
             <div className="absolute -bottom-6 w-full flex justify-between text-[9px] font-bold text-muted-fg tracking-widest">
@@ -264,7 +264,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 rounded-xl p-3" style={{ background: 'oklch(100% 0 0 / 0.02)', border: '1px solid oklch(15% 0.008 265 / 0.2)' }}>
+        <div className="flex flex-wrap items-center gap-4 rounded-xl p-3" style={{ background: "var(--surface)", border: '1px solid oklch(15% 0.008 265 / 0.2)' }}>
           <div className="text-center px-4 py-1" style={{ borderRight: '1px solid oklch(15% 0.008 265 / 0.2)' }}>
             <p className="text-[9px] font-extrabold text-muted-fg uppercase tracking-widest">Compliance</p>
             <p className="text-xs font-bold text-foreground mt-0.5 font-display">SOC 2</p>

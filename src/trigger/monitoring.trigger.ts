@@ -10,9 +10,8 @@ export const evaluateMonitorsTask = schedules.task({
   // Se ejecutaría según la configuración cron, por ejemplo diario a las 00:00
   // Aquí usamos un patrón de ejemplo para la definición del schedule trigger
   cron: "0 0 * * *", 
-  run: async (_p, _c) => {
-    void _p; void _c;
-    logger.info("Iniciando evaluación de monitores de seguridad");
+  run: async (payload) => {
+    logger.info("Iniciando evaluación de monitores de seguridad", { timestamp: payload.timestamp.toISOString() });
 
     // Obtener todos los schedules activos que deberían ejecutarse
     // Para simplificar, buscamos los que están enabled

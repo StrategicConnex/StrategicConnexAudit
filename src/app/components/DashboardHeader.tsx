@@ -37,9 +37,9 @@ export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderP
   };
 
   return (
-    <header className="h-20 bg-background/60 backdrop-blur-xl border-b border-border/50 flex items-center justify-between px-3 sm:px-10 sticky top-0 z-20 shrink-0">
+    <header className="h-14 bg-background/60 backdrop-blur-xl border-b border-border/50 flex items-center justify-between px-3 sm:px-10 sticky top-0 z-20 shrink-0">
       <div key={activeTab} className="flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-300">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">
+        <h1 className="text-lg font-bold tracking-tight text-foreground">
           {getTitle()}
         </h1>
         <p className="hidden sm:block text-[9px] font-extrabold text-primary uppercase tracking-widest mt-0.5">

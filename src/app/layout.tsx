@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Inter, JetBrains_Mono, DM_Sans } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ToasterProvider } from "@/app/components/ToasterProvider";
 import { I18nProvider } from "@/app/components/I18nProvider";
@@ -20,11 +20,11 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-const dmSans = DM_Sans({
+const spaceGrotesk = Space_Grotesk({
   variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
-  weight: ["400", "500", "600", "700", "800", "1000"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -77,7 +77,7 @@ export default async function RootLayout({
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable} ${dmSans.variable} h-full antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
       <head>
         {/**

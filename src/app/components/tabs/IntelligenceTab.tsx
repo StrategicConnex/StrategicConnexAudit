@@ -1992,7 +1992,7 @@ export function IntelligenceTab({
                             <linearGradient id="trace-flow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
                               <stop offset="0%" stopColor="#6271C4" />
                               <stop offset="50%" stopColor="#f472b6" />
-                              <stop offset="100%" stopColor="oklch(68% 0.14 230)" />
+                              <stop offset="100%" stopColor="var(--primary)" />
                             </linearGradient>
                           </defs>
                         </svg>
@@ -2011,7 +2011,7 @@ export function IntelligenceTab({
                             <linearGradient id="trace-vertical-grad" x1="0%" y1="0%" x2="0%" y2="100%">
                               <stop offset="0%" stopColor="#6271C4" />
                               <stop offset="50%" stopColor="#f472b6" />
-                              <stop offset="100%" stopColor="oklch(68% 0.14 230)" />
+                              <stop offset="100%" stopColor="var(--primary)" />
                             </linearGradient>
                           </defs>
                         </svg>
@@ -2389,12 +2389,12 @@ export function IntelligenceTab({
                       
                       <defs>
                         <radialGradient id="core-gradient" cx="50%" cy="50%" r="50%">
-                          <stop offset="0%" stopColor="oklch(68% 0.14 230)" stopOpacity="0.8" />
+                          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.8" />
                           <stop offset="100%" stopColor="#0891b2" stopOpacity="0" />
                         </radialGradient>
                         <linearGradient id="link-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
                           <stop offset="0%" stopColor="#6366f1" />
-                          <stop offset="100%" stopColor="oklch(68% 0.14 230)" />
+                          <stop offset="100%" stopColor="var(--primary)" />
                         </linearGradient>
                         <linearGradient id="link-grad-2" x1="100%" y1="0%" x2="0%" y2="100%">
                           <stop offset="0%" stopColor="#ec4899" />

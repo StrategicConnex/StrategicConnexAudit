@@ -17,8 +17,8 @@ interface PerformanceTabProps {
 
 /* ─── Reusable color tokens ─────────────────────────────────── */
 const COLORS = {
-  primary: 'oklch(68% 0.14 230)',
-  chartreuse: 'oklch(78% 0.18 140)',
+  primary: "var(--primary)",
+  chartreuse: "var(--accent)",
   destructive: 'oklch(55% 0.22 25)',
   warning: 'oklch(75% 0.13 80)',
   track: 'oklch(15% 0.008 265 / 0.25)',

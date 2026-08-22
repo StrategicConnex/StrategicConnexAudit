@@ -242,7 +242,7 @@ flowchart TB
 
         subgraph JOBS["Background Jobs"]
             VC["☑️ Vercel Cron (garantizado)<br/>siem */5 · uptime */15"]
-            TD["Trigger.dev (opcional)<br/>12 tasks · deploy no verificado"]
+            TD["Trigger.dev (opcional)<br/>11 tasks + 1 template · deploy no verificado"]
         end
 
         subgraph DATA["Data"]
@@ -299,7 +299,7 @@ src/server/
 
 ### Background jobs
 
-**Mecanismo garantizado: Vercel Cron** (`vercel.json`, protegido con `CRON_SECRET`). **Trigger.dev es opcional** (deploy no verificado según `docs/guides/deployment.md`) — 12 tasks definidos en `src/trigger/*.trigger.ts`.
+**Mecanismo garantizado: Vercel Cron** (`vercel.json`, protegido con `CRON_SECRET`). **Trigger.dev es opcional** (deploy no verificado según `docs/guides/deployment.md`) — 11 functional tasks + 1 template en `src/trigger/*.trigger.ts`.
 
 | Fuente | Schedule | Descripción |
 |--------|----------|-------------|

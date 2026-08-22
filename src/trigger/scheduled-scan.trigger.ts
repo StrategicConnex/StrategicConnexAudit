@@ -26,7 +26,7 @@ export const scheduledScanTask = schedules.task({
   cron: "0 * * * *", // Cada hora
   run: async (payload) => {
     // Usar el timestamp del ciclo (determinista y auditable) como base temporal
-    const now = new Date(payload.timestamp ?? new Date());
+    const now = payload.timestamp;
     console.log(`[ScheduledScan] Ciclo ${now.toISOString()}`);
 
     // 1. Schedules habilitados y vencidos (nextRunAt not null y <= now)

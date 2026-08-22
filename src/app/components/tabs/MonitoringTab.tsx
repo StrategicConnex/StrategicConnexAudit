@@ -351,7 +351,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border/50 pb-6">
         <div>
           <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <Sliders aria-hidden="true" className="w-6 h-6 text-[oklch(68% 0.14 230)]" />
+            <Sliders aria-hidden="true" className="w-6 h-6 text-[var(--primary)]" />
             {t('pageTitle')}
           </h2>
           <p className="text-xs text-muted-fg mt-1">
@@ -488,7 +488,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
 
           <button
             onClick={() => setShowPlanModal(true)}
-            className="w-full bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-colors duration-300 cursor-pointer"
+            className="w-full bg-[var(--primary)]/10 hover:bg-[var(--primary)]/20 border border-[var(--primary)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-colors duration-300 cursor-pointer"
           >
             {t('quotaUpgradeButton')}
           </button>
@@ -809,7 +809,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <button
                 type="submit"
                 disabled={isQueuingBulk}
-                className="w-full flex items-center justify-center gap-2 bg-[oklch(68% 0.14 230)]/10 hover:bg-[oklch(68% 0.14 230)]/20 border border-[oklch(68% 0.14 230)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-colors duration-300 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-[var(--primary)]/10 hover:bg-[var(--primary)]/20 border border-[var(--primary)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-colors duration-300 cursor-pointer"
               >
                 {isQueuingBulk ? t('bulkQueuing') : t('bulkProcessButton')}
               </button>
@@ -830,7 +830,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               ✕
             </button>
 
-            <div className="text-center space-y-1">                  <span className="text-[10px] font-extrabold tracking-widest text-[oklch(68% 0.14 230)] bg-primary/10 px-3 py-1 rounded-full uppercase">{t('pricingBadge')}</span>
+            <div className="text-center space-y-1">                  <span className="text-[10px] font-extrabold tracking-widest text-[var(--primary)] bg-primary/10 px-3 py-1 rounded-full uppercase">{t('pricingBadge')}</span>
               <h2 className="text-2xl font-black text-white tracking-tight mt-3">{t('pricingTitle')}</h2>
               <p className="text-xs text-muted-fg max-w-lg mx-auto">
                 {t('pricingDesc')}
@@ -843,7 +843,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               {/* Starter Tier */}
               <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 ${
                 currentPlan === 'starter'
-                  ? 'border-[oklch(68% 0.14 230)] bg-[oklch(68% 0.14 230)]/[0.02]'
+                  ? 'border-[var(--primary)] bg-[var(--primary)]/[0.02]'
                   : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
                 <div className="space-y-3">
@@ -873,14 +873,14 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               {/* Business Tier */}
               <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 relative ${
                 currentPlan === 'business'
-                  ? 'border-[oklch(68% 0.14 230)] bg-[oklch(68% 0.14 230)]/[0.03] shadow-[0_4px_30px_rgba(6,182,212,0.15)]'
+                  ? 'border-[var(--primary)] bg-[var(--primary)]/[0.03] shadow-[0_4px_30px_rgba(6,182,212,0.15)]'
                   : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black tracking-widest text-[oklch(68% 0.14 230)] bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-full uppercase">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black tracking-widest text-[var(--primary)] bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-full uppercase">
                   {t('planRecommended')}
                 </span>
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-[oklch(68% 0.14 230)] uppercase tracking-widest">{t('planBusiness')}</p>
+                  <p className="text-xs font-bold text-[var(--primary)] uppercase tracking-widest">{t('planBusiness')}</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$149</span>
                     <span className="text-[11px] font-bold text-muted-fg">{t('planPerMonth')}</span>
@@ -897,7 +897,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     setCurrentPlan('business');
                     setShowPlanModal(false);
                   }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg bg-[oklch(68% 0.14 230)] hover:bg-[oklch(68% 0.14 230)]/80 text-black transition-colors cursor-pointer"
+                  className="w-full text-xs font-bold py-2.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary)]/80 text-black transition-colors cursor-pointer"
                 >
                   {currentPlan === 'business' ? t('planActive') : t('planSelect', { plan: t('planBusiness') })}
                 </button>
@@ -906,7 +906,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               {/* Enterprise Tier */}
               <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 ${
                 currentPlan === 'enterprise'
-                  ? 'border-[oklch(68% 0.14 230)] bg-[oklch(68% 0.14 230)]/[0.02]'
+                  ? 'border-[var(--primary)] bg-[var(--primary)]/[0.02]'
                   : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
                 <div className="space-y-3">
