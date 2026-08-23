@@ -5,11 +5,20 @@ export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
     const signature = request.headers.get("x-scaudit-signature") || "";
-    const secret = process.env.SCAUDIT_WEBHOOK_SECRET || "default_webhook_secret_for_dev";
+    // SECURITY: fail-closed. Sin secreto configurado el webhook se rechaza
+    // siempre — nunca se acepta un secreto por defecto ni se salta la
+    // verificación fuera de producción.
+    const secret = process.env.SCAUDIT_WEBHOOK_SECRET;
+    if (!secret) {
+      return NextResponse.json(
+        { success: false, error: "Webhook no configurado: falta SCAUDIT_WEBHOOK_SECRET" },
+        { status: 503 }
+      );
+    }
 
     const isValid = verifyWebhookSignature(rawBody, signature, secret);
 
-    if (!isValid && process.env.NODE_ENV === "production") {
+    if (!isValid) {
       return NextResponse.json(
         { success: false, error: "Firma HMAC inválida o no provista" },
         { status: 401 }

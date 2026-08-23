@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/shared/lib/supabase/server";
 import { runSiemExport } from "@/server/security/siem-exporter";
+import { isCronSecretMatched } from "@/server/auth/cron";
+import { requireAdmin } from "@/server/auth/admin";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120; // 2 minutes timeout
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth: allow cron secret OR authenticated user
+    // Auth: allow cron secret OR platform-admin user
+    // (SECURITY: sin el gate de admin, cualquier usuario autenticado podía
+    // spamear los canales externos de alerting — Slack/PagerDuty/Splunk)
     const authHeader = req.headers.get("authorization");
-    const isCron = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
+    const isCron = isCronSecretMatched(authHeader);
 
     if (!isCron) {
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 });
+      const gate = await requireAdmin();
+      if (!gate.ok) {
+        return gate.response;
       }
     }
 

@@ -25,6 +25,7 @@ import { directDb } from "@/shared/db";
 import { aiHealthLogs } from "@/shared/db/schemas/health";
 import { logSecurityEvent } from "@/shared/lib/audit-log";
 import { TASK_ROUTING } from "@/server/ai/ai-router";
+import { isCronAuthorized } from "@/server/auth/cron";
 
 export const maxDuration = 120; // 2 minutes — need time for model fallback chains
 export const dynamic = "force-dynamic";
@@ -204,23 +205,17 @@ export async function GET(request: Request) {
   const startTime = Date.now();
 
   try {
-    // 1. Auth check (solo en producción)
-    const authHeader = request.headers.get("authorization");
-    if (process.env.NODE_ENV === "production") {
-      if (!process.env.CRON_SECRET) {
-        console.error(
-          "[AI Healthcheck] CRON_SECRET environment variable is not configured. " +
-          "Set CRON_SECRET in Vercel environment variables to enable authenticated cron jobs."
-        );
-        return NextResponse.json({
-          success: false,
-          error: "CRON_SECRET no configurado en el servidor",
-        }, { status: 500 });
-      }
-
-      if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    // 1. Auth check (timing-safe, fail-closed en producción sin CRON_SECRET)
+    if (!isCronAuthorized(request)) {
+      const hasSecret = !!process.env.CRON_SECRET;
+      console.error(
+        "[AI Healthcheck] Rechazada invocación no autorizada" +
+        (hasSecret ? "." : " — CRON_SECRET environment variable is not configured.")
+      );
+      return NextResponse.json({
+        success: false,
+        error: hasSecret ? "Unauthorized" : "CRON_SECRET no configurado en el servidor",
+      }, { status: hasSecret ? 401 : 500 });
     }
 
     // 2. Extraer trigger source

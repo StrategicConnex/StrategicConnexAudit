@@ -54,10 +54,17 @@ export async function POST(req: NextRequest) {
     const endpoint = subscription.endpoint as string;
 
     // 3. Check if already subscribed
+    // SECURITY: scoped por userId — un endpoint de OTRO usuario no se
+    // reactiva ni sobrescribe (evita hijacking de notificaciones)
     const existing = await directDb
       .select({ id: pushSubscriptions.id })
       .from(pushSubscriptions)
-      .where(eq(pushSubscriptions.endpoint, endpoint))
+      .where(
+        and(
+          eq(pushSubscriptions.endpoint, endpoint),
+          eq(pushSubscriptions.userId, user.id),
+        ),
+      )
       .limit(1);
 
     if (existing.length > 0) {
@@ -75,13 +82,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, status: "reactivated" });
     }
 
-    // 4. Insert new subscription
-    await directDb.insert(pushSubscriptions).values({
-      userId: user.id,
-      endpoint,
-      subscription: subscription as Record<string, unknown>,
-      userAgent: req.headers.get("user-agent") || undefined,
-    });
+    // 4. Insert new subscription (el endpoint es UNIQUE: si existe de otro
+    // usuario el insert falla con 23505 y se responde conflicto, sin filtrar datos)
+    try {
+      await directDb.insert(pushSubscriptions).values({
+        userId: user.id,
+        endpoint,
+        subscription: subscription as Record<string, unknown>,
+        userAgent: req.headers.get("user-agent") || undefined,
+      });
+    } catch (err) {
+      if ((err as { code?: string }).code === "23505") {
+        return NextResponse.json(
+          { success: false, error: "Endpoint already registered" },
+          { status: 409 },
+        );
+      }
+      throw err;
+    }
 
     return NextResponse.json({ success: true, status: "subscribed" });
   } catch (error: unknown) {
@@ -126,10 +144,16 @@ export async function DELETE(req: NextRequest) {
     }
 
     // 3. Deactivate subscription
+    // SECURITY: solo se puede desactivar una suscripción PROPIA
     await directDb
       .update(pushSubscriptions)
       .set({ active: false, updatedAt: new Date() })
-      .where(eq(pushSubscriptions.endpoint, endpoint));
+      .where(
+        and(
+          eq(pushSubscriptions.endpoint, endpoint),
+          eq(pushSubscriptions.userId, user.id),
+        ),
+      );
 
     return NextResponse.json({ success: true, status: "unsubscribed" });
   } catch (error: unknown) {

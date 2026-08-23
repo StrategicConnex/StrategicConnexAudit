@@ -139,3 +139,18 @@ export const intelligenceUsageEvents = pgTable("intelligence_usage_events", {
   index("idx_intel_usage_project_created").on(t.projectId, t.createdAt),
   index("idx_intel_usage_user").on(t.userId),
 ]);
+
+// ─── Tipos canónicos derivados del schema ────────────────────────────────────
+// FUENTE ÚNICA DE VERDAD para filas de intelligence. Los componentes deben
+// importar estos tipos en lugar de redeclarar interfaces locales divergentes
+// (antes existían 3 formas incompatibles de `Finding`/`Investigation`).
+export type IntelligenceInvestigation = typeof intelligenceInvestigations.$inferSelect;
+export type NewIntelligenceInvestigation = typeof intelligenceInvestigations.$inferInsert;
+export type IntelligenceToolRun = typeof intelligenceToolRuns.$inferSelect;
+export type IntelligenceFinding = typeof intelligenceFindings.$inferSelect;
+export type IntelligenceAsset = typeof intelligenceAssets.$inferSelect;
+export type IntelligenceRunEvent = typeof intelligenceRunEvents.$inferSelect;
+export type IntelligenceUsageEvent = typeof intelligenceUsageEvents.$inferSelect;
+export type FindingSeverity = (typeof findingSeverityEnum.enumValues)[number];
+export type InvestigationStatus = (typeof investigationStatusEnum.enumValues)[number];
+

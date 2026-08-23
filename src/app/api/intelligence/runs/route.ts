@@ -11,6 +11,7 @@ import { runToolSchema } from "@/features/intelligence/validators/intelligence.s
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { getToolDefinition } from "@/server/intelligence/core/tool-registry";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
+import { checkIntelScanRateLimit, buildRateLimitHeaders } from "@/shared/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,16 @@ export async function POST(req: NextRequest) {
     }
 
     const { projectId, investigationId, toolId, input } = parseResult.data;
+
+    // Rate limit (SECURITY: misma cuota que el resto del motor intelligence —
+    // antes esta ruta permitía abusar de APIs externas saltándose el quota)
+    const rateLimit = await checkIntelScanRateLimit(user.id);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { success: false, error: "Límite de escaneos excedido. Inténtalo más tarde." },
+        { status: 429, headers: buildRateLimitHeaders(rateLimit) },
+      );
+    }
 
     // Verificar si la herramienta existe en el registro
     const toolDef = getToolDefinition(toolId);

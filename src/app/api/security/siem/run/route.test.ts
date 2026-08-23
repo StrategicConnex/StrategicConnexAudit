@@ -2,7 +2,8 @@
    Security: SIEM Run — Tests de endpoint (P0)
 
    Verifica:
-   - Autenticación dual: CRON_SECRET (Bearer) o usuario de sesión → 401
+   - Autenticación dual: CRON_SECRET (Bearer) o usuario ADMIN de plataforma
+   - Sin credenciales → 401; usuario NO admin → 403
    - Ejecución exitosa delega a runSiemExport y devuelve el resultado
    - Error de exportación → 500 con error interno
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -14,6 +15,7 @@ import { NextRequest } from "next/server";
 
 const mockRunSiemExport = vi.fn();
 const mockGetUser = vi.fn();
+const mockPlatformRole: { current: string | null } = { current: null };
 
 vi.mock("@/server/security/siem-exporter", () => ({
   runSiemExport: mockRunSiemExport,
@@ -24,6 +26,19 @@ vi.mock("@/shared/lib/supabase/server", () => ({
     auth: { getUser: mockGetUser },
   })),
 }));
+
+vi.mock("@/shared/db", () => {
+  const resolveRole = () =>
+    Promise.resolve(
+      mockPlatformRole.current === null ? [] : [{ role: mockPlatformRole.current }],
+    );
+  const chain = {
+    where: () => ({ limit: () => resolveRole(), then: undefined }),
+    from: () => chain,
+    select: () => chain,
+  };
+  return { db: chain, directDb: chain };
+});
 
 const baseResult = {
   scannedWindowMinutes: 10,
@@ -55,6 +70,7 @@ describe("Security: SIEM Run — endpoint", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
+    mockPlatformRole.current = null;
     const mod = await import("./route");
     POST = mod.POST;
   });
@@ -98,9 +114,10 @@ describe("Security: SIEM Run — endpoint", () => {
     expect(mockGetUser).not.toHaveBeenCalled();
   });
 
-  it("usuario autenticado (sin cron) → 200", async () => {
+  it("usuario ADMIN autenticado (sin cron) → 200", async () => {
     vi.stubEnv("CRON_SECRET", "supersecret");
     mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    mockPlatformRole.current = "admin";
     mockRunSiemExport.mockResolvedValue(baseResult);
 
     const res = await POST(createRequest());
@@ -108,6 +125,17 @@ describe("Security: SIEM Run — endpoint", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(mockGetUser).toHaveBeenCalledTimes(1);
+  });
+
+  it("usuario autenticado NO admin (sin cron) → 403", async () => {
+    vi.stubEnv("CRON_SECRET", "supersecret");
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-2" } } });
+    mockPlatformRole.current = "client";
+
+    const res = await POST(createRequest());
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("admin");
   });
 
   it("runSiemExport falla → 500", async () => {

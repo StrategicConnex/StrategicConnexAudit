@@ -2,7 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateApiKey } from "@/server/intelligence/enterprise/api-auth";
 import { db } from "@/shared/db";
 import { intelligenceInvestigations, projects } from "@/shared/db/schemas";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import { checkIntelScanRateLimit, buildRateLimitHeaders } from "@/shared/lib/ratelimit";
+
+const bulkSchema = z.object({
+  projectId: z.string().uuid(),
+  targets: z
+    .array(z.string().min(1).max(2048))
+    .min(1)
+    .max(50),
+});
+
+function normalizeTarget(raw: string): {
+  target: string;
+  normalizedTarget: string;
+  targetType: "domain" | "ip" | "url" | "email";
+} {
+  const target = raw.trim();
+  const normalizedTarget = target.toLowerCase();
+
+  let targetType: "domain" | "ip" | "url" | "email" = "domain";
+  if (normalizedTarget.includes("@")) targetType = "email";
+  else if (/^\d{1,3}(\.\d{1,3}){3}$/.test(normalizedTarget)) targetType = "ip";
+  else if (normalizedTarget.startsWith("http")) targetType = "url";
+
+  return { target, normalizedTarget, targetType };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,62 +38,67 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized. Invalid or missing API Key." }, { status: 401 });
     }
 
+    // SECURITY: validación zod (antes se aceptaban strings de tamaño
+    // arbitrario y sin rate limit — vector de bloat de BD)
     const body = await req.json();
-    const { projectId, targets } = body;
-
-    if (!projectId || !targets || !Array.isArray(targets)) {
-      return NextResponse.json({ error: "Invalid payload. 'projectId' and 'targets' (array) are required." }, { status: 400 });
+    const parseResult = bulkSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Invalid payload. 'projectId' (uuid) and 'targets' (array of 1–50 strings, max 2048 chars) are required." },
+        { status: 400 },
+      );
     }
 
-    if (targets.length === 0 || targets.length > 50) {
-      return NextResponse.json({ error: "The 'targets' array must contain between 1 and 50 elements." }, { status: 400 });
+    // Rate limit por usuario (misma cuota que el resto del motor intelligence)
+    const rateLimit = await checkIntelScanRateLimit(authContext.userId);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Scan rate limit exceeded. Try again later." },
+        { status: 429, headers: buildRateLimitHeaders(rateLimit) },
+      );
     }
+
+    const { projectId, targets } = parseResult.data;
 
     // 2. Verificar acceso al proyecto
     const project = await db.query.projects.findFirst({
-      where: eq(projects.id, projectId)
+      where: and(eq(projects.id, projectId), eq(projects.ownerId, authContext.userId)),
+      columns: { id: true },
     });
 
-    if (!project || project.ownerId !== authContext.userId) {
+    if (!project) {
       return NextResponse.json({ error: "Project not found or access denied." }, { status: 404 });
     }
 
-    // 3. Crear las investigaciones en estado 'queued' o 'draft'
-    // En una implementación robusta, esto debería despacharse vía Trigger.dev a un Worker
-    // para procesar el array de forma asíncrona.
-    
-    const createdInvestigations = [];
-
-    for (const target of targets) {
-      // Normalización muy básica del target para el bulk insert
-      let targetType: "domain" | "ip" | "url" | "email" = "domain";
-      if (target.includes("@")) targetType = "email";
-      else if (/^\d{1,3}(\.\d{1,3}){3}$/.test(target)) targetType = "ip";
-      else if (target.startsWith("http")) targetType = "url";
-
-      const [inv] = await db.insert(intelligenceInvestigations).values({
+    // 3. Insert MASIVO en estado 'queued' (un solo statement; antes había un
+    // INSERT por target dentro de un bucle)
+    // NOTA: aquí se despacharía el Trigger a 'audit.trigger.ts' enviando los
+    // investigationIds para procesamiento asíncrono en background.
+    const rows = targets.map((raw) => {
+      const { target, normalizedTarget, targetType } = normalizeTarget(raw);
+      return {
         projectId,
         ownerId: authContext.userId,
         title: `Bulk Analysis: ${target}`,
-        target: target,
-        normalizedTarget: target.toLowerCase(),
+        target,
+        normalizedTarget,
         targetType,
-        status: "queued"
-      }).returning();
+        status: "queued" as const,
+      };
+    });
 
-      createdInvestigations.push(inv);
-    }
-
-    // IMPORTANTE: Aquí se despacharía el Trigger a 'audit.trigger.ts' enviando los investigationIds 
-    // para procesamiento asíncrono en background. (Omitido por concisión arquitectónica)
+    const createdInvestigations = await db
+      .insert(intelligenceInvestigations)
+      .values(rows)
+      .returning({ id: intelligenceInvestigations.id, target: intelligenceInvestigations.target });
 
     return NextResponse.json({
       success: true,
       message: `${createdInvestigations.length} investigations queued for processing.`,
-      investigations: createdInvestigations.map(i => ({ id: i.id, target: i.target }))
+      investigations: createdInvestigations,
     }, { status: 202 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Bulk API Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }

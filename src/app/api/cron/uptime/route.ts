@@ -3,18 +3,15 @@ import { db } from '@/shared/db';
 import { projects, uptimeLogs } from '@/shared/db/schemas';
 import { isNull } from 'drizzle-orm';
 import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
+import { isCronAuthorized } from "@/server/auth/cron";
 
 export const maxDuration = 60; // 1 minute timeout
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    // 1. Verify Vercel Cron Secret for security
-    const authHeader = request.headers.get('authorization');
-    if (
-      process.env.NODE_ENV === 'production' &&
-      authHeader !== `Bearer ${process.env.CRON_SECRET}`
-    ) {
+    // 1. Verify Vercel Cron Secret (timing-safe, fail-closed en producción)
+    if (!isCronAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

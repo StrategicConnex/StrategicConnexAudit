@@ -176,6 +176,13 @@
       "when": 1786283401110,
       "tag": "0024_rls_fase1_project_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787481600000,
+      "tag": "0025_rls_core_defense_in_depth",
+      "breakpoints": true
     }
   ]
 }

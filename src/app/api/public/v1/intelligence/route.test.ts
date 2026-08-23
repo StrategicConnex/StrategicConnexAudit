@@ -182,6 +182,8 @@ describe("Public API v1: Intelligence — GET", () => {
 
   it("listado por projectId → 200", async () => {
     mockAuthenticateApiKey.mockResolvedValue(authenticatedAuth);
+    // Ownership check del proyecto (SECURITY): debe pertenecer al dueño de la key
+    mockProjectFindFirst.mockResolvedValue({ id: "p1", ownerId: "user-1" });
     mockInvFindMany.mockResolvedValue([{ id: "inv-1" }, { id: "inv-2" }]);
 
     const res = await GET(
@@ -191,6 +193,17 @@ describe("Public API v1: Intelligence — GET", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.investigations).toHaveLength(2);
+  });
+
+  it("projectId de OTRO dueño → 404 (no lista investigaciones ajenas)", async () => {
+    mockAuthenticateApiKey.mockResolvedValue(authenticatedAuth);
+    mockProjectFindFirst.mockResolvedValue({ id: "p1", ownerId: "otro-user" });
+
+    const res = await GET(
+      createRequest("GET", "http://localhost:3000/api/public/v1/intelligence?projectId=p1")
+    );
+    expect(res.status).toBe(404);
+    expect(mockInvFindMany).not.toHaveBeenCalled();
   });
 });
 

@@ -15,7 +15,7 @@
 
 import { db } from "@/shared/db";
 import { intelligenceAssets } from "@/shared/db/schemas/intelligence";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { runDnsBruteForce } from "./dns-brute";
 import { runCtMonitor } from "./ct-monitor";
 import { runShadowDetection } from "./shadow-detector";
@@ -90,20 +90,44 @@ export async function runDiscovery(config: DiscoveryConfig): Promise<DiscoveryRu
   );
 
   // 4. Persistir activos nuevos en la BD
+  // PERF: upsert MASIVO en un solo statement (onConflictDoUpdate sobre la
+  // unique (project_id, asset_type, value)). Antes había un INSERT por asset
+  // con UPDATE de recuperación en conflicto 23505 — N roundtrips por run.
   const assetChangesLog: AssetChange[] = [];
+  const now = new Date();
 
-  for (const asset of trulyNewAssets) {
-    try {
-      await db.insert(intelligenceAssets).values({
-        projectId,
-        assetType: asset.assetType,
-        value: asset.value,
-        ip: asset.ip,
-        metadata: asset.metadata,
-        firstSeenAt: new Date(),
-        lastSeenAt: new Date(),
+  if (trulyNewAssets.length > 0) {
+    const inserted = await db
+      .insert(intelligenceAssets)
+      .values(
+        trulyNewAssets.map((asset) => ({
+          projectId,
+          assetType: asset.assetType,
+          value: asset.value,
+          ip: asset.ip,
+          metadata: asset.metadata,
+          firstSeenAt: now,
+          lastSeenAt: now,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: [
+          intelligenceAssets.projectId,
+          intelligenceAssets.assetType,
+          intelligenceAssets.value,
+        ],
+        set: { lastSeenAt: now },
+      })
+      .returning({
+        assetType: intelligenceAssets.assetType,
+        value: intelligenceAssets.value,
       });
 
+    const insertedSet = new Set(
+      inserted.map((a) => `${a.assetType}:${a.value}`)
+    );
+
+    for (const asset of trulyNewAssets) {
       assetChangesLog.push({
         projectId,
         domain,
@@ -111,50 +135,39 @@ export async function runDiscovery(config: DiscoveryConfig): Promise<DiscoveryRu
         value: asset.value,
         changeType: "new",
         previousValue: null,
-        currentValue: asset.ip,
+        currentValue: asset.ip ?? null,
         metadata: asset.metadata,
-        detectedAt: new Date(),
+        detectedAt: now,
       });
-    } catch (err: any) {
-      // Si ya existe (unique constraint), actualizar lastSeenAt
-      if (err?.code === "23505") {
-        try {
-          await db
-            .update(intelligenceAssets)
-            .set({ lastSeenAt: new Date() })
-            .where(
-              and(
-                eq(intelligenceAssets.projectId, projectId),
-                eq(intelligenceAssets.assetType, asset.assetType),
-                eq(intelligenceAssets.value, asset.value)
-              )
-            );
-        } catch (updateErr) {
-          console.error(`[Discovery] Error actualizando lastSeenAt para ${asset.value}:`, updateErr);
-        }
-      } else {
-        console.error(`[Discovery] Error insertando activo ${asset.value}:`, err);
+      if (!insertedSet.has(`${asset.assetType}:${asset.value}`)) {
+        console.warn(
+          `[Discovery] Conficto inesperado al insertar activo ${asset.value}: no devuelto por RETURNING`
+        );
       }
     }
   }
 
   // 5. Actualizar lastSeenAt de activos conocidos que siguen apareciendo
-  for (const asset of allNewAssets) {
-    if (knownSet.has(`${asset.assetType}:${asset.value}`)) {
-      try {
-        await db
-          .update(intelligenceAssets)
-          .set({ lastSeenAt: new Date() })
-          .where(
-            and(
-              eq(intelligenceAssets.projectId, projectId),
-              eq(intelligenceAssets.assetType, asset.assetType),
-              eq(intelligenceAssets.value, asset.value)
-            )
-          );
-      } catch {
-        // Ignorar errores de actualización
-      }
+  // PERF: un solo UPDATE con tupla (project_id, asset_type, value) IN …
+  // en lugar de un UPDATE por asset.
+  const knownStillSeen = allNewAssets.filter((a) =>
+    knownSet.has(`${a.assetType}:${a.value}`)
+  );
+
+  if (knownStillSeen.length > 0) {
+    const tuples = sql.join(
+      knownStillSeen.map(
+        (a) => sql`(${projectId}::uuid, ${a.assetType}, ${a.value})`
+      ),
+      sql`, `
+    );
+    try {
+      await db.execute(
+        sql`UPDATE intelligence_assets SET last_seen_at = ${now}
+            WHERE (project_id, asset_type, value) IN (${tuples})`
+      );
+    } catch (updateErr) {
+      console.error("[Discovery] Error actualizando lastSeenAt masivo:", updateErr);
     }
   }
 

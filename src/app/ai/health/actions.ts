@@ -3,6 +3,7 @@
 import { directDb } from "@/shared/db";
 import { aiHealthLogs } from "@/shared/db/schemas/health";
 import { desc, gte, sql } from "drizzle-orm";
+import { assertPlatformAdmin } from "@/server/auth/admin";
 
 export type HealthCheckRecord = {
   id: string;
@@ -47,6 +48,9 @@ export type ModelHealthSummary = {
  * Fetch the most recent health check records.
  */
 export async function getRecentHealthChecks(limit = 50): Promise<HealthCheckRecord[]> {
+  // SECURITY: Server Actions son endpoints públicamente invocables — el gate
+  // debe lanzar FUERA del try/catch para no ser silenciado.
+  await assertPlatformAdmin();
   try {
     const rows = await directDb
       .select()
@@ -74,6 +78,7 @@ export async function getRecentHealthChecks(limit = 50): Promise<HealthCheckReco
  * Fetch daily aggregated health data for charts (last 30 days).
  */
 export async function getDailyAggregates(days = 30): Promise<DailyAggregate[]> {
+  await assertPlatformAdmin();
   try {
     const since = new Date(Date.now() - days * 86_400_000);
     const rows = await directDb
@@ -109,12 +114,15 @@ export async function getDailyAggregates(days = 30): Promise<DailyAggregate[]> {
  * Fetch per-model health summary across all checks.
  */
 export async function getModelHealthSummary(): Promise<ModelHealthSummary[]> {
+  await assertPlatformAdmin();
   try {
+    // SECURITY: limitar la ventana de agregación para no escanear toda la tabla
     const rows = await directDb
       .select()
       .from(aiHealthLogs)
+      .where(gte(aiHealthLogs.checkedAt, new Date(Date.now() - 30 * 86_400_000)))
       .orderBy(desc(aiHealthLogs.checkedAt))
-      .limit(100);
+      .limit(500);
 
     // Aggregate per-model from modelResults jsonb
     const modelMap = new Map<string, {
@@ -171,6 +179,7 @@ export async function getModelHealthSummary(): Promise<ModelHealthSummary[]> {
  * Fetch the latest health check result (for the summary cards).
  */
 export async function getLatestHealthCheck(): Promise<HealthCheckRecord | null> {
+  await assertPlatformAdmin();
   try {
     const [row] = await directDb
       .select()

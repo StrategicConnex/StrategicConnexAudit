@@ -14,15 +14,28 @@ import { NextRequest } from "next/server";
 
 const mockGetUser = vi.fn();
 
+const RUN_ID = "11111111-1111-4111-8111-111111111111";
+
 const { dbMock } = vi.hoisted(() => {
   const dbMock = {
     updateCalls: [] as Array<{ table: unknown; values: unknown; where: unknown }>,
+    // Resultado del JOIN de ownership (PATCH): filas visibles para el usuario
+    ownedResult: [] as Array<{ ownerId: string }>,
     update: vi.fn((table: unknown) => ({
       set: vi.fn((values: unknown) => ({
         where: vi.fn(async (where: unknown) => {
           dbMock.updateCalls.push({ table, values, where });
         }),
       })),
+    })),
+    select: vi.fn(() => ({
+      from: () => ({
+        innerJoin: () => ({
+          where: () => ({
+            limit: async () => dbMock.ownedResult,
+          }),
+        }),
+      }),
     })),
   };
   return { dbMock };
@@ -36,6 +49,7 @@ vi.mock("@/shared/lib/supabase/server", () => ({
 
 vi.mock("@/shared/db", () => ({
   db: dbMock,
+  directDb: dbMock,
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -59,6 +73,7 @@ describe("Adversary API — PATCH report", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     dbMock.updateCalls = [];
+    dbMock.ownedResult = [];
     const mod = await import("./route");
     PATCH = mod.PATCH;
   });
@@ -66,7 +81,7 @@ describe("Adversary API — PATCH report", () => {
   it("PATCH sin auth → 401", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } });
     const res = await PATCH(
-      createRequest("PATCH", { runId: "run-1", result: "detected" })
+      createRequest("PATCH", { runId: RUN_ID, result: "detected" })
     );
     expect(res.status).toBe(401);
     const body = await res.json();
@@ -83,14 +98,14 @@ describe("Adversary API — PATCH report", () => {
 
   it("PATCH sin result → 400", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    const res = await PATCH(createRequest("PATCH", { runId: "run-1" }));
+    const res = await PATCH(createRequest("PATCH", { runId: RUN_ID }));
     expect(res.status).toBe(400);
   });
 
   it("PATCH con result inválido → 400", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
     const res = await PATCH(
-      createRequest("PATCH", { runId: "run-1", result: "maybe" })
+      createRequest("PATCH", { runId: RUN_ID, result: "maybe" })
     );
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -99,8 +114,9 @@ describe("Adversary API — PATCH report", () => {
 
   it("PATCH válido (detected + detectedBy) → 200 y update correcto", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    dbMock.ownedResult = [{ ownerId: "user-1" }];
     const res = await PATCH(
-      createRequest("PATCH", { runId: "run-1", result: "detected", detectedBy: "EDR" })
+      createRequest("PATCH", { runId: RUN_ID, result: "detected", detectedBy: "EDR" })
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -115,8 +131,9 @@ describe("Adversary API — PATCH report", () => {
 
   it("PATCH válido sin detectedBy → se persiste null", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    dbMock.ownedResult = [{ ownerId: "user-1" }];
     const res = await PATCH(
-      createRequest("PATCH", { runId: "run-1", result: "missed" })
+      createRequest("PATCH", { runId: RUN_ID, result: "missed" })
     );
     expect(res.status).toBe(200);
     expect(dbMock.updateCalls).toHaveLength(1);
@@ -124,5 +141,15 @@ describe("Adversary API — PATCH report", () => {
       result: "missed",
       detectedBy: null,
     });
+  });
+
+  it("PATCH de run ajeno (ownership check falla) → 404 y NO update", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-2" } } });
+    dbMock.ownedResult = [{ ownerId: "user-1" }];
+    const res = await PATCH(
+      createRequest("PATCH", { runId: RUN_ID, result: "detected" })
+    );
+    expect(res.status).toBe(404);
+    expect(dbMock.updateCalls).toHaveLength(0);
   });
 });

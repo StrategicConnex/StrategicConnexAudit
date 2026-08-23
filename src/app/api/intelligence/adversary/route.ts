@@ -1,12 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/shared/lib/supabase/server";
-import { db } from "@/shared/db";
-import { adversaryRuns } from "@/shared/db/schemas/adversary";
-import { eq } from "drizzle-orm";
+import { db, directDb } from "@/shared/db";
+import {
+  adversaryRuns,
+  projects,
+} from "@/shared/db/schemas";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import { ADVERSARY_CATALOG } from "@/server/intelligence/adversary/catalog";
 import { runScenario, listScenariosWithRuns } from "@/server/intelligence/adversary/scenario-runner";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * SECURITY: todos los verbos verifican que el proyecto (o el run) pertenece
+ * al usuario autenticado. Antes de este fix, GET/POST/PATCH operaban sobre
+ * cualquier projectId/runId sin autorización (IDOR cross-tenant) y POST
+ * permitía usar la plataforma como scanner-for-hire contra dominios ajenos.
+ */
+async function assertProjectOwnership(
+  userId: string,
+  projectId: string,
+): Promise<boolean> {
+  const project = await db.query.projects.findFirst({
+    where: and(eq(projects.id, projectId), eq(projects.ownerId, userId)),
+    columns: { id: true },
+  });
+  return !!project;
+}
+
+const postSchema = z.object({
+  scenarioMitreId: z.string().min(1).max(64),
+  projectId: z.string().uuid(),
+  investigationId: z.string().uuid().optional(),
+  detectedBy: z.string().max(128).optional(),
+  notes: z.string().max(2048).optional(),
+});
+
+const patchSchema = z.object({
+  runId: z.string().uuid(),
+  result: z.enum(["detected", "missed", "error"]),
+  detectedBy: z.string().max(128).optional(),
+});
+
+const patchLooseSchema = z.object({
+  runId: z.string().uuid().optional(),
+  result: z.string().optional(),
+  detectedBy: z.string().max(128).optional(),
+});
 
 /**
  * GET /api/intelligence/adversary
@@ -25,10 +66,17 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("projectId");
 
-    if (!projectId) {
+    if (!projectId || !z.string().uuid().safeParse(projectId).success) {
       return NextResponse.json(
         { success: false, error: "projectId es requerido" },
         { status: 400 }
+      );
+    }
+
+    if (!(await assertProjectOwnership(user.id, projectId))) {
+      return NextResponse.json(
+        { success: false, error: "Proyecto no encontrado o sin acceso" },
+        { status: 404 }
       );
     }
 
@@ -49,8 +97,8 @@ export async function GET(req: NextRequest) {
         missedCount: runs.filter((r) => r.result === "missed").length,
       },
     });
-  } catch (error: any) {
-    console.error("Error en GET /api/intelligence/adversary:", error.message);
+  } catch (error: unknown) {
+    console.error("Error en GET /api/intelligence/adversary:", error);
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
       { status: 500 }
@@ -73,12 +121,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { scenarioMitreId, projectId, investigationId, detectedBy, notes } = body;
+    const parsed = postSchema.safeParse(body);
 
-    if (!scenarioMitreId || !projectId) {
+    if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: "scenarioMitreId y projectId son requeridos" },
         { status: 400 }
+      );
+    }
+
+    const { scenarioMitreId, projectId, investigationId, detectedBy, notes } = parsed.data;
+
+    if (!(await assertProjectOwnership(user.id, projectId))) {
+      return NextResponse.json(
+        { success: false, error: "Proyecto no encontrado o sin acceso" },
+        { status: 404 }
       );
     }
 
@@ -104,8 +161,8 @@ export async function POST(req: NextRequest) {
       scoreImpact: result.scoreImpact,
       output: result.output,
     });
-  } catch (error: any) {
-    console.error("Error en POST /api/intelligence/adversary:", error.message);
+  } catch (error: unknown) {
+    console.error("Error en POST /api/intelligence/adversary:", error);
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
       { status: 500 }
@@ -128,23 +185,49 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { runId, result, detectedBy } = body;
-
-    if (!runId || !result) {
+    const loose = patchLooseSchema.safeParse(body);
+    if (!loose.success || !loose.data.runId || !loose.data.result) {
       return NextResponse.json(
         { success: false, error: "runId y result son requeridos" },
         { status: 400 }
       );
     }
 
-    if (!["detected", "missed", "error"].includes(result)) {
+    if (!["detected", "missed", "error"].includes(loose.data.result)) {
       return NextResponse.json(
         { success: false, error: "result debe ser: detected, missed, o error" },
         { status: 400 }
       );
     }
 
-    await db
+    const parsed = patchSchema.safeParse(body);
+
+    if (!parsed.success) {
+      // El valor era válido pero el formato de runId no (uuid requerido)
+      return NextResponse.json(
+        { success: false, error: "runId debe ser un UUID válido" },
+        { status: 400 }
+      );
+    }
+
+    const { runId, result, detectedBy } = parsed.data;
+
+    // SECURITY: solo el dueño del proyecto del run puede modificarlo
+    const owned = await directDb
+      .select({ ownerId: projects.ownerId })
+      .from(adversaryRuns)
+      .innerJoin(projects, eq(projects.id, adversaryRuns.projectId))
+      .where(eq(adversaryRuns.id, runId))
+      .limit(1);
+
+    if (!owned[0] || owned[0].ownerId !== user.id) {
+      return NextResponse.json(
+        { success: false, error: "Run no encontrado o sin acceso" },
+        { status: 404 }
+      );
+    }
+
+    await directDb
       .update(adversaryRuns)
       .set({
         result,
@@ -154,8 +237,8 @@ export async function PATCH(req: NextRequest) {
       .where(eq(adversaryRuns.id, runId));
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Error en PATCH /api/intelligence/adversary:", error.message);
+  } catch (error: unknown) {
+    console.error("Error en PATCH /api/intelligence/adversary:", error);
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runSiemExport } from "@/server/security/siem-exporter";
+import { isCronAuthorized } from "@/server/auth/cron";
 
 export const maxDuration = 120; // 2 minutes timeout
 export const dynamic = "force-dynamic";
@@ -16,12 +17,8 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   try {
-    // 1. Verify Vercel Cron Secret
-    const authHeader = request.headers.get("authorization");
-    if (
-      process.env.NODE_ENV === "production" &&
-      authHeader !== `Bearer ${process.env.CRON_SECRET}`
-    ) {
+    // 1. Verify Vercel Cron Secret (timing-safe, fail-closed en producción)
+    if (!isCronAuthorized(request)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

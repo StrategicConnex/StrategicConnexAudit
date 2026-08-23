@@ -25,17 +25,23 @@ export const dynamic = 'force-dynamic';
  *   Authorization: Bearer <api_key>
  */
 export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
+  const userId = req.apiKeyAuth.userId!;
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get('projectId');
   const investigationId = searchParams.get('investigationId');
 
   try {
     if (investigationId) {
+      // SECURITY: ownership check — la investigación debe pertenecer a un
+      // proyecto del dueño de la API key (evita lectura cross-tenant).
       const investigation = await directDb.query.intelligenceInvestigations.findFirst({
-        where: eq(intelligenceInvestigations.id, investigationId),
+        where: and(
+          eq(intelligenceInvestigations.id, investigationId),
+          eq(intelligenceInvestigations.ownerId, userId),
+        ),
       });
 
-      if (!investigation) {
+      if (!investigation || investigation.ownerId !== userId) {
         return apiError('Investigation not found', 404);
       }
 
@@ -59,8 +65,21 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
       return apiError('projectId is required', 400);
     }
 
+    // SECURITY: verificar que el proyecto pertenece al dueño de la key
+    // antes de listar sus investigaciones.
+    const project = await directDb.query.projects.findFirst({
+      where: and(eq(projects.id, projectId), eq(projects.ownerId, userId)),
+    });
+
+    if (!project || project.ownerId !== userId) {
+      return apiError('Project not found or access denied', 404);
+    }
+
     const list = await directDb.query.intelligenceInvestigations.findMany({
-      where: eq(intelligenceInvestigations.projectId, projectId),
+      where: and(
+        eq(intelligenceInvestigations.projectId, projectId),
+        eq(intelligenceInvestigations.ownerId, userId),
+      ),
       orderBy: [desc(intelligenceInvestigations.createdAt)],
       limit: 50,
     });

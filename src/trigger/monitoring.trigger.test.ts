@@ -35,7 +35,7 @@ vi.mock("@/server/intelligence/core/dispatcher", () => ({
 }));
 
 const mockFindMany = vi.fn<() => Promise<unknown[]>>();
-const mockFindFirst = vi.fn<() => Promise<unknown>>();
+const mockSelectWhere = vi.fn<() => Promise<unknown[]>>();
 const mockInsertValues = vi.fn<
   (values: Record<string, unknown>) => Promise<unknown>
 >();
@@ -45,8 +45,12 @@ vi.mock("@/shared/db", () => ({
   db: {
     query: {
       monitoringSchedules: { findMany: mockFindMany },
-      projects: { findFirst: mockFindFirst },
     },
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: mockSelectWhere,
+      })),
+    })),
     insert: vi.fn(() => ({ values: mockInsertValues })),
     update: vi.fn(() => ({ set: vi.fn(() => ({ where: mockUpdateSetWhere })) })),
   },
@@ -97,7 +101,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
   it("con hallazgos High/Critical → genera alerta y actualiza lastRunAt", async () => {
     mockFindMany.mockResolvedValue([monitor]);
-    mockFindFirst.mockResolvedValue(project);
+    mockSelectWhere.mockResolvedValue([project]);
     mockExecuteTool.mockResolvedValue({
       success: true,
       findings: [
@@ -133,7 +137,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
   it("sin hallazgos High/Critical → NO genera alerta pero actualiza lastRunAt", async () => {
     mockFindMany.mockResolvedValue([monitor]);
-    mockFindFirst.mockResolvedValue(project);
+    mockSelectWhere.mockResolvedValue([project]);
     mockExecuteTool.mockResolvedValue({
       success: true,
       findings: [{ severity: "low" }, { severity: "medium" }],
@@ -150,7 +154,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
   it("proyecto sin dominio → se omite el monitor (continue)", async () => {
     mockFindMany.mockResolvedValue([monitor]);
-    mockFindFirst.mockResolvedValue({ id: "p1", domain: null, ownerId: "u1" });
+    mockSelectWhere.mockResolvedValue([{ id: "p1", domain: null, ownerId: "u1" }]);
 
     const { evaluateMonitorsTask } = await import("./monitoring.trigger");
     const task = evaluateMonitorsTask as unknown as MonitorTaskConfig;
@@ -163,7 +167,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
   it("error en executeTool → se captura y el ciclo continúa", async () => {
     mockFindMany.mockResolvedValue([monitor]);
-    mockFindFirst.mockResolvedValue(project);
+    mockSelectWhere.mockResolvedValue([project]);
     mockExecuteTool.mockRejectedValue(new Error("tool timeout"));
 
     const { evaluateMonitorsTask } = await import("./monitoring.trigger");

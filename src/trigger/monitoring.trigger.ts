@@ -1,7 +1,7 @@
 import { logger, schedules } from "@trigger.dev/sdk/v3";
 import { db } from "@/shared/db";
 import { monitoringSchedules, monitoringAlerts, projects } from "@/shared/db/schemas";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
 
 // Tarea programada que evalúa los monitores activos
@@ -14,26 +14,31 @@ export const evaluateMonitorsTask = schedules.task({
     logger.info("Iniciando evaluación de monitores de seguridad", { timestamp: payload.timestamp.toISOString() });
 
     // Obtener todos los schedules activos que deberían ejecutarse
-    // Para simplificar, buscamos los que están enabled
     const activeMonitors = await db.query.monitoringSchedules.findMany({
       where: eq(monitoringSchedules.enabled, true),
-      with: {
-        // Asumiendo relaciones en drizzle si se añaden
-      }
     });
 
     logger.info(`Se encontraron ${activeMonitors.length} monitores activos`);
+
+    if (activeMonitors.length === 0) {
+      return { evaluated: 0 };
+    }
+
+    // PERF: resolver todos los proyectos en UNA query (antes había un
+    // findFirst dentro del bucle — N+1)
+    const projectIds = [...new Set(activeMonitors.map((m) => m.projectId))];
+    const projectRows = await db
+      .select({ id: projects.id, domain: projects.domain, ownerId: projects.ownerId })
+      .from(projects)
+      .where(inArray(projects.id, projectIds));
+    const projectsById = new Map(projectRows.map((p) => [p.id, p]));
 
     for (const monitor of activeMonitors) {
       try {
         // 1. Simular la ejecución de una herramienta específica para el monitor
         // En una implementación completa, monitoringSchedules tendría toolId y target.
         // Simularemos con toolId="tls.scan" y un target genérico del proyecto
-        // Aquí tomamos un target dummy para mantener el ejemplo robusto
-        
-        const project = await db.query.projects.findFirst({
-          where: eq(projects.id, monitor.projectId)
-        });
+        const project = projectsById.get(monitor.projectId);
 
         if (!project || !project.domain) {
           continue;

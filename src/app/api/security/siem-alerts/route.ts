@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { desc, eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
-import { createClient } from "@/shared/lib/supabase/server";
 import { siemAlertLogs } from "@/shared/db/schemas";
 import { directDb } from "@/shared/db";
+import { requireAdmin } from "@/server/auth/admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. Authenticate
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 });
+    // 1. Authenticate + authorize (SECURITY: alertas SIEM son datos globales
+    // de la plataforma — solo rol admin de plataforma puede leerlas)
+    const gate = await requireAdmin();
+    if (!gate.ok) {
+      return gate.response;
     }
 
     // 2. Parse filters
