@@ -1,18 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { createClient } from '@/shared/lib/supabase/client';
 
 export function useRealtimeMetrics(projectId?: string) {
   const [latestFinding, setLatestFinding] = useState<{ severity: string; title: string; createdAt: string } | null>(null);
   const [assetsDiscovered, setAssetsDiscovered] = useState<number>(0);
-  // CS-301 fix: usar el nombre canónico (PUBLISHABLE_KEY); env.ts mantiene el
-  // alias de compatibilidad ANON_KEY para no romper despliegues existentes.
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
+  // Singleton estándar (createBrowserClient ya es singleton internamente):
+  // evita duplicar la lectura cruda de env y el fallback || "".
+  const supabase = createClient();
 
   useEffect(() => {
     if (!projectId) return;
