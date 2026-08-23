@@ -15,6 +15,7 @@ import { createInvestigationSchema } from "@/features/intelligence/validators/in
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
 import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
+import type { Finding } from "@/server/intelligence/types/executor.types";
 import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
@@ -210,8 +211,8 @@ export async function POST(req: NextRequest) {
         const tStart = Date.now();
 
         // Events acumulados en memoria
-        const inMemoryEvents: Array<{ eventType: string; message: string; payload: any }> = [];
-        const logEvent = (type: string, message: string, payload: any = {}) => {
+        const inMemoryEvents: Array<{ eventType: string; message: string; payload: Record<string, unknown> }> = [];
+        const logEvent = (type: string, message: string, payload: Record<string, unknown> = {}) => {
           inMemoryEvents.push({ eventType: type, message, payload });
         };
 
@@ -248,8 +249,8 @@ export async function POST(req: NextRequest) {
         );
 
         // Acumular resultados
-        const allFindings: any[] = [];
-        const toolRunRecords: any[] = [];
+        const allFindings: Finding[] = [];
+        const toolRunRecords: Array<typeof intelligenceToolRuns.$inferInsert> = [];
         let toolsOk = 0, toolsFail = 0;
 
         for (const res of executionResults) {
@@ -275,7 +276,7 @@ export async function POST(req: NextRequest) {
         // ── Fase 2: Calcular risk score ──────────────────────────
         phase = "cálculo de puntuación";
         let score = 50;
-        let aggregatedFindings: any[] = allFindings;
+        let aggregatedFindings: Finding[] = allFindings;
 
         try {
           const riskResult = calculateRiskScore(allFindings);
@@ -287,10 +288,10 @@ export async function POST(req: NextRequest) {
           logEvent("warning", `Error calculando score: ${riskMsg}`);
         }
 
-        const emailFindings = aggregatedFindings.filter((f: any) => (f.toolId ?? "").startsWith("email."));
-        const infraFindings = aggregatedFindings.filter((f: any) => !(f.toolId ?? "").startsWith("email."));
-        const mailHealthScore = Math.max(10, 100 - emailFindings.reduce((acc: number, curr: any) => acc + Math.round(Number(curr.scoreImpact || 0)), 0));
-        const infraScore = Math.max(10, 100 - infraFindings.reduce((acc: number, curr: any) => acc + Math.round(Number(curr.scoreImpact || 0)), 0));
+        const emailFindings = aggregatedFindings.filter((f: Finding) => (f.toolId ?? "").startsWith("email."));
+        const infraFindings = aggregatedFindings.filter((f: Finding) => !(f.toolId ?? "").startsWith("email."));
+        const mailHealthScore = Math.max(10, 100 - emailFindings.reduce((acc: number, curr: Finding) => acc + Math.round(Number(curr.scoreImpact || 0)), 0));
+        const infraScore = Math.max(10, 100 - infraFindings.reduce((acc: number, curr: Finding) => acc + Math.round(Number(curr.scoreImpact || 0)), 0));
 
         logEvent("success", `Score: ${score}/100 | Correo: ${mailHealthScore} | Servidor: ${infraScore}`);
 
@@ -310,15 +311,15 @@ export async function POST(req: NextRequest) {
             // Findings
             if (aggregatedFindings.length > 0) {
               await tx.insert(intelligenceFindings).values(
-                aggregatedFindings.map((f: any) => ({
+                aggregatedFindings.map((f: Finding) => ({
                   investigationId: investigation.id,
                   toolRunId: runIds.get(f.toolId ?? "") ?? null,
                   projectId,
-                  severity: f.severity as "info" | "low" | "medium" | "high" | "critical",
+                  severity: f.severity,
                   confidence: String(Number(f.confidence) || 0.7),
                   title: f.title, description: f.description,
                   recommendation: f.remediation || f.recommendation || null,
-                  evidence: (f.evidence ?? {}) as Record<string, unknown>,
+                  evidence: f.evidence ?? {},
                   affectedAsset: f.affectedAsset ?? null,
                 }))
               );
