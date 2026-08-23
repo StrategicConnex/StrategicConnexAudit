@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
   {
@@ -34,7 +35,6 @@ const eslintConfig = defineConfig([
       "src/features/intelligence/hooks/**/*.ts"
     ],
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
       "react-hooks/set-state-in-effect": "off",
     },
   },
@@ -72,6 +72,9 @@ const eslintConfig = defineConfig([
     "e2e/**/*-snapshots/**",
     // SQL migration files — not JS/TS:
     "drizzle/**",
+    // Vendored minified third-party bundles (mermaid, web-vitals):
+    "docs/vendor/**",
+    "public/vendor/**",
     // Development directories and scratch files
     "scratch/**",
     "backups/**",
