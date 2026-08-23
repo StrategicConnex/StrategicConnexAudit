@@ -4,6 +4,7 @@ import { httpSemaphore, dnsSemaphore } from "./concurrency";
 import { executionCache, IntelligenceCache } from "./cache";
 import { enforceToolRunPolicy } from "./policy-enforcer";
 import { initializePluginExecutors } from "../plugins/plugin-executor";
+import { getErrorMessage } from "@/shared/lib/errors";
 import net from "node:net";
 import dns from "node:dns/promises";
 
@@ -74,12 +75,12 @@ export async function executeTool(
 
     const combinedInput = { ...input, domain: target, host: target, ip: targetIp, url: targetUrl };
     validatedInput = executor.validate(combinedInput);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       success: false,
       output: {},
       findings: [],
-      error: `Validación de entrada fallida para la herramienta '${toolId}': ${err.message}`,
+      error: `Validación de entrada fallida para la herramienta '${toolId}': ${getErrorMessage(err)}`,
     };
   }
 
@@ -143,16 +144,18 @@ export async function executeTool(
 
     return finalResult;
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     clearTimeout(timeoutId);
-    ctx.log(`Fallo crítico de ejecución en la herramienta '${toolId}': ${err.message}`);
+    const isAbort = err instanceof Error && err.name === "AbortError";
+    const msg = getErrorMessage(err);
+    ctx.log(`Fallo crítico de ejecución en la herramienta '${toolId}': ${msg}`);
     return {
       success: false,
       output: { _logs: logs },
       findings: [],
-      error: err.name === "AbortError"
+      error: isAbort
         ? `Tiempo de espera agotado (Timeout de ${timeoutMs}ms) en la herramienta '${toolId}'`
-        : `Error de ejecución en la herramienta '${toolId}': ${err.message || err}`,
+        : `Error de ejecución en la herramienta '${toolId}': ${msg}`,
     };
   }
 }

@@ -11,6 +11,7 @@
 
 import dns from "node:dns/promises";
 import { assertPublicHostname } from "../security/egress-guard";
+import { getErrorMessage } from "@/shared/lib/errors";
 import type { DiscoveredAsset, DiscoveryModuleResult } from "./types";
 import type { Finding } from "../types/executor.types";
 
@@ -191,14 +192,14 @@ export async function runDnsBruteForce(
   // Validar que el dominio base es público
   try {
     await assertPublicHostname(domain);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       moduleId: "dns-brute",
       moduleName: "DNS Brute Force Subdomain Discovery",
       assets: [],
       findings: [],
       success: false,
-      error: `Dominio inválido o privado: ${err.message}`,
+      error: `Dominio inválido o privado: ${getErrorMessage(err)}`,
       durationMs: Date.now() - startTime,
     };
   }

@@ -15,6 +15,7 @@ import { createInvestigationSchema } from "@/features/intelligence/validators/in
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
 import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -92,12 +93,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     console.error("GET intelligence investigations failure:", error);
     return NextResponse.json({
       success: false,
-      error: error.message === "No autorizado" ? "No autorizado" : "Error interno del servidor"
-    }, { status: error.message === "No autorizado" ? 401 : 500 });
+      error: msg === "No autorizado" ? "No autorizado" : "Error interno del servidor"
+    }, { status: msg === "No autorizado" ? 401 : 500 });
   }
 }
 
@@ -166,10 +168,10 @@ export async function POST(req: NextRequest) {
     // SSRF Prevention validation via Egress Guard
     try {
       await assertPublicHostname(normalizedTarget);
-    } catch (ssrfError: any) {
+    } catch (ssrfError: unknown) {
       return NextResponse.json({
         success: false,
-        error: `Acceso denegado por EgressGuard: ${ssrfError.message}`
+        error: `Acceso denegado por EgressGuard: ${getErrorMessage(ssrfError)}`
       }, { status: 403 });
     }
 
@@ -233,8 +235,8 @@ export async function POST(req: NextRequest) {
                 error: result.error || null,
                 durationMs: Date.now() - toolStart
               };
-            } catch (err: any) {
-              const msg = err?.message || "Fallo inesperado";
+            } catch (err: unknown) {
+              const msg = err instanceof Error && err.message ? err.message : "Fallo inesperado";
               errorLog.push(`${tool.id}: ${msg}`);
               return {
                 toolId: tool.id, category: tool.category,
@@ -279,9 +281,10 @@ export async function POST(req: NextRequest) {
           const riskResult = calculateRiskScore(allFindings);
           score = riskResult.score;
           aggregatedFindings = riskResult.aggregatedFindings;
-        } catch (riskErr: any) {
-          errorLog.push(`risk-engine: ${riskErr.message}`);
-          logEvent("warning", `Error calculando score: ${riskErr.message}`);
+        } catch (riskErr: unknown) {
+          const riskMsg = getErrorMessage(riskErr);
+          errorLog.push(`risk-engine: ${riskMsg}`);
+          logEvent("warning", `Error calculando score: ${riskMsg}`);
         }
 
         const emailFindings = aggregatedFindings.filter((f: any) => (f.toolId ?? "").startsWith("email."));
@@ -386,24 +389,26 @@ export async function POST(req: NextRequest) {
               updatedAt: new Date()
             }).where(eq(intelligenceInvestigations.id, investigation.id));
           });
-        } catch (dbErr: any) {
-          errorLog.push(`db: ${dbErr.message}`);
+        } catch (dbErr: unknown) {
+          const dbMsg = getErrorMessage(dbErr);
+          errorLog.push(`db: ${dbMsg}`);
           console.error("DB persistence failed in background scan:", dbErr);
           // Marcar como completado con advertencia (resultados parciales)
           await markInvestigationResult(investigation.id, user.id, {
             status: "failed",
             score,
-            summary: `Finalizado con errores de persistencia: ${dbErr.message}. ${toolsOk}/${TOOLS_TO_RUN.length} herramientas ejecutadas.`,
+            summary: `Finalizado con errores de persistencia: ${dbMsg}. ${toolsOk}/${TOOLS_TO_RUN.length} herramientas ejecutadas.`,
           }, errorLog);
         }
 
-      } catch (backgroundError: any) {
+      } catch (backgroundError: unknown) {
         console.error(`Background scan failed (phase: ${phase}):`, backgroundError);
-        errorLog.push(`fase "${phase}": ${backgroundError.message || backgroundError}`);
+        const bgMsg = getErrorMessage(backgroundError);
+        errorLog.push(`fase "${phase}": ${bgMsg}`);
         await markInvestigationResult(investigation.id, user.id, {
           status: "failed",
           score: null,
-          summary: `Error en fase "${phase}": ${backgroundError.message || backgroundError}. ${errorLog.length > 0 ? `Detalles: ${errorLog.slice(0, 3).join("; ")}` : ""}`,
+          summary: `Error en fase "${phase}": ${bgMsg}. ${errorLog.length > 0 ? `Detalles: ${errorLog.slice(0, 3).join("; ")}` : ""}`,
         }, errorLog);
       }
     })();
@@ -418,12 +423,13 @@ export async function POST(req: NextRequest) {
         status: "running",
         score: null,
       }
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     console.error("POST intelligence investigations failure:", error);
     return NextResponse.json({
       success: false,
-      error: error.message === "No autorizado" ? "No autorizado" : "Error interno del servidor"
-    }, { status: error.message === "No autorizado" ? 401 : 500 });
+      error: msg === "No autorizado" ? "No autorizado" : "Error interno del servidor"
+    }, { status: msg === "No autorizado" ? 401 : 500 });
   }
 }
 

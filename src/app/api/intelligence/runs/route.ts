@@ -12,6 +12,7 @@ import { assertPublicHostname } from "@/server/intelligence/security/egress-guar
 import { getToolDefinition } from "@/server/intelligence/core/tool-registry";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
 import { checkIntelScanRateLimit, buildRateLimitHeaders } from "@/shared/lib/ratelimit";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -52,12 +53,13 @@ export async function GET(req: NextRequest) {
       runs
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     console.error("GET intelligence runs failure:", error);
     return NextResponse.json({
       success: false,
-      error: error.message === "No autorizado" ? "No autorizado" : "Error interno del servidor"
-    }, { status: error.message === "No autorizado" ? 401 : 500 });
+      error: msg === "No autorizado" ? "No autorizado" : "Error interno del servidor"
+    }, { status: msg === "No autorizado" ? 401 : 500 });
   }
 }
 
@@ -118,10 +120,10 @@ export async function POST(req: NextRequest) {
     // Control preventivo de SSRF
     try {
       await assertPublicHostname(target);
-    } catch (ssrfError: any) {
+    } catch (ssrfError: unknown) {
       return NextResponse.json({
         success: false,
-        error: `Acceso denegado por EgressGuard: ${ssrfError.message}`
+        error: `Acceso denegado por EgressGuard: ${getErrorMessage(ssrfError)}`
       }, { status: 403 });
     }
 
@@ -183,12 +185,13 @@ export async function POST(req: NextRequest) {
       run: record
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     console.error("POST intelligence run failure:", error);
     return NextResponse.json({
       success: false,
-      error: error.message === "No autorizado" ? "No autorizado" : `Error al ejecutar herramienta: ${error.message || error}`
-    }, { status: error.message === "No autorizado" ? 401 : 500 });
+      error: msg === "No autorizado" ? "No autorizado" : `Error al ejecutar herramienta: ${msg}`
+    }, { status: msg === "No autorizado" ? 401 : 500 });
   }
 }
 

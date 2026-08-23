@@ -15,6 +15,7 @@
  */
 
 import { safeFetch } from "../security/egress-guard";
+import { getErrorMessage } from "@/shared/lib/errors";
 import type { DiscoveredAsset, DiscoveryModuleResult } from "./types";
 import type { Finding } from "../types/executor.types";
 
@@ -235,14 +236,14 @@ export async function runCtMonitor(
         },
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       moduleId: "ct-monitor",
       moduleName: "Certificate Transparency Log Monitor",
       assets: [],
       findings: [],
       success: false,
-      error: `Error consultando CT logs: ${err.message}`,
+      error: `Error consultando CT logs: ${getErrorMessage(err)}`,
       durationMs: Date.now() - startTime,
     };
   }

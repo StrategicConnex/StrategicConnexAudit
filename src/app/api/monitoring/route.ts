@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
     console.error("GET monitoring active route failure:", error);
     return NextResponse.json({
       success: false,
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
     console.error("POST monitoring active route failure:", error);
     return NextResponse.json({
       success: false,

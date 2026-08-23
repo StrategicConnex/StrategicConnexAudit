@@ -9,6 +9,8 @@
  *   - DNS:       máximo 25 resoluciones concurrentes por análisis
  */
 
+import { getErrorMessage } from "@/shared/lib/errors";
+
 export class Semaphore {
   private readonly maxConcurrency: number;
   private currentConcurrency = 0;
@@ -86,8 +88,8 @@ export async function runWithPool<T>(
         try {
           const value = await task();
           return { success: true as const, value };
-        } catch (err: any) {
-          return { success: false as const, error: err?.message ?? String(err) };
+        } catch (err: unknown) {
+          return { success: false as const, error: getErrorMessage(err) };
         }
       })
     )

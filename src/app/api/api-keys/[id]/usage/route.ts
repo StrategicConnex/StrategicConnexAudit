@@ -142,7 +142,7 @@ export const GET = withRateLimit(
           count: r.count,
         })),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('GET /api/api-keys/[id]/usage failure:', error);
       return NextResponse.json(
         { success: false, error: 'Error interno del servidor' },

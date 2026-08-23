@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: { nodes, edges } });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Graph API Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }

@@ -18,6 +18,7 @@ import { isKnownTool, listToolDefinitions } from "@/server/intelligence/core/too
 import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
 import { Finding } from "@/server/intelligence/types/executor.types";
 import { buildResultMap, getPrimaryIp, buildScanResponse, buildScanMetadata } from "@/server/intelligence/core/scan-response";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -112,7 +113,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
     console.error("GET intelligence failure:", error);
     return NextResponse.json({
       success: false,
@@ -177,10 +178,10 @@ export async function POST(req: NextRequest) {
 
     try {
       await assertPublicHostname(normalizedTarget);
-    } catch (ssrfError: any) {
+    } catch (ssrfError: unknown) {
       return NextResponse.json({
         success: false,
-        error: `Acceso denegado por EgressGuard: ${ssrfError.message}`
+        error: `Acceso denegado por EgressGuard: ${getErrorMessage(ssrfError)}`
       }, { status: 403 });
     }
 
@@ -240,14 +241,15 @@ export async function POST(req: NextRequest) {
           error: result.error || null,
           durationMs: Date.now() - toolStart
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const msg = err instanceof Error && err.message ? err.message : "Fallo inesperado de ejecución";
         return {
           toolId: tool.id,
           category: tool.category,
           success: false,
           output: {},
           findings: [] as Finding[],
-          error: err.message || "Fallo inesperado de ejecución",
+          error: msg,
           durationMs: Date.now() - toolStart
         };
       }
@@ -380,9 +382,10 @@ export async function POST(req: NextRequest) {
       })
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
     console.error("[Orchestrator Failure] Diagnostic engine execution failure:", error);
-    
+
     // Tratamiento resiliente ante fallos de ejecución: marcar como fallido
     if (createdInvestigationId && loggedInUserId) {
       const invId = createdInvestigationId;
@@ -391,7 +394,7 @@ export async function POST(req: NextRequest) {
         await withRLS(userId, async (tx) => {
           await tx.update(intelligenceInvestigations).set({
             status: "failed",
-            summary: `Auditoría fallida debido a un error interno: ${error.message || error}`,
+            summary: `Auditoría fallida debido a un error interno: ${msg}`,
             updatedAt: new Date(),
             completedAt: new Date()
           }).where(eq(intelligenceInvestigations.id, invId));
@@ -399,8 +402,8 @@ export async function POST(req: NextRequest) {
           await tx.insert(intelligenceRunEvents).values({
             investigationId: invId,
             eventType: "error",
-            message: `Error crítico de ejecución: ${error.message || error}`,
-            payload: { error: error.stack || error }
+            message: `Error crítico de ejecución: ${msg}`,
+            payload: { error: error instanceof Error ? error.stack : error }
           });
         });
       } catch (dbErr) {

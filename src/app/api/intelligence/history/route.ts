@@ -24,6 +24,7 @@ import { eq } from "drizzle-orm";
 import { queryDnsHistory } from "@/server/intelligence/history/dns-history";
 import { queryWhoisHistory } from "@/server/intelligence/history/whois-history";
 import { getProjectHistoryTimeline } from "@/server/intelligence/history/orchestrator";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -76,9 +77,9 @@ async function handler(_req: NextRequest, userId: string) {
     }
 
     return NextResponse.json({ success: true, type, projectId, dns: dnsResult, whois: whoisResult, timeline });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[History API] Error:", error);
-    return NextResponse.json({ success: false, error: `Error al consultar historial: ${error.message || error}` }, { status: 500 });
+    return NextResponse.json({ success: false, error: `Error al consultar historial: ${getErrorMessage(error)}` }, { status: 500 });
   }
 }
 

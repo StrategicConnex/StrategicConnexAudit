@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { getErrorMessage } from '@/shared/lib/errors';
 import { 
   Settings, 
   Palette, 
@@ -157,8 +158,9 @@ export function SettingsTab({
       } else {
         setKeysError(data.error || t('apiKeysFetchNetworkError'));
       }
-    } catch (err: any) {
-      setKeysError(err.message || t('apiKeysFetchNetworkError'));
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
+      setKeysError(msg === 'Error desconocido' ? t('apiKeysFetchNetworkError') : msg);
     } finally {
       setLoadingKeys(false);
     }
@@ -177,8 +179,9 @@ export function SettingsTab({
       } else {
         setWebhooksError(data.error || t('webhooksFetchNetworkError'));
       }
-    } catch (err: any) {
-      setWebhooksError(err.message || t('webhooksFetchNetworkError'));
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
+      setWebhooksError(msg === 'Error desconocido' ? t('webhooksFetchNetworkError') : msg);
     } finally {
       setLoadingWebhooks(false);
     }
@@ -223,8 +226,9 @@ export function SettingsTab({
       } else {
         setKeysError(data.error || t('apiKeysCreateNetworkError'));
       }
-    } catch (err: any) {
-      setKeysError(err.message || t('apiKeysCreateNetworkError'));
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
+      setKeysError(msg === 'Error desconocido' ? t('apiKeysCreateNetworkError') : msg);
     } finally {
       setCreatingKey(false);
     }
@@ -243,8 +247,8 @@ export function SettingsTab({
       } else {
         alert(t('apiKeysRevokeError', { error: data.error }));
       }
-    } catch (err: any) {
-      alert(t('apiKeysRevokeNetworkError', { error: err.message }));
+    } catch (err: unknown) {
+      alert(t('apiKeysRevokeNetworkError', { error: getErrorMessage(err) }));
     }
   };
 
@@ -278,8 +282,9 @@ export function SettingsTab({
       } else {
         setWebhooksError(data.error || t('webhooksCreateNetworkError'));
       }
-    } catch (err: any) {
-      setWebhooksError(err.message || t('webhooksCreateNetworkError'));
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
+      setWebhooksError(msg === 'Error desconocido' ? t('webhooksCreateNetworkError') : msg);
     } finally {
       setCreatingWebhook(false);
     }
@@ -298,8 +303,8 @@ export function SettingsTab({
       } else {
         alert(t('webhooksDeleteError', { error: data.error }));
       }
-    } catch (err: any) {
-      alert(t('webhooksDeleteNetworkError', { error: err.message }));
+    } catch (err: unknown) {
+      alert(t('webhooksDeleteNetworkError', { error: getErrorMessage(err) }));
     }
   };
 

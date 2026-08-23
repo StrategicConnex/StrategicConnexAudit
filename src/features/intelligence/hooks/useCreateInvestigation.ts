@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useIntelligenceStore, IntelligenceState } from "../stores/intelligence-store";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 interface CreateInvestigationInput {
   projectId: string;
@@ -32,8 +33,9 @@ export function useCreateInvestigation() {
         setActiveInvestigation(data.investigation.id);
       }
       return data.investigation;
-    } catch (err: any) {
-      const msg = err.message || "Error de conexión";
+    } catch (err: unknown) {
+      const raw = getErrorMessage(err);
+      const msg = raw === "Error desconocido" ? "Error de conexión" : raw;
       setError(msg);
       throw err;
     } finally {

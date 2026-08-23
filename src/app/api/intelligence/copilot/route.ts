@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
 import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from "@/server/ai/ai-router";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -93,12 +94,12 @@ export const POST = withRateLimit(
         fromCache: aiResult.fromCache,
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Infrastructure Copilot execution failure:", error);
       return NextResponse.json({
         success: true,
         remediationPlan: getNoApiKeyResponse("copilot-remediation"),
-        error: error.message || "Error desconocido",
+        error: getErrorMessage(error),
       });
     }
   }

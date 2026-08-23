@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/shared/lib/supabase/client";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export interface InvestigationData {
   id: string;
@@ -52,8 +53,9 @@ export function useInvestigationRealtime(investigationId: string | null) {
       } else {
         setError(data.error || "Error al obtener detalles de la investigación");
       }
-    } catch (err: any) {
-      setError(err.message || "Error al conectar con la base de datos");
+    } catch (err: unknown) {
+      const raw = getErrorMessage(err);
+      setError(raw === "Error desconocido" ? "Error al conectar con la base de datos" : raw);
     }
   };
 

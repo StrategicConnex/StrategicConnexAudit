@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
     console.error("GET webhooks route failure:", error);
     return NextResponse.json({
       success: false,
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
     console.error("POST webhooks route failure:", error);
     return NextResponse.json({
       success: false,
@@ -218,7 +218,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({
       success: true
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
     console.error("DELETE webhooks route failure:", error);
     return NextResponse.json({
       success: false,

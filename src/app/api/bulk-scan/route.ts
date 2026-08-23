@@ -111,7 +111,7 @@ export const POST = withRateLimit(
           createdAt: inv.createdAt
         }))
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("POST bulk scan route failure:", error);
       return NextResponse.json({
         success: false,

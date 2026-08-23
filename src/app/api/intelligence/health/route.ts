@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...report,
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
     console.error("[HealthAPI] Error fetching health report:", error);
     return NextResponse.json({
       success: false,

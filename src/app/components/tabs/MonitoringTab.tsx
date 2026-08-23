@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { getErrorMessage } from '@/shared/lib/errors';
 import {
   Bell, Key, Link2, Plus, Trash2, Cpu, CheckCircle2, AlertTriangle,
   Sliders, Play, Copy, Check, Sparkles, Send, ShieldCheck, Zap
@@ -312,8 +313,9 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
       } else {
         setBulkError(data.error || 'Error al procesar la cola de escaneo.');
       }
-    } catch (err: any) {
-      setBulkError(err.message || 'Error de red al conectar con el servidor.');
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err);
+      setBulkError(msg === 'Error desconocido' ? 'Error de red al conectar con el servidor.' : msg);
     } finally {
       setIsQueuingBulk(false);
     }

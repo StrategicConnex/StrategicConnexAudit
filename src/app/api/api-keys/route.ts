@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest) {
       success: true,
       keys,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('GET /api/api-keys failure:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       rawKey: result.rawKey,
       message: 'Save this key now — it will not be shown again.',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('POST /api/api-keys failure:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
@@ -103,7 +103,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, message: 'API key revoked' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('DELETE /api/api-keys failure:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }

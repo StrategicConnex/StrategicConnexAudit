@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
       total,
       stats,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[AnomaliesAPI] Error:", error);
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },

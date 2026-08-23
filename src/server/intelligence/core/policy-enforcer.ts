@@ -8,6 +8,7 @@ import {
 } from "@/shared/db/schemas";
 import { eq, and } from "drizzle-orm";
 import { IntelligenceToolDefinition } from "../registry/tool-registry";
+import { getErrorMessage } from "@/shared/lib/errors";
 import crypto from "crypto";
 
 export interface EnforcePolicyResult {
@@ -92,12 +93,12 @@ export async function enforceToolRunPolicy(
     });
 
     return { allowed, reason, planName };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Error in policy enforcer for tool ${tool.id}:`, error);
     // Fallback block/allow gracefully but do not crash the execution flow
     return {
       allowed: false,
-      reason: `Operational error checking subscription policy: ${error.message || error}`,
+      reason: `Operational error checking subscription policy: ${getErrorMessage(error)}`,
       planName: "free",
     };
   }

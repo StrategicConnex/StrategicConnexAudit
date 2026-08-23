@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       total: assets.total,
       project: assets.project,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error fetching discovered assets:", err);
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
         })),
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error running discovery:", err);
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },

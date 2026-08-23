@@ -8,6 +8,7 @@
 
 import { geoipCircuit, whoisCircuit, premiumApiCircuit, CircuitBreaker } from "./circuit-breaker";
 import { logger } from "@/shared/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export type HealthStatus = "healthy" | "degraded" | "down";
 export type ExternalApiName = "geoip" | "whois" | "copilot" | "dns";
@@ -147,8 +148,13 @@ class ExternalApiHealthChecker {
         ep = e;
         if (r.ok) { ok = true; break; }
         else { err = "HTTP " + r.status; }
-      } catch (ex: any) {
-        err = ex.name === "AbortError" ? "Timeout" : (ex.message || "Unknown");
+      } catch (ex: unknown) {
+        if (ex instanceof Error && ex.name === "AbortError") {
+          err = "Timeout";
+        } else {
+          const msg = getErrorMessage(ex);
+          err = msg === "Error desconocido" ? "Unknown" : msg;
+        }
         lat = Date.now() - t0;
       }
     }
@@ -170,9 +176,10 @@ class ExternalApiHealthChecker {
       await d.resolve4("google.com");
       lat = Date.now() - t0;
       ok = true;
-    } catch (ex: any) {
+    } catch (ex: unknown) {
       lat = Date.now() - t0;
-      err = ex.message || "DNS failed";
+      const msg = getErrorMessage(ex);
+      err = msg === "Error desconocido" ? "DNS failed" : msg;
     }
     await this.record(cfg.find((c) => c.id === "dns")!, ok, lat, err, "node:dns/promises");
   }

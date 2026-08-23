@@ -20,6 +20,7 @@ import { dnsHistory } from "@/shared/db/schemas/history";
 import { securityAuditLogs } from "@/shared/db/schemas/security-audit";
 import { eq, desc, and, gte } from "drizzle-orm";
 import crypto from "node:crypto";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -74,8 +75,8 @@ async function runPipelineTest() {
   try {
     const result = await directPool.query("SELECT 1 as ok");
     pass(`Conectado a Supabase (${result.rows[0].ok})`);
-  } catch (err: any) {
-    fail(`No se puede conectar: ${err.message}`);
+  } catch (err: unknown) {
+    fail(`No se puede conectar: ${getErrorMessage(err)}`);
     await directPool.end();
     process.exit(1);
   }
@@ -98,8 +99,8 @@ async function runPipelineTest() {
       domain: TEST_DOMAIN,
     });
     pass(`Proyecto creado: ${projectId}`);
-  } catch (err: any) {
-    fail(`Error creando proyecto: ${err.message}`);
+  } catch (err: unknown) {
+    fail(`Error creando proyecto: ${getErrorMessage(err)}`);
     await directPool.end();
     process.exit(1);
   }
@@ -159,8 +160,8 @@ async function runPipelineTest() {
     } else {
       fail("dns_history vacío post-1ra ejecución");
     }
-  } catch (err: any) {
-    fail(`Error: ${err.message}`);
+  } catch (err: unknown) {
+    fail(`Error: ${getErrorMessage(err)}`);
   }
 
   // ─── 4. Segunda ejecución: datos modificados ───────────────────────────────
@@ -225,8 +226,8 @@ async function runPipelineTest() {
       const vals = snaps.map((s) => s.value).join(", ");
       info(`${type} (${snaps.length}): ${vals}`);
     }
-  } catch (err: any) {
-    fail(`Error consultando: ${err.message}`);
+  } catch (err: unknown) {
+    fail(`Error consultando: ${getErrorMessage(err)}`);
   }
 
   // ─── 6. Verificar audit logs ──────────────────────────────────────────────
@@ -260,8 +261,8 @@ async function runPipelineTest() {
     } else {
       info("Sin cambios → sin eventos (correcto)");
     }
-  } catch (err: any) {
-    fail(`Error: ${err.message}`);
+  } catch (err: unknown) {
+    fail(`Error: ${getErrorMessage(err)}`);
   }
 
   // ─── 7. Restaurar FK + cerrar conexión ────────────────────────────────────

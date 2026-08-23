@@ -18,6 +18,7 @@ import { DownloadPdfButton } from '@/app/components/DownloadPdfButton';
 import { HistoryPanel } from '@/app/components/HistoryPanel';
 import { parseMarkdown, splitInlineMarkdown } from '@/features/intelligence/lib/rendering/markdown';
 import { getScoreRating, getSeverityBadge } from '@/features/intelligence/lib/rendering/severity';
+import { getErrorMessage } from '@/shared/lib/errors';
 
 interface Project {
   id: string;
@@ -415,8 +416,8 @@ export function IntelligenceTab({
         } else {
           setErrorText(data.error || 'Ocurrió un error inesperado durante el análisis.');
         }
-      } catch (err: any) {
-        setErrorText(`Error de conexión con la API de Inteligencia: ${err.message || err}`);
+      } catch (err: unknown) {
+        setErrorText(`Error de conexión con la API de Inteligencia: ${getErrorMessage(err)}`);
       } finally {
         setIsScanning(false);
       }
@@ -460,8 +461,8 @@ export function IntelligenceTab({
       } else {
         setErrorText(data.error || 'No se pudo generar el plan de remediación con IA.');
       }
-    } catch (err: any) {
-      setErrorText(`Error de comunicación con el motor de IA: ${err.message || err}`);
+    } catch (err: unknown) {
+      setErrorText(`Error de comunicación con el motor de IA: ${getErrorMessage(err)}`);
     } finally {
       clearInterval(stepInterval);
       setIsGeneratingCopilot(false);

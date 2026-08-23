@@ -204,7 +204,7 @@ export async function GET(req: NextRequest) {
       previousInvestigationId: previous.id,
       previousScore: previous.score,
       previousCreatedAt: previous.createdAt,
-    });    } catch (error: any) {
+    });    } catch (error: unknown) {
     console.error("Drift detection error:", error);
     return NextResponse.json({
       success: false,

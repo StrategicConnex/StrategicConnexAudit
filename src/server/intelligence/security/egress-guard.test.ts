@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { isBlockedAddress, isPrivateIp, assertPublicHostname, safeFetch, normalizeUrl, validateSafeUrl } from "./egress-guard";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 // Sondeo previo de conectividad: los tests de red requieren internet real y
 // httpbin.org / example.com pueden estar caídos o filtrados (p.ej. detrás
@@ -262,10 +263,11 @@ describe("EgressGuard - SSRF and Private Network Protection Suite", () => {
           redirect: "follow",
         });
         // Si milagrosamente conecta, no es SSRF
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Puede lanzar error de conexión (ECONNREFUSED) pero NO de SSRF
-        expect(error.message).not.toContain("SSRF Prevention");
-        expect(error.message).not.toContain("Acceso denegado");
+        const msg = getErrorMessage(error);
+        expect(msg).not.toContain("SSRF Prevention");
+        expect(msg).not.toContain("Acceso denegado");
       }
     });
   });

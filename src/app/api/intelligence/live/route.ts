@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
       findings,
       events,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[LiveAPI] Error:", error);
     return NextResponse.json({
       success: false,
