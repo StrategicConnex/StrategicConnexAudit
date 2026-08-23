@@ -11,7 +11,7 @@ interface TimelineItem {
   type?: string;
   tool?: string;
   time?: string;
-  createdAt?: string;
+  createdAt?: string | null;
 }
 
 interface TelemetryTimelineProps {

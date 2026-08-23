@@ -1,37 +1,38 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/shared/lib/supabase/client";
 import { getErrorMessage } from "@/shared/lib/errors";
+import type {
+  IntelligenceFinding,
+  IntelligenceInvestigation,
+  IntelligenceRunEvent,
+} from "@/shared/db/schemas";
 
-export interface InvestigationData {
-  id: string;
-  title: string;
-  target: string;
-  normalizedTarget: string;
-  status: "draft" | "queued" | "running" | "completed" | "failed" | "canceled";
-  score: number | null;
-  summary: string | null;
-  metadata: any;
-  createdAt: string;
-}
+/**
+ * Tipos derivados del schema canónico (única fuente de verdad) en lugar de
+ * interfaces locales duplicadas con campos `any`. Los payloads Realtime y las
+ * respuestas API viajan como JSON: los timestamps llegan como string ISO.
+ */
+type Serialized<T> = {
+  [K in keyof T]: T[K] extends Date ? string : T[K] extends Date | null ? string | null : T[K];
+};
 
-export interface FindingData {
-  id: string;
-  severity: "info" | "low" | "medium" | "high" | "critical";
-  title: string;
-  description: string;
-  recommendation: string | null;
-  evidence: any;
-  affectedAsset: string | null;
-  createdAt: string;
-}
+export type InvestigationData = Serialized<
+  Pick<
+    IntelligenceInvestigation,
+    "id" | "title" | "target" | "normalizedTarget" | "status" | "score" | "summary" | "metadata" | "createdAt"
+  >
+>;
 
-export interface RunEventData {
-  id: string;
-  eventType: string;
-  message: string;
-  payload: any;
-  createdAt: string;
-}
+export type FindingData = Serialized<
+  Pick<
+    IntelligenceFinding,
+    "id" | "severity" | "title" | "description" | "recommendation" | "evidence" | "affectedAsset" | "createdAt"
+  >
+>;
+
+export type RunEventData = Serialized<
+  Pick<IntelligenceRunEvent, "id" | "eventType" | "message" | "payload" | "createdAt">
+>;
 
 export function useInvestigationRealtime(investigationId: string | null) {
   const [investigation, setInvestigation] = useState<InvestigationData | null>(null);
