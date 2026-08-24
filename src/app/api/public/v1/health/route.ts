@@ -37,7 +37,7 @@ export async function GET() {
   const hasRedisConfig = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
   // Config real de la app: DATABASE_URL (pg server-side vía drizzle) +
   // NEXT_PUBLIC_SUPABASE_URL (cliente Supabase Auth). SUPABASE_SERVICE_ROLE_KEY
-  // no se usa en ninguna ruta (createAdminClient sin referencias) — no es
+  // no se usa en ninguna ruta del app (la fábrica admin fue eliminada) — no es
   // un indicador de configuración válido para el health público.
   const hasDbConfig = !!(process.env.DATABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL);
   const allServicesConfigured = hasRedisConfig && hasDbConfig;

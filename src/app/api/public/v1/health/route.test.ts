@@ -4,9 +4,9 @@
    Verifica (corrección 2026-08-10):
    - dbConfigured refleja la CONFIG REAL de la app: DATABASE_URL (pg server-side
      vía drizzle) + NEXT_PUBLIC_SUPABASE_URL (cliente Supabase Auth).
-   - SUPABASE_SERVICE_ROLE_KEY ya NO cuenta: el admin client (createAdminClient)
-     no se usa en ninguna ruta y la var nunca estuvo en Vercel → producía un
-     503 `degraded` permanente en el health público.
+   - SUPABASE_SERVICE_ROLE_KEY ya NO cuenta: la fábrica admin client fue
+     eliminada y ninguna ruta usa service-role; la var nunca estuvo en Vercel
+     → producía un 503 `degraded` permanente en el health público.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
