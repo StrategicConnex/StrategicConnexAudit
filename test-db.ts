@@ -34,7 +34,7 @@ async function testConnection() {
     connectionString: cleanUrl,
     ssl: {
       ca,
-      rejectUnauthorized: false
+      rejectUnauthorized: process.env.DB_ALLOW_INSECURE_SSL === 'true'
     }
   });
 

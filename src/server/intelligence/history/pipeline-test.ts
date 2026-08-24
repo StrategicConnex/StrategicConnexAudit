@@ -28,13 +28,16 @@ const TEST_DOMAIN = "strategicconnex.com.ar";
 
 // ─── Database setup ───────────────────────────────────────────────────────────
 
-const directUrl =
-  process.env.DIRECT_URL ||
-  "postgresql://postgres:***REDACTED***@db.qwebfomwtwxxbkxbrrwm.supabase.co:5432/postgres";
+const directUrl = process.env.DIRECT_URL;
+if (!directUrl) {
+  throw new Error(
+    "DIRECT_URL no configurada: pipeline-test requiere conexión directa (defínela en .env.local)"
+  );
+}
 
 const directPool = new Pool({
   connectionString: directUrl,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: process.env.DB_ALLOW_INSECURE_SSL !== "true" },
   max: 1,
   connectionTimeoutMillis: 10000,
 });

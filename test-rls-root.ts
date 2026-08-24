@@ -18,8 +18,14 @@ async function testRLS() {
     // 1. Setup: Crear usuarios
     console.log("Step 1: Creando usuarios de prueba con conexión directa (Superuser)...");
     const { Client } = await import('pg');
-    const directUrl = "postgresql://postgres:***REDACTED***@db.qwebfomwtwxxbkxbrrwm.supabase.co:5432/postgres";
-    const client = new Client({ connectionString: directUrl, ssl: { rejectUnauthorized: false } });
+    const directUrl = process.env.DIRECT_URL;
+    if (!directUrl) {
+      throw new Error("DIRECT_URL no configurada en .env.local (requerida para setup superuser)");
+    }
+    const client = new Client({
+      connectionString: directUrl,
+      ssl: { rejectUnauthorized: process.env.DB_ALLOW_INSECURE_SSL !== 'true' },
+    });
     await client.connect();
     
     await client.query(

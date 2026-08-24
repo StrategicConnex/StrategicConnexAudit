@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 dotenv.config({ path: '.env.local' });
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const dbUrl = process.env.DATABASE_URL;
 
@@ -22,7 +21,7 @@ async function runBackup() {
 
   if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
 
-  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: process.env.DB_ALLOW_INSECURE_SSL === 'true' } });
 
   try {
     // 1. Obtener lista de tablas

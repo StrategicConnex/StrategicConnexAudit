@@ -3,7 +3,6 @@ import * as dotenv from 'dotenv';
 
 // Cargar variables de entorno
 dotenv.config({ path: '.env.local' });
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const dbUrl = process.env.DATABASE_URL;
 
@@ -15,7 +14,7 @@ async function scanSecurity() {
     return;
   }
 
-  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: process.env.DB_ALLOW_INSECURE_SSL === 'true' } });
 
   try {
     const query = `

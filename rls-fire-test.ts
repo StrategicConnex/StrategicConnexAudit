@@ -7,7 +7,6 @@ import { randomUUID } from 'crypto';
 
 // Cargar variables de entorno
 dotenv.config({ path: '.env.local' });
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const dbUrl = process.env.DATABASE_URL;
 
@@ -35,7 +34,7 @@ async function runTest() {
     return;
   }
 
-  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: process.env.DB_ALLOW_INSECURE_SSL === 'true' } });
   const db = drizzle(pool);
 
   const userA_Id = randomUUID();
