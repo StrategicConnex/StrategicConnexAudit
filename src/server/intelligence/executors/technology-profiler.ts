@@ -133,7 +133,7 @@ export const technologyProfilerExecutor: ToolExecutor<{ url: string }, Technolog
     try {
       const cn = await dns.resolve(host, "CNAME");
       if (cn?.length) {
-        const c = cn[0].toLowerCase();
+        const c = cn[0]!.toLowerCase();
         const cdn: Array<[RegExp, string]> = [
           [/cloudflare/i, "Cloudflare"], [/cloudfront/i, "AWS CloudFront"],
           [/fastly/i, "Fastly"], [/akamai|edgekey/i, "Akamai"],
@@ -154,16 +154,16 @@ export const technologyProfilerExecutor: ToolExecutor<{ url: string }, Technolog
       for (const s of META_SIG) {
         const re = new RegExp('<meta[^>]+content=["\']([^"\']*)["\'][^>]+name=["\']' + s.name + '["\']', "i");
         const m = re.exec(html);
-        if (m && s.pattern?.test(m[1])) {
-          const vers = m[1].match(/([\d.]+)/);
-          detected.push({ ...s.tech, version: vers?.[1], evidence: "Meta " + s.name + ": " + m[1].substring(0, 60) });
+        if (m && s.pattern?.test(m![1])) {
+          const vers = m[1]!.match(/([\d.]+)/);
+          detected.push({ ...s.tech, version: vers?.[1], evidence: "Meta " + s.name + ": " + m[1]!.substring(0, 60) });
         }
       }
 
       const srcs: string[] = [];
       const srcRe = /<script[^>]*src=["\']([^"\']*)["\'][^>]*>/gi;
       let sm: RegExpExecArray | null;
-      while ((sm = srcRe.exec(html)) !== null) srcs.push(sm[1]);
+      while ((sm = srcRe.exec(html)) !== null) srcs.push(sm![1]);
 
       for (const s of SCRIPT_SIG) {
         for (const src of srcs) {

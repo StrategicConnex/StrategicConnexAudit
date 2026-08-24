@@ -162,7 +162,7 @@ export function getMitreTechniques(toolId: string): MitreTechnique[] {
 /** Obtiene la primera técnica MITRE asociada a un tool ID */
 export function getPrimaryMitreTechnique(toolId: string): MitreTechnique | null {
   const techniques = getMitreTechniques(toolId);
-  return techniques.length > 0 ? techniques[0] : null;
+  return techniques.length > 0 ? techniques![0] : null;
 }
 
 /** Detecta técnica MITRE por contenido del título del hallazgo (keyword matching) */

@@ -173,7 +173,7 @@ describe("api-keys — createApiKey / listApiKeys / revokeApiKey", () => {
     ]);
     const keys = await listApiKeys("u_1");
     expect(keys.length).toBe(2);
-    expect(keys[1].name).toBe("Prod");
+    expect(keys[1]!.name).toBe("Prod");
   });
 
   it("listApiKeys devuelve [] si la DB falla", async () => {

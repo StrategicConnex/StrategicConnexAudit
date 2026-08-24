@@ -313,13 +313,13 @@ export async function callAIWithFallback(
     const modelId = modelChain[i];
     try {
       const content = await openRouterCircuitBreaker.execute(async () => {
-        return await callModel(modelId, messages, temperature, maxTokens, timeoutMs);
+        return await callModel(modelId!, messages, temperature, maxTokens, timeoutMs);
       });
 
       const latencyMs = Date.now() - startTime;
 
       // Cache successful response
-      setCache(cacheKey, content, modelId);
+      setCache(cacheKey, content, modelId)!;
 
       console.log(
         `[AI Router] ${taskType} → ${modelId} (${latencyMs}ms) ` +
@@ -329,7 +329,7 @@ export async function callAIWithFallback(
       return {
         success: true,
         content,
-        modelUsed: modelId,
+        modelUsed: modelId!,
         latencyMs,
       };
     } catch (err: unknown) {
@@ -345,7 +345,7 @@ export async function callAIWithFallback(
   return {
     success: false,
     content: "",
-    modelUsed: modelChain[modelChain.length - 1],
+    modelUsed: modelChain[modelChain.length - 1]!,
     latencyMs: Date.now() - startTime,
     error: `All ${modelChain.length} AI models failed:\n${errors.join("\n")}`,
   };

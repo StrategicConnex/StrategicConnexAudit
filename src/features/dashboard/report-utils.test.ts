@@ -84,7 +84,7 @@ describe("parseMarkdownReport", () => {
     expect(parsed.healthScore).toBe(85);
     expect(parsed.healthClassification).toContain("Rendimiento Premium");
     expect(parsed.planItems.length).toBe(3);
-    expect(parsed.planItems[0].priority).toBe("Alta");
+    expect(parsed.planItems[0]!.priority).toBe("Alta");
     expect(parsed.lcp).toContain("1.8");
   });
 
@@ -105,8 +105,8 @@ describe("extractMermaidBlocks (reporte real)", () => {
   it("extrae el diagrama mermaid del Plan de Acción", () => {
     const blocks = extractMermaidBlocks(REAL_AI_REPORT);
     expect(blocks).toHaveLength(1);
-    expect(blocks[0].code).toContain("flowchart TD");
-    expect(blocks[0].code).toContain("A[Inicio]");
+    expect(blocks[0]!.code).toContain("flowchart TD");
+    expect(blocks[0]!.code).toContain("A[Inicio]");
   });
 
   it("el reporte resiliente (sin IA) SIEMPRE incluye mermaid y parsea su sección de salud", () => {
@@ -134,7 +134,7 @@ flowchart TD
     // El reporte resiliente garantiza el diagrama mermaid en producción
     const blocks = extractMermaidBlocks(resilient);
     expect(blocks).toHaveLength(1);
-    expect(blocks[0].code).toContain("flowchart TD");
+    expect(blocks[0]!.code).toContain("flowchart TD");
   });
 });
 
@@ -152,8 +152,8 @@ describe("extractMermaidBlocks", () => {
     ].join("\n");
     const blocks = extractMermaidBlocks(md);
     expect(blocks).toHaveLength(1);
-    expect(blocks[0].code).toContain("flowchart TD");
-    expect(blocks[0].code).toContain("A[Inicio]");
+    expect(blocks[0]!.code).toContain("flowchart TD");
+    expect(blocks[0]!.code).toContain("A[Inicio]");
   });
 
   it("extrae multiples diagramas en orden", () => {
@@ -171,8 +171,8 @@ describe("extractMermaidBlocks", () => {
     ].join("\n");
     const blocks = extractMermaidBlocks(md);
     expect(blocks).toHaveLength(2);
-    expect(blocks[0].code).toContain("graph LR");
-    expect(blocks[1].code).toContain("pie title");
+    expect(blocks[0]!.code).toContain("graph LR");
+    expect(blocks[1]!.code).toContain("pie title");
   });
 
   it("ignora bloques de codigo que no son mermaid", () => {
@@ -187,7 +187,7 @@ describe("extractMermaidBlocks", () => {
     ].join("\n");
     const blocks = extractMermaidBlocks(md);
     expect(blocks).toHaveLength(1);
-    expect(blocks[0].code).toContain("sequenceDiagram");
+    expect(blocks[0]!.code).toContain("sequenceDiagram");
   });
 
   it("devuelve [] si no hay diagramas", () => {
@@ -217,8 +217,8 @@ describe("tableRowsToChartData", () => {
       { metric: "CTR US", value: "6.74%", status: "" },
       { metric: "Miles", value: "12,345,678", status: "" },
     ]);
-    expect(data[0].value).toBe(6.74);
-    expect(data[1].value).toBe(12345678);
+    expect(data[0]!.value).toBe(6.74);
+    expect(data[1]!.value).toBe(12345678);
   });
 
   it("filtra valores no numericos", () => {

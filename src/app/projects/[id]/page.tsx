@@ -99,7 +99,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         console.warn("Uptime logs table not ready or accessible:", e);
       }
       
-      const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0].isUp ? 'up' : 'down') : 'unknown';
+      const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0]!.isUp ? 'up' : 'down') : 'unknown';
         
       // 5. Fetch Web Vitals Logs (Resiliente)
       type WebVitalsLogType = typeof webVitalsLogs.$inferSelect;

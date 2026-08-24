@@ -53,14 +53,14 @@ describe("parseMarkdown", () => {
 
   it("usa 'code' como lenguaje por defecto cuando no se declara", () => {
     const blocks = parseMarkdown("```\nconst x = 1;\n```\n");
-    expect(blocks[0].language).toBe("code");
-    expect(blocks[0].content).toBe("const x = 1;");
+    expect(blocks[0]!.language).toBe("code");
+    expect(blocks[0]!.content).toBe("const x = 1;");
   });
 
   it("conserva código multi-línea intacto", () => {
     const md = "```js\nline1\nline2\nline3\n```\n";
     const blocks = parseMarkdown(md);
-    expect(blocks[0].content).toBe("line1\nline2\nline3");
+    expect(blocks[0]!.content).toBe("line1\nline2\nline3");
   });
 
   it("agrupa líneas de párrafo consecutivas con quiebre", () => {

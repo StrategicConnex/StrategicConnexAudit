@@ -382,7 +382,7 @@ async function lastHeartbeatTime(): Promise<Date | null> {
     const rows = await directDb.select({ createdAt: siemAlertLogs.createdAt }).from(siemAlertLogs)
       .where(and(eq(siemAlertLogs.ruleEventType, "heartbeat"), eq(siemAlertLogs.status, "success")))
       .orderBy(desc(siemAlertLogs.createdAt)).limit(1);
-    return rows.length > 0 ? rows[0].createdAt : null;
+    return rows.length > 0 ? rows[0]!.createdAt : null;
   } catch { return null; }
 }
 

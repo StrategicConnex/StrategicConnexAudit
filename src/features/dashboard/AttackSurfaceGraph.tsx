@@ -264,7 +264,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
 
           {/* Nodes */}
           {nodes.map((node) => {
-            const cfg = NODE_COLORS[node.type];
+            const cfg = NODE_COLORS[node.type]!;
             const isHovered = hoveredNode === node.id;
             const isMain = node.type === 'domain';
             const r = isMain ? 26 : 18;
@@ -328,7 +328,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
                   letterSpacing="0.08em"
                   style={{ userSelect: 'none', pointerEvents: 'none', textTransform: 'uppercase' }}
                 >
-                  {NODE_COLORS[node.type].label}
+                  {NODE_COLORS[node.type]!.label}
                 </text>
 
                 {/* Node label below */}
@@ -368,7 +368,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
                 fill="rgba(255,255,255,0.9)"
                 style={{ userSelect: 'none', pointerEvents: 'none' }}
               >
-                {NODE_COLORS[tooltip.node.type].label}
+                {NODE_COLORS[tooltip.node.type]!.label}
               </text>
               <text
                 x={Math.min(tooltip.x + 23, 288)}

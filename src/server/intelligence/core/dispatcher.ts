@@ -67,7 +67,7 @@ export async function executeTool(
     if (!net.isIP(target)) {
       try {
         const resolved = await dns.resolve4(target);
-        if (resolved.length > 0) targetIp = resolved[0];
+        if (resolved.length > 0) targetIp! = resolved[0];
       } catch {
         // Silently fallback if it cannot be resolved to IP
       }

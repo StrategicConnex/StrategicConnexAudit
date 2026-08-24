@@ -29,7 +29,7 @@ export async function checkQuota(
 
   // Si es enterprise o infinito, pasamos rápido
   if (maxQuota >= 9999999) {
-    return { allowed: true, remainingUnits: maxQuota };
+    return { allowed: true, remainingUnits: maxQuota! };
   }
 
   // Calcular el inicio del mes actual

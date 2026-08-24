@@ -639,7 +639,7 @@ function SeverityDonutChart({ findings }: { findings: PdfFinding[] }) {
 
     segments.push({
       path,
-      color: colors[order.indexOf(sev)],
+      color: colors[order.indexOf(sev)]!,
       label: labels[order.indexOf(sev)],
       count,
       pct: (pct * 100).toFixed(1) + '%',

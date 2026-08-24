@@ -124,13 +124,13 @@ describe("Push — boolean `active` semantics (TSK-009)", () => {
 
     // El WHERE de la selección apunta a la columna `active` y su param es el
     // boolean `true` real (no el string 'true' legacy)
-    const selectSql = sqlOf(captureWhere.mock.calls[0][0]);
+    const selectSql = sqlOf(captureWhere.mock.calls[0][0]!);
     expect(selectSql.sql).toContain("active");
     expect(selectSql.params).toContain(true);
     expect(selectSql.params).not.toContain("true");
 
     // La limpieza de endpoints expirados escribe `active: false` boolean
-    const setArg = captureSet.mock.calls[0][0] as { active: unknown };
+    const setArg = captureSet.mock.calls[0][0]! as { active: unknown };
     expect(setArg.active).toBe(false);
     expect(typeof setArg.active).toBe("boolean");
   });
@@ -144,7 +144,7 @@ describe("Push — boolean `active` semantics (TSK-009)", () => {
 
     expect(result.failed).toBe(1);
 
-    const whereSql = sqlOf(captureWhere.mock.calls[0][0]);
+    const whereSql = sqlOf(captureWhere.mock.calls[0][0]!);
     expect(whereSql.sql).toContain("active");
     expect(whereSql.params).toContain(true);
     expect(whereSql.params).not.toContain("true");

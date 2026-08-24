@@ -156,7 +156,7 @@ describe("Trigger: Scheduled Scan (real)", () => {
 
     expect(result.processedSchedules).toBe(1);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].scheduleId).toBe("sch-bad");
+    expect(result.errors[0]!.scheduleId).toBe("sch-bad");
     // El schedule bueno sí se encoló
     expect(mockTasksTrigger).toHaveBeenCalledTimes(2);
   });

@@ -253,7 +253,7 @@ export async function GET(req: NextRequest) {
       for (let i = 14; i >= 0; i--) {
         const targetDate = new Date();
         targetDate.setDate(today.getDate() - i);
-        const isoDateStr = targetDate.toISOString().split('T')[0];
+        const isoDateStr = targetDate.toISOString().split('T')[0]!;
         const dateStr = isoDateStr.replace(/-/g, '');
 
         const realGsc = gscRecords.find(r => r.date === isoDateStr);

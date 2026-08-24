@@ -106,7 +106,7 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   const h1Tags: string[] = [];
   let m1;
   while ((m1 = h1Regex.exec(html)) !== null) {
-    const cleaned = m1[1].replace(/<[^>]*>/g, "").trim();
+    const cleaned = m1[1]!.replace(/<[^>]*>/g, "").trim();
     if (cleaned) h1Tags.push(cleaned);
   }
 
@@ -116,7 +116,7 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   let m2;
   let h2Count = 0;
   while ((m2 = h2Regex.exec(html)) !== null && h2Count < 30) {
-    const cleaned = m2[1].replace(/<[^>]*>/g, "").trim();
+    const cleaned = m2[1]!.replace(/<[^>]*>/g, "").trim();
     if (cleaned) h2Tags.push(cleaned);
     h2Count++;
   }
@@ -124,7 +124,7 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   // 5. Conteo aproximado de palabras
   const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   const bodyText = bodyMatch
-    ? bodyMatch[1]
+    ? bodyMatch[1]!
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
         .replace(/<[^>]*>/g, " ")

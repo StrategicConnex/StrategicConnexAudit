@@ -150,7 +150,7 @@ describe("Trigger: Periodic Adversary Simulation", () => {
     expect(result.errorCount).toBe(1);
     expect(result.totalScenariosRun).toBe(0);
 
-    const first = (result.summaries as Array<Record<string, unknown>>)[0];
+    const first = (result.summaries as Array<Record<string, unknown>>)[0]!;
     expect(first.error).toBe("sandbox timeout");
   });
 });

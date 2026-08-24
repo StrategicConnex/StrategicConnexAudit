@@ -81,7 +81,7 @@ describe("runShadowDetection — detección pasiva de shadow IT", () => {
 
     const dangling = result.assets.filter((a) => a.assetType === "dangling_service");
     expect(dangling.length).toBeGreaterThan(0);
-    expect(dangling[0].severity).toBe("medium");
+    expect(dangling[0]!.severity).toBe("medium");
     expect(result.findings.some((f) => f.title.includes("Shadow IT"))).toBe(true);
   });
 

@@ -53,7 +53,7 @@ export function useAiReport(projectId: string) {
     let stepIdx = 0;
     const interval = setInterval(() => {
       if (stepIdx < PROGRESS_STEPS.length) {
-        const step = PROGRESS_STEPS[stepIdx];
+        const step = PROGRESS_STEPS[stepIdx]!;
         setState(s => ({ ...s, progress: step.progress, status: step.text }));
         stepIdx++;
       }

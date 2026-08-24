@@ -128,7 +128,7 @@ export async function detectLatencyAnomalies(
     return { metricType: "latency", checked: false, reason: "insufficient data", anomalies: 0 };
   }
 
-  const currentValue = values[0];
+  const currentValue = values[0]!;
   const hist = values.slice(1);
   const histMean = hist.reduce((a, b) => a + b, 0) / hist.length;
   const label = `Pico de latencia: ${currentValue.toFixed(0)}ms`;

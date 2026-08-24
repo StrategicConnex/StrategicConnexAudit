@@ -84,10 +84,10 @@ function resolveFilePath(slug: string[]): string | null {
 function extractTitle(raw: string): string {
   // Try to get title from front matter
   const titleMatch = raw.match(/^---[\s\S]*?title:\s*(.+?)[\s\S]*?---/);
-  if (titleMatch) return titleMatch[1].replace(/"/g, "");
+  if (titleMatch) return titleMatch[1]!.replace(/"/g, "");
   // Try first H1
   const h1Match = raw.match(/^#\s+(.+)/m);
-  if (h1Match) return h1Match[1];
+  if (h1Match) return h1Match[1]!;
   return "Documentación";
 }
 

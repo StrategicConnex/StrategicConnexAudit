@@ -47,7 +47,7 @@ export async function getPluginPackage(packageId: string): Promise<PluginPackage
 
 export async function registerPluginPackage(data: PluginPackageInsert): Promise<PluginPackage> {
   const [pkg] = await db.insert(pluginPackages).values(data).returning();
-  return pkg;
+  return pkg!;
 }
 
 export async function importPluginFromManifest(manifest: PluginManifest): Promise<PluginPackage> {
@@ -80,11 +80,11 @@ export async function importPluginFromManifest(manifest: PluginManifest): Promis
       .set({ ...insert, updatedAt: new Date() })
       .where(eq(pluginPackages.id, existing.id))
       .returning();
-    return updated;
+    return updated!;
   }
 
   const [created] = await db.insert(pluginPackages).values(insert).returning();
-  return created;
+  return created!;
 }
 
 // ─── Instancias ─────────────────────────────────────────────────────────────
@@ -116,7 +116,7 @@ export async function installPlugin(
           .where(eq(pluginInstances.id, existing.id))
           .returning();
       });
-      return { success: true, instance: updated };
+      return { success: true, instance: updated! };
     }
     return { success: true, instance: existing, error: "Already installed" };
   }

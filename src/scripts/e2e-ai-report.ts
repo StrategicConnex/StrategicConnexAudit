@@ -296,7 +296,7 @@ async function main() {
     const mermaidMatch = report.match(/```mermaid\n([\s\S]*?)```/);
     if (mermaidMatch) {
       console.log("\n────── Diagrama mermaid extraído ──────");
-      console.log(mermaidMatch[1].trim().split("\n").slice(0, 12).join("\n"));
+      console.log(mermaidMatch[1]!.trim().split("\n").slice(0, 12).join("\n"));
     }
 
     console.log("\n" + (pass ? "✅✅ E2E OK: el reporte IA se genera al 100% con tabla + mermaid." : "❌❌ E2E FALLÓ: revisar checks arriba."));

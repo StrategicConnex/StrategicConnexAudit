@@ -246,7 +246,7 @@ export async function runDnsBruteForce(
      "backup", "ftp", "sftp", "phpmyadmin", "adminer", "blog", "wp-admin",
      "wordpress", "mail", "webmail", "sso", "auth", "login", "portal",
      "jenkins", "confluence", "wiki", "kibana", "grafana", "prometheus",
-     "redis", "mongodb", "kafka", "rabbitmq"].includes(a.value.split(".")[0])
+     "redis", "mongodb", "kafka", "rabbitmq"].includes(a.value.split!(".")[0])
   );
 
   if (interestingSubs.length > 0) {

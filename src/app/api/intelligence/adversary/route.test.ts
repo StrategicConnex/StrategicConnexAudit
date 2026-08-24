@@ -137,7 +137,7 @@ describe("Adversary API — PATCH report", () => {
     );
     expect(res.status).toBe(200);
     expect(dbMock.updateCalls).toHaveLength(1);
-    expect(dbMock.updateCalls[0].values).toMatchObject({
+    expect(dbMock.updateCalls[0]!.values).toMatchObject({
       result: "missed",
       detectedBy: null,
     });

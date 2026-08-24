@@ -229,8 +229,8 @@ export function IntelligenceTab({
 
     const logTimer = setInterval(() => {
       if (idx < steps.length) {
-        setScanProgress(prev => [...prev, steps[idx]]);
-        setScanStatusMessage(steps[idx].replace(/\[\d+:\d+\] /, ''));
+        setScanProgress(prev => [...prev, steps[idx]!]);
+        setScanStatusMessage(steps[idx]!.replace(/\[\d+:\d+\] /, ''));
         setProgressPercent(Math.round(((idx + 1) / steps.length) * 100));
         idx++;
       } else {

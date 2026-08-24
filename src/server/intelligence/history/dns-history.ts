@@ -146,11 +146,11 @@ export async function detectDnsChanges(projectId: string, query: string): Promis
       .limit(2);
 
     if (snapshots.length >= 2) {
-      if (snapshots[1].value !== snapshots[0].value) {
-        changes.push({ type: 'changed', recordType, query, previousValue: snapshots[1].value, currentValue: snapshots[0].value, detectedAt: snapshots[0].snapshotDate });
+      if (snapshots[1]!.value !== snapshots[0]!.value) {
+        changes.push({ type: 'changed', recordType, query, previousValue: snapshots[1]!.value, currentValue: snapshots[0]!.value, detectedAt: snapshots[0]!.snapshotDate });
       }
     } else if (snapshots.length === 1) {
-      changes.push({ type: 'added', recordType, query, previousValue: null, currentValue: snapshots[0].value, detectedAt: snapshots[0].snapshotDate });
+      changes.push({ type: 'added', recordType, query, previousValue: null, currentValue: snapshots[0]!.value, detectedAt: snapshots[0]!.snapshotDate });
     }
   }
   return changes;

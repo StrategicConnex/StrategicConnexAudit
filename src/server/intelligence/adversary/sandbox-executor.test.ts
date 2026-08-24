@@ -192,7 +192,7 @@ describe("sandbox-executor — runSandboxedCommand", () => {
     expect(result.output).toContain("[HTTP GET] /admin/");
     expect(result.output).toContain("200");
     expect(result.findings.length).toBeGreaterThan(0);
-    expect(result.findings[0].severity).toBe("high"); // /admin → sensitive
+    expect(result.findings[0]!.severity).toBe("high"); // /admin → sensitive
     expect(vi.mocked(safeFetch)).toHaveBeenCalledWith(
       "https://example.com/admin/",
       expect.objectContaining({ method: "GET", redirect: "manual" })
@@ -301,7 +301,7 @@ describe("sandbox-executor — runSandboxedCommand", () => {
     expect(result.output).toContain("22/tcp open");
     expect(result.output).toContain("80/tcp closed");
     expect(result.findings).toHaveLength(1);
-    expect(result.findings[0].title).toContain("22");
+    expect(result.findings[0]!.title).toContain("22");
   });
 
   it("powershell: solo asesoría, nunca se ejecuta", async () => {

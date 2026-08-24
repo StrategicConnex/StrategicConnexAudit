@@ -20,7 +20,7 @@ export function LanguageSwitcher({ mini = false }: { mini?: boolean }) {
   const [isPending, setPending] = useState(false);
 
   const nextLocale = locale === "es" ? "en" : "es";
-  const nextInfo = LOCALE_MAP[nextLocale];
+  const nextInfo = LOCALE_MAP[nextLocale]!;
 
   const handleSwitch = () => {
     setPending(true);

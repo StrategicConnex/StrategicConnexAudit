@@ -142,7 +142,7 @@ describe("Trigger: Continuous Discovery", () => {
     expect(result.errorCount).toBe(0);
     expect(result.totalNewAssets).toBe(3);
 
-    const first = (result.results as Array<Record<string, unknown>>)[0];
+    const first = (result.results as Array<Record<string, unknown>>)[0]!;
     expect(first.newAssets).toBe(3);
     expect(first.totalChanges).toBe(2);
     expect(first.modules).toHaveLength(2);
@@ -160,7 +160,7 @@ describe("Trigger: Continuous Discovery", () => {
     expect(result.successCount).toBe(0);
     expect(result.errorCount).toBe(1);
 
-    const first = (result.results as Array<Record<string, unknown>>)[0];
+    const first = (result.results as Array<Record<string, unknown>>)[0]!;
     expect(first.error).toBe("DNS timeout");
     expect(first.newAssets).toBe(0);
   });

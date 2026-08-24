@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
           userAgent: req.headers.get("user-agent") || undefined,
           updatedAt: new Date(),
         })
-        .where(eq(pushSubscriptions.id, existing[0].id));
+        .where(eq(pushSubscriptions.id, existing[0]!.id));
 
       return NextResponse.json({ success: true, status: "reactivated" });
     }

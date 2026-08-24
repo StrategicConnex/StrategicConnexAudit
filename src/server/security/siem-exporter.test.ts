@@ -59,7 +59,7 @@ describe("siem-exporter — sendTestAlert", () => {
     const result = await sendTestAlert();
     expect(result.targetsAttempted).toBe(0);
     expect(result.success).toBe(false);
-    expect(result.details[0].name).toBe("system");
+    expect(result.details[0]!.name).toBe("system");
   });
 
   it("envía a todos los canales configurados y reporta éxito si todos OK", async () => {

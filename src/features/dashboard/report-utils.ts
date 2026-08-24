@@ -72,7 +72,7 @@ export function parseMarkdownReport(text: string): ParsedReport {
       const healthPart = section.replace(/^(🛠️\s*)?Diagnóstico de Salud Técnica y Velocidad\s*/i, "").trim().split(/^---\s*$/m)[0]!.trim();
 
       const scoreMatch = healthPart.match(/(?:#+\s*)?🏆\s*(\d+)\s*\/\s*100/i);
-      if (scoreMatch) healthScore = parseInt(scoreMatch[1], 10);
+      if (scoreMatch) healthScore = parseInt(scoreMatch![1], 10);
 
       const classificationMatch = healthPart.match(/Clasificación:\s*([^*|\n]+)/i);
       if (classificationMatch) healthClassification = classificationMatch[1]!.trim();

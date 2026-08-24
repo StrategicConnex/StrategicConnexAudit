@@ -80,7 +80,7 @@ export const POST = withRateLimit(
           return record;
         });
 
-        queuedInvestigations.push(investigation);
+        queuedInvestigations.push(investigation)!;
 
         // Fire-and-forget background execution using our established intelligence route
         const targetUrl = new URL("/api/intelligence", req.nextUrl!.origin);

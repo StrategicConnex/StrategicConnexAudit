@@ -135,7 +135,7 @@ describe("EgressGuard - SSRF and Private Network Protection Suite", () => {
       if (!networkReachable) return;
       const result = await assertPublicHostname("google.com");
       expect(result.length).toBeGreaterThan(0);
-      expect(result[0].address).toBeDefined();
+      expect(result[0]!.address).toBeDefined();
     });
 
     it("should reject hostnames that resolve to private subnets", async () => {

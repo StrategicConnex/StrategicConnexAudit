@@ -251,7 +251,7 @@ export async function runShadowDetection(
           assets.push({
             assetType: "dangling_service",
             value: sub,
-            ip: ips[0],
+            ip: ips[0]!,
             metadata: {
               discoveryMethod: "shadow-detection",
               dnsStatus: "resolves",
@@ -268,7 +268,7 @@ export async function runShadowDetection(
         assets.push({
           assetType: "dangling_service",
           value: sub,
-          ip: ips[0],
+          ip: ips[0]!,
           metadata: {
             discoveryMethod: "shadow-detection",
             dnsStatus: "resolves",

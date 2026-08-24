@@ -130,7 +130,7 @@ describe("HistoryPanel — historial DNS/WHOIS con fetch mockeado", () => {
       expect(screen.getByText("3600s")).toBeTruthy();
     });
     // Colapsar de nuevo → el detalle desaparece (el valor ahora aparece 2 veces)
-    fireEvent.click(screen.getAllByText("203.0.113.9")[0].closest("button")!);
+    fireEvent.click(screen.getAllByText("203.0.113.9")[0]!.closest("button")!);
     await waitFor(() => {
       expect(screen.queryByText("3600s")).toBeNull();
     });

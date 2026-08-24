@@ -133,7 +133,7 @@ describe("useInvestigationRealtime — aislamiento multi-tenant", () => {
     });
 
     expect(result.current.events).toHaveLength(1);
-    expect(result.current.events[0].id).toBe("evt-1");
+    expect(result.current.events[0]!.id).toBe("evt-1");
   });
 
   it("evento INSERT de OTRA investigación NO agrega a events", async () => {
@@ -168,7 +168,7 @@ describe("useInvestigationRealtime — aislamiento multi-tenant", () => {
     });
 
     expect(result.current.findings).toHaveLength(1);
-    expect(result.current.findings[0].id).toBe("find-1");
+    expect(result.current.findings[0]!.id).toBe("find-1");
   });
 
   it("evento INSERT de OTRA investigación NO agrega a findings", async () => {

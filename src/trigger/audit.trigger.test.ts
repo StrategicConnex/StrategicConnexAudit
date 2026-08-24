@@ -111,7 +111,7 @@ describe("Trigger: Audit Runner", () => {
     expect(mockUpdate).toHaveBeenCalledTimes(2);
     // insert solo para crawlResults (sin issues: title/meta/h1 presentes)
     expect(mockInsert).toHaveBeenCalledTimes(1);
-    const values = mockInsertValues.mock.calls[0][0] as Record<string, unknown>;
+    const values = mockInsertValues.mock.calls[0][0]! as Record<string, unknown>;
     expect(values.auditId).toBe("a1");
     expect(values.statusCode).toBe(200);
     expect(values.title).toBe("Acme Corp");
@@ -137,7 +137,7 @@ describe("Trigger: Audit Runner", () => {
 
     // insert: crawlResults + issues
     expect(mockInsert).toHaveBeenCalledTimes(2);
-    const issues = mockInsertValues.mock.calls[1][0] as Array<{ title: string }>;
+    const issues = mockInsertValues.mock.calls[1][0]! as Array<{ title: string }>;
     expect(issues.length).toBeGreaterThanOrEqual(2);
     const titles = issues.map((i) => i.title);
     expect(titles.join(" ")).toContain("Título");
@@ -155,7 +155,7 @@ describe("Trigger: Audit Runner", () => {
 
     // el catch marca la auditoría como failed
     expect(mockUpdate.mock.calls.length).toBeGreaterThanOrEqual(2);
-    const failedSet = mockSet.mock.calls[1][0] as Record<string, unknown>;
+    const failedSet = mockSet.mock.calls[1][0]! as Record<string, unknown>;
     expect(failedSet.status).toBe("failed");
   });
 
@@ -170,7 +170,7 @@ describe("Trigger: Audit Runner", () => {
 
     // 2 updates: 1º running (no encuentra el audit y lanza), 2º failed (catch)
     expect(mockUpdate).toHaveBeenCalledTimes(2);
-    const failedSet = mockSet.mock.calls[1][0] as Record<string, unknown>;
+    const failedSet = mockSet.mock.calls[1][0]! as Record<string, unknown>;
     expect(failedSet.status).toBe("failed");
   });
 
@@ -192,7 +192,7 @@ describe("Trigger: Audit Runner", () => {
 
     // catch: marca failed → segundo update
     expect(mockUpdate.mock.calls.length).toBeGreaterThanOrEqual(2);
-    const failedSet = mockSet.mock.calls[1][0] as Record<string, unknown>;
+    const failedSet = mockSet.mock.calls[1][0]! as Record<string, unknown>;
     expect(failedSet.status).toBe("failed");
   });
 });

@@ -403,7 +403,7 @@ export default function ApiPlaygroundPage() {
     const url = new URL(endpoint.path, baseUrl);
     for (const p of endpoint.params) {
       if (p.in === 'query' && paramValues[p.name]) {
-        url.searchParams.set(p.name, paramValues[p.name]);
+        url.searchParams.set(p.name, paramValues![p.name]);
       }
     }
     return url.toString();
@@ -545,7 +545,7 @@ export default function ApiPlaygroundPage() {
   }, [endpoint, apiKey, missingRequired, buildUrl, buildHeaders, buildBody]);
 
   const handleReplay = useCallback((idx: number) => {
-    const entry = history[idx];
+    const entry = history[idx]!;
     const ep = ENDPOINTS.find((e) => e.path === entry.path && e.method === entry.method);
     if (ep) {
       setSelectedEndpoint(ep.id);

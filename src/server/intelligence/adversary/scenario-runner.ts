@@ -61,7 +61,7 @@ export async function getOrCreateScenarioId(
     .limit(1);
 
   if (existing.length > 0) {
-    return existing[0].id;
+    return existing[0]!.id;
   }
 
   // 2. Insert con ON CONFLICT DO NOTHING: si otra escritura concurrente

@@ -25,5 +25,5 @@ export function getCookie(name: string): string | null {
     new RegExp(`(?:^|;\\s*)${encodeURIComponent(name)}=([^;]*)`)
   );
 
-  return match ? decodeURIComponent(match[1]) : null;
+  return match ? decodeURIComponent(match![1]) : null;
 }

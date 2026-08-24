@@ -23,7 +23,7 @@ export async function getLocale(): Promise<Locale> {
     } else if (accepted) {
       const preferred = accepted
         .split(",")
-        .map((l) => l.split(";")[0].trim().split("-")[0].toLowerCase())
+        .map((l) => l.split(";")[0]!.trim().split("-")[0]!.toLowerCase())
         .find((l) => routing.locales.includes(l as Locale));
       if (preferred) locale = preferred as Locale;
     }

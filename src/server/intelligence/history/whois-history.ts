@@ -132,8 +132,8 @@ export async function detectWhoisChanges(projectId: string, domain: string): Pro
         const field = match[1]!.toLowerCase().replace(/[^a-z0-9]/g, '');
         changes.push({
           field, label: match[1]!,
-          previousValue: match[2]! === '(none)' ? null : match[2],
-          currentValue: match[3]! === '(none)' ? null : match[3],
+          previousValue: match[2]! === '(none)' ? null : match[2] ?? null,
+          currentValue: match[3]! === '(none)' ? null : match[3] ?? null,
           severity: field === 'expiresdate' ? 'critical' as const : 'warning' as const,
           detectedAt: curr.snapshotDate,
         });

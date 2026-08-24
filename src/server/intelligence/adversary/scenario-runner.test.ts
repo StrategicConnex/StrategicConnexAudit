@@ -131,7 +131,7 @@ import { projects } from "@/shared/db/schemas";
 import { intelligenceFindings } from "@/shared/db/schemas/intelligence";
 import type { SandboxExecutionResult } from "./sandbox-executor";
 
-const SCENARIO = ADVERSARY_CATALOG[0]; // T1078.001 — Default Credential Access (manual, high)
+const SCENARIO = ADVERSARY_CATALOG[0]!; // T1078.001 — Default Credential Access (manual, high)
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -172,7 +172,7 @@ describe("getOrCreateScenarioId — race condition fix (0018)", () => {
     expect(id).toBe("winner-id");
     const scenarioInserts = dbState.inserted.filter((i) => i.table === adversaryScenarios);
     expect(scenarioInserts).toHaveLength(1);
-    expect((scenarioInserts[0].values as { mitreId?: string }).mitreId).toBe(SCENARIO.mitreId);
+    expect((scenarioInserts[0]!.values as { mitreId?: string }).mitreId).toBe(SCENARIO.mitreId);
   });
 
   it("onConflictDoNothing usa target = adversaryScenarios.mitreId (índice único)", async () => {
@@ -181,7 +181,7 @@ describe("getOrCreateScenarioId — race condition fix (0018)", () => {
     await getOrCreateScenarioId(SCENARIO);
 
     expect(dbState.conflicts).toHaveLength(1);
-    expect(dbState.conflicts[0].target).toEqual({ target: adversaryScenarios.mitreId });
+    expect(dbState.conflicts[0]!.target).toEqual({ target: adversaryScenarios.mitreId });
   });
 
   it("fila irresoluble → lanza error", async () => {
@@ -216,7 +216,7 @@ describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox",
     // Template creado (insert en adversaryScenarios) con los datos del catálogo
     const scenarioInserts = dbState.inserted.filter((i) => i.table === adversaryScenarios);
     expect(scenarioInserts).toHaveLength(1);
-    expect((scenarioInserts[0].values as { mitreId?: string }).mitreId).toBe("T1078.001");
+    expect((scenarioInserts[0]!.values as { mitreId?: string }).mitreId).toBe("T1078.001");
 
     // FIX P0: la run inserta con scenario_id = id persistido del template
     const runInsert = dbState.inserted.find((i) => i.table === adversaryRuns)!;

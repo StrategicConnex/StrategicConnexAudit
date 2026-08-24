@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting by IP
     const forwarded = request.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') ?? 'unknown');
+    const ip = forwarded ? forwarded.split(',')[0]!.trim() : (request.headers.get('x-real-ip') ?? 'unknown');
     if (!checkTelemetryRateLimit(ip)) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }

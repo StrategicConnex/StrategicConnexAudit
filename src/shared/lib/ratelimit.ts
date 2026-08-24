@@ -241,7 +241,7 @@ function checkRateLimitInMemory(identifier: string, config: RateLimitConfig): Ra
 
   // Podar timestamps fuera de la ventana
   const cutoff = now - windowMs;
-  while (timestamps.length > 0 && timestamps[0] <= cutoff) {
+  while (timestamps.length > 0 && timestamps[0]! <= cutoff) {
     timestamps.shift();
   }
 
@@ -256,7 +256,7 @@ function checkRateLimitInMemory(identifier: string, config: RateLimitConfig): Ra
   }
 
   if (timestamps.length >= config.limit) {
-    const reset = timestamps[0] + windowMs;
+    const reset = timestamps[0]! + windowMs;
     return {
       success: false,
       limit: config.limit,

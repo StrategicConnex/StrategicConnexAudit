@@ -75,7 +75,7 @@ describe("pdf-utils — exportElementToPdf", () => {
       expect.any(HTMLElement),
       expect.objectContaining({ scale: 2, useCORS: true })
     );
-    expect(pdfInstances[0].save).toHaveBeenCalledWith("reporte.pdf");
+    expect(pdfInstances[0]!.save).toHaveBeenCalledWith("reporte.pdf");
     expect(document.body.classList.contains("pdf-export-active")).toBe(false);
   });
 
@@ -86,8 +86,8 @@ describe("pdf-utils — exportElementToPdf", () => {
 
     const ok = await exportElementToPdf("pdf-tall", "multi.pdf");
     expect(ok).toBe(true);
-    expect(pdfInstances[0].addPage).toHaveBeenCalled();
-    expect(pdfInstances[0].addImage.mock.calls.length).toBeGreaterThan(1);
+    expect(pdfInstances[0]!.addPage).toHaveBeenCalled();
+    expect(pdfInstances[0]!.addImage.mock.calls.length).toBeGreaterThan(1);
   });
 
   it("invoca onBeforeExport y onAfterExport en el orden correcto", async () => {

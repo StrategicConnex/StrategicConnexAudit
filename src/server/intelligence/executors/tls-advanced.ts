@@ -71,7 +71,7 @@ export const tlsAdvancedExecutor: ToolExecutor<{ host: string }, TlsAdvancedOutp
     if (cert?.subjectaltname) {
       cert.subjectaltname.split(", ").forEach((e: string) => {
         const m = e.match(/DNS:(.+)/);
-        if (m) sans.push(m[1]);
+        if (m) sans.push(m![1]);
       });
     }
     const isSelfSigned = cert?.issuer?.CN === cert?.subject?.CN;

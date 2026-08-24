@@ -32,10 +32,10 @@ describe("mitre-mapping — MITRE_MAPPING (fuente única de verdad)", () => {
   });
 
   it("usa IDs MITRE reales por táctica (Reconnaissance vs Resource Development)", () => {
-    expect(MITRE_MAPPING["dns.lookup"][0].tactic).toBe("Reconnaissance");
-    expect(MITRE_MAPPING["dns-brute"][0].tactic).toBe("Resource Development");
-    expect(MITRE_MAPPING["network.port_scan"][0].tactic).toBe("Discovery");
-    expect(MITRE_MAPPING["tls.scan"][0].tactic).toBe("Command and Control");
+    expect(MITRE_MAPPING["dns.lookup"][0]!.tactic).toBe("Reconnaissance");
+    expect(MITRE_MAPPING["dns-brute"][0]!.tactic).toBe("Resource Development");
+    expect(MITRE_MAPPING["network.port_scan"][0]!.tactic).toBe("Discovery");
+    expect(MITRE_MAPPING["tls.scan"][0]!.tactic).toBe("Command and Control");
   });
 });
 
@@ -43,8 +43,8 @@ describe("mitre-mapping — getMitreTechniques / getPrimaryMitreTechnique", () =
   it("devuelve las técnicas de un tool conocido", () => {
     const techniques = getMitreTechniques("dns.lookup");
     expect(techniques.length).toBe(1);
-    expect(techniques[0].id).toBe("T1580");
-    expect(techniques[0].name).toContain("DNS");
+    expect(techniques[0]!.id).toBe("T1580");
+    expect(techniques[0]!.name).toContain("DNS");
   });
 
   it("devuelve [] para un tool desconocido (sin lanzar)", () => {

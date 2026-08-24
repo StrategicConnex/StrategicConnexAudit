@@ -99,7 +99,7 @@ describe("Trigger: Periodic Anomaly Detection", () => {
     expect(result.errorCount).toBe(0);
     expect(result.totalAnomalies).toBe(3);
 
-    const first = (result.summaries as Array<Record<string, unknown>>)[0];
+    const first = (result.summaries as Array<Record<string, unknown>>)[0]!;
     expect(first.projectId).toBe("p1");
     expect(first.metricCount).toBe(2);
     expect(first.totalAnomalies).toBe(3);
@@ -133,7 +133,7 @@ describe("Trigger: Periodic Anomaly Detection", () => {
     expect(result.successCount).toBe(0);
     expect(result.errorCount).toBe(1);
 
-    const first = (result.summaries as Array<Record<string, unknown>>)[0];
+    const first = (result.summaries as Array<Record<string, unknown>>)[0]!;
     expect(first.error).toBe("DB timeout");
     expect(first.totalAnomalies).toBe(0);
   });
