@@ -1,7 +1,5 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { env } from '@/shared/config/env'
+import { createClient } from '@/shared/lib/supabase/server'
 import { extractClientIp, checkCallbackRateLimit, rateLimitResponse, isEmailAllowlisted } from '@/shared/lib/ratelimit'
 import { logSecurityEvent, eventFromRequest } from '@/shared/lib/audit-log'
 import { sanitizeNextPath } from '@/shared/lib/safe-next'
@@ -42,23 +40,10 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   if (code) {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      env.supabaseUrl,
-      env.supabaseAnonKey,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          },
-        },
-      }
-    )
+    // Fábrica compartida (única implementación del cookie-adapter SSR).
+    // En un Route Handler cookieStore.set siempre funciona: el try/catch de
+    // la fábrica (pensado para Server Components) nunca se dispara aquí.
+    const supabase = await createClient()
     const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code)
 
     // Rate limit por IP — aplica a TODOS los intentos (incluidos exchanges
