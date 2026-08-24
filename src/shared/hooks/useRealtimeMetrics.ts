@@ -15,7 +15,10 @@ export function useRealtimeMetrics(projectId?: string) {
     if (!projectId) return;
 
     // Listen to new findings
-    const findingsChannel = supabase.channel('custom-findings-channel')
+    // Canales con nombre único por proyecto: Supabase deduplica canales por
+    // nombre, y nombres estáticos provocaban que dos montajes con distinto
+    // projectId compartieran el mismo topic/filter.
+    const findingsChannel = supabase.channel(`metrics-findings-${projectId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'intelligence_findings', filter: `project_id=eq.${projectId}` },
@@ -35,7 +38,7 @@ export function useRealtimeMetrics(projectId?: string) {
       .subscribe();
 
     // Listen to new assets
-    const assetsChannel = supabase.channel('custom-assets-channel')
+    const assetsChannel = supabase.channel(`metrics-assets-${projectId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'intelligence_assets', filter: `project_id=eq.${projectId}` },

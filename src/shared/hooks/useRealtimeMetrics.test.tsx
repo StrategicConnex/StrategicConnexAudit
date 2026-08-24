@@ -156,8 +156,15 @@ describe("useRealtimeMetrics — aislamiento multi-tenant", () => {
     unmount();
 
     expect(mockState.removedChannels.sort()).toEqual(
-      ["custom-assets-channel", "custom-findings-channel"].sort()
+      ["metrics-assets-proj-A", "metrics-findings-proj-A"].sort()
     );
+  });
+
+  it("los canales se nombran por proyecto para evitar colisiones multi-tenant", () => {
+    renderHook(() => useRealtimeMetrics("proj-A"));
+    const names = mockState.subscriptions.map((s) => s.channelName);
+    expect(names).toContain("metrics-findings-proj-A");
+    expect(names).toContain("metrics-assets-proj-A");
   });
 
   it("usa la env key canónica (CS-301): PUBLISHABLE_KEY con fallback ANON_KEY", () => {
