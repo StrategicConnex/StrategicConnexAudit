@@ -8,7 +8,7 @@ import {
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
-import { LanguageSwitcher } from '@/app/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/features/dashboard/LanguageSwitcher';
 import { loadIntelligenceTab } from './tab-loaders';
 import { ThemeSwitcher } from "@/shared/design-system";
 

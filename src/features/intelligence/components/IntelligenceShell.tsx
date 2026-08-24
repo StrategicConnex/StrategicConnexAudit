@@ -17,7 +17,7 @@ import { EvidencesList } from "./EvidencesList";
 import { TopologyView } from "./TopologyView";
 import { AiCopilotSidebar } from "./AiCopilotSidebar";
 import { Terminal, ArrowLeft, Download, Sparkles, Menu, X, Loader2 } from "lucide-react";
-import { LiveMetricsBar } from "@/app/components/LiveMetricsBar";
+import { LiveMetricsBar } from "@/features/dashboard/LiveMetricsBar";
 
 // ─── Demo Data ──────────────────────────────────────────────────────────────
 

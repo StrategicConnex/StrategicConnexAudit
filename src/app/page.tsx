@@ -1,11 +1,11 @@
 import { Suspense } from 'react';
 import { projects, audits, integrations } from '@/shared/db/schemas';
 import { eq, desc, isNull, and, inArray } from 'drizzle-orm';
-import { DashboardContainer } from './components/DashboardContainer';
+import { DashboardContainer } from '@/features/dashboard/DashboardContainer';
 import { createClient } from '@/shared/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { withRLS } from '@/shared/db/rls';
-import { DashboardSkeleton } from './components/DashboardSkeleton';
+import { DashboardSkeleton } from '@/features/dashboard/DashboardSkeleton';
 
 export const dynamic = 'force-dynamic';
 

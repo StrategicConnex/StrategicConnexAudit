@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import { ToasterProvider } from "@/app/components/ToasterProvider";
-import { I18nProvider } from "@/app/components/I18nProvider";
-import { RegisterServiceWorker } from "@/app/components/RegisterServiceWorker";
+import { ToasterProvider } from "@/features/dashboard/ToasterProvider";
+import { I18nProvider } from "@/features/dashboard/I18nProvider";
+import { RegisterServiceWorker } from "@/features/dashboard/RegisterServiceWorker";
 import { ThemeProvider, themeInitScript } from "@/shared/design-system";
 
 

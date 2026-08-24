@@ -36,10 +36,10 @@ const eslintConfig = defineConfig([
       "src/app/api/api-keys/**/*.ts",
       "src/app/api/monitoring/**/*.ts",
       "src/app/api/webhooks/**/*.ts",
-      "src/app/components/tabs/IntelligenceTab.tsx",
-      "src/app/components/tabs/MonitoringTab.tsx",
-      "src/app/components/tabs/SettingsTab.tsx",
-      "src/app/components/tabs/AdversaryTab.tsx",
+      "src/features/dashboard/tabs/IntelligenceTab.tsx",
+      "src/features/dashboard/tabs/MonitoringTab.tsx",
+      "src/features/dashboard/tabs/SettingsTab.tsx",
+      "src/features/dashboard/tabs/AdversaryTab.tsx",
       "src/features/intelligence/hooks/**/*.ts"
     ],
     rules: {
@@ -50,13 +50,13 @@ const eslintConfig = defineConfig([
     // UI components with intentional mount-time state patterns (fetch,
     // localStorage hydration, poll intervals, pulse animations).
     files: [
-      "src/app/components/tabs/MarketplaceTab.tsx",
-      "src/app/components/tabs/OverviewTab.tsx",
-      "src/app/components/CustomDashboardGrid.tsx",
-      "src/app/components/HistoryPanel.tsx",
-      "src/app/components/InstallPwaButton.tsx",
-      "src/app/components/LiveMetricsBar.tsx",
-      "src/app/components/ScoreGauge.tsx",
+      "src/features/dashboard/tabs/MarketplaceTab.tsx",
+      "src/features/dashboard/tabs/OverviewTab.tsx",
+      "src/features/dashboard/CustomDashboardGrid.tsx",
+      "src/features/dashboard/HistoryPanel.tsx",
+      "src/features/dashboard/InstallPwaButton.tsx",
+      "src/features/dashboard/LiveMetricsBar.tsx",
+      "src/features/dashboard/ScoreGauge.tsx",
       "src/app/docs/api/playground/page.tsx",
       "src/app/settings/api-keys/ApiKeysDashboard.tsx"
     ],

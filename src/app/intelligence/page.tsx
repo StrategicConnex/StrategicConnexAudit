@@ -4,7 +4,7 @@ import { eq, desc, isNull, and } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { withRLS } from '@/shared/db/rls';
-import { DashboardSkeleton } from '../components/DashboardSkeleton';
+import { DashboardSkeleton } from '@/features/dashboard/DashboardSkeleton';
 import IntelligenceShell from '@/features/intelligence/components/IntelligenceShell';
 
 export const dynamic = 'force-dynamic';

@@ -8,7 +8,7 @@ import AuditControl from './components/AuditControl';
 import DeactivateButton from './components/DeactivateButton';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
-import { ExportCsvButton } from '@/app/components/ExportCsvButton';
+import { ExportCsvButton } from '@/features/dashboard/ExportCsvButton';
 import { computeVitalsAverages } from '@/shared/utils/rum';
 
 export const dynamic = 'force-dynamic';

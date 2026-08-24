@@ -6,9 +6,9 @@ import { useSearchParams } from 'next/navigation';
 
 import { Mail, Loader2, CheckCircle2, AlertCircle, ArrowRight, Shield, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { LanguageSwitcher } from '@/app/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/features/dashboard/LanguageSwitcher';
 import { ThemeSwitcher } from '@/shared/design-system';
-import AiCoreVisual from '../components/AiCoreVisual';
+import AiCoreVisual from '@/features/dashboard/AiCoreVisual';
 import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
 
 // ─── Placeholder rotativo ──────────────────────────────────────────

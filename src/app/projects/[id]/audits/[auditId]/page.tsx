@@ -16,7 +16,7 @@ import {
   Search
 } from 'lucide-react';
 import Link from 'next/link';
-import { ExportPdfButton } from '@/app/components/ExportPdfButton';
+import { ExportPdfButton } from '@/features/dashboard/ExportPdfButton';
 
 export const dynamic = 'force-dynamic';
 

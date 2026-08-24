@@ -4,9 +4,9 @@ import {
   Check, Copy, AlertCircle 
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { DownloadPdfButton } from '@/app/components/DownloadPdfButton';
+import { DownloadPdfButton } from '@/features/dashboard/DownloadPdfButton';
 import { parseMarkdownReport, extractMermaidBlocks, tableRowsToChartData } from '../report-utils';
-import { MermaidBlock } from '@/app/components/MermaidBlock';
+import { MermaidBlock } from '@/features/dashboard/MermaidBlock';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { ProjectRow } from '@/shared/db/types';
 

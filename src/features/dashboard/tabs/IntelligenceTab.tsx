@@ -8,13 +8,13 @@ import {
   FileText, TrendingDown, Network
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { ScoreGauge } from '@/app/components/ScoreGauge';
-import { AttackSurfaceGraph } from '@/app/components/AttackSurfaceGraph';
-import { IncidentBriefModal } from '@/app/components/IncidentBriefModal';
-import { AutoMitreBadge } from '@/app/components/MitreBadge';
-import { GeoMap } from '@/app/components/GeoMap';
-import { DownloadPdfButton } from '@/app/components/DownloadPdfButton';
-import { HistoryPanel } from '@/app/components/HistoryPanel';
+import { ScoreGauge } from '@/features/dashboard/ScoreGauge';
+import { AttackSurfaceGraph } from '@/features/dashboard/AttackSurfaceGraph';
+import { IncidentBriefModal } from '@/features/dashboard/IncidentBriefModal';
+import { AutoMitreBadge } from '@/features/dashboard/MitreBadge';
+import { GeoMap } from '@/features/dashboard/GeoMap';
+import { DownloadPdfButton } from '@/features/dashboard/DownloadPdfButton';
+import { HistoryPanel } from '@/features/dashboard/HistoryPanel';
 import { getScoreRating, getSeverityBadge } from '@/features/intelligence/lib/rendering/severity';
 import { getErrorMessage } from '@/shared/lib/errors';
 
