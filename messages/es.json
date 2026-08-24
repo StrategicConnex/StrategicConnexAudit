@@ -30,7 +30,8 @@
     "footerProtected": "Protegido por Supabase Auth",
     "footerEnterprise": "Enterprise Grade",
     "footerBrand": "StrategicAudit Pro — Enterprise Cyber Intelligence",
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "authCodeError": "No se pudo completar el inicio de sesión. El enlace puede haber expirado o ya fue utilizado. Solicita uno nuevo."
   },
   "sidebar": {
     "brand": "StrategicAudit",

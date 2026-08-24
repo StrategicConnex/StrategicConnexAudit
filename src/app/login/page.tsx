@@ -69,6 +69,15 @@ function LoginContent() {
     return () => clearTimeout(t);
   }, []);
 
+  // ─── Error devuelto por /auth/callback (ej: auth-code-error) ────
+  // Antes el parámetro ?error= se ignoraba y el usuario volvía al login
+  // sin ningún feedback tras un intercambio de código fallido.
+  // Derivado (no estado): evita setState en efecto.
+  const authCodeError = searchParams.get('error') === 'auth-code-error';
+  const displayMessage = authCodeError
+    ? { type: 'error' as const, text: t('authCodeError') }
+    : message;
+
   // ─── Validación de email en tiempo real ─────────────────────────
   const validateEmail = useCallback(async (value: string) => {
     if (!value || !value.includes('@')) {
@@ -375,28 +384,28 @@ function LoginContent() {
             <div
               className="overflow-hidden transition-all duration-400 ease-out"
               style={{
-                maxHeight: message ? '6rem' : '0',
-                opacity: message ? 1 : 0,
-                transform: message ? 'scaleY(1)' : 'scaleY(0.97)',
+                maxHeight: displayMessage ? '6rem' : '0',
+                opacity: displayMessage ? 1 : 0,
+                transform: displayMessage ? 'scaleY(1)' : 'scaleY(0.97)',
               }}
             >
-              {message && (
+              {displayMessage && (
                 <div className={`p-3 sm:p-3.5 rounded-xl text-xs sm:text-sm flex items-start gap-2.5 origin-top ${
-                  message.type === 'error'
+                  displayMessage.type === 'error'
                     ? 'bg-destructive/10 text-destructive border border-destructive/15'
-                    : message.type === 'warning'
+                    : displayMessage.type === 'warning'
                     ? 'bg-chart-warning/10 text-chart-warning border border-chart-warning/15'
                     : 'bg-chartreuse/10 text-chartreuse border border-chartreuse/15'
                 }`}>
                   <div className={`shrink-0 transition-transform duration-300 ${
-                    message ? 'scale-100' : 'scale-0'
+                    displayMessage ? 'scale-100' : 'scale-0'
                   }`}>
-                    {message.type === 'error' || message.type === 'warning'
+                    {displayMessage.type === 'error' || displayMessage.type === 'warning'
                       ? <AlertCircle className="w-4 h-4 mt-0.5" />
                       : <CheckCircle2 className="w-4 h-4 mt-0.5" />
                     }
                   </div>
-                  <span>{message.text}</span>
+                  <span>{displayMessage.text}</span>
                 </div>
               )}
             </div>
