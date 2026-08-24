@@ -22,6 +22,9 @@ import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
+type RunEventInsert = typeof intelligenceRunEvents.$inferInsert;
+type ToolRunInsert = typeof intelligenceToolRuns.$inferInsert;
+
 const inputSchema = z.object({
   target: z.string().min(1).max(2048),
   projectId: z.string().uuid()
@@ -205,8 +208,10 @@ export async function POST(req: NextRequest) {
     const tStart = Date.now();
 
     // Eventos y tool runs acumulados en memoria para inserción masiva posterior
-    const inMemoryEvents: Array<{ eventType: string; message: string; payload: any }> = [];
-    const logEvent = (type: string, message: string, payload: any = {}) => {
+    // (investigationId se añade en el insert masivo del paso D)
+    type PendingRunEvent = Pick<RunEventInsert, "eventType" | "message" | "payload">;
+    const inMemoryEvents: PendingRunEvent[] = [];
+    const logEvent = (type: string, message: string, payload: PendingRunEvent["payload"] = {}) => {
       inMemoryEvents.push({ eventType: type, message, payload });
     };
 
@@ -259,7 +264,7 @@ export async function POST(req: NextRequest) {
 
     // 7. Agrupar resultados y registrar eventos de éxito/error
     const allFindings: Finding[] = [];
-    const toolRunRecords: any[] = [];
+    const toolRunRecords: ToolRunInsert[] = [];
 
     for (const res of executionResults) {
       if (res.success) {
