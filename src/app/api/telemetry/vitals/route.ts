@@ -4,30 +4,48 @@ import { webVitalsLogs, projects } from '@/shared/db/schemas';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+// Tamaño máximo aceptado del cuerpo JSON (los beacons reales son < 8KB).
+// Un solo check mata el vector de DB-bloat independientemente del schema.
+const MAX_BODY_BYTES = 65_536;
+
+/** Registro suelto de las listas RUM: claves string, valores primitivos. */
+const boundedEntry = z.record(z.string(), z.union([z.string().max(1024), z.number(), z.boolean(), z.null()]));
+
 // Define the validation schema for the incoming RUM v2.0 payload
 const vitalsSchema = z.object({
   projectId: z.string().uuid(),
   url: z.string().min(1).max(2048),
   deviceType: z.enum(['desktop', 'mobile', 'tablet']).optional().default('desktop'),
-  
+
   // RUM v2.0 enriched parameters
-  sessionId: z.string().optional(),
-  path: z.string().optional(),
+  sessionId: z.string().max(128).optional(),
+  path: z.string().max(512).optional(),
   device: z.object({
     deviceType: z.enum(['desktop', 'mobile', 'tablet']).optional(),
-    platform: z.string().optional(),
+    platform: z.string().max(64).optional(),
     screenWidth: z.number().optional(),
     screenHeight: z.number().optional(),
     dpr: z.number().optional(),
-    language: z.string().optional(),
-    browser: z.string().optional(),
-    browserVersion: z.string().optional(),
+    language: z.string().max(32).optional(),
+    browser: z.string().max(64).optional(),
+    browserVersion: z.string().max(32).optional(),
   }).optional(),
-  
-  connection: z.any().optional(),
-  memory: z.any().optional(),
-  timing: z.any().optional(),
-  
+
+  // Formas exactas que emite public/scripts/vitals.js (claves desconocidas
+  // se descartan al parsear — antes eran z.any() sin límite).
+  connection: z.object({
+    effectiveType: z.string().max(16).optional(),
+    downlink: z.number().optional(),
+    rtt: z.number().optional(),
+    saveData: z.boolean().optional(),
+  }).optional(),
+  memory: z.object({
+    usedJSHeapSize: z.number().optional(),
+    totalJSHeapSize: z.number().optional(),
+    jsHeapSizeLimit: z.number().optional(),
+  }).optional(),
+  timing: z.record(z.string(), z.number()).optional(),
+
   vitals: z.object({
     cls: z.number().optional(),
     lcp: z.number().optional(),
@@ -36,7 +54,7 @@ const vitalsSchema = z.object({
     fcp: z.number().optional(),
     ttfb: z.number().optional(),
   }).optional(),
-  
+
   // Legacy payload compatibility
   metrics: z.object({
     LCP: z.number().optional(),
@@ -45,13 +63,14 @@ const vitalsSchema = z.object({
     TTFB: z.number().optional(),
     FCP: z.number().optional(),
   }).optional(),
-  
+
   pageViews: z.number().optional(),
   sessionDuration: z.number().optional(),
   timeOnPage: z.number().optional(),
-  errors: z.array(z.any()).optional(),
-  interactions: z.array(z.any()).optional(),
-  resources: z.array(z.any()).optional(),
+  // El cliente envía máx 10/20/10 por lote; se tolera hasta 50 por margen.
+  errors: z.array(boundedEntry).max(50).optional(),
+  interactions: z.array(boundedEntry).max(50).optional(),
+  resources: z.array(boundedEntry).max(50).optional(),
   isFinal: z.boolean().optional(),
 });
 
@@ -101,7 +120,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Guard de tamaño: rechazar cuerpos anormalmente grandes antes de parsear
+    const contentLength = Number(request.headers.get('content-length') || '0');
+    if (contentLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+    }
+
     const body = await request.json();
+    if (JSON.stringify(body).length > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+    }
+
     const parsed = vitalsSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -159,7 +188,9 @@ export async function POST(request: NextRequest) {
       connection: data.connection || null,
       memory: data.memory || null,
       timing: data.timing || null,
-      rawPayload: body,
+      // M-1: persistir el payload PARSEADO (claves desconocidas descartadas
+      // y acotado), nunca el body crudo controlado por el cliente.
+      rawPayload: data,
     });
 
     return new NextResponse(null, {
