@@ -1,3 +1,5 @@
+import 'server-only';
+
 import crypto from 'node:crypto';
 import { eq, and } from 'drizzle-orm';
 import { directDb } from '@/shared/db';
@@ -7,6 +9,30 @@ const KEY_PREFIX = 'sa_live_';
 const KEY_BYTES = 32;
 const KEY_PREFIX_LEN = KEY_PREFIX.length;
 const KEY_TOTAL_LEN = KEY_PREFIX_LEN + KEY_BYTES * 2;
+
+// ─── Scopes de API ────────────────────────────────────────────────────────────
+// Vocabulario cerrado: la creación rechaza valores fuera de esta lista y los
+// endpoints públicos exigen el scope correspondiente. Una key con scope []
+// conserva acceso completo por compatibilidad con keys existentes.
+export const API_SCOPES = {
+  intelligenceRead: 'intelligence:read',
+  intelligenceWrite: 'intelligence:write',
+} as const;
+export type ApiScope = (typeof API_SCOPES)[keyof typeof API_SCOPES];
+
+export function isValidApiScope(value: string): value is ApiScope {
+  return (Object.values(API_SCOPES) as string[]).includes(value);
+}
+
+/** ¿Puede la key operar con `required`? ([] = sin restricción, back-compat). */
+export function apiKeyHasScope(
+  key: { scope?: string[] | null } | null | undefined,
+  required: ApiScope,
+): boolean {
+  if (!key) return false;
+  const scopes = key.scope ?? [];
+  return scopes.length === 0 || scopes.includes(required);
+}
 
 export interface ApiKeyRecord {
   id: string;

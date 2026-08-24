@@ -4,6 +4,8 @@ import {
   createApiKey,
   listApiKeys,
   revokeApiKey,
+  isValidApiScope,
+  API_SCOPES,
 } from '@/shared/lib/api-keys';
 
 export const dynamic = 'force-dynamic';
@@ -54,10 +56,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Name is required' }, { status: 400 });
     }
 
+    // Vocabulario cerrado de scopes: rechazar valores desconocidos (antes se
+    // persistía cualquier string y nunca se verificaba al usar la key).
+    const scopes: string[] = Array.isArray(scope) ? scope : [];
+    if (scopes.some((s) => typeof s !== 'string' || !isValidApiScope(s))) {
+      return NextResponse.json(
+        { success: false, error: `Invalid scope. Valid values: ${Object.values(API_SCOPES).join(', ')}` },
+        { status: 400 },
+      );
+    }
+
     const result = await createApiKey(
       user.id,
       name.trim(),
-      Array.isArray(scope) ? scope : [],
+      scopes,
       expiresAt ? new Date(expiresAt) : undefined,
     );
 

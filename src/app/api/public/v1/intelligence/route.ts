@@ -9,6 +9,7 @@ import {
 } from '@/shared/db/schemas';
 import { checkIntelScanRateLimit } from '@/shared/lib/ratelimit';
 import { withPublicApi, apiError, apiSuccess, type AuthenticatedRequest } from '@/server/api/public-router';
+import { API_SCOPES } from '@/shared/lib/api-keys';
 import type { Finding } from '@/server/intelligence/types/executor.types';
 
 export const dynamic = 'force-dynamic';
@@ -89,6 +90,8 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
     console.error('GET /api/public/v1/intelligence error:', error);
     return apiError('Internal server error', 500);
   }
+}, {
+  scope: API_SCOPES.intelligenceRead,
 });
 
 const scanSchema = z.object({
@@ -173,6 +176,8 @@ export const POST = withPublicApi(async (req: AuthenticatedRequest) => {
     console.error('POST /api/public/v1/intelligence error:', error);
     return apiError('Internal server error', 500);
   }
+}, {
+  scope: API_SCOPES.intelligenceWrite,
 });
 
 /**

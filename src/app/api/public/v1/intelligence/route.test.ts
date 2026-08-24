@@ -28,6 +28,8 @@ const mockCalculateRiskScore = vi.fn();
 
 vi.mock("@/shared/lib/api-keys", () => ({
   authenticateApiKey: mockAuthenticateApiKey,
+  apiKeyHasScope: vi.fn(() => true),
+  API_SCOPES: { intelligenceRead: "intelligence:read", intelligenceWrite: "intelligence:write" },
 }));
 
 vi.mock("@/shared/lib/ratelimit", () => ({

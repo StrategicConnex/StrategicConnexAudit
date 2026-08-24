@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateApiKey, type ApiKeyAuthResult } from '@/shared/lib/api-keys';
+import { authenticateApiKey, apiKeyHasScope, type ApiKeyAuthResult, type ApiScope } from '@/shared/lib/api-keys';
 import { directDb } from '@/shared/db';
 import { securityAuditLogs } from '@/shared/db/schemas';
 
@@ -11,6 +11,14 @@ export type RouteHandler = (
   req: AuthenticatedRequest,
   params?: unknown,
 ) => Promise<NextResponse> | NextResponse;
+
+export interface PublicApiOptions {
+  /**
+   * Scope requerido para este endpoint. Si la key declara scopes y no incluye
+   * el necesario → 403. Keys con scope [] conservan acceso completo (compat).
+   */
+  scope?: ApiScope;
+}
 
 interface ApiErrorResponse {
   success: false;
@@ -26,7 +34,7 @@ interface ApiErrorResponse {
  *
  * The handler receives an AuthenticatedRequest with `apiKeyAuth` attached.
  */
-export function withPublicApi(handler: RouteHandler) {
+export function withPublicApi(handler: RouteHandler, options?: PublicApiOptions) {
   return async (req: NextRequest, params?: unknown): Promise<NextResponse> => {
     const authResult = await authenticateApiKey(req);
 
@@ -43,6 +51,19 @@ export function withPublicApi(handler: RouteHandler) {
           'WWW-Authenticate': 'Bearer realm="scaudit-api", error="invalid_token"',
         },
       });
+    }
+
+    // Enforcement de scope (M-3): el campo se almacenaba pero nunca se
+    // verificaba — toda key era efectivamente full-access.
+    if (options?.scope && !apiKeyHasScope(authResult.keyRecord, options.scope)) {
+      return NextResponse.json(
+        {
+          success: false as const,
+          error: `API key does not include required scope: ${options.scope}`,
+          documentation_url: 'https://scaudit.vercel.app/docs/api',
+        },
+        { status: 403 },
+      );
     }
 
     // Attach auth info to request and pass to handler

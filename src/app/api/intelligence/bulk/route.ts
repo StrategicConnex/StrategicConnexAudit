@@ -5,6 +5,7 @@ import { intelligenceInvestigations, projects } from "@/shared/db/schemas";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { checkIntelScanRateLimit, buildRateLimitHeaders } from "@/shared/lib/ratelimit";
+import { apiKeyHasScope, API_SCOPES } from "@/shared/lib/api-keys";
 
 const bulkSchema = z.object({
   projectId: z.string().uuid(),
@@ -36,6 +37,15 @@ export async function POST(req: NextRequest) {
     const authContext = await validateApiKey(req);
     if (!authContext) {
       return NextResponse.json({ error: "Unauthorized. Invalid or missing API Key." }, { status: 401 });
+    }
+
+    // 1b. Enforcement de scope: lanzar escaneos requiere intelligence:write
+    // (keys con scope [] conservan acceso completo por compatibilidad).
+    if (!apiKeyHasScope({ scope: authContext.scope }, API_SCOPES.intelligenceWrite)) {
+      return NextResponse.json(
+        { error: `API key does not include required scope: ${API_SCOPES.intelligenceWrite}` },
+        { status: 403 },
+      );
     }
 
     // SECURITY: validación zod (antes se aceptaban strings de tamaño

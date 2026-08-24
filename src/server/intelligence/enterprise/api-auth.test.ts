@@ -80,7 +80,7 @@ describe("validateApiKey", () => {
     const rawKey = "sa_live_1234567890";
     const result = await validateApiKey(createRequest(`Bearer ${rawKey}`));
 
-    expect(result).toEqual({ userId: "user-1", keyId: "key-1" });
+    expect(result).toEqual({ userId: "user-1", keyId: "key-1", scope: [] });
     expect(mockFindFirst).toHaveBeenCalledTimes(1);
     // Verificar que la query use el hash, no el token en claro
     const whereArg = mockFindFirst.mock.calls[0][0].where;

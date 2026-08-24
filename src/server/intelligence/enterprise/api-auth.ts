@@ -7,6 +7,8 @@ import crypto from "crypto";
 export interface ApiAuthContext {
   userId: string;
   keyId: string;
+  /** Scopes declarados por la key ([] = acceso completo, compat). */
+  scope: string[];
 }
 
 /**
@@ -55,7 +57,8 @@ export async function validateApiKey(req: NextRequest): Promise<ApiAuthContext |
 
     return {
       userId: keyRecord.userId,
-      keyId: keyRecord.id
+      keyId: keyRecord.id,
+      scope: keyRecord.scope ?? [],
     };
   } catch (err) {
     console.error("Error validando API Key:", err);
