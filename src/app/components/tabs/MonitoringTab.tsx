@@ -8,8 +8,41 @@ import {
   Sliders, Play, Copy, Check, Sparkles, Send, ShieldCheck, Zap
 } from 'lucide-react';
 
+interface MonitoringProject {
+  id: string;
+  name: string;
+}
+
+interface DriftAlert {
+  id: string;
+  severity: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  resolved: boolean;
+}
+
+interface WebhookItem {
+  id: string;
+  name: string;
+  url: string;
+}
+
+interface ApiKeyItem {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  expiresAt: string | null;
+}
+
+type ScheduleInterval = 'daily' | 'weekly' | 'monthly';
+
+function isScheduleInterval(value: string): value is ScheduleInterval {
+  return value === 'daily' || value === 'weekly' || value === 'monthly';
+}
+
 interface MonitoringTabProps {
-  initialProjects: any[];
+  initialProjects: MonitoringProject[];
   selectedProjectId: string;
   setSelectedProjectId: (id: string) => void;
 }
@@ -29,19 +62,19 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
     nextRunAt: null
   });
   
-  const [alerts, setAlerts] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<DriftAlert[]>([]);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
   const [isSavingSchedule, setIsSavingSchedule] = useState(false);
 
   // State for Webhooks
-  const [webhooks, setWebhooks] = useState<any[]>([]);
+  const [webhooks, setWebhooks] = useState<WebhookItem[]>([]);
   const [newWebhookName, setNewWebhookName] = useState('');
   const [newWebhookUrl, setNewWebhookUrl] = useState('');
   const [isCreatingWebhook, setIsCreatingWebhook] = useState(false);
   const [isLoadingWebhooks, setIsLoadingWebhooks] = useState(true);
 
   // State for Developer API Keys
-  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
   const [newKeyName, setNewKeyName] = useState('');
   const [createdClearKey, setCreatedClearKey] = useState<string | null>(null);
   const [isCreatingKey, setIsCreatingKey] = useState(false);
@@ -414,7 +447,12 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 <select
                   disabled={!schedule.enabled}
                   value={schedule.interval}
-                  onChange={(e) => setSchedule(prev => ({ ...prev, interval: e.target.value as any }))}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (isScheduleInterval(value)) {
+                      setSchedule(prev => ({ ...prev, interval: value }));
+                    }
+                  }}
                   className="w-full bg-[#0c0c0e]/80 border border-border disabled:opacity-40 text-foreground/80 text-xs rounded-lg px-3 py-2.5 outline-none focus:border-primary/40"
                 >
                   <option value="daily">{t('intervalDaily')}</option>
