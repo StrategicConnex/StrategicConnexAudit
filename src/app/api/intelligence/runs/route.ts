@@ -159,6 +159,7 @@ export async function POST(req: NextRequest) {
         startedAt,
         completedAt: new Date()
       }).returning();
+      if (!insertedRun) throw new Error("Fallo al registrar la ejecución de la herramienta");
 
       // 2. Si hubo findings reales, insertarlos de forma atómica
       if (executionResult.findings && executionResult.findings.length > 0 && investigationId) {

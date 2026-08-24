@@ -64,7 +64,7 @@ export async function GET(
     }
 
     // 3. Generate CSV
-    const headers = Object.keys(data[0]);
+    const headers = Object.keys(data[0]!);
     const csvRows = [
       headers.join(','),
       ...data.map(row => 

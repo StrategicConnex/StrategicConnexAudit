@@ -188,7 +188,7 @@ function EventRow({ entry, isExpanded, onToggle }: {
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const meta = EVENT_LABELS[entry.eventType] || EVENT_LABELS.invalid_input;
+  const meta = EVENT_LABELS[entry.eventType] ?? EVENT_LABELS.invalid_input!;
   const metadataKeys = Object.keys(entry.metadata);
   const hasMetadata = metadataKeys.length > 0;
 
@@ -430,7 +430,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
   }
 
   // Regular alert card
-  const sev = SEVERITY_COLORS[entry.severity] || SEVERITY_COLORS.info;
+  const sev = SEVERITY_COLORS[entry.severity] ?? SEVERITY_COLORS.info!;
   const targetBadge = TARGET_BADGES[entry.target] || { label: entry.target, color: "text-muted-foreground border-border/60 bg-muted/60" };
 
   return (

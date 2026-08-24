@@ -28,7 +28,7 @@ describe("audit-log — logSecurityEvent (fail-safe)", () => {
       metadata: { prefix: "email_limit" },
     });
 
-    const line = spy.mock.calls[0][0]!;
+    const line = spy.mock.calls[0]![0];
     expect(typeof line).toBe("string");
     const event = JSON.parse(line);
     expect(event.audit).toBe(true);
@@ -45,7 +45,7 @@ describe("audit-log — logSecurityEvent (fail-safe)", () => {
   it("rellena defaults para detalles vacíos", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
     logSecurityEvent("csp_violation", {});
-    const event = JSON.parse(spy.mock.calls[0][0]! as string);
+    const event = JSON.parse(spy.mock.calls[0]![0] as string);
     expect(event.ip).toBe("unknown");
     expect(event.path).toBe("/");
     expect(event.method).toBe("UNKNOWN");

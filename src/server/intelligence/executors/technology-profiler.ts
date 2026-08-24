@@ -154,7 +154,7 @@ export const technologyProfilerExecutor: ToolExecutor<{ url: string }, Technolog
       for (const s of META_SIG) {
         const re = new RegExp('<meta[^>]+content=["\']([^"\']*)["\'][^>]+name=["\']' + s.name + '["\']', "i");
         const m = re.exec(html);
-        if (m && s.pattern?.test(m![1])) {
+        if (m && s.pattern?.test(m[1]!)) {
           const vers = m[1]!.match(/([\d.]+)/);
           detected.push({ ...s.tech, version: vers?.[1], evidence: "Meta " + s.name + ": " + m[1]!.substring(0, 60) });
         }
@@ -163,7 +163,7 @@ export const technologyProfilerExecutor: ToolExecutor<{ url: string }, Technolog
       const srcs: string[] = [];
       const srcRe = /<script[^>]*src=["\']([^"\']*)["\'][^>]*>/gi;
       let sm: RegExpExecArray | null;
-      while ((sm = srcRe.exec(html)) !== null) srcs.push(sm![1]);
+      while ((sm = srcRe.exec(html)) !== null) srcs.push(sm[1]!);
 
       for (const s of SCRIPT_SIG) {
         for (const src of srcs) {

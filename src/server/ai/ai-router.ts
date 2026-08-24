@@ -319,7 +319,7 @@ export async function callAIWithFallback(
       const latencyMs = Date.now() - startTime;
 
       // Cache successful response
-      setCache(cacheKey, content, modelId)!;
+      setCache(cacheKey, content, modelId!);
 
       console.log(
         `[AI Router] ${taskType} → ${modelId} (${latencyMs}ms) ` +

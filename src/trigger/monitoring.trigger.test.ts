@@ -127,7 +127,7 @@ describe("Trigger: Monitor Evaluation", () => {
 
     expect(result.evaluated).toBe(1);
     expect(mockInsertValues).toHaveBeenCalledTimes(1);
-    const alertValues = mockInsertValues.mock.calls[0][0]! as Record<string, unknown>;
+    const alertValues = mockInsertValues.mock.calls[0]![0] as Record<string, unknown>;
     expect(alertValues.projectId).toBe("p1");
     expect(alertValues.scheduleId).toBe("m1");
     expect(alertValues.severity).toBe("critical");

@@ -155,6 +155,7 @@ export const POST = withPublicApi(async (req: AuthenticatedRequest) => {
       targetType,
       status: 'running',
     }).returning();
+    if (!investigation) return apiError('Internal server error', 500);
 
     // Fire-and-forget: trigger async scan in background
     scanInBackground(investigation.id, projectId, normalizedTarget, userId).catch((err) => {

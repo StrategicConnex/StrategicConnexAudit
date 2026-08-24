@@ -134,7 +134,7 @@ function formatSlack(pattern: SiemPattern): WebhookPayload {
   lines.push(`\u2022 *Window:* ${pattern.firstSeen.toISOString()} \u2192 ${pattern.lastSeen.toISOString()}`);
   if (pattern.paths.length > 0) lines.push(`\u2022 *Paths:* ${pattern.paths.map(p => `\`${p}\``).join(", ")}`);
   if (pattern.metadataSamples.length > 0) {
-    const sample = pattern.metadataSamples[0];
+    const sample = pattern.metadataSamples[0]!;
     const extra = Object.entries(sample).filter(([k]) => !["ip","path","method"].includes(k))
       .map(([k, v]) => `\u2022 *${k}:* ${typeof v === "object" ? `\`${JSON.stringify(v)}\`` : v}`).join("\n");
     if (extra) lines.push(extra);

@@ -124,7 +124,7 @@ export function parseBashCommand(command: string, target: string): ParsedBashCom
     const ncMatch = cmd.match(/nc\s+(?:-\S+\s+)*([^\s|"'`]+)\s+(\d+)/i);
     if (ncMatch) {
       const ncHost = ncMatch[1];
-      const port = parseInt(ncMatch![2], 10);
+      const port = parseInt(ncMatch[2]!, 10);
       if (ncHost && !ncHost.includes("://") && port > 0 && port < 65536) {
         return { kind: "nc", host: ncHost, port };
       }
@@ -134,7 +134,7 @@ export function parseBashCommand(command: string, target: string): ParsedBashCom
   if (/nmap/i.test(cmd)) {
     const nmapMatch = cmd.match(/nmap\s+.*?-p\s+([\d,\-]+)\s+([^\s|"'`]+)/i);
     if (nmapMatch) {
-      const ports = expandPortList(nmapMatch![1]);
+      const ports = expandPortList(nmapMatch[1]!);
       const nmapHost = nmapMatch[2];
       if (ports.length && nmapHost) {
         return { kind: "nmap", host: nmapHost, ports };

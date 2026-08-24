@@ -200,6 +200,12 @@ export async function POST(req: NextRequest) {
       }).returning();
       return record;
     });
+    if (!investigation) {
+      return NextResponse.json({
+        success: false,
+        error: "Error interno del servidor"
+      }, { status: 500 });
+    }
 
     // ─── Background scan: aislamiento por fase ───────────────────
     (async () => {

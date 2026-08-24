@@ -108,7 +108,7 @@ describe("Trigger: Webhook Dispatch", () => {
 
     expect(result.delivered).toBe(1);
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [url, init] = mockFetch.mock.calls[0];
+    const [url, init] = mockFetch.mock.calls[0]!;
     expect(url).toBe("https://hooks.acme.com/receiver");
     expect(init?.method).toBe("POST");
     const headers = init?.headers as Record<string, string>;

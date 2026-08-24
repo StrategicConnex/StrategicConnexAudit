@@ -403,7 +403,7 @@ export default function ApiPlaygroundPage() {
     const url = new URL(endpoint.path, baseUrl);
     for (const p of endpoint.params) {
       if (p.in === 'query' && paramValues[p.name]) {
-        url.searchParams.set(p.name, paramValues![p.name]);
+        url.searchParams.set(p.name, paramValues[p.name]!);
       }
     }
     return url.toString();

@@ -32,10 +32,10 @@ describe("mitre-mapping — MITRE_MAPPING (fuente única de verdad)", () => {
   });
 
   it("usa IDs MITRE reales por táctica (Reconnaissance vs Resource Development)", () => {
-    expect(MITRE_MAPPING["dns.lookup"][0]!.tactic).toBe("Reconnaissance");
-    expect(MITRE_MAPPING["dns-brute"][0]!.tactic).toBe("Resource Development");
-    expect(MITRE_MAPPING["network.port_scan"][0]!.tactic).toBe("Discovery");
-    expect(MITRE_MAPPING["tls.scan"][0]!.tactic).toBe("Command and Control");
+    expect(MITRE_MAPPING["dns.lookup"]![0]!.tactic).toBe("Reconnaissance");
+    expect(MITRE_MAPPING["dns-brute"]![0]!.tactic).toBe("Resource Development");
+    expect(MITRE_MAPPING["network.port_scan"]![0]!.tactic).toBe("Discovery");
+    expect(MITRE_MAPPING["tls.scan"]![0]!.tactic).toBe("Command and Control");
   });
 });
 

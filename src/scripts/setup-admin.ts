@@ -31,7 +31,7 @@ if (!supabaseUrl || !serviceRoleKey) {
   process.exit(1);
 }
 
-const email = process.argv[2];
+const email = process.argv[2] ?? "";
 if (!email || !email.includes("@")) {
   console.error("❌ Uso: pnpm setup-admin <email>");
   console.error("   Ejemplo: pnpm setup-admin palacios_juan@hotmail.com");

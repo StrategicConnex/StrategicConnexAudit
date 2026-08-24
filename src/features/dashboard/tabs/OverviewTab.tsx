@@ -32,10 +32,9 @@ function LazyBenchmarkingSection({ projectId }: { projectId?: string }) {
     }
     const obs = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          obs.disconnect();
-        }
+        if (!entry || !entry.isIntersecting) return;
+        setInView(true);
+        obs.disconnect();
       },
       { rootMargin: '300px' } // start loading just before it scrolls into view
     );

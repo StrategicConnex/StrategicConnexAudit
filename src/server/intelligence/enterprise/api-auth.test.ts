@@ -83,7 +83,7 @@ describe("validateApiKey", () => {
     expect(result).toEqual({ userId: "user-1", keyId: "key-1", scope: [] });
     expect(mockFindFirst).toHaveBeenCalledTimes(1);
     // Verificar que la query use el hash, no el token en claro
-    const whereArg = mockFindFirst.mock.calls[0][0]!.where;
+    const whereArg = mockFindFirst.mock.calls[0]![0].where;
     const whereClause = JSON.stringify(whereArg);
     expect(whereClause).toContain(sha256(rawKey));
     expect(whereClause).not.toContain(rawKey);

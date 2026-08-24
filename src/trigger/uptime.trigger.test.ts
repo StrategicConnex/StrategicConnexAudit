@@ -100,12 +100,12 @@ describe("Trigger: Uptime Monitor", () => {
     expect(result.processed).toBe(1);
     expect(mockFetch).toHaveBeenCalledTimes(1);
     // HEAD + egress-guard (normalizeUrl aplicado)
-    const [url, init] = mockFetch.mock.calls[0];
+    const [url, init] = mockFetch.mock.calls[0]!;
     expect(url).toBe("https://acme.com");
     expect(init?.method).toBe("HEAD");
 
     expect(mockInsertValues).toHaveBeenCalledTimes(1);
-    const values = mockInsertValues.mock.calls[0][0]!;
+    const values = mockInsertValues.mock.calls[0]![0];
     expect(values.projectId).toBe("p1");
     expect(values.isUp).toBe(true);
     expect(values.statusCode).toBe(200);
@@ -123,7 +123,7 @@ describe("Trigger: Uptime Monitor", () => {
 
     expect(result.processed).toBe(1);
     expect(mockInsertValues).toHaveBeenCalledTimes(1);
-    const values = mockInsertValues.mock.calls[0][0]!;
+    const values = mockInsertValues.mock.calls[0]![0];
     expect(values.isUp).toBe(false);
     expect(values.errorMessage).toContain("ECONNREFUSED");
   });
@@ -138,7 +138,7 @@ describe("Trigger: Uptime Monitor", () => {
 
     expect(result.processed).toBe(1);
     expect(mockInsertValues).toHaveBeenCalledTimes(1);
-    const values = mockInsertValues.mock.calls[0][0]!;
+    const values = mockInsertValues.mock.calls[0]![0];
     expect(values.isUp).toBe(false);
     expect(values.statusCode).toBe(500);
     expect(values.errorMessage).toBeNull();

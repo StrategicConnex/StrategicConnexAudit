@@ -63,7 +63,7 @@ describe("Proxy — Security Headers", () => {
 
   it("CSP: script-src usa el MISMO nonce que x-csp-nonce", async () => {
     await proxyFn(createMockRequest("/login"));
-    const passedRequest = mockUpdateSession.mock.calls[0][0]!;
+    const passedRequest = mockUpdateSession.mock.calls[0]![0];
     const nonce = passedRequest.headers.get("x-csp-nonce");
     const csp = passedRequest.headers.get("content-security-policy");
     expect(csp).toContain(`'nonce-${nonce}'`);
@@ -71,7 +71,7 @@ describe("Proxy — Security Headers", () => {
 
   it("CSP: el header viaja en el REQUEST (Next.js extrae el nonce de ahí)", async () => {
     await proxyFn(createMockRequest("/login"));
-    const passedRequest = mockUpdateSession.mock.calls[0][0]!;
+    const passedRequest = mockUpdateSession.mock.calls[0]![0];
     expect(passedRequest.headers.get("content-security-policy")).toContain("default-src 'self'");
   });
 
@@ -161,7 +161,7 @@ describe("Proxy — Security Headers", () => {
   it("agrega x-csp-nonce al request", async () => {
     await proxyFn(createMockRequest("/login"));
 
-    const passedRequest = mockUpdateSession.mock.calls[0][0]!;
+    const passedRequest = mockUpdateSession.mock.calls[0]![0];
     const nonce = passedRequest.headers.get("x-csp-nonce");
     expect(nonce).toBeDefined();
     expect(nonce?.length ?? 0).toBeGreaterThan(0);
@@ -174,8 +174,8 @@ describe("Proxy — Security Headers", () => {
     await proxyFn(createMockRequest("/login"));
     await proxyFn(createMockRequest("/login"));
 
-    const req1 = mockUpdateSession.mock.calls[0][0]!;
-    const req2 = mockUpdateSession.mock.calls[1][0]!;
+    const req1 = mockUpdateSession.mock.calls[0]![0];
+    const req2 = mockUpdateSession.mock.calls[1]![0];
     const nonce1 = req1.headers.get("x-csp-nonce");
     const nonce2 = req2.headers.get("x-csp-nonce");
     expect(nonce1).not.toBe(nonce2);
@@ -185,7 +185,7 @@ describe("Proxy — Security Headers", () => {
     await proxyFn(createMockRequest("/login"));
 
     expect(mockUpdateSession).toHaveBeenCalledTimes(1);
-    const passedRequest = mockUpdateSession.mock.calls[0][0]!;
+    const passedRequest = mockUpdateSession.mock.calls[0]![0];
     expect(passedRequest.headers.get("user-agent")).toBe("test-agent");
   });
 

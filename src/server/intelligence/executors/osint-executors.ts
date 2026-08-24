@@ -136,7 +136,7 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
         if (vcard && vcard[1]) {
           const fn = vcard[1].find((item) => item[0] === "fn");
           if (fn) {
-            registrar! = fn[3];
+            registrar = fn[3] ?? "Desconocido";
           }
         }
       }

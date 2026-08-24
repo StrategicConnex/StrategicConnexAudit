@@ -28,7 +28,7 @@ describe("MermaidBlock (XSS defense en diagramas de la IA)", () => {
     render(<MermaidBlock code="flowchart TD\nA-->B" />);
     await waitFor(() => expect(renderMock).toHaveBeenCalled());
 
-    const initOptions = initializeMock.mock.calls[0][0]!;
+    const initOptions = initializeMock.mock.calls[0]![0];
     expect(initOptions.securityLevel).toBe("strict");
   });
 
@@ -43,7 +43,7 @@ describe("MermaidBlock (XSS defense en diagramas de la IA)", () => {
     expect(document.body.querySelector("script")).toBeNull();
     expect(document.body.innerHTML).not.toContain("<script>alert(1)");
     // El código pasa a mermaid.render (que aplica sanitización strict), no al DOM.
-    expect(renderMock.mock.calls[0][1]!).toContain("<script>");
+    expect(renderMock.mock.calls[0]![1]).toContain("<script>");
   });
 
   it("muestra el SVG generado por mermaid", async () => {

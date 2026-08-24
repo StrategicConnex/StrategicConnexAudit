@@ -47,7 +47,7 @@ export const scheduledScanTask = schedules.task({
     const errors: Array<{ scheduleId: string; error: string }> = [];
 
     for (const schedule of dueSchedules) {
-      const intervalMs = INTERVAL_MS[schedule.interval] ?? INTERVAL_MS.weekly;
+      const intervalMs = INTERVAL_MS[schedule.interval] ?? INTERVAL_MS.weekly ?? 0;
       const nextRunAt = new Date(now.getTime() + intervalMs);
 
       try {

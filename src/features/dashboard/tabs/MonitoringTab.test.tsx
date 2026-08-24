@@ -176,7 +176,7 @@ describe("MonitoringTab — schedule, webhooks, API keys, bulk scan y planes", (
     });
     // Botón de copiar (Copy) → clipboard (el último botón sin nombre; el + del webhook está antes)
     const emptyButtons = screen.getAllByRole("button", { name: "" });
-    fireEvent.click(emptyButtons![emptyButtons.length - 1]);
+    fireEvent.click(emptyButtons[emptyButtons.length - 1]!);
     expect(clipboardMock.writeText).toHaveBeenCalledWith("sa_live_clear_key_xyz");
   });
 
@@ -242,7 +242,7 @@ describe("MonitoringTab — schedule, webhooks, API keys, bulk scan y planes", (
     expect(selectButtons.length).toBe(2);
     expect(screen.getAllByText("planActive").length).toBe(1);
 
-    fireEvent.click(selectButtons![0]); // Starter
+    fireEvent.click(selectButtons[0]!); // Starter
     await waitFor(() => {
       expect(screen.queryByText("pricingTitle")).toBeNull(); // modal cerrado
     });

@@ -80,7 +80,8 @@ export const POST = withRateLimit(
           return record;
         });
 
-        queuedInvestigations.push(investigation)!;
+        if (!investigation) throw new Error("Fallo al crear la investigación en cola");
+        queuedInvestigations.push(investigation);
 
         // Fire-and-forget background execution using our established intelligence route
         const targetUrl = new URL("/api/intelligence", req.nextUrl!.origin);

@@ -137,6 +137,7 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
         startedAt: startTime,
       })
       .returning();
+    if (!run) throw new Error("Fallo al crear el registro de ejecución del escenario");
 
     // 2.5 Resolve the target (project domain) to substitute $TARGET in the
     //     executor command, and run the command inside the sandbox.

@@ -25,11 +25,11 @@ export async function checkQuota(
   requiredUnits: number
 ): Promise<QuotaCheckResult> {
   const planKey = planName.toLowerCase();
-  const maxQuota = QUOTAS_BY_PLAN[planKey] ?? QUOTAS_BY_PLAN.free;
+  const maxQuota = QUOTAS_BY_PLAN[planKey] ?? QUOTAS_BY_PLAN.free ?? 0;
 
   // Si es enterprise o infinito, pasamos rápido
   if (maxQuota >= 9999999) {
-    return { allowed: true, remainingUnits: maxQuota! };
+    return { allowed: true, remainingUnits: maxQuota };
   }
 
   // Calcular el inicio del mes actual

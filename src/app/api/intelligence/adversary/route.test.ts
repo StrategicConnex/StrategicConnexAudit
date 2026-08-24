@@ -123,7 +123,7 @@ describe("Adversary API — PATCH report", () => {
     expect(body.success).toBe(true);
 
     expect(dbMock.updateCalls).toHaveLength(1);
-    const { values, where } = dbMock.updateCalls[0];
+    const { values, where } = dbMock.updateCalls[0]!;
     expect(values).toMatchObject({ result: "detected", detectedBy: "EDR" });
     expect((values as { completedAt?: Date }).completedAt).toBeInstanceOf(Date);
     expect(where).toBeDefined();
