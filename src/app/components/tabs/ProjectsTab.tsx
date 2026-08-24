@@ -4,15 +4,7 @@ import React from 'react';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ProjectCard } from '../ProjectCard';
-import { projects } from '@/shared/db/schemas';
-
-type ProjectWithNested = typeof projects.$inferSelect & {
-  latestAudit?: {
-    id: string;
-    status: string;
-  } | null;
-  integrations?: unknown[] | null;
-};
+import type { ProjectWithNested } from '@/shared/db/types';
 
 interface ProjectsTabProps {
   dashboardData: ProjectWithNested[];

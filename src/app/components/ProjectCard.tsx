@@ -1,16 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { Globe, ChevronRight, ShieldCheck, Activity } from 'lucide-react';
-import { projects } from '@/shared/db/schemas';
+import type { ProjectWithNested } from '@/shared/db/types';
 
 interface ProjectCardProps {
-  project: typeof projects.$inferSelect & {
-    latestAudit?: {
-      id: string;
-      status: string;
-    } | null;
-    integrations?: unknown[] | null;
-  };
+  project: ProjectWithNested;
 }
 
 /* ─── Design-system-aware health score style ─────────────── */

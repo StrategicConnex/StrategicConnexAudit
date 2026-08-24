@@ -65,18 +65,10 @@ const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mo
 
 const AiCopilot = dynamic(() => import('./AiCopilot').then(mod => mod.AiCopilot), { ssr: false });
 
-import { projects } from '@/shared/db/schemas';
-
-type ProjectWithNested = typeof projects.$inferSelect & {
-  latestAudit?: {
-    id: string;
-    status: string;
-  } | null;
-  integrations?: unknown[] | null;
-};
+import { ProjectWithNested, type ProjectRow } from '@/shared/db/types';
 
 interface DashboardContainerProps {
-  initialProjects: (typeof projects.$inferSelect)[];
+  initialProjects: ProjectRow[];
   dashboardData: ProjectWithNested[];
   defaultTab?: DashboardTab;
 }

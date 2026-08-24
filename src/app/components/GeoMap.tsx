@@ -3,6 +3,7 @@
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { MapPin } from 'lucide-react';
 import type { Map as LeafletMap } from 'leaflet';
+import type { Investigation } from './tabs/intelligence/types';
 
 interface GeoLocation {
   lat: number;
@@ -16,33 +17,8 @@ interface GeoLocation {
   asn?: string;
 }
 
-interface GeoMetadata {
-  asnGeo?: {
-    latitude?: number;
-    longitude?: number;
-    ipAddress?: string;
-    cityName?: string;
-    countryName?: string;
-    countryCode?: string;
-    asn?: string;
-  } | null;
-  traceroute?: Array<{
-    hop?: number;
-    ip?: string;
-    hostname?: string;
-    countryCode?: string;
-    cityName?: string;
-    latencyMs?: number;
-  }> | null;
-  cdnWaf?: {
-    detected?: boolean;
-    name?: string;
-    provider?: string;
-  } | null;
-}
-
 interface GeoMapProps {
-  metadata?: GeoMetadata | null;
+  metadata?: Investigation["metadata"];
   target?: string;
 }
 
@@ -76,10 +52,10 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
           label: target || asnGeo.ipAddress || 'Target',
           sublabel: [asnGeo.cityName, asnGeo.countryName].filter(Boolean).join(', '),
           type: 'target',
-          countryCode: asnGeo.countryCode,
-          cityName: asnGeo.cityName,
-          ip: asnGeo.ipAddress,
-          asn: asnGeo.asn,
+          countryCode: asnGeo.countryCode ?? undefined,
+          cityName: asnGeo.cityName ?? undefined,
+          ip: asnGeo.ipAddress ?? undefined,
+          asn: asnGeo.asn ?? undefined,
         });
       }
     }
@@ -88,7 +64,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
     if (traceroute && Array.isArray(traceroute)) {
       for (const hop of traceroute) {
         if (hop.countryCode && hop.countryCode !== 'LAN') {
-          const coords = countryToLatLng(hop.countryCode, hop.cityName);
+          const coords = countryToLatLng(hop.countryCode, hop.cityName ?? undefined);
           const key = `${coords.lat.toFixed(1)}_${coords.lng.toFixed(1)}`;
           if (!seen.has(key)) {
             seen.add(key);
@@ -96,11 +72,11 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
               lat: coords.lat,
               lng: coords.lng,
               label: hop.hostname || hop.ip || `Hop ${hop.hop}`,
-              sublabel: `${hop.cityName || 'Unknown'}, ${hop.countryCode} · ${hop.latencyMs}ms`,
+              sublabel: `${hop.cityName || 'Unknown'}, ${hop.countryCode} • ${hop.latencyMs}ms`,
               type: 'hop',
-              countryCode: hop.countryCode,
-              cityName: hop.cityName,
-              ip: hop.ip,
+              countryCode: hop.countryCode ?? undefined,
+              cityName: hop.cityName ?? undefined,
+              ip: hop.ip ?? undefined,
             });
           }
         }

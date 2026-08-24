@@ -8,7 +8,7 @@ import { DownloadPdfButton } from '@/app/components/DownloadPdfButton';
 import { parseMarkdownReport, extractMermaidBlocks, tableRowsToChartData } from '../report-utils';
 import { MermaidBlock } from '@/app/components/MermaidBlock';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { projects } from '@/shared/db/schemas';
+import type { ProjectRow } from '@/shared/db/types';
 
 interface AIReportState {
   isGenerating: boolean;
@@ -27,7 +27,7 @@ interface AIReport {
 }
 
 interface ReportsTabProps {
-  initialProjects: (typeof projects.$inferSelect)[];
+  initialProjects: ProjectRow[];
   selectedProjectId: string;
   setSelectedProjectId: (id: string) => void;
   aiReport: AIReport;

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ProjectCard } from '../ProjectCard';
-import { projects } from '@/shared/db/schemas';
+import type { ProjectWithNested } from '@/shared/db/types';
 
 /**
  * BenchmarkingSection pulls in recharts (~570KB) — defer the chunk until the
@@ -54,13 +54,7 @@ function LazyBenchmarkingSection({ projectId }: { projectId?: string }) {
   );
 }
 
-export type ProjectWithNested = typeof projects.$inferSelect & {
-  latestAudit?: {
-    id: string;
-    status: string;
-  } | null;
-  integrations?: unknown[] | null;
-};
+export type { ProjectWithNested };
 
 interface OverviewTabProps {
   initialProjects: ProjectWithNested[];

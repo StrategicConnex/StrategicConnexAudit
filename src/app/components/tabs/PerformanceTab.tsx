@@ -9,10 +9,10 @@ import {
   AreaChart, Area, PieChart, Pie, Cell,
   ResponsiveContainer
 } from 'recharts';
-import { projects } from '@/shared/db/schemas';
+import type { ProjectRow } from '@/shared/db/types';
 
 interface PerformanceTabProps {
-  dashboardData: (typeof projects.$inferSelect)[];
+  dashboardData: ProjectRow[];
 }
 
 /* ─── Reusable color tokens ─────────────────────────────────── */
