@@ -51,7 +51,7 @@ export const POST = withRateLimit(
       const cookieHeader = req.headers.get("cookie") || "";
       const authHeader = req.headers.get("authorization") || "";
 
-      const queuedInvestigations: any[] = [];
+      const queuedInvestigations: Array<typeof intelligenceInvestigations.$inferSelect> = [];
 
       // Trigger each target asynchronously in RLS transactions
       for (const target of targets) {
