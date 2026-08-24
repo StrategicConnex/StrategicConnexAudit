@@ -6,14 +6,11 @@ import type { NextConfig } from "next";
 // and can conflict with Vercel's lambda tracing (intermittent
 // "Unable to find lambda for route" build failures observed on this project).
 const nextConfig: NextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
-    ],
-  },
+  // Sin remotePatterns: la app no carga imágenes remotas vía el optimizador
+  // de next/image (el logo es local; el branding de PDFs usa @react-pdf,
+  // que no pasa por este pipeline). El wildcard hostname:"**" era superficie
+  // de ataque sin uso legítimo.
+  images: {},
   // /docs/[...slug] renders the markdown from docs/ at REQUEST time (dynamic
   // rendering is required so the CSP nonce applies — see src/proxy.ts), so the
   // markdown files must ship inside the serverless function bundle.
