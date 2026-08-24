@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * SECRETOS — NUNCA importar desde componentes o código de navegador.
  *

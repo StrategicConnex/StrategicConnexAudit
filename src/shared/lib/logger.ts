@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { directDb } from "@/shared/db";
 import { auditLogs } from "@/shared/db/schemas";
 import { headers } from "next/headers";

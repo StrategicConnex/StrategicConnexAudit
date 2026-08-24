@@ -8,7 +8,10 @@ export default defineConfig({
     environment: 'jsdom',
     exclude: ['**/node_modules/**', '**/e2e/**', '**/.next/**', '**/test-results/**'],
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      // El guard server-only lanza en el runtime default (node/jsdom); en
+      // tests los módulos marcados deben resolverse a un stub inerte.
+      'server-only': path.resolve(__dirname, './scripts/stubs/server-only.ts'),
     },
     coverage: {
       provider: 'v8',

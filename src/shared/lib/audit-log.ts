@@ -1,3 +1,5 @@
+import 'server-only';
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Audit Log — Structured Security Event Logger
    
