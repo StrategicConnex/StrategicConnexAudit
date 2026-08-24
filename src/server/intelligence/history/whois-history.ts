@@ -32,7 +32,7 @@ export async function persistWhoisSnapshot(
   let diffSummary: string | null = null;
 
   if (lastSnapshot.length > 0) {
-    const prev = lastSnapshot[0];
+    const prev = lastSnapshot[0]!;
     prevFirstSeen = prev.firstSeenAt;
 
     if (prev.registrar !== snapshot.registrar) {
@@ -94,7 +94,7 @@ export async function queryWhoisHistory(params: {
     domain: r.domain, registrar: r.registrar,
     createdDate: r.createdDate, expiresDate: r.expiresDate, updatedDate: r.updatedDate,
     status: (r.status as string[]) ?? [], nameservers: (r.nameservers as string[]) ?? [],
-    abuseContact: r.abuseContact, registrantOrg: r.registrantOrg,
+    abuseContact: r.abuseContact ?? null, registrantOrg: r.registrantOrg ?? null,
     originalData: (r.originalSnapshot as Record<string, unknown>) ?? {},
     snapshotDate: r.snapshotDate.toISOString(),
   }));
@@ -112,7 +112,7 @@ export async function getWhoisDomainHistory(projectId: string, domain: string, l
     domain: r.domain, registrar: r.registrar,
     createdDate: r.createdDate, expiresDate: r.expiresDate, updatedDate: r.updatedDate,
     status: (r.status as string[]) ?? [], nameservers: (r.nameservers as string[]) ?? [],
-    abuseContact: r.abuseContact, registrantOrg: r.registrantOrg,
+    abuseContact: r.abuseContact ?? null, registrantOrg: r.registrantOrg ?? null,
     originalData: (r.originalSnapshot as Record<string, unknown>) ?? {},
   }));
 }
@@ -121,7 +121,7 @@ export async function detectWhoisChanges(projectId: string, domain: string): Pro
   const snapshots = await directDb.select().from(whoisHistory).where(and(eq(whoisHistory.projectId, projectId), eq(whoisHistory.domain, domain))).orderBy(desc(whoisHistory.snapshotDate)).limit(2);
   if (snapshots.length < 2) return [];
 
-  const curr = snapshots[0];
+  const curr = snapshots[0]!;
   const changes: WhoisChange[] = [];
 
   if (curr.diffSummary) {
@@ -129,11 +129,11 @@ export async function detectWhoisChanges(projectId: string, domain: string): Pro
     for (const part of parts) {
       const match = part.match(/^([^:]+): (.+) → (.+)$/);
       if (match) {
-        const field = match[1].toLowerCase().replace(/[^a-z0-9]/g, '');
+        const field = match[1]!.toLowerCase().replace(/[^a-z0-9]/g, '');
         changes.push({
-          field, label: match[1],
-          previousValue: match[2] === '(none)' ? null : match[2],
-          currentValue: match[3] === '(none)' ? null : match[3],
+          field, label: match[1]!,
+          previousValue: match[2]! === '(none)' ? null : match[2],
+          currentValue: match[3]! === '(none)' ? null : match[3],
           severity: field === 'expiresdate' ? 'critical' as const : 'warning' as const,
           detectedAt: curr.snapshotDate,
         });

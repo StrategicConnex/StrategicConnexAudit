@@ -39,16 +39,16 @@ export function parseMarkdownReport(text: string): ParsedReport {
 
   // Parse Title: "# 📊 Reporte Estratégico Mensual SEO — ..."
   const titleMatch = text.match(/# 📊 Reporte Estratégico Mensual SEO —\s*(.*)/i);
-  if (titleMatch) title = titleMatch[1].trim();
+  if (titleMatch) title = titleMatch[1]!.trim();
 
   // Split by ## headers
   const sections = text.split(/##\s+/);
   for (const section of sections) {
     if (section.startsWith("🏢 Resumen Ejecutivo") || section.toLowerCase().includes("resumen ejecutivo")) {
-      summary = section.replace(/^(🏢\s*)?Resumen Ejecutivo\s*/i, "").trim().split(/^---\s*$/m)[0].trim();
+      summary = section.replace(/^(🏢\s*)?Resumen Ejecutivo\s*/i, "").trim().split(/^---\s*$/m)[0]!.trim();
 
     } else if (section.startsWith("📈 Análisis de Rendimiento") || section.toLowerCase().includes("rendimiento y visibilidad")) {
-      const perfSection = section.replace(/^(📈\s*)?Análisis de Rendimiento y Visibilidad\s*/i, "").trim().split(/^---\s*$/m)[0].trim();
+      const perfSection = section.replace(/^(📈\s*)?Análisis de Rendimiento y Visibilidad\s*/i, "").trim().split(/^---\s*$/m)[0]!.trim();
 
       const tableLines = perfSection.match(/\|([^|\n]+)\|([^|\n]+)\|([^|\n]+)\|/g);
       if (tableLines) {
@@ -56,38 +56,38 @@ export function parseMarkdownReport(text: string): ParsedReport {
           .map(line => line.split("|").map(c => c.trim()).filter(Boolean))
           .filter(cells => {
             if (cells.length < 3) return false;
-            if (cells[0].includes("---") || cells[0].toLowerCase().includes("métrica")) return false;
+            if (cells[0]!.includes("---") || cells[0]!.toLowerCase().includes("métrica")) return false;
             return true;
           })
           .map(cells => ({
-            metric: cells[0].replace(/\*\*/g, ""),
-            value: cells[1],
-            status: cells[2]
+            metric: cells[0]!.replace(/\*\*/g, ""),
+            value: cells[1]!,
+            status: cells[2]!,
           }));
       }
 
-      performanceIntro = perfSection.split(/\|/)[0].trim();
+      performanceIntro = perfSection.split(/\|/)[0]!.trim();
 
     } else if (section.startsWith("🛠️ Diagnóstico de Salud") || section.toLowerCase().includes("salud técnica y velocidad")) {
-      const healthPart = section.replace(/^(🛠️\s*)?Diagnóstico de Salud Técnica y Velocidad\s*/i, "").trim().split(/^---\s*$/m)[0].trim();
+      const healthPart = section.replace(/^(🛠️\s*)?Diagnóstico de Salud Técnica y Velocidad\s*/i, "").trim().split(/^---\s*$/m)[0]!.trim();
 
       const scoreMatch = healthPart.match(/(?:#+\s*)?🏆\s*(\d+)\s*\/\s*100/i);
       if (scoreMatch) healthScore = parseInt(scoreMatch[1], 10);
 
       const classificationMatch = healthPart.match(/Clasificación:\s*([^*|\n]+)/i);
-      if (classificationMatch) healthClassification = classificationMatch[1].trim();
+      if (classificationMatch) healthClassification = classificationMatch[1]!.trim();
 
       const lcpMatch = healthPart.match(/Largest Contentful Paint \(LCP\):\s*([^*|\n]+)/i);
-      if (lcpMatch) lcp = lcpMatch[1].trim();
+      if (lcpMatch) lcp = lcpMatch[1]!.trim();
 
       const inpMatch = healthPart.match(/Interaction to Next Paint \(INP\):\s*([^*|\n]+)/i);
-      if (inpMatch) inp = inpMatch[1].trim();
+      if (inpMatch) inp = inpMatch[1]!.trim();
 
       const clsMatch = healthPart.match(/Cumulative Layout Shift \(CLS\):\s*([^*|\n]+)/i);
-      if (clsMatch) cls = clsMatch[1].trim();
+      if (clsMatch) cls = clsMatch[1]!.trim();
 
     } else if (section.startsWith("🎯 Plan de Acción") || section.toLowerCase().includes("plan de acción")) {
-      const planPart = section.replace(/^(🎯\s*)?Plan de Acción Priorizado[^]*?\n/i, "").trim().split(/^---\s*$/m)[0].trim();
+      const planPart = section.replace(/^(🎯\s*)?Plan de Acción Priorizado[^]*?\n/i, "").trim().split(/^---\s*$/m)[0]!.trim();
 
       const lines = planPart.split("\n");
       let currentItem: ParsedReport['planItems'][number] | null = null;
@@ -98,12 +98,12 @@ export function parseMarkdownReport(text: string): ParsedReport {
           if (currentItem) planItems.push(currentItem);
 
           let priority: 'Alta' | 'Media' | 'Baja' = 'Media';
-          if (matchNum[1].toLowerCase().includes("alta")) priority = 'Alta';
-          else if (matchNum[1].toLowerCase().includes("baja")) priority = 'Baja';
+          if (matchNum[1]!.toLowerCase().includes("alta")) priority = 'Alta';
+          else if (matchNum[1]!.toLowerCase().includes("baja")) priority = 'Baja';
 
           currentItem = {
-            title: matchNum[1].replace(/\((?:Prioridad\s*)?(?:Alta|Media|Baja)\)/i, "").trim(),
-            desc: matchNum[2].trim(),
+            title: matchNum[1]!.replace(/\((?:Prioridad\s*)?(?:Alta|Media|Baja)\)/i, "").trim(),
+            desc: matchNum[2]!.trim(),
             priority,
           };
         } else if (line.trim().startsWith("*") || line.trim().startsWith("-")) {
@@ -158,7 +158,7 @@ export function extractMermaidBlocks(text: string): { code: string }[] {
   const regex = /```mermaid\s*\n([\s\S]*?)```/g;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
-    const code = match[1].trim();
+    const code = match[1]!.trim();
     if (code) blocks.push({ code });
   }
   return blocks;
@@ -197,7 +197,7 @@ function parseNumericValue(value: string): number | null {
   let multiplier = 1;
   const suffixMatch = cleaned.match(/([kKmM])$/);
   if (suffixMatch) {
-    multiplier = suffixMatch[1].toLowerCase() === 'k' ? 1_000 : 1_000_000;
+    multiplier = suffixMatch[1]!.toLowerCase() === 'k' ? 1_000 : 1_000_000;
     cleaned = cleaned.slice(0, -1);
   }
 
@@ -207,7 +207,7 @@ function parseNumericValue(value: string): number | null {
   //  - "6.74" → decimal (6.74)  - "124.800" → miles (124800)
   if (cleaned.includes(',')) {
     const parts = cleaned.split(',');
-    const last = parts[parts.length - 1];
+    const last = parts[parts.length - 1]!;
     // Coma de miles solo si el último grupo tiene exactamente 3 dígitos,
     // no hay punto decimal y todos los grupos intermedios son de 3 dígitos.
     const isThousands =

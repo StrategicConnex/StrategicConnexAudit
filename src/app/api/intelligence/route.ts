@@ -204,6 +204,13 @@ export async function POST(req: NextRequest) {
       return record;
     });
 
+    if (!investigation) {
+      return NextResponse.json(
+        { success: false, error: "No se pudo registrar la investigación" },
+        { status: 500 }
+      );
+    }
+
     createdInvestigationId = investigation.id;
     const tStart = Date.now();
 

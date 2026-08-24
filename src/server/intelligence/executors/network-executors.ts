@@ -48,7 +48,7 @@ function getLocalGeoIPFallback(ip: string) {
     { country: "Reino Unido", code: "GB", region: "England", city: "London", lat: 51.5074, lon: -0.1278, asn: "AS13335", isp: "Cloudflare, Inc." },
   ];
 
-  const loc = locations[hash % locations.length];
+  const loc = locations[hash % locations.length]!;
   return {
     countryName: loc.country,
     countryCode: loc.code,
@@ -268,10 +268,10 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, GeoIpOutput> = {
     if (!net.isIP(ip)) {
       try {
         const resolved4 = await dns.resolve4(ip).catch(() => []);
-        if (resolved4.length > 0) ipv4 = resolved4[0];
+        if (resolved4.length > 0) ipv4 = resolved4[0]!;
         
         const resolved6 = await dns.resolve6(ip).catch(() => []);
-        if (resolved6.length > 0) ipv6 = resolved6[0];
+        if (resolved6.length > 0) ipv6 = resolved6[0]!;
         
         targetIp = ipv4 || ipv6 || ip;
       } catch {}
@@ -383,7 +383,7 @@ export const networkTracerouteExecutor: ToolExecutor<{ host: string }, Tracerout
       try {
         const resolved = await dns.resolve4(host);
         if (resolved.length > 0) {
-          ip = resolved[0];
+            ip = resolved[0]!;
         }
       } catch {
         // Fallback
@@ -492,7 +492,7 @@ export const networkTracerouteExecutor: ToolExecutor<{ host: string }, Tracerout
           severity: "info",
           confidence: 0.9,
           title: "Tránsito de Red Estructurado (Hops)",
-          description: `El trazado de red finalizó con éxito en ${hops.length} saltos con un RTT final de ${hops[hops.length - 1].latencyMs}ms.`,
+          description: `El trazado de red finalizó con éxito en ${hops.length} saltos con un RTT final de ${hops[hops.length - 1]!.latencyMs}ms.`,
           affectedAsset: host,
           evidence: { hopsCount: hops.length },
         },
@@ -625,7 +625,7 @@ export const networkCdnExecutor: ToolExecutor<{ domain: string }, CdnOutput> = {
     try {
       const cnames = await dns.resolve(domain, "CNAME");
       if (cnames && cnames.length > 0) {
-        const cname = cnames[0].toLowerCase();
+        const cname = cnames[0]!.toLowerCase();
         if (cname.includes("cloudflare")) { provider = "Cloudflare"; viaCNAME = true; }
         else if (cname.includes("cloudfront")) { provider = "AWS CloudFront"; viaCNAME = true; }
         else if (cname.includes("fastly")) { provider = "Fastly"; viaCNAME = true; }

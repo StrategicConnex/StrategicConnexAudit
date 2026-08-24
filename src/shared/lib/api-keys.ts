@@ -127,6 +127,9 @@ export async function createApiKey(
       userId, name, keyPrefix, hashedKey, scope,
       expiresAt: expiresAt ?? null,
     }).returning();
+    if (!record) {
+      return { error: 'Failed to create API key' };
+    }
     return {
       rawKey,
       record: {
