@@ -28,6 +28,26 @@ import { updateSession } from "@/shared/lib/supabase/middleware";
  */
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV === "development";
+
+  // Desarrollo: CSP permisivo sin nonce. Turbopack inyecta <script src> sin
+  // nonce en dev (gap conocido del modo dev) y con strict-dynamic esos chunks
+  // se bloquean → ruido de violaciones + latencia del endpoint de reportes.
+  // Producción conserva la política estricta íntegra.
+  if (isDev) {
+    return [
+      `default-src 'self'`,
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
+      `style-src 'self' 'unsafe-inline'`,
+      `object-src 'none'`,
+      `img-src 'self' data: https:`,
+      `font-src 'self' data:`,
+      `connect-src 'self' https://*.supabase.co`,
+      `frame-ancestors 'none'`,
+      `base-uri 'self'`,
+      `form-action 'self'`,
+    ].join("; ");
+  }
+
   const directives = [
     `default-src 'self'`,
     // Scripts: self (Next.js bundles) + per-request nonce (inline hydration
