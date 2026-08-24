@@ -58,7 +58,7 @@ export const POST = withRateLimit(
         if (projectList.length === 0) {
           return null;
         }
-        const project = projectList[0];
+        const project = projectList[0]!;
 
         // Obtain historical metrics concurrently
         const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([

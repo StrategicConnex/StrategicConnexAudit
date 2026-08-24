@@ -156,7 +156,7 @@ export function NeuralNetworkBackground({ listening = false }: NeuralNetworkBack
       let x: number;
       let y: number;
       if (isCluster) {
-        const c = clusterCenters[i % CLUSTER_COUNT];
+        const c = clusterCenters[i % CLUSTER_COUNT]!;
         // Desviación gaussiana aproximada (suma de 2 uniformes) → densidad real
         const spread = (Math.random() + Math.random() - 1) * 0.1;
         x = c.x + spread;
@@ -206,8 +206,8 @@ export function NeuralNetworkBackground({ listening = false }: NeuralNetworkBack
       // 1) Conexiones (alfa por proximidad)
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
-          const a = nodes[i];
-          const b = nodes[j];
+          const a = nodes[i]!;
+          const b = nodes[j]!;
           const ax = a.x * w;
           const ay = a.y * h;
           const bx = b.x * w;

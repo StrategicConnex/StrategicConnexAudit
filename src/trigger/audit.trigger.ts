@@ -89,16 +89,16 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
 
   // 1. Extracción de etiqueta Title
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const title = titleMatch ? titleMatch[1].trim() : null;
+  const title = titleMatch ? titleMatch[1]!.trim() : null;
 
   // 2. Extracción de Meta Descripción
   let metaDescription: string | null = null;
   const descMatch1 = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([\s\S]*?)["']/i);
   const descMatch2 = html.match(/<meta[^>]*content=["']([\s\S]*?)["'][^>]*name=["']description["']/i);
   if (descMatch1) {
-    metaDescription = descMatch1[1].trim();
+    metaDescription = descMatch1[1]!.trim();
   } else if (descMatch2) {
-    metaDescription = descMatch2[1].trim();
+    metaDescription = descMatch2[1]!.trim();
   }
 
   // 3. Extracción de etiquetas H1

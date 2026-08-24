@@ -65,7 +65,7 @@ function ipv6ToBuffer(ip: string): Uint8Array {
   const normalized = normalizeIPv6(ip);
   const parts = normalized.split(":");
   for (let i = 0; i < 8; i++) {
-    const val = parseInt(parts[i], 16);
+    const val = parseInt(parts[i] ?? "0", 16);
     buffer[i * 2] = (val >> 8) & 0xff;
     buffer[i * 2 + 1] = val & 0xff;
   }
@@ -73,7 +73,7 @@ function ipv6ToBuffer(ip: string): Uint8Array {
 }
 
 function ipInCidr(ip: string, cidr: string): boolean {
-  const [subnet, prefixStr] = cidr.split("/");
+  const [subnet = "", prefixStr = "0"] = cidr.split("/");
   const prefix = parseInt(prefixStr, 10);
 
   if (net.isIPv4(ip) && net.isIPv4(subnet)) {
@@ -92,7 +92,7 @@ function ipInCidr(ip: string, cidr: string): boolean {
       if (bits <= 0) break;
       const maskSize = Math.min(bits, 8);
       const mask = ((0xff00 >> maskSize) & 0xff) >>> 0;
-      if ((ipBuf[i] & mask) !== (subnetBuf[i] & mask)) {
+      if (((ipBuf[i] ?? 0) & mask) !== ((subnetBuf[i] ?? 0) & mask)) {
         return false;
       }
       bits -= 8;
@@ -114,13 +114,13 @@ function ipv4MappedToIpv4(ip: string): string | null {
 
   // Dotted-quad form: ::ffff:127.0.0.1
   const dotted = lower.match(/::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
-  if (dotted) return dotted[1];
+  if (dotted) return dotted[1]!;
 
   // Hexadecimal form: last 32 bits encode the IPv4, e.g. ::ffff:7f00:1
   const hex = lower.match(/^(?:.*:)?ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
   if (hex) {
-    const hi = parseInt(hex[1], 16);
-    const lo = parseInt(hex[2], 16);
+    const hi = parseInt(hex[1]!, 16);
+    const lo = parseInt(hex[2]!, 16);
     return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
   }
 

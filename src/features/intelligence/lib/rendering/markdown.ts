@@ -34,7 +34,7 @@ export function parseMarkdown(md: string): RenderedBlock[] {
   let codeLang = '';
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i]!;
 
     if (line.trim().startsWith('```')) {
       if (inCode) {
@@ -89,7 +89,7 @@ export function parseMarkdown(md: string): RenderedBlock[] {
 
     const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
     if (olMatch) {
-      const itemContent = olMatch[2];
+      const itemContent = olMatch[2]!;
       if (currentBlock && currentBlock.type === 'ol') {
         currentBlock.items?.push(itemContent);
       } else {

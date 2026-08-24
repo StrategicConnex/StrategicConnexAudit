@@ -50,7 +50,7 @@ export const triggerAudit = authenticatedAction(
       projectId, type: "full", status: "pending", startedAt: new Date(), createdBy: user.id,
     }).returning();
 
-    return { success: true, auditId: audit.id, projectId, userId: user.id };
+    return { success: true, auditId: audit!.id, projectId, userId: user.id };
   }
 );
 
@@ -125,19 +125,19 @@ async function analyzeUrl(targetUrl: string) {
 
   const html = await response.text();
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const title = titleMatch ? titleMatch[1].trim() : null;
+  const title = titleMatch ? titleMatch[1]!.trim() : null;
 
   let metaDescription: string | null = null;
   const dm1 = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([\s\S]*?)["']/i);
   const dm2 = html.match(/<meta[^>]*content=["']([\s\S]*?)["'][^>]*name=["']description["']/i);
-  if (dm1) metaDescription = dm1[1].trim();
-  else if (dm2) metaDescription = dm2[1].trim();
+  if (dm1) metaDescription = dm1[1]!.trim();
+  else if (dm2) metaDescription = dm2[1]!.trim();
 
   const h1Tags: string[] = [];
   const h1r = /<h1[^>]*>([\s\S]*?)<\/h1>/gi;
   let m1;
   while ((m1 = h1r.exec(html)) !== null) {
-    const c = m1[1].replace(/<[^>]*>/g, "").trim();
+    const c = m1[1]!.replace(/<[^>]*>/g, "").trim();
     if (c) h1Tags.push(c);
   }
 
@@ -145,12 +145,12 @@ async function analyzeUrl(targetUrl: string) {
   const h2r = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
   let m2;
   while ((m2 = h2r.exec(html)) !== null && h2Tags.length < 30) {
-    const c = m2[1].replace(/<[^>]*>/g, "").trim();
+    const c = m2[1]!.replace(/<[^>]*>/g, "").trim();
     if (c) h2Tags.push(c);
   }
 
   const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  const bodyText = bodyMatch ? bodyMatch[1].replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "").replace(/<[^>]*>/g, " ") : "";
+  const bodyText = bodyMatch ? bodyMatch[1]!.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "").replace(/<[^>]*>/g, " ") : "";
   const wordCount = bodyText.split(/\s+/).filter(w => w.length > 0).length;
 
   return { statusCode: response.status, contentType, title, metaDescription, h1Tags, h2Tags, wordCount };
