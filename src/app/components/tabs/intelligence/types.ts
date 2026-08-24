@@ -63,6 +63,9 @@ export interface Investigation {
       zipCode: string | null;
       asn: string | null;
       asName: string | null;
+      /** IPs resueltas cuando el objetivo es un hostname dual-stack */
+      ipv4?: string | null;
+      ipv6?: string | null;
       error?: string;
     } | null;
     reverseDns?: string[] | null;
