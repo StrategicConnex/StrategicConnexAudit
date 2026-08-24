@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Activity } from "lucide-react";
-import { AttackSurfaceGraph } from "./AttackSurfaceGraph";
+import { TopologyGraph } from "./TopologyGraph";
 
 interface TopologyViewProps {
   projectId: string;
@@ -20,7 +20,7 @@ export function TopologyView({ projectId }: TopologyViewProps) {
         </div>
       </div>
       <div className="p-4 bg-card border border-border rounded-xl">
-        <AttackSurfaceGraph projectId={projectId} />
+        <TopologyGraph projectId={projectId} />
       </div>
     </div>
   );

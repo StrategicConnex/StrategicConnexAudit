@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { AttackSurfaceGraph } from "./AttackSurfaceGraph";
+import { TopologyGraph } from "./TopologyGraph";
 
 // ReactFlow es pesado y requiere canvas; lo mockeamos para renderizar el
 // componente en jsdom y verificar el sink del <style>.
@@ -21,7 +21,7 @@ beforeEach(() => {
   global.fetch = fetchMock as unknown as typeof fetch;
 });
 
-describe("AttackSurfaceGraph (sink <style> y datos del grafo)", () => {
+describe("TopologyGraph (sink <style> y datos del grafo)", () => {
   it("el bloque <style> inyectado es una CONSTANTE — no interpola datos del fetch", async () => {
     // El API devuelve nodos con labels controlables (datos del objetivo).
     fetchMock.mockResolvedValue({
@@ -35,7 +35,7 @@ describe("AttackSurfaceGraph (sink <style> y datos del grafo)", () => {
       }),
     });
 
-    render(<AttackSurfaceGraph projectId="p1" />);
+    render(<TopologyGraph projectId="p1" />);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
     const styleEl = document.querySelector("style");
@@ -61,7 +61,7 @@ describe("AttackSurfaceGraph (sink <style> y datos del grafo)", () => {
       }),
     });
 
-    render(<AttackSurfaceGraph projectId="p1" />);
+    render(<TopologyGraph projectId="p1" />);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
     // Los labels van a ReactFlow como props (render seguro), no a innerHTML.
@@ -71,7 +71,7 @@ describe("AttackSurfaceGraph (sink <style> y datos del grafo)", () => {
 
   it("muestra el estado de loading antes de que llegue el fetch", () => {
     fetchMock.mockReturnValue(new Promise(() => {}));
-    render(<AttackSurfaceGraph projectId="p1" />);
+    render(<TopologyGraph projectId="p1" />);
     expect(screen.getAllByText(/Loading Topology/i).length).toBeGreaterThan(0);
   });
 });

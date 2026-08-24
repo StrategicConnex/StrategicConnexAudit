@@ -11,11 +11,11 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-interface AttackSurfaceGraphProps {
+interface TopologyGraphProps {
   projectId: string;
 }
 
-export function AttackSurfaceGraph({ projectId }: AttackSurfaceGraphProps) {
+export function TopologyGraph({ projectId }: TopologyGraphProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
