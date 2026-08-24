@@ -296,11 +296,14 @@ export async function GET(req: NextRequest) {
       return ep && (ep.gscRecords.length > 0 || ep.ga4Records.length > 0);
     });
 
-    const headers = {
+    // L-3: 'same-origin' NO es un valor válido de ACAO (los navegadores lo
+    // tratan como deny por accidente). Sin allowlist configurada se omite el
+    // header: las requests same-origin no necesitan CORS.
+    const headers: Record<string, string> = {
       'X-RateLimit-Remaining': remaining.toString(),
-      'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
-        ? process.env.ALLOWED_ORIGINS || 'same-origin' 
-        : '*',
+      ...(process.env.NODE_ENV === 'production'
+        ? (process.env.ALLOWED_ORIGINS ? { 'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGINS } : {})
+        : { 'Access-Control-Allow-Origin': '*' }),
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     };
@@ -337,8 +340,12 @@ export async function OPTIONS() {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization'
   };
 
+  // Sin allowlist en producción se OMITE el header (same-origin no necesita
+  // CORS) en lugar de enviar el valor inválido 'same-origin'.
   if (process.env.NODE_ENV === 'production') {
-    headers['Access-Control-Allow-Origin'] = process.env.ALLOWED_ORIGINS || 'same-origin';
+    if (process.env.ALLOWED_ORIGINS) {
+      headers['Access-Control-Allow-Origin'] = process.env.ALLOWED_ORIGINS;
+    }
   } else {
     headers['Access-Control-Allow-Origin'] = '*';
   }
