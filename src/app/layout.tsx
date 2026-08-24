@@ -87,8 +87,12 @@ export default async function RootLayout({
          * this meta can never weaken the header policy; it only guarantees a
          * strict policy if the proxy header were ever absent. script-src
          * deliberately has no 'unsafe-inline' (it would disable the nonce).
+         *
+         * SOLO PRODUCCIÓN: en dev Turbopack inyecta scripts sin nonce y la
+         * meta estricta los bloquea aunque el header sea permisivo (las
+         * políticas se intersectan) → la página nunca hidrata.
          */}
-        {nonce ? (
+        {nonce && !isDev ? (
           <meta
             httpEquiv="Content-Security-Policy"
             content={`default-src 'self'; script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}; style-src 'self' 'unsafe-inline'; object-src 'none'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'`}
