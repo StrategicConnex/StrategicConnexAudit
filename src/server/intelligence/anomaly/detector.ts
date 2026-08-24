@@ -171,7 +171,7 @@ export async function detectErrorRateAnomalies(
   );
 
   const buckets = rows.rows as Array<{ bucket: string; cnt: number }>;
-  const counts = buckets.map((r: any) => Number(r.cnt));
+  const counts = buckets.map((r) => Number(r.cnt));
 
   if (counts.length < 3) {
     return { metricType: "error_rate", checked: false, reason: "insufficient data", anomalies: 0 };

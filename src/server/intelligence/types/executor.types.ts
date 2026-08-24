@@ -30,7 +30,7 @@ export interface Finding {
   /** Activo afectado (dominio, URL, IP) */
   affectedAsset?: string;
   /** Evidencia técnica estructurada */
-  evidence?: Record<string, any>;
+  evidence?: Record<string, unknown>;
   /** Impacto numérico en el score de riesgo */
   scoreImpact?: number;
 }
@@ -40,7 +40,7 @@ export interface ExecutionContext {
   investigationId?: string;
   userId?: string;
   signal?: AbortSignal;
-  log: (message: string, payload?: Record<string, any>) => void;
+  log: (message: string, payload?: Record<string, unknown>) => void;
 }
 
 // ─── Tipos de salida por herramienta (contrato tipado) ───────────────────────
@@ -523,10 +523,10 @@ export interface RdapResponse {
   status?: string[];
 }
 
-export type InferExecutorInput<T extends ToolExecutor<any, any>> =
-  T extends ToolExecutor<infer TInput, any> ? TInput : never;
-export type InferExecutorOutput<T extends ToolExecutor<any, any>> =
-  T extends ToolExecutor<any, infer TOutput> ? TOutput : never;
+export type InferExecutorInput<T extends ToolExecutor<unknown, unknown>> =
+  T extends ToolExecutor<infer TInput, unknown> ? TInput : never;
+export type InferExecutorOutput<T extends ToolExecutor<unknown, unknown>> =
+  T extends ToolExecutor<unknown, infer TOutput> ? TOutput : never;
 
 export interface ExecutionResult<TOutput> {
   success: boolean;

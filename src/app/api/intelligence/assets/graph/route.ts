@@ -37,8 +37,22 @@ export async function GET(req: NextRequest) {
       return { assets, findings };
     });
 
-    const nodes: any[] = [];
-    const edges: any[] = [];
+    type GraphNode = {
+      id: string;
+      type: string;
+      data: Record<string, unknown>;
+      position: { x: number; y: number };
+    };
+    type GraphEdge = {
+      id: string;
+      source: string;
+      target: string;
+      animated?: boolean;
+      style?: { stroke: string };
+    };
+
+    const nodes: GraphNode[] = [];
+    const edges: GraphEdge[] = [];
 
     // Nodo Raíz Central (El Proyecto)
     nodes.push({
@@ -75,7 +89,8 @@ export async function GET(req: NextRequest) {
       });
 
       // Si el asset está relacionado a una IP en metadata, lo conectamos
-      const meta = asset.metadata as any;
+      // Si el asset está relacionado a una IP en metadata, lo conectamos
+      const meta = asset.metadata as { relatedIp?: string } | null;
       if (meta && meta.relatedIp) {
         const relatedNode = assets.find(a => a.value === meta.relatedIp && a.assetType === "ip");
         if (relatedNode) {

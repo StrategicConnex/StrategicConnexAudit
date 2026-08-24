@@ -25,11 +25,11 @@ import dns from "node:dns/promises";
 export async function executeTool(
   toolId: string,
   target: string,
-  input: Record<string, any>,
+  input: Record<string, unknown>,
   projectId: string,
   investigationId?: string,
   userId?: string
-): Promise<ExecutionResult<any>> {
+): Promise<ExecutionResult<Record<string, unknown>>> {
   // 0. Lazy init para plugins — asegura que los executors de plugins
   //    oficiales estén registrados antes de la resolución.
   if (toolId.startsWith("plugin.")) {
@@ -60,7 +60,7 @@ export async function executeTool(
   }
 
   // 1. Validar esquemas de entrada de la herramienta
-  let validatedInput: any = {};
+  let validatedInput: unknown = {};
   try {
     const targetUrl = target.startsWith("http") ? target : `https://${target}`;
     let targetIp = target;
@@ -86,7 +86,7 @@ export async function executeTool(
 
   // 2. Verificar caché antes de ejecutar
   const cacheKey = IntelligenceCache.buildKey(toolId, target);
-  const cached = executionCache.get<ExecutionResult<any>>(cacheKey);
+  const cached = executionCache.get<ExecutionResult<Record<string, unknown>>>(cacheKey);
   if (cached) {
     return {
       ...cached,

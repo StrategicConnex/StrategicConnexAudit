@@ -296,7 +296,8 @@ export async function POST(req: NextRequest) {
         logEvent("success", `Score: ${score}/100 | Correo: ${mailHealthScore} | Servidor: ${infraScore}`);
 
         // Extraer outputs para metadata
-        const extract = (id: string) => executionResults.find(r => r.toolId === id)?.output || {};
+            const extract = (id: string): Record<string, unknown> =>
+              (executionResults.find(r => r.toolId === id)?.output as Record<string, unknown> | undefined) ?? {};
 
         // ── Fase 3: Persistir en DB (con su propio try/catch) ────
         phase = "persistencia en base de datos";
@@ -326,7 +327,7 @@ export async function POST(req: NextRequest) {
             }
 
             // Assets
-            const primaryIp = extract("dns.lookup").A?.[0] || null;
+            const primaryIp = (extract("dns.lookup").A as string[] | undefined)?.[0] || null;
             if (primaryIp) {
               await tx.insert(intelligenceAssets).values({
                 projectId, investigationId: investigation.id,
@@ -369,7 +370,7 @@ export async function POST(req: NextRequest) {
                 dmarcParsed: extract("email.dmarc").dmarcParsed || null,
                 dkimCount: extract("email.dkim").count || 0,
                 bimiSuccess: false,
-                redirectsToHttps: extract("website.security_headers").securityHeaders?.hsts ? true : false,
+                redirectsToHttps: (extract("website.security_headers").securityHeaders as { hsts?: string } | undefined)?.hsts ? true : false,
                 whois: extract("osint.whois"),
                 asnGeo: { ...extract("network.geoip"), ...extract("network.asn") },
                 reverseDns: extract("network.reverse_dns").ptr || [],

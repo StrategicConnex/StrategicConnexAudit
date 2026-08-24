@@ -1,3 +1,5 @@
+import type { Finding } from "../types/executor.types";
+
 /**
  * Motor de análisis de deriva (Baseline Drift).
  * Compara configuraciones históricas de hallazgos para determinar qué cambió.
@@ -11,21 +13,21 @@ export interface DriftReport {
 }
 
 export function detectBaselineDrift(
-  baselineFindings: any[],
-  currentFindings: any[]
+  baselineFindings: Finding[],
+  currentFindings: Finding[]
 ): DriftReport {
   const added: string[] = [];
   const removed: string[] = [];
   const modified: string[] = [];
 
   // Mapeamos por titulo/asset
-  const baselineMap = new Map();
+  const baselineMap = new Map<string, Finding>();
   baselineFindings.forEach((f) => {
     const key = `${f.affectedAsset}-${f.title}`;
     baselineMap.set(key, f);
   });
 
-  const currentMap = new Map();
+  const currentMap = new Map<string, Finding>();
   currentFindings.forEach((f) => {
     const key = `${f.affectedAsset}-${f.title}`;
     currentMap.set(key, f);
@@ -33,7 +35,7 @@ export function detectBaselineDrift(
     if (!baselineMap.has(key)) {
       added.push(`Nuevo hallazgo en ${f.affectedAsset}: ${f.title}`);
     } else {
-      const b = baselineMap.get(key);
+      const b = baselineMap.get(key)!;
       // Comparación simple de evidencia (drift)
       if (JSON.stringify(b.evidence) !== JSON.stringify(f.evidence)) {
         modified.push(`Evidencia modificada en ${f.affectedAsset}: ${f.title}`);

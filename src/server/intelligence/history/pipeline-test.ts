@@ -145,7 +145,7 @@ async function runPipelineTest() {
 
   divider("3. Verificando dns_history (post-1ra ejecución)");
 
-  let rowsAfterFirst: any[] = [];
+  let rowsAfterFirst: Array<typeof dnsHistory.$inferSelect> = [];
   try {
     rowsAfterFirst = await testDb
       .select()
@@ -250,13 +250,14 @@ async function runPipelineTest() {
       .orderBy(desc(securityAuditLogs.createdAt));
 
     const dnsEvents = auditRows.filter(
-      (r: any) => (r.metadata as any)?.action === "dns_change_detected",
+      (r) => (r.metadata as { action?: string } | null)?.action === "dns_change_detected",
     );
 
     if (dnsEvents.length > 0) {
       pass(`${dnsEvents.length} eventos dns_change_detected:`);
       for (const e of dnsEvents) {
-        const m = e.metadata as any;
+        const m = e.metadata as { recordType?: string; previousValue?: string; currentValue?: string } | null;
+        if (!m) continue;
         console.log(`     [${m.recordType}] "${m.previousValue}" → "${m.currentValue}"`);
       }
     } else if (outcome2.changes.length > 0) {

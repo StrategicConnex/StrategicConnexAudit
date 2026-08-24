@@ -14,9 +14,17 @@ interface DriftChange {
   severity: "critical" | "warning" | "info";
 }
 
+interface DriftMetadata {
+  asnGeo?: { ipAddress?: string | null; asn?: string | null; asName?: string | null } | null;
+  whois?: { nameservers?: string[] } | null;
+  dmarcParsed?: { policy?: string } | null;
+  spfParsed?: { isWeak?: boolean } | null;
+  sslCertificate?: { validTo?: string | number | null } | null;
+  cdnWaf?: { detected?: boolean; name?: string | null } | null;
+}
 function detectDriftChanges(
-  previous: Record<string, any>,
-  current: Record<string, any>,
+  previous: DriftMetadata,
+  current: DriftMetadata,
   prevScore: number | null,
   currScore: number | null
 ): DriftChange[] {
@@ -189,8 +197,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const prevMeta = (previous.metadata as Record<string, any>) || {};
-    const currMeta = (current.metadata as Record<string, any>) || {};
+    const prevMeta = (previous.metadata as DriftMetadata | null) || {};
+    const currMeta = (current.metadata as DriftMetadata | null) || {};
     const changes = detectDriftChanges(prevMeta, currMeta, previous.score, current.score);
     const deltaScore = (current.score !== null && previous.score !== null)
       ? current.score - previous.score

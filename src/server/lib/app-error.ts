@@ -12,7 +12,6 @@
  *   throw new RateLimitError("intel_scan", 30);
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // ─── Base class ────────────────────────────────────────────────────────────
 
@@ -29,21 +28,21 @@ export interface ErrorPayload {
   error: string;
   code: ErrorCode;
   status: number;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   retryAfter?: number;
 }
 
 export class AppError extends Error {
   public readonly code: ErrorCode;
   public readonly status: number;
-  public readonly details?: Record<string, any>;
+  public readonly details?: Record<string, unknown>;
   public readonly retryAfter?: number;
 
   constructor(
     message: string,
     code: ErrorCode,
     status: number,
-    options?: { details?: Record<string, any>; retryAfter?: number },
+    options?: { details?: Record<string, unknown>; retryAfter?: number },
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -84,7 +83,7 @@ export class NotFoundError extends AppError {
  * 400 — Input validation failed.
  */
 export class ValidationError extends AppError {
-  constructor(message: string, details?: Record<string, any>) {
+  constructor(message: string, details?: Record<string, unknown>) {
     super(message, "VALIDATION_ERROR", 400, { details });
   }
 }

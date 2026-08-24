@@ -33,7 +33,7 @@ type PluginRunner = (
   ctx: ExecutionContext,
   input: Record<string, unknown>,
   pkg: PluginPackage
-) => Promise<ExecutionResult<any>>;
+) => Promise<ExecutionResult<Record<string, unknown>>>;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Official Plugin → Native Executor Mapping
@@ -296,7 +296,7 @@ export function createPluginExecutor(pkg: PluginPackage): ToolExecutor {
     validate(input: unknown) {
       return schema.parse(input);
     },
-    async execute(ctx: ExecutionContext, input): Promise<ExecutionResult<any>> {
+    async execute(ctx: ExecutionContext, input): Promise<ExecutionResult<Record<string, unknown>>> {
       ctx.log(`[Plugin] Ejecutando plugin: ${pkg.name} (v${pkg.version})`);
 
       // 1. Check if this plugin maps to an existing native executor
@@ -305,7 +305,11 @@ export function createPluginExecutor(pkg: PluginPackage): ToolExecutor {
         const nativeExecutor = getExecutor(nativeToolId);
         if (nativeExecutor) {
           ctx.log(`[Plugin] Delegando '${pkg.name}' al executor nativo '${nativeToolId}'`);
-          return nativeExecutor.execute(ctx, input);
+          const nativeResult = await nativeExecutor.execute(ctx, input);
+          return {
+            ...nativeResult,
+            output: (nativeResult.output ?? {}) as Record<string, unknown>,
+          };
         }
       }
 

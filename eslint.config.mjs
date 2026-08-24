@@ -21,31 +21,6 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Deuda legacy (auditoría 2026-08-24): ~41 `any` de producción en estos
-    // archivos. Se mantienen en "warn" para no bloquear CI, pero es la lista
-    // de quemado: NUEVOS archivos quedan sujetos a "error". No crecer.
-    files: [
-      "src/server/intelligence/types/executor.types.ts",
-      "src/app/api/intelligence/drift/route.ts",
-      "src/server/lib/app-error.ts",
-      "src/server/intelligence/core/dispatcher.ts",
-      "src/app/api/intelligence/assets/graph/route.ts",
-      "src/shared/lib/ratelimit.ts",
-      "src/server/intelligence/plugins/plugin-executor.ts",
-      "src/server/intelligence/core/drift-analyzer.ts",
-      "src/app/api/intelligence/anomalies/route.ts",
-      "src/app/api/intelligence/live/route.ts",
-      "src/app/api/intelligence/history/route.ts",
-      "src/server/intelligence/anomaly/detector.ts",
-      "src/server/intelligence/history/pipeline-test.ts",
-      "src/app/components/AttackSurfaceGraph.tsx",
-      "src/app/components/tabs/intelligence/NetworkOsintSection.tsx",
-    ],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
-    },
-  },
-  {
     // Los tests construyen mocks parciales: `any` puntual es aceptable ahí,
     // pero no se permite que se propague a código de producción.
     files: ["**/*.test.ts", "**/*.test.tsx"],

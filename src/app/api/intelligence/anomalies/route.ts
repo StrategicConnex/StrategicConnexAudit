@@ -47,10 +47,10 @@ export async function GET(req: NextRequest) {
     const conditions = [eq(anomalyDetections.projectId, projectId)];
 
     if (metricType) {
-      conditions.push(eq(anomalyDetections.metricType, metricType as any));
+      conditions.push(eq(anomalyDetections.metricType, metricType as typeof anomalyDetections.$inferSelect.metricType));
     }
     if (severity) {
-      conditions.push(eq(anomalyDetections.severity, severity as any));
+      conditions.push(eq(anomalyDetections.severity, severity as typeof anomalyDetections.$inferSelect.severity));
     }
     if (unresolvedOnly) {
       conditions.push(isNull(anomalyDetections.resolvedAt));
