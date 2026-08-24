@@ -184,19 +184,19 @@ export default function AuditControl({ projectId }: AuditControlProps) {
           {status === 'pending' && (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Initializing {progress}%</span>
+              <span>Initializing {Math.round(progress)}%</span>
             </>
           )}
           {status === 'running' && (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Auditing {progress}%</span>
+              <span>Auditing {Math.round(progress)}%</span>
             </>
           )}
           {status === 'completed' && (
             <>
               <CheckCircle2 className="w-3.5 h-3.5 animate-bounce" />
-              <span>Success {progress}%</span>
+              <span>Success {Math.round(progress)}%</span>
             </>
           )}
           {status === 'failed' && (

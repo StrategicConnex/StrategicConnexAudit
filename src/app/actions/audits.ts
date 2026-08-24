@@ -191,6 +191,21 @@ export const getAuditStatus = authenticatedAction(
     if (!record) return { success: false, message: "Auditoria no encontrada." };
     if (record.project.ownerId !== user.id) throw new Error("Acceso denegado");
 
+    // Watchdog anti-cuelgue: una auditoría 'pending' con más de 3 minutos
+    // significa que el worker murió antes de su primer write (p.ej. Trigger.dev
+    // con env roto — el error handler tampoco puede escribir a la BD). Se
+    // expira para que la UI transicione a 'failed' y el usuario pueda reintentar.
+    if (record.audit.status === "pending") {
+      const startedAt = record.audit.startedAt?.getTime() ?? 0;
+      if (Date.now() - startedAt > 180_000) {
+        const message = "El analizador no respondió (worker no disponible). Verifica Trigger.dev y reintenta.";
+        await directDb.update(audits)
+          .set({ status: "failed", errorMessage: message, completedAt: new Date() })
+          .where(eq(audits.id, auditId));
+        return { success: true, status: "failed", errorMessage: message };
+      }
+    }
+
     return { success: true, status: record.audit.status, errorMessage: record.audit.errorMessage };
   }
 );
