@@ -9,7 +9,10 @@ import { cn } from "@/lib/utils";
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   ref?: React.Ref<HTMLDivElement>;
-  variant?: "default" | "hero";
+  /** default: glass · hero: glass elevado (firma) · elevation: superficie
+   *  sólida sin borde (patrón Vercel — jerarquía por luminancia, el blur
+   *  se reserva para overlays donde separa del contenido) */
+  variant?: "default" | "hero" | "elevation";
 }
 
 export function Card({ className, variant = "default", ref, ...props }: CardProps) {
@@ -17,8 +20,10 @@ export function Card({ className, variant = "default", ref, ...props }: CardProp
     <div
       ref={ref}
       className={cn(
-        variant === "hero" ? "glass-card-hero" : "glass-card",
         "rounded-2xl relative",
+        variant === "hero" && "glass-card-hero",
+        variant === "default" && "glass-card",
+        variant === "elevation" && "bg-surface-elevated shadow-[var(--shadow-card)]",
         className,
       )}
       {...props}

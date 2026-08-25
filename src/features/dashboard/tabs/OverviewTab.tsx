@@ -78,7 +78,11 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
       </div>
 
       {/* ═══ 1. HERO CARD — Full-width live monitoring ═══ */}
-      <Card variant="hero" className="p-6 sm:p-8">
+      <Card variant="hero" className="p-6 sm:p-8 overflow-hidden">
+        {/* Momento firma: barrido de encendido (1 vez al montar) */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 motion-reduce:hidden">
+          <div className="hero-scan absolute inset-y-0 left-0 w-1/3" />
+        </div>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-2">
@@ -149,10 +153,13 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
       </Card>
 
       {/* ═══ 2. ASYMMETRIC BENTO: Chart + Terminal ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div
+        className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in motion-reduce:animate-none"
+        style={{ animationDelay: '200ms' }}
+      >
 
         {/* Chart area (2fr) */}
-        <Card className="lg:col-span-2 p-6">
+        <Card variant="elevation" className="lg:col-span-2 p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5 mb-1">
@@ -202,7 +209,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
         </Card>
 
         {/* Activity Terminal (1fr) */}
-        <Card className="p-6 flex flex-col">
+        <Card variant="elevation" className="p-6 flex flex-col">
           <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5 mb-4">
             <Terminal className="w-3.5 h-3.5 text-primary" />
             {t('activityLog')}
@@ -242,7 +249,11 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
       <LazyBenchmarkingSection projectId={projectId} />
 
       {/* ═══ 4. COMPLIANCE & TRUST BANNER ═══ */}
-      <Card className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <Card
+        variant="elevation"
+        className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 animate-fade-in motion-reduce:animate-none"
+        style={{ animationDelay: '400ms' }}
+      >
         <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full" style={{ background: 'oklch(68% 0.14 230 / 0.3)' }} />
         <div className="space-y-1.5 max-w-xl pl-4">
           <div className="flex items-center gap-2">

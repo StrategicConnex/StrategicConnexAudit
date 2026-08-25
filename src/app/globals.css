@@ -317,6 +317,21 @@
   50% { opacity: 1; transform: scale(1.03); }
 }
 
+/* Momento firma del hero: barra de luz que barre la card una sola vez al
+   cargar (escaneo de encendido). Respeta prefers-reduced-motion vía
+   motion-reduce:hidden/animate-none en el consumidor. */
+@keyframes hero-scan {
+  0%   { transform: translateX(-120%); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateX(320%); opacity: 0; }
+}
+
+@utility hero-scan {
+  background: linear-gradient(90deg, transparent, oklch(72% 0.14 85 / 0.10) 45%, oklch(72% 0.14 85 / 0.16) 50%, oklch(72% 0.14 85 / 0.10) 55%, transparent);
+  animation: hero-scan 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both;
+}
+
 /* ─── View Transitions API — route enter/exit ──────────────────────────
    Next.js wraps <Link> navigations in document.startViewTransition when
    experimental.viewTransition is enabled (next.config.ts). The root

@@ -45,14 +45,20 @@ function NavButton({ tab, activeTab, icon, label, badge, onClick, onHover, colla
       onClick={onClick}
       onMouseEnter={onHover}
       title={collapsed ? label : undefined}
-      className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 rounded-lg text-sm font-medium transition-colors duration-300 group border cursor-pointer ${
+      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 rounded-lg text-sm font-medium transition-colors duration-300 group border cursor-pointer ${
         isActive
-          ? 'bg-primary/5 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
+          ? 'bg-primary/8 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
           : 'text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10'
       }`}
     >
+      {isActive && (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary"
+        />
+      )}
       <div className="flex items-center gap-3">
-        <span className={isActive ? 'text-primary drop-shadow-[0_0_8px_rgba(99,102,241,0.4)]' : 'text-muted-fg group-hover:text-primary transition-colors duration-300'}>
+        <span className={isActive ? 'text-primary' : 'text-muted-fg group-hover:text-primary transition-colors duration-300'}>
           {icon}
         </span>
         {!collapsed && <span className="tracking-tight">{label}</span>}

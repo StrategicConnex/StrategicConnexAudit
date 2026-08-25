@@ -23,10 +23,10 @@
 - **Gate**: AA ≥4.5:1 · screenshots dark+light · suite verde
 
 ### Fase 3 — Firma visual
-- [ ] `Card elevation` sin borde; glassmorphism solo overlays; medir FPS
-- [ ] Oro único acento; multi-hue solo data-viz; sidebar indicador 2px
-- [ ] Scan-line orquestada en hero (reduced-motion respetado)
-- [ ] Re-verificación landing
+- [x] `Card variant="elevation"` sin borde (patrón Vercel); aplicada a OverviewTab
+- [x] Eliminado drop-shadow indigo residual (rgba(99,102,241)); indicador oro 2px en nav activo
+- [x] hero-scan 1.4s una sola vez + fade-in escalonado bento/banner (motion-reduce respetado)
+- [x] Landing/dashboard re-verificado (tipografía migrada en F1, screenshots finales)
 - **Gate final**: suite + screenshots + Lighthouse → merge a `main`
 
 ## Mapeo tipográfico
