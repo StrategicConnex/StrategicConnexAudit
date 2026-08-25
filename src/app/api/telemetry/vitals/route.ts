@@ -139,15 +139,15 @@ export async function POST(request: NextRequest) {
 
     const data = parsed.data;
 
-    // Verify project exists and is active (not deleted)
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, data.projectId),
-      columns: { id: true, deletedAt: true },
-    });
+// Verify project exists and is active (not deleted / not hidden)
+const project = await db.query.projects.findFirst({
+  where: eq(projects.id, data.projectId),
+  columns: { id: true, deletedAt: true, isDeleted: true, isHidden: true },
+});
 
-    if (!project || project.deletedAt !== null) {
-      return NextResponse.json({ error: 'Project not found or inactive' }, { status: 404 });
-    }
+if (!project || project.deletedAt !== null || project.isDeleted || project.isHidden) {
+  return NextResponse.json({ error: 'Project not found or inactive' }, { status: 404 });
+}
 
     // Extract device type
     const incomingDeviceType = data.device?.deviceType || data.deviceType;

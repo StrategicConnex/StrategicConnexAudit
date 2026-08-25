@@ -1,7 +1,7 @@
 import { schedules, wait } from "@trigger.dev/sdk";
 import { db } from "@/shared/db";
 import { projects, uptimeLogs } from "@/shared/db/schemas";
-import { isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
 
 export const uptimeMonitor = schedules.task({
@@ -14,7 +14,7 @@ export const uptimeMonitor = schedules.task({
     const activeProjects = await db
       .select()
       .from(projects)
-      .where(isNull(projects.deletedAt));
+      .where(and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)));
 
     console.log(`[Uptime] Monitoreando ${activeProjects.length} proyectos.`);
 

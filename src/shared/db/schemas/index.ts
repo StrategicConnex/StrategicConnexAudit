@@ -50,6 +50,9 @@ export const projects = pgTable("projects", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  // Soft delete ampliado (panel admin): visibilidad granular
+  isDeleted: boolean("is_deleted").notNull().default(false),
+  isHidden: boolean("is_hidden").notNull().default(false),
 });
 
 // 3. Subscription Plans
@@ -505,3 +508,5 @@ export * from "./anomaly";
 export * from "./adversary";
 // ─── 42. Plugin Marketplace (P3.4)
 export * from "./plugins";
+// ─── 43. User Logs (telemetría de accesos — panel admin)
+export * from "./user-logs";

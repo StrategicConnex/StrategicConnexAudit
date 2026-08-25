@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       const [project] = await tx
         .select()
         .from(projects)
-        .where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+        .where(and(eq(projects.id, projectId), and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false))))
         .limit(1);
 
       if (!project) {
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       const [project] = await tx
         .select()
         .from(projects)
-        .where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+        .where(and(eq(projects.id, projectId), and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false))))
         .limit(1);
       return project || null;
     });

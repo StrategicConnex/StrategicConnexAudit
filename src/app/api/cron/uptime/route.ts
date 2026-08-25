@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/db';
 import { projects, uptimeLogs } from '@/shared/db/schemas';
-import { isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
 import { isCronAuthorized } from "@/server/auth/cron";
 
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     // 2. Get all active projects
     const activeProjects = await db.query.projects.findMany({
-      where: isNull(projects.deletedAt),
+      where: and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)),
     });
 
     if (activeProjects.length === 0) {

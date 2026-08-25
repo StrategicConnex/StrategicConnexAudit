@@ -10,7 +10,7 @@ import { schedules } from "@trigger.dev/sdk";
 import { db } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { runAllDetections } from "@/server/intelligence/anomaly/detector";
-import { isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 export const periodicAnomalyDetection = schedules.task({
   id: "periodic-anomaly-detection",
@@ -21,7 +21,7 @@ export const periodicAnomalyDetection = schedules.task({
     const activeProjects = await db
       .select()
       .from(projects)
-      .where(isNull(projects.deletedAt));
+      .where(and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)));
 
     console.log(`[AnomalyDetector] ${activeProjects.length} active projects.`);
 

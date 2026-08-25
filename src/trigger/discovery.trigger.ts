@@ -9,7 +9,7 @@ import { schedules } from "@trigger.dev/sdk";
 import { db } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { runDiscovery } from "@/server/intelligence/discovery/orchestrator";
-import { isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 export const continuousDiscovery = schedules.task({
   id: "continuous-discovery",
@@ -20,7 +20,7 @@ export const continuousDiscovery = schedules.task({
     const activeProjects = await db
       .select()
       .from(projects)
-      .where(isNull(projects.deletedAt));
+      .where(and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)));
 
     console.log(`[Discovery Trigger] ${activeProjects.length} active projects.`);
 

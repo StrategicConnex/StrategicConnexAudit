@@ -145,7 +145,7 @@ export async function GET(req: NextRequest) {
             .where(
               and(
                 eq(projects.ownerId, user.id),
-                isNull(projects.deletedAt)
+                and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false))
               )
             );
         }

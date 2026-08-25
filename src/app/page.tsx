@@ -39,7 +39,7 @@ async function DashboardContent() {
       .where(
         and(
           eq(projects.ownerId, user.id),
-          isNull(projects.deletedAt)
+          and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false))
         )
       )
       .orderBy(desc(projects.createdAt));

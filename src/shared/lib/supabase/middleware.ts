@@ -45,6 +45,48 @@ export async function updateSession(request: NextRequest) {
   const url = request.nextUrl.clone();
   const currentPath = request.nextUrl.pathname;
 
+  // ─── Gate /admin: solo el email admin de plataforma ───────────────────
+  // Cualquier otro usuario autenticado (o anónimo) vuelve a "/".
+  // La page de /admin re-valida con requireAdmin() + email (defense-in-depth).
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "palacios_juan@hotmail.com";
+  if (currentPath.startsWith("/admin")) {
+    if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // ─── Telemetría de accesos (no bloqueante, throttled) ─────────────────
+  // 1 cada 5 min por navegador: la cookie sl_track evita duplicar escrituras
+  // en cada request. El endpoint interno resuelve sesión y hace upsert en DB.
+  if (user) {
+    const lastTrack = Number(request.cookies.get("sl_track")?.value ?? 0);
+    if (Date.now() - lastTrack > 5 * 60 * 1000) {
+      const trackUrl = new URL("/api/internal/track-access", request.url);
+      fetch(trackUrl, {
+        method: "POST",
+        headers: {
+          // Mismo origen: las cookies de sesión viajan solas; los headers de
+          // IP/país se replican porque el fetch interno no los hereda.
+          cookie: request.headers.get("cookie") ?? "",
+          "x-forwarded-for": request.headers.get("x-forwarded-for") ?? "",
+          "x-real-ip": request.headers.get("x-real-ip") ?? "",
+          "x-vercel-ip-country": request.headers.get("x-vercel-ip-country") ?? "",
+          "user-agent": request.headers.get("user-agent") ?? "",
+        },
+      }).catch(() => {
+        /* telemetría no bloqueante */
+      });
+      supabaseResponse.cookies.set("sl_track", String(Date.now()), {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 300,
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      });
+    }
+  }
+
   // 1. Proteger rutas privadas (ej. /projects, /dashboard, etc.)
   // Agrega aquí las rutas que deseas proteger. Si el panel entero está protegido, 
   // puedes invertir la lógica y verificar rutas públicas.

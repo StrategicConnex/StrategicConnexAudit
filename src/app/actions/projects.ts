@@ -94,7 +94,7 @@ export const deactivateProject = authenticatedAction(
   DeactivateSchema,
   async ({ projectId }, { user, tx }) => {
     await tx.update(projects)
-      .set({ deletedAt: new Date() })
+      .set({ deletedAt: new Date(), isDeleted: true })
       .where(
         and(
           eq(projects.id, projectId),

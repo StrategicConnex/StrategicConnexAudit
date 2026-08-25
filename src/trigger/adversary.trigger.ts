@@ -11,7 +11,7 @@ import { db } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { ADVERSARY_CATALOG } from "@/server/intelligence/adversary/catalog";
 import { runScenario } from "@/server/intelligence/adversary/scenario-runner";
-import { isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 const SCHEDULED_SCENARIOS = [
   "T1078.001",
@@ -30,7 +30,7 @@ export const periodicAdversarySimulation = schedules.task({
     const activeProjects = await db
       .select()
       .from(projects)
-      .where(isNull(projects.deletedAt));
+      .where(and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)));
 
     console.log(`[AdversaryTrigger] ${activeProjects.length} active projects.`);
 

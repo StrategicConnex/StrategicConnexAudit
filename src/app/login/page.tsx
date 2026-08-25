@@ -52,6 +52,8 @@ function AnimatedPlaceholder() {
 function LoginContent() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+const [password, setPassword] = useState('');
+const [showPasswordLogin, setShowPasswordLogin] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success' | 'warning', text: string } | null>(null);
   const [validationState, setValidationState] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
   const [validationReason, setValidationReason] = useState<string | null>(null);
@@ -166,8 +168,37 @@ function LoginContent() {
         text: t('emailSentSuccess'),
       });
     }
+  setLoading(false);
+};
+
+// ─── Acceso con contraseña (signInWithPassword estándar) ──────────────
+// Sin credenciales hardcodeadas: la sesión activa determina el email y el
+// gate de /admin valida email + rol. Cubierto por rate limit del callback.
+const handlePasswordLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!email.trim() || !password) {
+    setMessage({ type: 'error', text: t('emailRequired') });
+    return;
+  }
+
+  setLoading(true);
+  setMessage(null);
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+
+  if (error) {
+    setMessage({ type: 'error', text: error.message });
     setLoading(false);
-  };
+    return;
+  }
+
+  // Sesión creada: redirige al destino seguro (sanitizado por useSearchParams + callback)
+  window.location.href = next;
+};
 
   // ═════════════════════════════════════════════════════════════════
   // Pantalla: Email Enviado
@@ -446,10 +477,46 @@ function LoginContent() {
                   {t('disposableEmail')}
                 </span>
               )}
-            </p>
-          </form>
+      </p>
+      </form>
 
-          {/* Footer */}
+      {/* Acceso con contraseña — plegado por defecto */}
+      <div className="mt-5">
+        <button
+          type="button"
+          onClick={() => setShowPasswordLogin(v => !v)}
+          className="w-full text-center text-2xs text-muted-fg/70 hover:text-muted-fg transition-colors uppercase tracking-widest font-bold"
+          aria-expanded={showPasswordLogin}
+        >
+          {showPasswordLogin ? '− ' : '+ '} Acceso con contraseña
+        </button>
+
+        {showPasswordLogin && (
+          <form onSubmit={handlePasswordLogin} className="mt-3 space-y-2.5">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              placeholder="Contraseña"
+              className="block w-full px-4 py-2.5 bg-input/50 border border-border rounded-xl text-sm
+                         focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/50
+                         text-foreground placeholder:text-muted-fg/50 transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={loading || !password}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold bg-secondary/20 text-secondary-fg
+                         border border-border hover:bg-secondary/30 disabled:opacity-50
+                         disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? 'Verificando…' : 'Iniciar sesión'}
+            </button>
+          </form>
+        )}
+      </div>
+
+      {/* Footer */}
           <div className="mt-7 sm:mt-8 pt-5 sm:pt-6 border-t border-border">
             <div className="flex items-center justify-center gap-2 text-2xs sm:text-xs text-muted-fg/60">
               <Shield className="w-3 h-3" />
