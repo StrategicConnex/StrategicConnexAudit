@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { Badge } from '@/components/ui/Badge';
 import { useTranslations } from 'next-intl';
 import { LanguageSwitcher } from '@/features/dashboard/LanguageSwitcher';
 import { loadIntelligenceTab } from './tab-loaders';
@@ -115,7 +116,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<LayoutDashboard size={18} strokeWidth={2} />}
           label={t('tabs.overview')}
-          badge={<span className="text-2xs bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('live')}</span>}
+          badge={<Badge variant="live">{t('live')}</Badge>}
           onClick={() => onTabChange('overview')}
         />
 
@@ -125,7 +126,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<Globe size={18} strokeWidth={2} />}
           label={t('tabs.projects')}
-          badge={<span className="text-2xs bg-muted/20 text-foreground border border-border px-2.5 py-0.5 rounded-full font-bold">{projectCount}</span>}
+          badge={<Badge variant="neutral">{projectCount}</Badge>}
           onClick={() => onTabChange('projects')}
         />
 
@@ -135,7 +136,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<Activity size={18} strokeWidth={2} />}
           label={t('tabs.performance')}
-          badge={<span className="text-2xs bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold">92%</span>}
+          badge={<Badge variant="neutral">92%</Badge>}
           onClick={() => onTabChange('performance')}
         />
 
@@ -154,7 +155,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<BarChart3 size={18} strokeWidth={2} />}
           label={t('tabs.reports')}
-          badge={<span className="text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('audit')}</span>}
+          badge={<Badge variant="neutral">{t('audit')}</Badge>}
           onClick={() => onTabChange('reports')}
         />
 
@@ -164,7 +165,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<ShieldCheck size={18} strokeWidth={2} />}
           label={t('tabs.intelligence')}
-          badge={<span className="text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('beta')}</span>}
+          badge={<Badge variant="neutral">{t('beta')}</Badge>}
           onClick={() => onTabChange('intelligence')}
           onHover={() => { void loadIntelligenceTab(); }}
         />
@@ -175,7 +176,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<Sliders size={18} strokeWidth={2} />}
           label={t('tabs.monitoring')}
-          badge={<span className="text-2xs bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('apis')}</span>}
+          badge={<Badge variant="neutral">{t('apis')}</Badge>}
           onClick={() => onTabChange('monitoring')}
         />
 
@@ -185,7 +186,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<Skull size={18} strokeWidth={2} />}
           label={t('tabs.adversary')}
-          badge={<span className="text-2xs bg-destructive/10 text-destructive border border-destructive/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">BAS</span>}
+          badge={<Badge variant="alert">BAS</Badge>}
           onClick={() => onTabChange('adversary')}
         />
 
@@ -195,7 +196,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<Package size={18} strokeWidth={2} />}
           label={t('tabs.marketplace')}
-          badge={<span className="text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('new')}</span>}
+          badge={<Badge variant="neutral">{t('new')}</Badge>}
           onClick={() => onTabChange('plugins')}
         />
       </nav>
@@ -226,32 +227,32 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           <Link href="/docs" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
             <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
             <span className="tracking-tight">{t('links.docs')}</span>
-            <span className="ml-auto text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.docsBadge')}</span>
+            <Badge variant="neutral" className="ml-auto">{t('links.docsBadge')}</Badge>
           </Link>
           <Link href="/ai/health" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
             <HeartPulse size={18} strokeWidth={2} className="text-muted-fg" />
             <span className="tracking-tight">{t('links.aiHealth')}</span>
-            <span className="ml-auto text-2xs bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.aiHealthBadge')}</span>
+            <Badge variant="neutral" className="ml-auto">{t('links.aiHealthBadge')}</Badge>
           </Link>
           <Link href="/mitre-coverage" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
             <Crosshair size={18} strokeWidth={2} className="text-muted-fg" />
             <span className="tracking-tight">{t('links.mitre')}</span>
-            <span className="ml-auto text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.mitreBadge')}</span>
+            <Badge variant="neutral" className="ml-auto">{t('links.mitreBadge')}</Badge>
           </Link>
           <Link href="/docs/api" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
             <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
             <span className="tracking-tight">{t('links.apiReference')}</span>
-            <span className="ml-auto text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.docsBadge')}</span>
+            <Badge variant="neutral" className="ml-auto">{t('links.docsBadge')}</Badge>
           </Link>
           <Link href="/settings/api-keys" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
             <Key size={18} strokeWidth={2} className="text-muted-fg" />
             <span className="tracking-tight">{t('links.apiKeys')}</span>
-            <span className="ml-auto text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.apiKeysBadge')}</span>
+            <Badge variant="neutral" className="ml-auto">{t('links.apiKeysBadge')}</Badge>
           </Link>
           <Link href="/swagger" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
             <Zap size={18} strokeWidth={2} className="text-muted-fg" />
             <span className="tracking-tight">{t('links.apiPlayground')}</span>
-            <span className="ml-auto text-2xs bg-chartreuse/10 text-chartreuse border border-chartreuse/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{t('links.apiPlaygroundBadge')}</span>
+            <Badge variant="neutral" className="ml-auto">{t('links.apiPlaygroundBadge')}</Badge>
           </Link>
         </div>
       )}

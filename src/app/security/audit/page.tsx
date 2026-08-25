@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Globe, FileSearch, Siren, ShieldAlert } from "lucide-react";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -563,13 +566,7 @@ function DnsAlertsSection({
   error: string | null;
 }) {
   if (loading) {
-    return (
-      <div className="space-y-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-32 bg-surface-muted rounded-lg animate-pulse" />
-        ))}
-      </div>
-    );
+    return <SkeletonList count={4} />;
   }
 
   if (error) {
@@ -582,15 +579,11 @@ function DnsAlertsSection({
 
   if (alerts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-        <span className="text-4xl mb-4">🌐</span>
-        <p className="text-sm font-medium">No hay alertas DNS registradas</p>
-        <p className="text-xs mt-1 text-muted-foreground max-w-md text-center">
-          Las alertas de cambios DNS aparecerán aquí cuando el sistema detecte
-          modificaciones en registros A, AAAA, MX, NS, TXT u otros tipos
-          de los dominios auditados.
-        </p>
-      </div>
+<EmptyState
+          icon={<Globe />}
+          title="No hay alertas DNS registradas"
+          description="Las alertas de cambios DNS aparecerán aquí cuando el sistema detecte modificaciones en registros A, AAAA, MX, NS, TXT u otros tipos de los dominios auditados."
+        />
     );
   }
 
@@ -769,13 +762,7 @@ function WhoisAlertsSection({
   error: string | null;
 }) {
   if (loading) {
-    return (
-      <div className="space-y-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-32 bg-surface-muted rounded-lg animate-pulse" />
-        ))}
-      </div>
-    );
+    return <SkeletonList count={4} />;
   }
 
   if (error) {
@@ -788,15 +775,11 @@ function WhoisAlertsSection({
 
   if (alerts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-        <span className="text-4xl mb-4">🔍</span>
-        <p className="text-sm font-medium">No hay alertas WHOIS registradas</p>
-        <p className="text-xs mt-1 text-muted-foreground max-w-md text-center">
-          Las alertas de cambios WHOIS aparecerán aquí cuando el sistema detecte
-          modificaciones en registrador, expiración, nameservers u organización registrante
-          de los dominios auditados.
-        </p>
-      </div>
+<EmptyState
+          icon={<FileSearch />}
+          title="No hay alertas WHOIS registradas"
+          description="Las alertas de cambios WHOIS aparecerán aquí cuando el sistema detecte modificaciones en registrador, expiración, nameservers u organización registrante de los dominios auditados."
+        />
     );
   }
 
@@ -1115,16 +1098,12 @@ function SiemSection({
     return (
       <>
         {toast}
-        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-          <span className="text-4xl mb-4">📡</span>
-          <p className="text-sm font-medium">No hay alertas SIEM registradas</p>
-          <p className="text-xs mt-1 text-muted-foreground max-w-md text-center">
-            Las alertas aparecerán aquí cuando el SIEM exporter detecte patrones sospechosos
-            y envíe notificaciones a los webhooks configurados.
-            Los datos se persisten en la tabla <span className="font-mono text-muted-foreground">siem_alert_logs</span>.
-          </p>
-          <div className="mt-6">{testButton}</div>
-        </div>
+        <EmptyState
+          icon={<Siren />}
+          title="No hay alertas SIEM registradas"
+          description="Las alertas aparecerán aquí cuando el SIEM exporter detecte patrones sospechosos y envíe notificaciones a los webhooks configurados. Los datos se persisten en la tabla siem_alert_logs."
+          action={testButton}
+        />
       </>
     );
   }
@@ -1361,13 +1340,11 @@ export default function SecurityAuditDashboard() {
 
             {/* Empty */}
             {!loading && !error && logs.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-                <span className="text-4xl mb-4">📭</span>
-                <p className="text-sm font-medium">No hay eventos de seguridad registrados</p>
-                <p className="text-xs mt-1 text-muted-foreground">
-                  Los eventos aparecerán aquí cuando ocurran rate limits, CSP violations u otros eventos de seguridad
-                </p>
-              </div>
+              <EmptyState
+                icon={<ShieldAlert />}
+                title="No hay eventos de seguridad registrados"
+                description="Los eventos aparecerán aquí cuando ocurran rate limits, CSP violations u otros eventos de seguridad"
+              />
             )}
 
             {/* Table */}

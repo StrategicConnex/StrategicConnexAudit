@@ -212,7 +212,7 @@
   --card-fg: oklch(15% 0.018 100);
   --popover: oklch(100% 0 0);
   --popover-fg: oklch(15% 0.018 100);
-  --primary: oklch(50% 0.12 85);
+  --primary: oklch(45% 0.13 85);
   --primary-fg: oklch(99% 0.003 100);
   --secondary: oklch(90% 0.015 185);
   --secondary-fg: oklch(20% 0.02 100);
@@ -225,7 +225,7 @@
   --destructive-fg: oklch(99% 0.003 100);
   --border: oklch(86% 0.012 100);
   --input: oklch(92% 0.01 100);
-  --ring: oklch(50% 0.12 85);
+  --ring: oklch(45% 0.13 85);
   --radius: 12px;
 
   --surface: oklch(100% 0 0);
@@ -239,7 +239,7 @@
   --chart-grid: oklch(87% 0.012 265 / 0.7);
   --chart-axis: oklch(55% 0.02 260);
   --chart-label: oklch(45% 0.02 260);
-  --chart-primary: oklch(50% 0.12 85);
+  --chart-primary: oklch(45% 0.13 85);
   --chart-secondary: oklch(40% 0.08 185);
   --chart-success: oklch(42% 0.12 145);
   --chart-warning: oklch(55% 0.14 85);
@@ -247,13 +247,13 @@
   --chart-tooltip: oklch(100% 0 0 / 0.97);
 
   --glass-border: oklch(87% 0.012 265 / 0.75);
-  --glass-border-strong: oklch(50% 0.12 85 / 0.14);
+  --glass-border-strong: oklch(45% 0.13 85 / 0.14);
   --shadow-card: 0 8px 24px -8px oklch(20% 0.02 265 / 0.14);
-  --shadow-hero: 0 12px 40px -12px oklch(50% 0.12 85 / 0.18),
+  --shadow-hero: 0 12px 40px -12px oklch(45% 0.13 85 / 0.18),
                  inset 0 1px 0 oklch(100% 0 0 / 0.85);
   --gradient-surface: linear-gradient(160deg, oklch(100% 0 0 / 0.85), oklch(96% 0.008 100 / 0.9));
   --gradient-surface-hero: linear-gradient(160deg, oklch(100% 0 0 / 0.9), oklch(95% 0.01 100 / 0.95));
-  --gradient-primary: linear-gradient(135deg, oklch(50% 0.12 85), oklch(42% 0.10 100));
+  --gradient-primary: linear-gradient(135deg, oklch(45% 0.13 85), oklch(38% 0.10 100));
   --gradient-accent: linear-gradient(135deg, oklch(40% 0.08 185), oklch(35% 0.07 170));
 
   /* Fondo de red neuronal — azul eléctrico intenso, legible sobre light.
@@ -274,7 +274,7 @@
   --shimmer-a: oklch(15% 0.02 100 / 0.04);
   --shimmer-b: oklch(15% 0.02 100 / 0.09);
   --scan-line: oklch(15% 0.02 100 / 0.05);
-  --selection-bg: oklch(50% 0.12 85 / 0.16);
+  --selection-bg: oklch(45% 0.13 85 / 0.16);
   --selection-fg: oklch(15% 0.02 100);
   --scroll-thumb: oklch(80% 0.012 100);
   --scroll-thumb-hover: oklch(70% 0.015 100);

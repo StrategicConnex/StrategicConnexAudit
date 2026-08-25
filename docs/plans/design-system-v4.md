@@ -17,9 +17,9 @@
 - **Gate**: tsc 0 · vitest verde · eslint 0 · screenshots sin regresión · `text-[Npx]` < 50
 
 ### Fase 2 — Contraste y estados
-- [ ] Light: primary `oklch(45% 0.13 85)`, CTA sólido theme-scoped, pesos dark-tuned
-- [ ] `Skeleton` + `EmptyState` en `ui/`; aplicar a audit/monitoring/reports/keywords
-- [ ] `Badge` (live/neutral/alert); sidebar 17 badges → disciplina
+- [x] Light: primary `oklch(45% 0.13 85)` en primary/ring/chart-primary/gradient/borders. CTA sólido verificado en screenshots
+- [x] `Skeleton`+`SkeletonList` y `EmptyState` en `ui/`; aplicados a /security/audit (2 skeletons visibles + 4 empty states con iconos, emoji roto eliminado)
+- [x] `Badge` (live/neutral/alert); sidebar: 14 badges migrados (1 live, 1 alert, 12 neutral)
 - **Gate**: AA ≥4.5:1 · screenshots dark+light · suite verde
 
 ### Fase 3 — Firma visual
