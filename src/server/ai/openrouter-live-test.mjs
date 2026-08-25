@@ -21,7 +21,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ─── Cargar .env manualmente ───────────────────────────────────────
 function loadEnv() {
-  const envPath = resolve(__dirname, '../../.env.local');
+    const envPath = resolve(__dirname, '../../../.env.local');
   try {
     const content = readFileSync(envPath, 'utf-8');
     for (const line of content.split('\n')) {
@@ -50,13 +50,15 @@ const TEST_MESSAGE = {
   content: "Responde SOLO con la palabra 'OK' y un emoji. No agregues nada más.",
 };
 
+// Lista sincronizada con TASK_ROUTING en ai-router.ts (union de todas las
+// cadenas de fallback por tarea). Mantener en sync al añadir/quitar modelos.
 const MODELS = [
   { id: 'openrouter/free', label: '🤖 Meta-model (openrouter/free)' },
-  { id: 'google/gemini-2.0-flash-exp:free', label: '⚡ Gemini 2.0 Flash' },
-  { id: 'deepseek/deepseek-chat-v3:free', label: '🧠 DeepSeek V3' },
-  { id: 'meta-llama/llama-4:free', label: '🦙 Llama 4' },
-  { id: 'mistralai/mistral-small-3.1:free', label: '🌬️ Mistral Small 3.1' },
-  { id: 'qwen/qwen-2.5-72b-instruct:free', label: '🐉 Qwen 2.5 72B' },
+  { id: 'google/gemma-4-26b-a4b-it:free', label: '💎 Gemma 4 26B' },
+  { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', label: '🧠 Nemotron 3 Nano Omni' },
+  { id: 'nvidia/nemotron-3-super-120b-a12b:free', label: '🧠 Nemotron 3 Super' },
+  { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: '🧠 Nemotron 3 Ultra' },
+  { id: 'nvidia/nemotron-3-nano-30b-a3b:free', label: '🧠 Nemotron 3 Nano' },
 ];
 
 async function testModel(modelId, timeoutMs = 15_000) {

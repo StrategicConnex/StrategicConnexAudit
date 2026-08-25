@@ -65,12 +65,14 @@ const FREE_META_MODEL = "openrouter/free";
  * 2. On failure, try individual :free models in a task-optimized order.
  * 3. Keep trying remaining :free models in order until one works.
  *
- * Tested working :free models (July 2026):
- *   - nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free  (393ms, general)
- *   - nvidia/nemotron-3-super-120b-a12b:free               (396ms, general)
- *   - nvidia/nemotron-3-nano-30b-a3b:free                  (408ms, general)
- *   - nvidia/nemotron-3-ultra-550b-a55b:free               (474ms, 1M ctx)
+ * Tested working :free models (live test 2026-08-24):
+ *   - nvidia/nemotron-3-super-120b-a12b:free               (419ms, general)
+ *   - nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free   (421ms, general)
  *   - google/gemma-4-26b-a4b-it:free                       (678ms, best instruction following)
+ *
+ * Retirados del pool (verificados en live test 2026-08-24):
+ *   - nvidia/nemotron-3-nano-30b-a3b:free  → 404, ya no disponible como :free
+ *   - nvidia/nemotron-3-ultra-550b-a55b:free → timeout >15s constante
  */
 /**
  * Task routing table — maps task types to ordered fallback model chains.
@@ -100,7 +102,6 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
     "google/gemma-4-26b-a4b-it:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3-nano-30b-a3b:free",
   ],
   // Acotada a 2 modelos con timeout largo (ver MODEL_TIMEOUTS): un reporte
   // ejecutivo de 4096 tokens NO termina en 20s en modelos :free (verificado

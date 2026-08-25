@@ -18,7 +18,8 @@
     "e2e:report": "npx tsx --env-file=.env.local src/scripts/e2e-ai-report.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "prepare": "node scripts/prepare.mjs"
+    "prepare": "node scripts/prepare.mjs",
+    "e2e:ai-router": "npx tsx --env-file=.env.local src/scripts/e2e-ai-router.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
