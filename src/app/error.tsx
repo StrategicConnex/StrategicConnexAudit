@@ -56,7 +56,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
           {/* Error digest for support */}
           {error.digest && (
             <div className="bg-black/30 border border-border/30 rounded-xl p-3 mb-6 sm:mb-8 text-left">
-              <p className="text-[10px] sm:text-xs text-muted-fg/50 font-mono break-all">
+              <p className="text-2xs sm:text-xs text-muted-fg/50 font-mono break-all">
                 Error ID: <span className="text-muted-fg/70">{error.digest}</span>
               </p>
             </div>
@@ -78,7 +78,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
 
           {/* Footer */}
           <div className="mt-7 sm:mt-8 pt-5 sm:pt-6 border-t border-border">
-            <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-muted-fg/60">
+            <div className="flex items-center justify-center gap-2 text-2xs sm:text-xs text-muted-fg/60">
               <Shield className="w-3 h-3" />
               <span>StrategicAudit Pro · Error Recovery</span>
             </div>

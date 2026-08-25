@@ -60,7 +60,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         <nav className="flex-1 p-4 space-y-6">
           {SIDEBAR_SECTIONS.map((section) => (
             <div key={section.title}>
-              <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-fg mb-2 px-2">
+              <h3 className="text-2xs font-extrabold uppercase tracking-widest text-muted-fg mb-2 px-2">
                 {section.title}
               </h3>
               <ul className="space-y-0.5">
@@ -68,7 +68,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="block px-2 py-2 text-[13px] font-medium text-muted-fg hover:text-foreground hover:bg-primary/5 rounded-lg transition-all duration-200"
+                      className="block px-2 py-2 text-sm font-medium text-muted-fg hover:text-foreground hover:bg-primary/5 rounded-lg transition-all duration-200"
                     >
                       {link.label}
                     </Link>
@@ -82,7 +82,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         <div className="p-4 border-t border-border/50 shrink-0">
           <Link
             href="/"
-            className="flex items-center gap-2 text-[12px] text-muted-fg hover:text-foreground transition-colors"
+            className="flex items-center gap-2 text-xs text-muted-fg hover:text-foreground transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m12 19-7-7 7-7" />

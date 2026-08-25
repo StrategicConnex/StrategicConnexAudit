@@ -35,7 +35,7 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
             aria-label={`Tema ${label}`}
             title={`Tema ${label}`}
             className={cn(
-              "flex items-center gap-1.5 rounded-md py-1 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer",
+              "flex items-center gap-1.5 rounded-md py-1 text-2xs font-bold uppercase tracking-wider transition-colors cursor-pointer",
               compact ? "px-1.5" : "px-2",
               active
                 ? "bg-primary/15 text-primary"

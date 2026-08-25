@@ -173,29 +173,29 @@ export function MarketplaceTab() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground">{pkg.name}</h3>
-              <span className="text-[10px] text-muted-fg">{pkg.author}</span>
+              <span className="text-2xs text-muted-fg">{pkg.author}</span>
             </div>
           </div>
-          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${catColor}`}>
+          <span className={`text-2xs font-bold px-2 py-0.5 rounded-full border ${catColor}`}>
             {pkg.category}
           </span>
         </div>
 
-        <p className="text-[11px] text-muted-fg leading-relaxed flex-1 mb-4">
+        <p className="text-2xs text-muted-fg leading-relaxed flex-1 mb-4">
           {pkg.description}
         </p>
 
         {pkg.tags && pkg.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4">
             {pkg.tags.slice(0, 4).map((tag, i) => (
-              <span key={i} className="text-[8px] font-bold bg-muted/10 border border-border/30 px-1.5 py-0.5 rounded text-muted-fg uppercase tracking-wider">
+              <span key={i} className="text-2xs font-bold bg-muted/10 border border-border/30 px-1.5 py-0.5 rounded text-muted-fg uppercase tracking-wider">
                 {tag}
               </span>
             ))}
           </div>
         )}
 
-        <div className="flex items-center justify-between text-[10px] text-muted-fg border-t border-border/30 pt-3 mb-3">
+        <div className="flex items-center justify-between text-2xs text-muted-fg border-t border-border/30 pt-3 mb-3">
           <span>v{pkg.version}</span>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
@@ -209,7 +209,7 @@ export function MarketplaceTab() {
               </span>
             )}
             {pkg.isOfficial && (
-              <span className="text-[8px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+              <span className="text-2xs bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
                 Oficial
               </span>
             )}
@@ -219,13 +219,13 @@ export function MarketplaceTab() {
         <div className="flex items-center gap-2">
           {item.installed && item.instance ? (
             <>
-              <span className="flex items-center gap-1.5 text-[10px] text-chartreuse font-bold bg-chartreuse/10 border border-chartreuse/20 px-3 py-1.5 rounded-lg">
+              <span className="flex items-center gap-1.5 text-2xs text-chartreuse font-bold bg-chartreuse/10 border border-chartreuse/20 px-3 py-1.5 rounded-lg">
                 <Check className="w-3 h-3" /> Instalado
               </span>
               <button
                 onClick={() => handleUninstall(item.instance!.id, pkg.id)}
                 disabled={isInstalling}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold hover:bg-destructive/20 transition-[color,background-color,border-color,opacity] cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-2xs font-bold hover:bg-destructive/20 transition-[color,background-color,border-color,opacity] cursor-pointer disabled:opacity-50"
               >
                 {isInstalling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                 Desinstalar
@@ -268,7 +268,7 @@ export function MarketplaceTab() {
           <div className="flex items-center gap-2 bg-muted/10 border border-border/50 px-4 py-2 rounded-xl">
             <Package className="w-4 h-4 text-primary" />
             <span className="text-sm font-bold text-foreground">{plugins.length}</span>
-            <span className="text-[9px] text-muted-fg uppercase tracking-wider">Plugins</span>
+            <span className="text-2xs text-muted-fg uppercase tracking-wider">Plugins</span>
           </div>
         </div>
       </div>
@@ -304,14 +304,14 @@ export function MarketplaceTab() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => setCategoryFilter('all')}
-            className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+            className={`text-2xs font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
               categoryFilter === 'all' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/5 border-border text-muted-fg hover:text-foreground'
             }`}>
             Todos ({plugins.length})
           </button>
           {categories.map((cat) => (
             <button key={cat} onClick={() => setCategoryFilter(cat)}
-              className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer flex items-center gap-1.5 ${
+              className={`text-2xs font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer flex items-center gap-1.5 ${
                 categoryFilter === cat ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/5 border-border text-muted-fg hover:text-foreground'
               }`}>
               {CATEGORY_ICONS[cat] || <Tag className="w-3 h-3" />}

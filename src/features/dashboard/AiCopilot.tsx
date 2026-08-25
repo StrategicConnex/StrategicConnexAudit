@@ -82,7 +82,7 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
         className="fixed bottom-8 right-8 p-5 rounded-full bg-gradient-to-r from-primary to-primary/80 text-foreground shadow-[0_0_20px_rgba(98,113,196,0.3)] border-2 border-primary/30 hover:scale-105 hover:shadow-[0_0_30px_rgba(98,113,196,0.5)] hover:border-primary/50 transition-[color,background-color,border-color,box-shadow,transform] duration-300 z-50 flex items-center justify-center group cursor-pointer"
       >
         <Sparkles aria-hidden="true" className="w-5 h-5 animate-pulse text-primary/80" strokeWidth={2.5} />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-[140px] transition-[max-width,padding] duration-300 font-extrabold text-[11px] uppercase tracking-widest whitespace-nowrap px-0 group-hover:px-2 text-foreground">
+        <span className="max-w-0 overflow-hidden group-hover:max-w-[140px] transition-[max-width,padding] duration-300 font-extrabold text-2xs uppercase tracking-widest whitespace-nowrap px-0 group-hover:px-2 text-foreground">
           Strategic Copilot
         </span>
       </button>
@@ -99,12 +99,12 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
               {mode === 'analyst' ? <ShieldAlert className="w-4 h-4" strokeWidth={2.5} /> : <Sparkles className="w-4 h-4" strokeWidth={2.5} />}
             </div>
             <div>
-              <h3 className="font-bold text-[14px] text-foreground tracking-tight">
+              <h3 className="font-bold text-sm text-foreground tracking-tight">
                 {mode === 'analyst' ? 'Analyst Mode' : 'Strategic Copilot'}
               </h3>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${mode === 'analyst' ? 'bg-destructive' : 'bg-primary'}`}></span>
-                <span className={`text-[9px] font-extrabold uppercase tracking-widest ${mode === 'analyst' ? 'text-destructive' : 'text-primary'}`}>
+                <span className={`text-2xs font-extrabold uppercase tracking-widest ${mode === 'analyst' ? 'text-destructive' : 'text-primary'}`}>
                   Motor Activo
                 </span>
               </div>
@@ -135,13 +135,13 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
           <div className="bg-muted/15 border border-border/60 p-1 rounded-lg flex items-center gap-1">
             <button
               onClick={() => { setMode('copilot'); setMessages([{ role: 'assistant', content: 'Hola. Soy Strategic Copilot. ¿En qué te puedo ayudar hoy? Puedo analizar reportes, priorizar tareas o explicarte problemas técnicos.' }]); }}
-              className={`flex-1 text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-md transition-[color,background-color,box-shadow,border-color] border ${mode === 'copilot' ? 'bg-primary/15 text-foreground shadow-sm border-primary/25' : 'text-muted-fg hover:text-foreground/80 border-transparent'}`}
+              className={`flex-1 text-2xs font-extrabold uppercase tracking-widest py-1.5 rounded-md transition-[color,background-color,box-shadow,border-color] border ${mode === 'copilot' ? 'bg-primary/15 text-foreground shadow-sm border-primary/25' : 'text-muted-fg hover:text-foreground/80 border-transparent'}`}
             >
               Copilot
             </button>
             <button
               onClick={() => { setMode('analyst'); setMessages([{ role: 'assistant', content: 'Analyst Mode activo. Listo para forense técnico, triage de alertas y revisión de postura.' }]); }}
-              className={`flex-1 text-[10px] font-extrabold uppercase tracking-widest py-1.5 rounded-md transition-[color,background-color,box-shadow,border-color] border ${mode === 'analyst' ? 'bg-destructive/15 text-destructive shadow-sm border-destructive/25' : 'text-muted-fg hover:text-foreground/80 border-transparent'}`}
+              className={`flex-1 text-2xs font-extrabold uppercase tracking-widest py-1.5 rounded-md transition-[color,background-color,box-shadow,border-color] border ${mode === 'analyst' ? 'bg-destructive/15 text-destructive shadow-sm border-destructive/25' : 'text-muted-fg hover:text-foreground/80 border-transparent'}`}
             >
               Analyst
             </button>
@@ -166,7 +166,7 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
           <div className="flex justify-start">
             <div className="bg-muted/15 border-2 border-border/50 rounded-xl px-4 py-3 flex items-center gap-2.5">
               <Loader2 className={`w-3.5 h-3.5 animate-spin ${mode === 'analyst' ? 'text-destructive' : 'text-primary'}`} />
-              <span className="text-[9px] font-extrabold text-muted-fg uppercase tracking-widest animate-pulse">Generando...</span>
+              <span className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest animate-pulse">Generando...</span>
             </div>
           </div>
         )}
@@ -180,7 +180,7 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
             <button
               key={i}
               onClick={() => handleSend(q)}
-              className="text-[9px] font-bold uppercase tracking-wider whitespace-nowrap bg-muted/25 hover:bg-muted/50 border-2 border-border/60 text-muted-fg hover:text-foreground px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              className="text-2xs font-bold uppercase tracking-wider whitespace-nowrap bg-muted/25 hover:bg-muted/50 border-2 border-border/60 text-muted-fg hover:text-foreground px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
             >
               {mode === 'analyst' ? <Activity className="w-3 h-3 text-destructive/50" /> : <FileText className="w-3 h-3 text-primary/50" />}
               {q}
@@ -222,7 +222,7 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
             <Send aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
         </form>
-        <p className="mt-3 text-[9px] font-extrabold text-center text-muted-fg uppercase tracking-widest">
+        <p className="mt-3 text-2xs font-extrabold text-center text-muted-fg uppercase tracking-widest">
           IA Experimental • Verificar datos con Analistas Humanos
         </p>
       </div>

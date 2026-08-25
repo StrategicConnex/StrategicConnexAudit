@@ -3,14 +3,24 @@ import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════
    SCAUDIT Card — compound primitive over the `glass-card` @utility
-   (globals.css). Matches the DS: deep indigo-charcoal glass surfaces.
+   (globals.css). Matches the DS: olive-charcoal glass surfaces.
+   variant="hero" uses the elevated glass-card-hero treatment.
    ═══════════════════════════════════════════════════════════════════════ */
 
-export function Card({ className, ref, ...props }: HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> }) {
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  ref?: React.Ref<HTMLDivElement>;
+  variant?: "default" | "hero";
+}
+
+export function Card({ className, variant = "default", ref, ...props }: CardProps) {
   return (
     <div
       ref={ref}
-      className={cn("glass-card rounded-2xl relative", className)}
+      className={cn(
+        variant === "hero" ? "glass-card-hero" : "glass-card",
+        "rounded-2xl relative",
+        className,
+      )}
       {...props}
     />
   );

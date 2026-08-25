@@ -40,7 +40,7 @@ export function MailSecurityPanel({
               <Shield className="w-5 h-5 text-primary" />
               {t('emailWebSecurity')}
             </h3>
-            <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
+            <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">
               {t('scanSubtitle')}
             </p>
       </div>
@@ -55,7 +55,7 @@ export function MailSecurityPanel({
               Autenticación de Correo y Reputación
             </h4>
             {mailScore !== null && (
-              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+              <span className={`text-2xs font-extrabold px-2.5 py-0.5 rounded-full border ${
                 mailScore >= 80 ? 'text-chartreuse border-chartreuse/20 bg-chartreuse/5' : 'text-destructive border-destructive/20 bg-destructive/5'
               }`}>
                 Score: {mailScore}/100
@@ -72,14 +72,14 @@ export function MailSecurityPanel({
                 className="w-full flex items-center justify-between p-4 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40 hover:bg-muted/10 transition-colors"
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-extrabold text-foreground/80 uppercase tracking-widest">
+                  <span className="text-2xs font-extrabold text-foreground/80 uppercase tracking-widest">
                     SPF (Sender Policy Framework)
                   </span>
-                  <span className="text-[9px] text-muted-fg font-medium">Verificación del registro TXT en DNS</span>
+                  <span className="text-2xs text-muted-fg font-medium">Verificación del registro TXT en DNS</span>
                 </div>
                 <div className="flex items-center gap-3">
                   {meta?.spfParsed ? (
-                    <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded ${
+                    <span className={`text-2xs font-bold px-2.5 py-0.5 rounded ${
                       meta.spfParsed.isWeak
                         ? 'bg-[oklch(75% 0.13 80)]/10 text-[oklch(75% 0.13 80)] border border-[oklch(75% 0.13 80)]/20'
                         : 'bg-chartreuse/10 text-chartreuse border border-chartreuse/20'
@@ -87,7 +87,7 @@ export function MailSecurityPanel({
                       {meta.spfParsed.isWeak ? 'Vulnerable' : 'Seguro'}
                     </span>
                   ) : (
-                    <span className="text-[9px] bg-destructive/10 text-destructive border border-destructive/20 px-2.5 py-0.5 rounded font-bold">
+                    <span className="text-2xs bg-destructive/10 text-destructive border border-destructive/20 px-2.5 py-0.5 rounded font-bold">
                       No Configurado
                     </span>
                   )}
@@ -101,28 +101,28 @@ export function MailSecurityPanel({
                   {meta?.spfParsed ? (
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Registro SPF Detectado</span>
-                        <code className="block text-[10px] text-foreground/80 bg-muted/5 border border-border p-3 rounded-lg font-mono break-all leading-normal select-all">
+                        <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Registro SPF Detectado</span>
+                        <code className="block text-2xs text-foreground/80 bg-muted/5 border border-border p-3 rounded-lg font-mono break-all leading-normal select-all">
                           {meta.spfParsed.record}
                         </code>
                       </div>
-                      <div className="flex items-center justify-between text-[9px] text-muted-fg font-bold uppercase tracking-wider">
+                      <div className="flex items-center justify-between text-2xs text-muted-fg font-bold uppercase tracking-wider">
                         <span>Consultas DNS: <span className="text-foreground/80 font-mono">{meta.spfParsed.dnsLookups} / 10</span></span>
                         <span>Directiva: <span className={meta.spfParsed.isWeak ? 'text-[oklch(75% 0.13 80)]' : 'text-chartreuse'}>{meta.spfParsed.isWeak ? 'Débil (SoftFail/Neutral)' : 'Fuerte (HardFail)'}</span></span>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                         <div className="bg-muted/5 border border-border/50 p-4 rounded-xl space-y-2">
-                          <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Diagnóstico de Seguridad</span>
-                          <p className="text-foreground/80 leading-relaxed text-[11px]">
+                          <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Diagnóstico de Seguridad</span>
+                          <p className="text-foreground/80 leading-relaxed text-2xs">
                             {meta.spfParsed.isWeak
                               ? 'El registro utiliza una directiva de atenuación blanda (como ~all o ?all) o supera el límite máximo de 10 consultas DNS autorizadas, lo que reduce la protección contra atacantes.'
                               : 'Filtro SPF robusto establecido. El dominio deniega de forma estricta (-all) todo correo enviado desde servidores SMTP no declarados en el registro.'}
                           </p>
                         </div>
                         <div className={`${meta.spfParsed.isWeak ? 'bg-destructive/[0.02] border-destructive/[0.08]' : 'bg-chartreuse/[0.02] border-chartreuse/[0.08]'} border p-4 rounded-xl space-y-2`}>
-                          <span className={`text-[8px] font-bold ${meta.spfParsed.isWeak ? 'text-destructive' : 'text-chartreuse'} uppercase tracking-widest block`}>Impacto del Riesgo</span>
-                          <p className="text-foreground/80 leading-relaxed text-[11px]">
+                          <span className={`text-2xs font-bold ${meta.spfParsed.isWeak ? 'text-destructive' : 'text-chartreuse'} uppercase tracking-widest block`}>Impacto del Riesgo</span>
+                          <p className="text-foreground/80 leading-relaxed text-2xs">
                             {meta.spfParsed.isWeak
                               ? 'Un atacante puede enviar correos suplantando tu dominio institucional, burlando parcialmente la autenticación de servidores como Gmail o Microsoft 365.'
                               : 'Riesgo minimizado. Los proveedores de correo de destino rechazarán automáticamente los correos fraudulentos en tránsito que intenten suplantar tu identidad.'}
@@ -131,7 +131,7 @@ export function MailSecurityPanel({
                       </div>
 
                       {meta.spfParsed.isWeak && meta.spfParsed.weakReason && (
-                        <div className="text-[10px] text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/[0.03] border border-[oklch(75% 0.13 80)]/10 p-3 rounded-xl leading-relaxed flex items-start gap-2.5">
+                        <div className="text-2xs text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/[0.03] border border-[oklch(75% 0.13 80)]/10 p-3 rounded-xl leading-relaxed flex items-start gap-2.5">
                           <AlertTriangle className="w-4 h-4 shrink-0 text-[oklch(75% 0.13 80)] mt-0.5 animate-pulse" />
                           <span>{meta.spfParsed.weakReason}</span>
                         </div>
@@ -139,14 +139,14 @@ export function MailSecurityPanel({
 
                       <div className="space-y-2 pt-3.5 border-t border-border">
                         <div className="flex justify-between items-center">
-                          <span className="text-[8px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="text-2xs font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
                             <Terminal className="w-3.5 h-3.5 text-primary" />
                             Código de Remediación DNS
                           </span>
                           <button
                             type="button"
                             onClick={() => onCopy("v=spf1 include:_spf.google.com -all", "spf_remediation")}
-                            className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="px-2.5 py-1 rounded-md text-2xs font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
                           >
                             {copiedId === 'spf_remediation' ? (
                               <>
@@ -161,26 +161,26 @@ export function MailSecurityPanel({
                             )}
                           </button>
                         </div>
-                        <code className="block text-[10px] text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
+                        <code className="block text-2xs text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
                           v=spf1 include:_spf.google.com -all
                         </code>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <p className="text-foreground/80 leading-relaxed text-[11px]">
+                      <p className="text-foreground/80 leading-relaxed text-2xs">
                         El dominio no tiene un registro SPF configurado en su zona DNS. Esto permite que cualquier atacante falsifique la identidad del remitente de tus correos institucionales de manera directa.
                       </p>
                       <div className="space-y-2 pt-2 border-t border-border">
                         <div className="flex justify-between items-center">
-                          <span className="text-[8px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="text-2xs font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
                             <Terminal className="w-3.5 h-3.5 text-primary" />
                             Crear Registro TXT Recomendado
                           </span>
                           <button
                             type="button"
                             onClick={() => onCopy("v=spf1 include:_spf.google.com -all", "spf_unconfigured_remediation")}
-                            className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="px-2.5 py-1 rounded-md text-2xs font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
                           >
                             {copiedId === 'spf_unconfigured_remediation' ? (
                               <>
@@ -195,7 +195,7 @@ export function MailSecurityPanel({
                             )}
                           </button>
                         </div>
-                        <code className="block text-[10px] text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
+                        <code className="block text-2xs text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
                           v=spf1 include:_spf.google.com -all
                         </code>
                       </div>
@@ -213,14 +213,14 @@ export function MailSecurityPanel({
                 className="w-full flex items-center justify-between p-4 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40 hover:bg-muted/10 transition-colors"
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-extrabold text-foreground/80 uppercase tracking-widest">
+                  <span className="text-2xs font-extrabold text-foreground/80 uppercase tracking-widest">
                     DMARC Policy Enforcement
                   </span>
-                  <span className="text-[9px] text-muted-fg font-medium">Instrucción de alineación SPF/DKIM</span>
+                  <span className="text-2xs text-muted-fg font-medium">Instrucción de alineación SPF/DKIM</span>
                 </div>
                 <div className="flex items-center gap-3">
                   {meta?.dmarcParsed && meta.dmarcParsed.policy !== 'invalid' ? (
-                    <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded ${
+                    <span className={`text-2xs font-bold px-2.5 py-0.5 rounded ${
                       meta.dmarcParsed.policy === 'reject'
                         ? 'bg-chartreuse/10 text-chartreuse border border-chartreuse/20'
                         : meta.dmarcParsed.policy === 'quarantine'
@@ -230,7 +230,7 @@ export function MailSecurityPanel({
                       Política: {meta.dmarcParsed.policy?.toUpperCase() || 'NINGUNA'}
                     </span>
                   ) : (
-                    <span className="text-[9px] bg-destructive/10 text-destructive border border-destructive/20 px-2.5 py-0.5 rounded font-bold">
+                    <span className="text-2xs bg-destructive/10 text-destructive border border-destructive/20 px-2.5 py-0.5 rounded font-bold">
                       Inactivo / Inválido
                     </span>
                   )}
@@ -244,23 +244,23 @@ export function MailSecurityPanel({
                   {meta?.dmarcParsed && meta.dmarcParsed.policy !== 'invalid' ? (
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Registro DMARC Detectado</span>
-                        <code className="block text-[10px] text-foreground/80 bg-muted/5 border border-border p-3 rounded-lg font-mono break-all leading-normal select-all">
+                        <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Registro DMARC Detectado</span>
+                        <code className="block text-2xs text-foreground/80 bg-muted/5 border border-border p-3 rounded-lg font-mono break-all leading-normal select-all">
                           {meta.dmarcParsed.record}
                         </code>
                       </div>
 
                       {meta.dmarcParsed.rua && meta.dmarcParsed.rua.length > 0 && (
-                        <div className="text-[9.5px] text-muted-fg flex flex-col gap-1.5 bg-muted/5 border border-border/70 p-3 rounded-xl">
-                          <span className="font-bold uppercase tracking-wider text-muted-fg text-[8px]">Destino de Informes RUA (Agregados):</span>
-                          <span className="text-foreground/80 font-mono text-[9.5px] break-all">{meta.dmarcParsed.rua.join(', ')}</span>
+                        <div className="text-2xs text-muted-fg flex flex-col gap-1.5 bg-muted/5 border border-border/70 p-3 rounded-xl">
+                          <span className="font-bold uppercase tracking-wider text-muted-fg text-2xs">Destino de Informes RUA (Agregados):</span>
+                          <span className="text-foreground/80 font-mono text-2xs break-all">{meta.dmarcParsed.rua.join(', ')}</span>
                         </div>
                       )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                         <div className="bg-muted/5 border border-border/50 p-4 rounded-xl space-y-2">
-                          <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Diagnóstico de la Política</span>
-                          <p className="text-foreground/80 leading-relaxed text-[11px]">
+                          <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Diagnóstico de la Política</span>
+                          <p className="text-foreground/80 leading-relaxed text-2xs">
                             {meta.dmarcParsed.policy === 'none'
                               ? 'La política "p=none" (Solo monitoreo) permite que los correos que fallen SPF/DKIM sigan entregándose en la bandeja de entrada del receptor. Es el nivel básico para auditar flujos.'
                               : meta.dmarcParsed.policy === 'quarantine'
@@ -269,8 +269,8 @@ export function MailSecurityPanel({
                           </p>
                         </div>
                         <div className={`${meta.dmarcParsed.policy === 'none' ? 'bg-destructive/[0.02] border-destructive/[0.08]' : 'bg-chartreuse/[0.02] border-chartreuse/[0.08]'} border p-4 rounded-xl space-y-2`}>
-                          <span className={`text-[8px] font-bold ${meta.dmarcParsed.policy === 'none' ? 'text-destructive' : 'text-chartreuse'} uppercase tracking-widest block`}>Impacto de Riesgo de Seguridad</span>
-                          <p className="text-foreground/80 leading-relaxed text-[11px]">
+                          <span className={`text-2xs font-bold ${meta.dmarcParsed.policy === 'none' ? 'text-destructive' : 'text-chartreuse'} uppercase tracking-widest block`}>Impacto de Riesgo de Seguridad</span>
+                          <p className="text-foreground/80 leading-relaxed text-2xs">
                             {meta.dmarcParsed.policy === 'none'
                               ? 'Ataque de suplantación viable. Un hacker puede seguir enviar phishing directo que aparente venir de tus directivos sin ser bloqueado.'
                               : 'Protección perimetral en curso. Los correos falsos se descartan o aíslan de las bandejas normales, limitando la tasa de éxito de campañas de phishing.'}
@@ -279,7 +279,7 @@ export function MailSecurityPanel({
                       </div>
 
                       {meta.dmarcParsed.policy === 'none' && (
-                        <div className="text-[10px] text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/[0.03] border border-[oklch(75% 0.13 80)]/10 p-3 rounded-xl leading-relaxed flex items-start gap-2.5">
+                        <div className="text-2xs text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/[0.03] border border-[oklch(75% 0.13 80)]/10 p-3 rounded-xl leading-relaxed flex items-start gap-2.5">
                           <AlertTriangle className="w-4 h-4 shrink-0 text-[oklch(75% 0.13 80)] mt-0.5 animate-pulse" />
                           <span>La política &apos;p=none&apos; solo monitorea pero no bloquea ni rechaza correos fraudulentos. Se recomienda migrar a &apos;quarantine&apos; o &apos;reject&apos; gradualmente.</span>
                         </div>
@@ -287,14 +287,14 @@ export function MailSecurityPanel({
 
                       <div className="space-y-2 pt-3.5 border-t border-border">
                         <div className="flex justify-between items-center">
-                          <span className="text-[8px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="text-2xs font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
                             <Terminal className="w-3.5 h-3.5 text-primary" />
                             Código de Remediación DMARC (Políticas de Rechazo)
                           </span>
                           <button
                             type="button"
                             onClick={() => onCopy(`v=DMARC1; p=reject; pct=100; rua=mailto:dmarc-reports@${target}`, "dmarc_remediation")}
-                            className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="px-2.5 py-1 rounded-md text-2xs font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
                           >
                             {copiedId === 'dmarc_remediation' ? (
                               <>
@@ -309,26 +309,26 @@ export function MailSecurityPanel({
                             )}
                           </button>
                         </div>
-                        <code className="block text-[10px] text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
+                        <code className="block text-2xs text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
                           v=DMARC1; p=reject; pct=100; rua=mailto:dmarc-reports@{target}
                         </code>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <p className="text-foreground/80 leading-relaxed text-[11px]">
+                      <p className="text-foreground/80 leading-relaxed text-2xs">
                         No se detectó una política DMARC válida en el host. DMARC es el escudo definitivo que ordena a los servidores del mundo cómo manejar correos fraudulentos que pretendan ser tuyos.
                       </p>
                       <div className="space-y-2 pt-2 border-t border-border">
                         <div className="flex justify-between items-center">
-                          <span className="text-[8px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="text-2xs font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
                             <Terminal className="w-3.5 h-3.5 text-primary" />
                             Crear Registro TXT Recomendado
                           </span>
                           <button
                             type="button"
                             onClick={() => onCopy(`v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc-reports@${target}`, "dmarc_unconfigured_remediation")}
-                            className="px-2.5 py-1 rounded-md text-[9px] font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="px-2.5 py-1 rounded-md text-2xs font-bold text-muted-fg hover:text-foreground bg-muted/20 hover:bg-muted/40 border border-border transition-colors flex items-center gap-1.5 cursor-pointer"
                           >
                             {copiedId === 'dmarc_unconfigured_remediation' ? (
                               <>
@@ -343,7 +343,7 @@ export function MailSecurityPanel({
                             )}
                           </button>
                         </div>
-                        <code className="block text-[10px] text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
+                        <code className="block text-2xs text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 p-3.5 rounded-lg font-mono break-all leading-normal select-all">
                           v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc-reports@{target}
                         </code>
                       </div>
@@ -356,22 +356,22 @@ export function MailSecurityPanel({
             {/* DKIM & BIMI Mini-grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-muted/40 border border-border/50 rounded-xl p-3.5 flex flex-col gap-1 justify-between">
-                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-wider">
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">
                   Selectores DKIM
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-xl font-extrabold text-foreground">
                     {meta?.dkimCount ?? 0}
                   </span>
-                  <span className="text-[9px] font-bold text-muted-fg">Encontrados</span>
+                  <span className="text-2xs font-bold text-muted-fg">Encontrados</span>
                 </div>
-                <span className="text-[8px] text-muted-fg leading-normal mt-1">
+                <span className="text-2xs text-muted-fg leading-normal mt-1">
                   {meta?.dkimCount && meta.dkimCount > 0 ? '✓ Firmas criptográficas activas.' : '⚠ No se detectaron firmas estándar.'}
                 </span>
               </div>
 
               <div className="bg-muted/40 border border-border/50 rounded-xl p-3.5 flex flex-col gap-1 justify-between">
-                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-wider">
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">
                   Protocolo BIMI
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
@@ -379,7 +379,7 @@ export function MailSecurityPanel({
                     {meta?.bimiSuccess ? 'Certificado' : 'No detectado'}
                   </span>
                 </div>
-                <span className="text-[8px] text-muted-fg leading-normal mt-1">
+                <span className="text-2xs text-muted-fg leading-normal mt-1">
                   {meta?.bimiSuccess ? '✓ Logo corporativo validado.' : 'Logo en bandeja de entrada inactivo.'}
                 </span>
               </div>
@@ -396,7 +396,7 @@ export function MailSecurityPanel({
               Seguridad Web e Infraestructura
             </h4>
             {infraScore !== null && (
-              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+              <span className={`text-2xs font-extrabold px-2.5 py-0.5 rounded-full border ${
                 infraScore >= 80 ? 'text-chartreuse border-chartreuse/20 bg-chartreuse/5' : 'text-destructive border-destructive/20 bg-destructive/5'
               }`}>
                 Score: {infraScore}/100
@@ -407,7 +407,7 @@ export function MailSecurityPanel({
           <div className="space-y-4">
             {/* HTTPS & Protocol Enforcement */}
             <div className="bg-muted/40 border border-border/50 rounded-xl p-4 space-y-3.5">
-              <span className="text-[10px] font-extrabold text-muted-fg uppercase tracking-widest block">
+              <span className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest block">
                 Seguridad de Conexión y Transporte (TLS)
               </span>
 
@@ -417,7 +417,7 @@ export function MailSecurityPanel({
                     <Lock className="w-4 h-4 text-chartreuse" />
                   </div>
                   <div>
-                    <div className="text-[9px] font-extrabold text-muted-fg uppercase tracking-wider">Redirección HTTPS</div>
+                    <div className="text-2xs font-extrabold text-muted-fg uppercase tracking-wider">Redirección HTTPS</div>
                     <div className="text-xs font-bold text-foreground mt-0.5">
                       {meta?.redirectsToHttps ? 'Establecida' : 'Faltante / Débil'}
                     </div>
@@ -429,7 +429,7 @@ export function MailSecurityPanel({
                     <Cpu className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <div className="text-[9px] font-extrabold text-muted-fg uppercase tracking-wider">Cifrado de Capa</div>
+                    <div className="text-2xs font-extrabold text-muted-fg uppercase tracking-wider">Cifrado de Capa</div>
                     <div className="text-xs font-bold text-foreground mt-0.5">
                       TLS v1.3 / v1.2
                     </div>
@@ -440,7 +440,7 @@ export function MailSecurityPanel({
 
             {/* Web Security Headers Compliance Checklist */}
             <div className="bg-muted/[0.4] border border-border backdrop-blur-xl rounded-xl p-4 space-y-4">
-              <span className="text-[10px] font-extrabold text-muted-fg uppercase tracking-widest block">
+              <span className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest block">
                 Cumplimiento de Cabeceras de Seguridad
               </span>
 
@@ -496,12 +496,12 @@ export function MailSecurityPanel({
                           <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                             {header.name}
                           </span>
-                          <p className="text-[10px] text-muted-fg leading-normal truncate">
+                          <p className="text-2xs text-muted-fg leading-normal truncate">
                             {header.description}
                           </p>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider ${
+                          <span className={`px-2 py-0.5 rounded text-2xs font-extrabold uppercase tracking-wider ${
                             header.status
                               ? 'bg-chartreuse/10 text-chartreuse border border-chartreuse/20'
                               : 'bg-destructive/10 text-destructive border border-destructive/20'
@@ -514,25 +514,25 @@ export function MailSecurityPanel({
 
                       {/* Collapsable Content */}
                       <div className={`transition-[max-height,margin] duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[450px] mt-2 mb-3' : 'max-h-0'}`}>
-                        <div className="bg-muted/[0.5] border border-border p-4 rounded-xl space-y-3.5 text-[11px] leading-relaxed">
+                        <div className="bg-muted/[0.5] border border-border p-4 rounded-xl space-y-3.5 text-2xs leading-relaxed">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Diagnóstico Detallado</span>
+                              <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Diagnóstico Detallado</span>
                               <p className="text-muted-fg">{header.diagnostic}</p>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[8px] font-bold text-destructive uppercase tracking-widest block">Impacto y Explotabilidad</span>
+                              <span className="text-2xs font-bold text-destructive uppercase tracking-widest block">Impacto y Explotabilidad</span>
                               <p className="text-muted-fg">{header.risk}</p>
                             </div>
                           </div>
 
                           <div className="space-y-2 pt-2 border-t border-border/50">
                             <div className="flex justify-between items-center">
-                              <span className="text-[8px] font-bold text-primary uppercase tracking-widest">Código de Remediación / Configuración</span>
+                              <span className="text-2xs font-bold text-primary uppercase tracking-widest">Código de Remediación / Configuración</span>
                               <button
                                 type="button"
                                 onClick={() => onCopy(header.code, copyId)}
-                                className="text-[9px] font-bold text-muted-fg hover:text-foreground uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors duration-200"
+                                className="text-2xs font-bold text-muted-fg hover:text-foreground uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors duration-200"
                               >
                                 {copiedId === copyId ? (
                                   <>
@@ -547,7 +547,7 @@ export function MailSecurityPanel({
                                 )}
                               </button>
                             </div>
-                            <pre className="p-3.5 overflow-x-auto text-[10px] font-mono text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 rounded-lg max-h-[120px] leading-relaxed select-all">
+                            <pre className="p-3.5 overflow-x-auto text-2xs font-mono text-chartreuse bg-chartreuse/[0.15] border border-chartreuse/20 rounded-lg max-h-[120px] leading-relaxed select-all">
                               {header.code}
                             </pre>
                           </div>

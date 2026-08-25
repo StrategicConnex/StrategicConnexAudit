@@ -118,7 +118,7 @@ function Filters({
   return (
     <div className="flex flex-wrap gap-3 items-end">
       <div className="flex flex-col gap-1 min-w-40">
-        <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Tipo de Evento</label>
+        <label className="text-2xs uppercase tracking-widest text-muted-foreground font-semibold">Tipo de Evento</label>
         <select
           value={filters.eventType}
           onChange={e => onChange({ ...filters, eventType: e.target.value })}
@@ -133,7 +133,7 @@ function Filters({
         </select>
       </div>
       <div className="flex flex-col gap-1 min-w-36">
-        <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">IP</label>
+        <label className="text-2xs uppercase tracking-widest text-muted-foreground font-semibold">IP</label>
         <input
           type="text"
           placeholder="Filtrar por IP…"
@@ -145,7 +145,7 @@ function Filters({
         />
       </div>
       <div className="flex flex-col gap-1 min-w-32">
-        <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Desde</label>
+        <label className="text-2xs uppercase tracking-widest text-muted-foreground font-semibold">Desde</label>
         <input
           type="date"
           value={filters.from}
@@ -157,7 +157,7 @@ function Filters({
         />
       </div>
       <div className="flex flex-col gap-1 min-w-32">
-        <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Hasta</label>
+        <label className="text-2xs uppercase tracking-widest text-muted-foreground font-semibold">Hasta</label>
         <input
           type="date"
           value={filters.to}
@@ -201,14 +201,14 @@ function EventRow({ entry, isExpanded, onToggle }: {
           ${hasMetadata ? "cursor-pointer" : ""}`}
       >
         <td className="py-3 px-4">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${meta.color}`}>
-            <span className="text-[13px]">{meta.icon}</span>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-medium border ${meta.color}`}>
+            <span className="text-sm">{meta.icon}</span>
             {meta.label}
           </span>
         </td>
         <td className="py-3 px-4 font-mono text-xs text-foreground">{entry.ip}</td>
         <td className="py-3 px-4">
-          <span className="font-mono text-[11px] text-muted-foreground bg-surface-muted px-2 py-0.5 rounded">
+          <span className="font-mono text-2xs text-muted-foreground bg-surface-muted px-2 py-0.5 rounded">
             {entry.method}
           </span>
           <span className="ml-2 text-xs text-muted-foreground">{truncate(entry.path, 40)}</span>
@@ -232,7 +232,7 @@ function EventRow({ entry, isExpanded, onToggle }: {
                 const v = entry.metadata[k];
                 return (
                   <div key={k} className="bg-card rounded-md px-3 py-2 border border-border">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">{k}</div>
+                    <div className="text-2xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">{k}</div>
                     <div className="text-xs text-foreground font-mono break-all">
                       {typeof v === "object" ? JSON.stringify(v) : String(v)}
                     </div>
@@ -268,7 +268,7 @@ function StatsBar({ logs, total }: { logs: AuditLogEntry[]; total: number }) {
         const m = EVENT_LABELS[type];
         return (
           <span key={type} className="flex items-center gap-1">
-            <span className="text-[11px]">{m?.icon || "•"}</span>
+            <span className="text-2xs">{m?.icon || "•"}</span>
             <span className="text-foreground">{count}</span>
             <span className="text-muted-foreground">{m?.label || type}</span>
           </span>
@@ -377,7 +377,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
               <span className={`text-sm font-medium ${isFailed ? "text-destructive" : "text-chartreuse"} truncate`}>
                 💓 {isFailed ? "Heartbeat Failed" : "Heartbeat OK"}
               </span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-medium border ${
                 isFailed
                   ? "text-destructive border-destructive/30 bg-destructive/10"
                   : "text-chartreuse border-chartreuse/30 bg-chartreuse/10"
@@ -385,11 +385,11 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
                 {entry.target}
               </span>
               {isFailed ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-destructive border-destructive/30 bg-destructive/10">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-destructive border-destructive/30 bg-destructive/10">
                   ✗ Failed
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
                   ✓ Delivered
                 </span>
               )}
@@ -443,22 +443,22 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
         <div className="flex-1 min-w-0">
           {/* Header row */}
           <div className="flex items-center gap-2.5 mb-2 flex-wrap">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${sev.color}`}>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-medium border ${sev.color}`}>
               {sev.icon} {sev.label}
             </span>
             <span className="text-sm font-medium text-foreground truncate">
               {entry.label}
             </span>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${targetBadge.color}`}>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-medium border ${targetBadge.color}`}>
               {targetBadge.label}
             </span>
             {isFailed && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-destructive border-destructive/30 bg-destructive/10">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-destructive border-destructive/30 bg-destructive/10">
                 ✗ Failed
               </span>
             )}
             {entry.status === "success" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
                 ✓ Delivered
               </span>
             )}
@@ -644,7 +644,7 @@ function DnsAlertsSection({
                   {domain}
                 </span>
                 {/* Delivery channel badge */}
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border ${
                   entry.target === "Slack"
                     ? "text-accent-purple border-accent-purple/30 bg-accent-purple/10"
                     : entry.target === "PagerDuty"
@@ -659,11 +659,11 @@ function DnsAlertsSection({
                 </span>
                 {/* Status badge */}
                 {isFailed ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-destructive border-destructive/30 bg-destructive/10">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-destructive border-destructive/30 bg-destructive/10">
                     ✗ Failed
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
                     ✓ Delivered
                   </span>
                 )}
@@ -691,17 +691,17 @@ function DnsAlertsSection({
                       </span>
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-semibold text-foreground uppercase tracking-wide">
+                          <span className="text-2xs font-semibold text-foreground uppercase tracking-wide">
                             {s.recordType}
                           </span>
                           {/* Change type badge */}
                           {ctColor && (
-                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium border ${ctColor.color}`}>
+                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-2xs font-medium border ${ctColor.color}`}>
                               {s.typeEmoji || "•"} {ctColor.label}
                             </span>
                           )}
                           {/* Severity badge */}
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium border ${
                             s.severity === "critical"
                               ? "text-destructive border-destructive/30 bg-destructive/10"
                               : s.severity === "warning"
@@ -731,7 +731,7 @@ function DnsAlertsSection({
             )}
 
             {/* Footer: count + window */}
-            <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground">
+            <div className="mt-2 flex items-center gap-3 text-2xs text-muted-foreground">
               <span>{entry.count} cambio{entry.count !== 1 ? "s" : ""}</span>
               <span>ventana: {entry.windowMinutes} min</span>
               {entry.responseCode != null && (
@@ -753,7 +753,7 @@ function DiffBadge({ prev, curr }: { prev: string; curr: string }) {
       <span className="font-mono text-destructive line-through bg-destructive/10 px-2 py-0.5 rounded border border-destructive/30 max-w-[200px] truncate" title={prev}>
         {prev || "(vacío)"}
       </span>
-      <span className="text-muted-foreground text-[10px]">→</span>
+      <span className="text-muted-foreground text-2xs">→</span>
       <span className="font-mono text-chartreuse bg-chartreuse/30 px-2 py-0.5 rounded border border-chartreuse/30 max-w-[200px] truncate" title={curr}>
         {curr || "(vacío)"}
       </span>
@@ -850,7 +850,7 @@ function WhoisAlertsSection({
                   {domain}
                 </span>
                 {/* Delivery channel badge */}
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border ${
                   entry.target === "Slack"
                     ? "text-accent-purple border-accent-purple/30 bg-accent-purple/10"
                     : entry.target === "PagerDuty"
@@ -865,11 +865,11 @@ function WhoisAlertsSection({
                 </span>
                 {/* Status badge */}
                 {isFailed ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-destructive border-destructive/30 bg-destructive/10">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-destructive border-destructive/30 bg-destructive/10">
                     ✗ Failed
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
                     ✓ Delivered
                   </span>
                 )}
@@ -895,10 +895,10 @@ function WhoisAlertsSection({
                     </span>
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold text-foreground uppercase tracking-wide">
+                        <span className="text-2xs font-semibold text-foreground uppercase tracking-wide">
                           {s.label}
                         </span>
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium border ${
                           s.severity === "critical"
                             ? "text-destructive border-destructive/30 bg-destructive/10"
                             : s.severity === "warning"
@@ -927,7 +927,7 @@ function WhoisAlertsSection({
             )}
 
             {/* Footer: count + window */}
-            <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground">
+            <div className="mt-2 flex items-center gap-3 text-2xs text-muted-foreground">
               <span>{entry.count} cambio{entry.count !== 1 ? "s" : ""}</span>
               <span>ventana: {entry.windowMinutes} min</span>
               {entry.responseCode != null && (
@@ -965,7 +965,7 @@ function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismi
           <span className="text-sm font-medium text-foreground">Webhook Test</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {result.targetsAttempted} target{result.targetsAttempted !== 1 ? "s" : ""}
             {!allOk && <span className="text-destructive ml-1">({errorCount} fail{errorCount !== 1 ? "s" : ""})</span>}
           </span>
@@ -993,7 +993,7 @@ function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismi
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="font-semibold text-foreground">{d.name}</span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                <span className={`px-1.5 py-0.5 rounded text-2xs font-medium ${
                   d.status === "ok"
                     ? "text-chartreuse bg-chartreuse/10"
                     : "text-destructive bg-destructive/10"
@@ -1009,7 +1009,7 @@ function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismi
 
       {/* Timestamp */}
       <div className="px-5 py-2 border-t border-border">
-        <p className="text-[10px] text-muted-foreground font-mono">
+        <p className="text-2xs text-muted-foreground font-mono">
           {new Date(result.timestamp).toLocaleTimeString("es-ES")}
         </p>
       </div>
@@ -1063,7 +1063,7 @@ function SiemSection({
     <button
       onClick={handleTestWebhooks}
       disabled={testing}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium 
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-2xs font-medium 
                  text-foreground bg-card border border-border 
                  rounded-md hover:bg-surface-muted hover:text-foreground disabled:opacity-50
                  transition-all duration-150 active:scale-[0.97]"
@@ -1375,7 +1375,7 @@ export default function SecurityAuditDashboard() {
               <div className="border border-border rounded-xl overflow-hidden bg-surface">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-border text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+                    <tr className="border-b border-border text-2xs uppercase tracking-widest text-muted-foreground font-semibold">
                       <th className="text-left py-3 px-4 w-44">Evento</th>
                       <th className="text-left py-3 px-4 w-36">IP</th>
                       <th className="text-left py-3 px-4">Ruta</th>
@@ -1399,7 +1399,7 @@ export default function SecurityAuditDashboard() {
 
             {/* Footer */}
             {!loading && logs.length > 0 && (
-              <div className="mt-4 text-center text-[10px] text-muted-foreground">
+              <div className="mt-4 text-center text-2xs text-muted-foreground">
                 Mostrando {logs.length} de {total} eventos
               </div>
             )}

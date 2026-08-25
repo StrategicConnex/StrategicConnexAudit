@@ -142,16 +142,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <AlertTriangle className="w-10 h-10 text-destructive" />
         </div>
         <h1 className="text-3xl font-extrabold text-foreground tracking-tight relative z-10">Error de Conexión</h1>
-        <p className="mt-4 text-[15px] font-medium text-muted-foreground max-w-md leading-relaxed relative z-10">
+        <p className="mt-4 text-base font-medium text-muted-foreground max-w-md leading-relaxed relative z-10">
           Hubo un problema técnico al recuperar los datos de este proyecto. Nuestro equipo de respuesta a incidentes ha sido notificado automáticamente.
         </p>
         <div className="mt-12 flex gap-4 relative z-10">
-          <Link href="/" className="px-8 py-3 bg-surface-muted text-foreground font-bold border border-border rounded-xl hover:bg-surface-elevated transition-all text-[14px]">
+          <Link href="/" className="px-8 py-3 bg-surface-muted text-foreground font-bold border border-border rounded-xl hover:bg-surface-elevated transition-all text-sm">
             Volver al Inicio
           </Link>
           <Link 
             href={`/projects/${projectId}`}
-            className="px-8 py-3 bg-primary text-primary-foreground font-extrabold rounded-xl hover:bg-primary/90 transition-all text-[14px] shadow-[0_0_20px_rgba(99,102,241,0.3)] flex items-center justify-center"
+            className="px-8 py-3 bg-primary text-primary-foreground font-extrabold rounded-xl hover:bg-primary/90 transition-all text-sm shadow-[0_0_20px_rgba(99,102,241,0.3)] flex items-center justify-center"
           >
             Reintentar
           </Link>
@@ -180,17 +180,17 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Link>
         <div className="flex flex-col text-left min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-widest">Proyecto Activo</span>
+            <span className="text-2xs font-extrabold text-muted-foreground uppercase tracking-widest">Proyecto Activo</span>
             <span className="w-1.5 h-1.5 rounded-full bg-foreground/20" />
-            <span className="text-[9px] font-extrabold text-accent-cyan uppercase tracking-widest">{project.id.substring(0, 8)}</span>
+            <span className="text-2xs font-extrabold text-accent-cyan uppercase tracking-widest">{project.id.substring(0, 8)}</span>
           </div>
           <h1 className="text-xl font-bold tracking-tight text-foreground leading-tight truncate mt-0.5" title={project.name}>{project.name}</h1>
         </div>
         
         <div className="flex items-center gap-6">
           <div className="hidden sm:flex flex-col items-end text-right">
-             <span className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-widest">Dominio</span>
-             <span className="text-[13px] font-bold text-muted-foreground truncate max-w-[200px] mt-0.5">{project.domain}</span>
+             <span className="text-2xs font-extrabold text-muted-foreground uppercase tracking-widest">Dominio</span>
+             <span className="text-sm font-bold text-muted-foreground truncate max-w-[200px] mt-0.5">{project.domain}</span>
           </div>
           <div className="h-8 w-px bg-border mx-2" />
           <DeactivateButton projectId={projectId} />
@@ -223,15 +223,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   </h2>
                   {/* Executive Compliance Badges */}
                   <div className="hidden xl:flex items-center gap-2">
-                    <span className="text-[8px] font-bold text-chartreuse bg-chartreuse/10 border border-chartreuse/20 px-2 py-0.5 rounded-full uppercase tracking-wider">SOC 2 Type II</span>
-                    <span className="text-[8px] font-bold text-accent-cyan bg-accent-cyan/10 border border-accent-cyan/20 px-2 py-0.5 rounded-full uppercase tracking-wider">OWASP Top 10</span>
+                    <span className="text-2xs font-bold text-chartreuse bg-chartreuse/10 border border-chartreuse/20 px-2 py-0.5 rounded-full uppercase tracking-wider">SOC 2 Type II</span>
+                    <span className="text-2xs font-bold text-accent-cyan bg-accent-cyan/10 border border-accent-cyan/20 px-2 py-0.5 rounded-full uppercase tracking-wider">OWASP Top 10</span>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">Monitoreo en tiempo real de disponibilidad, tiempos de respuesta y Core Web Vitals.</p>
               </div>
               <div className="flex items-center gap-3 bg-surface-muted px-5 py-2.5 rounded-full border border-border w-fit">
                 <div className={`w-2 h-2 rounded-full ${currentUptimeStatus === 'up' ? 'bg-chart-success shadow-[0_0_12px_var(--chart-success)]' : 'bg-chart-danger shadow-[0_0_12px_var(--chart-danger)]'}`} />
-                <span className="text-[10px] font-bold text-foreground uppercase tracking-widest">{currentUptimeStatus === 'up' ? 'Servidor Online' : 'Servidor Offline'}</span>
+                <span className="text-2xs font-bold text-foreground uppercase tracking-widest">{currentUptimeStatus === 'up' ? 'Servidor Online' : 'Servidor Offline'}</span>
               </div>
             </div>
 
@@ -289,7 +289,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <div className="grid grid-cols-2 gap-6">
                   {/* Browsers */}
                   <div>
-                    <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Navegadores</h4>
+                    <h4 className="text-2xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Navegadores</h4>
                     {Object.keys(vitalsAverages.browsersMap).length > 0 ? (
                       <div className="space-y-2">
                         {Object.entries(vitalsAverages.browsersMap).map(([browser, count], idx) => (
@@ -305,7 +305,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   </div>
                   {/* Countries */}
                   <div>
-                    <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Países (Vercel Geo)</h4>
+                    <h4 className="text-2xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Países (Vercel Geo)</h4>
                     {Object.keys(vitalsAverages.countriesMap).length > 0 ? (
                       <div className="space-y-2">
                         {Object.entries(vitalsAverages.countriesMap).map(([country, count], idx) => (
@@ -326,10 +326,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             <div className="mt-12 p-8 bg-surface-muted/60 rounded-2xl border border-border relative overflow-hidden">
               <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 relative z-10">
-                <h3 className="text-[10px] font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-2xs font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
                   <Server className="w-4 h-4 text-accent-cyan" /> Integración RUM (Real User Monitoring)
                 </h3>
-                <Link href={`/scripts/vitals.js`} className="text-[10px] font-bold text-accent-cyan hover:text-accent-cyan/80 transition-colors uppercase tracking-widest">Documentación Técnica →</Link>
+                <Link href={`/scripts/vitals.js`} className="text-2xs font-bold text-accent-cyan hover:text-accent-cyan/80 transition-colors uppercase tracking-widest">Documentación Técnica →</Link>
               </div>
               <p className="text-sm text-muted-foreground mb-6 max-w-2xl leading-relaxed relative z-10">
                 Inserte este fragmento en el head de su sitio web para comenzar a capturar métricas de rendimiento reales de sus visitantes directamente en su consola de StrategicAudit Pro.
@@ -365,7 +365,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 action={latestCompletedAudit ? (
                   <Link 
                     href={`/projects/${projectId}/audits/${latestCompletedAudit.id}`}
-                    className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-destructive hover:text-destructive/80 transition-colors mt-6 w-fit bg-destructive/10 border border-destructive/20 px-4 py-2 rounded-xl"
+                    className="flex items-center gap-2 text-2xs font-extrabold uppercase tracking-widest text-destructive hover:text-destructive/80 transition-colors mt-6 w-fit bg-destructive/10 border border-destructive/20 px-4 py-2 rounded-xl"
                   >
                     Generar PDF <ArrowRight className="w-4 h-4 ml-1" />
                   </Link>
@@ -394,7 +394,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <div className="text-center py-32 bg-card/20">
                 <Globe className="w-16 h-16 text-muted-foreground mx-auto mb-6" strokeWidth={1} />
                 <h3 className="text-xl font-bold text-muted-foreground">Sin Auditorías Activas</h3>
-                <p className="text-[14px] font-medium text-muted-foreground mt-2">Inicie un nuevo análisis de ciber-seguridad para comenzar a recolectar datos aquí.</p>
+                <p className="text-sm font-medium text-muted-foreground mt-2">Inicie un nuevo análisis de ciber-seguridad para comenzar a recolectar datos aquí.</p>
               </div>
             ) : (
               <div className="divide-y divide-border">
@@ -428,21 +428,21 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                         />
                         <div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                            <p className="text-[15px] font-bold text-foreground group-hover:text-accent-cyan transition-colors tracking-tight">
+                            <p className="text-base font-bold text-foreground group-hover:text-accent-cyan transition-colors tracking-tight">
                               Análisis Técnico Completo
                             </p>
-                            <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase tracking-widest px-2 py-0.5 bg-surface-muted border border-border rounded w-fit">
+                            <span className="text-2xs font-mono font-bold text-muted-foreground uppercase tracking-widest px-2 py-0.5 bg-surface-muted border border-border rounded w-fit">
                               ID: {audit.id.substring(0, 8)}
                             </span>
                           </div>
-                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
+                          <p className="text-2xs font-bold text-muted-foreground uppercase tracking-wider mt-1">
                             {audit.createdAt ? new Date(audit.createdAt).toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' }) : '--'}
                           </p>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-6">
-                        <span className={`text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider border ${statusStyle}`}>
+                        <span className={`text-2xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border ${statusStyle}`}>
                           {statusLabel}
                         </span>
                         <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" strokeWidth={2.5} />
@@ -473,7 +473,7 @@ function StatBox({ icon, title, value, accent = "default" }: { icon: React.React
         {icon}
       </div>
       <div>
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+        <p className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
         <p className="text-3xl font-extrabold text-foreground tracking-tighter mt-1">{value}</p>
       </div>
     </div>
@@ -491,7 +491,7 @@ function VitalsCard({ label, value, status, desc }: { label: string; value: stri
   return (
     <div className="backdrop-blur-xl border border-border bg-card/60 hover:bg-surface-muted hover:border-foreground/15 rounded-2xl p-8 flex flex-col justify-between group transition-all duration-300 shadow-[var(--shadow-card)]">
       <div>
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">{label}</p>
+        <p className="text-2xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">{label}</p>
         <div className="flex items-baseline gap-2">
           <span className="text-4xl font-extrabold tracking-tighter text-foreground">{value}</span>
           <div className={`w-2 h-2 rounded-full ${statusColors[status]}`}></div>

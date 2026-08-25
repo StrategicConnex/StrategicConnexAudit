@@ -87,7 +87,7 @@ export function AiCopilotSidebar({
                 : "bg-muted border border-border text-foreground mr-auto"
             }`}
           >
-            <span className="text-[9px] font-mono font-medium tracking-wide uppercase opacity-60">
+            <span className="text-2xs font-mono font-medium tracking-wide uppercase opacity-60">
               {msg.role === "user" ? "Yo" : "Copilot Audit"}
             </span>
             <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>

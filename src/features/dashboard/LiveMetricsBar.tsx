@@ -57,7 +57,7 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
         {!expanded && (
           <button onClick={() => setExpanded(true)}
             aria-label="Expandir métricas en vivo"
-            className="flex items-center space-x-2 px-3 py-2 text-[10px] font-mono text-muted-fg hover:text-foreground transition-colors">
+            className="flex items-center space-x-2 px-3 py-2 text-2xs font-mono text-muted-fg hover:text-foreground transition-colors">
             <span className={"w-2 h-2 rounded-full " + pClass} aria-hidden="true" />
             <Activity aria-hidden="true" className="w-3 h-3 text-primary" /> <span>Live</span>
           </button>
@@ -71,41 +71,41 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
               </div>
               <div className="flex items-center space-x-1">
                 {metrics.connected ? <Wifi className="w-3 h-3 text-chartreuse" /> : <WifiOff className="w-3 h-3 text-red-400" />}
-                <span className={"text-[9px] font-mono " + (metrics.connected ? "text-chartreuse" : "text-red-400")}>
+                <span className={"text-2xs font-mono " + (metrics.connected ? "text-chartreuse" : "text-red-400")}>
                   {metrics.connected ? "ONLINE" : "OFFLINE"}</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-background/60 rounded-lg p-2 border border-border/50">
-                <span className="text-[8px] font-mono text-muted-fg uppercase tracking-wider">Uptime</span>
+                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Uptime</span>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <TrendingUp className="w-3 h-3 text-primary" />
                   <span className="text-xs font-bold text-foreground">{metrics.uptimePercent !== null ? Math.round(metrics.uptimePercent * 100) + "%" : "—"}</span>
                 </div>
               </div>
               <div className="bg-background/60 rounded-lg p-2 border border-border/50">
-                <span className="text-[8px] font-mono text-muted-fg uppercase tracking-wider">Latency</span>
+                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Latency</span>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <Clock className="w-3 h-3 text-chartreuse" />
                   <span className="text-xs font-bold text-foreground">{metrics.avgLatencyMs !== null ? metrics.avgLatencyMs + "ms" : "—"}</span>
                 </div>
               </div>
               <div className="bg-background/60 rounded-lg p-2 border border-border/50">
-                <span className="text-[8px] font-mono text-muted-fg uppercase tracking-wider">Critical</span>
+                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Critical</span>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <AlertTriangle className="w-3 h-3 text-destructive" />
                   <span className="text-xs font-bold text-foreground">{metrics.criticalFindingsCount}</span>
                 </div>
               </div>
               <div className="bg-background/60 rounded-lg p-2 border border-border/50">
-                <span className="text-[8px] font-mono text-muted-fg uppercase tracking-wider">Events</span>
+                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Events</span>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <Activity className="w-3 h-3 text-blue-400" />
                   <span className="text-xs font-bold text-foreground">{metrics.eventsCount}</span>
                 </div>
               </div>
             </div>
-            <div className="text-[8px] font-mono text-muted-fg text-center pt-1 border-t border-border/30">
+            <div className="text-2xs font-mono text-muted-fg text-center pt-1 border-t border-border/30">
               {metrics.lastCheckTimestamp ? "Updated: " + new Date(metrics.lastCheckTimestamp).toLocaleTimeString() : "Waiting..."}
             </div>
           </div>

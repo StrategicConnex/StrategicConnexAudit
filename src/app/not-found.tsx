@@ -62,7 +62,7 @@ export default function NotFoundPage() {
 
           {/* Footer */}
           <div className="mt-7 sm:mt-8 pt-5 sm:pt-6 border-t border-border">
-            <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-muted-fg/60">
+            <div className="flex items-center justify-center gap-2 text-2xs sm:text-xs text-muted-fg/60">
               <Shield className="w-3 h-3" />
               <span>StrategicAudit Pro · Route Intelligence</span>
             </div>

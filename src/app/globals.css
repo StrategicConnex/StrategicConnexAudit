@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SCAUDIT — Enterprise Cyber Intelligence Design System v3
+   SCAUDIT — Enterprise Cyber Intelligence Design System v4
    Tailwind CSS v4 with OKLCH color tokens.
-   
-   Design DNA: Server-room precision — the inside of a fully-lit data center
-   rack. Deep indigo-charcoal backgrounds, clean indigo primary, and a single
-   chartreuse accent used sparingly as a live-signal marker.
-   
+
+   Design DNA: Olive + Gold + Teal NOC — the war-room of a network
+   operations center at night. Near-black olive backgrounds, gold as the
+   single saturated accent (live signals, primary actions, focus), teal as
+   the secondary data hue. Multi-hue accents are reserved for data-viz.
+
    Font stack: Space Grotesk (display/data), Inter (body/UI), JetBrains Mono
    (terminal/code).
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -32,7 +33,6 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-indigo: oklch(68% 0.14 230);
   --color-chartreuse: var(--chartreuse);
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
@@ -56,6 +56,14 @@
   --color-accent-cyan: var(--accent-cyan);
   --color-accent-indigo: var(--accent-indigo);
   --color-accent-violet: var(--accent-violet);
+
+  /* ─── Escala tipográfica (v4) — reemplaza a text-[Npx] ────────────────
+     Solo se añade 2xs (11px): los defaults de Tailwind (xs=12, sm=14,
+     base=16, lg=18) quedan intactos para no alterar el código existente.
+     Mínimo absoluto 11px: por debajo, el texto UPPERCASE con tracking en
+     dark shimmera y falla WCAG para texto esencial. */
+  --text-2xs: 0.6875rem;   /* 11px */
+  --text-2xs--line-height: 1.45;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

@@ -70,7 +70,7 @@ function StatCard({
           style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }}
         />
       )}
-      <p className="text-[11px] font-semibold text-muted-foreground tracking-widest uppercase mb-2">
+      <p className="text-2xs font-semibold text-muted-foreground tracking-widest uppercase mb-2">
         {label}
       </p>
       <p className="text-3xl font-bold tracking-tight">{value}</p>
@@ -304,7 +304,7 @@ function ModelTable({ models }: { models: ModelHealthSummary[] }) {
           <tbody>
             {models.map((m) => (
               <tr key={m.modelId} className="border-b border-border hover:bg-surface-muted transition-colors">
-                <td className="p-3 font-mono text-[11px]">{shortModelId(m.modelId)}</td>
+                <td className="p-3 font-mono text-2xs">{shortModelId(m.modelId)}</td>
                 <td className="p-3 text-right">{m.totalChecks}</td>
                 <td className="p-3 text-right text-chartreuse">{m.healthyCount}</td>
                 <td className="p-3 text-right text-chart-warning">{m.degradedCount}</td>
@@ -342,7 +342,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h3 className="text-sm font-bold text-foreground">Últimos Chequeos</h3>
-        <span className="text-[10px] text-muted-foreground">{recent.length} registros</span>
+        <span className="text-2xs text-muted-foreground">{recent.length} registros</span>
       </div>
       <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
         <table className="w-full text-xs">
@@ -370,7 +370,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                   >
                     <td className="p-3 whitespace-nowrap">{formatDate(r.checkedAt)}</td>
                     <td className="p-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-bold ${
                         r.overallStatus === "healthy"
                           ? "bg-chartreuse/10 text-chartreuse"
                           : r.overallStatus === "degraded"
@@ -399,7 +399,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                           {r.modelResults.map((mr) => (
                             <div
                               key={mr.modelId}
-                              className="flex items-center gap-3 text-[11px] font-mono px-3 py-1.5 rounded-lg"
+                              className="flex items-center gap-3 text-2xs font-mono px-3 py-1.5 rounded-lg"
                             >
                               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                                 mr.status === "healthy" ? "bg-chart-success" :
@@ -473,16 +473,16 @@ function FailureList({ recent }: { recent: HealthCheckRecord[] }) {
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h3 className="text-sm font-bold text-destructive">Eventos de Fallo</h3>
-        <span className="text-[10px] text-muted-foreground">{failures.length} eventos</span>
+        <span className="text-2xs text-muted-foreground">{failures.length} eventos</span>
       </div>
       <div className="divide-y divide-border max-h-[320px] overflow-y-auto">
         {failures.map((f, i) => (
           <div key={i} className="p-3 hover:bg-surface-muted transition-colors">
             <div className="flex items-center justify-between mb-1">
               <span className="font-mono text-xs text-destructive">{f.modelId}</span>
-              <span className="text-[10px] text-muted-foreground">{timeAgo(f.checkedAt)}</span>
+              <span className="text-2xs text-muted-foreground">{timeAgo(f.checkedAt)}</span>
             </div>
-            <p className="text-[11px] text-muted-foreground truncate" title={f.error}>
+            <p className="text-2xs text-muted-foreground truncate" title={f.error}>
               {f.error}
             </p>
           </div>

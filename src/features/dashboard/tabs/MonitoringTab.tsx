@@ -396,7 +396,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
 
         {/* Project Selector */}
         <div className="flex items-center gap-3 shrink-0">
-          <label className="text-[11px] font-bold uppercase tracking-widest text-muted-fg">{t('projectLabel')}</label>
+          <label className="text-2xs font-bold uppercase tracking-widest text-muted-fg">{t('projectLabel')}</label>
           <select
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
@@ -443,7 +443,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">{t('scheduleIntervalLabel')}</label>
+                <label className="text-2xs font-bold text-muted-fg uppercase tracking-wider">{t('scheduleIntervalLabel')}</label>
                 <select
                   disabled={!schedule.enabled}
                   value={schedule.interval}
@@ -462,7 +462,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               </div>
 
               {schedule.enabled && schedule.nextRunAt && (
-                <div className="text-[10px] text-muted-fg flex items-center gap-1">
+                <div className="text-2xs text-muted-fg flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-primary animate-pulse" />
                   {t('scheduleNextRunLabel')} {new Date(schedule.nextRunAt).toLocaleDateString()}
                 </div>
@@ -489,7 +489,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 </span>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">{t('quotaTitle')}</h3>
               </div>
-              <span className="text-[9px] font-black uppercase text-primary bg-cyan-400/10 border border-cyan-400/20 px-2 py-0.5 rounded">
+              <span className="text-2xs font-black uppercase text-primary bg-cyan-400/10 border border-cyan-400/20 px-2 py-0.5 rounded">
                 Plan {currentPlan}
               </span>
             </div>
@@ -505,7 +505,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   </svg>
                   <span className="absolute text-xs font-bold text-white">{initialProjects.length} / {planInfo.projects === 999 ? '∞' : planInfo.projects}</span>
                 </div>
-                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider mt-2">{t('quotaResourcesLabel')}</span>
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider mt-2">{t('quotaResourcesLabel')}</span>
               </div>
 
               {/* Dial 2: Scans */}
@@ -517,11 +517,11 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   </svg>
                   <span className="absolute text-xs font-bold text-white">{activeScansSimulated} / {planInfo.scans === 9999 ? '∞' : planInfo.scans}</span>
                 </div>
-                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider mt-2">{t('quotaScansLabel')}</span>
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider mt-2">{t('quotaScansLabel')}</span>
               </div>
             </div>
             
-            <p className="text-[11px] text-muted-fg mb-3 text-center">
+            <p className="text-2xs text-muted-fg mb-3 text-center">
               {t('quotaBillingInfo', { price: planInfo.price })}
             </p>
           </div>
@@ -552,17 +552,17 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <div className="flex items-center justify-between text-xs p-2 rounded bg-destructive/5 border border-destructive/10">                  <span className="text-muted-fg flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {t('severityCritical')}
                   </span>
-                <span className="font-mono text-foreground/80 text-[10px]">#security-incidents</span>
+                <span className="font-mono text-foreground/80 text-2xs">#security-incidents</span>
               </div>
               <div className="flex items-center justify-between text-xs p-2 rounded bg-[oklch(75% 0.13 80)]/5 border border-[oklch(75% 0.13 80)]/10">                  <span className="text-muted-fg flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> {t('severityWarning')}
                   </span>
-                <span className="font-mono text-foreground/80 text-[10px]">#seo-drift</span>
+                <span className="font-mono text-foreground/80 text-2xs">#seo-drift</span>
               </div>
               <div className="flex items-center justify-between text-xs p-2 rounded bg-primary/5 border border-primary/10">                  <span className="text-muted-fg flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" /> {t('severityInfo')}
                   </span>
-                <span className="font-mono text-foreground/80 text-[10px]">#deploy-logs</span>
+                <span className="font-mono text-foreground/80 text-2xs">#deploy-logs</span>
               </div>
             </div>
           </div>
@@ -585,9 +585,9 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
           <div className="flex items-center justify-between border-b border-border/50 pb-4">
             <div>
               <h3 className="text-sm font-bold text-white tracking-tight">{t('driftTitle')}</h3>
-              <p className="text-[11px] text-muted-fg mt-0.5">{t('driftDesc')}</p>
+              <p className="text-2xs text-muted-fg mt-0.5">{t('driftDesc')}</p>
             </div>
-            <span className="text-[10px] font-bold text-muted-fg bg-muted/20 border border-border/40 px-2 py-0.5 rounded">
+            <span className="text-2xs font-bold text-muted-fg bg-muted/20 border border-border/40 px-2 py-0.5 rounded">
               {t('driftEventCount', { count: alerts.length })}
             </span>
           </div>
@@ -622,12 +622,12 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-foreground/80">{alert.title}</span>
-                        <span className={`text-[9px] font-black uppercase border px-1.5 py-0.5 rounded ${badgeStyle}`}>
+                        <span className={`text-2xs font-black uppercase border px-1.5 py-0.5 rounded ${badgeStyle}`}>
                           {alert.severity}
                         </span>
                       </div>
                       <p className="text-xs text-muted-fg leading-relaxed">{alert.message}</p>
-                      <div className="text-[10px] text-muted-fg">
+                      <div className="text-2xs text-muted-fg">
                         {new Date(alert.createdAt).toLocaleString()}
                       </div>
                     </div>
@@ -637,7 +637,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                         onClick={() => {
                           setAlerts(prev => prev.map(a => a.id === alert.id ? { ...a, resolved: true } : a));
                         }}
-                        className="text-[10px] font-bold text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 px-2.5 py-1 rounded transition-colors shrink-0 cursor-pointer"
+                        className="text-2xs font-bold text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 px-2.5 py-1 rounded transition-colors shrink-0 cursor-pointer"
                       >
                         {t('driftResolveButton')}
                       </button>
@@ -657,7 +657,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 <Link2 className="w-4 h-4 text-primary" />
                 {t('webhookSectionTitle')}
               </h3>
-              <p className="text-[11px] text-muted-fg mt-0.5">{t('webhookSectionDesc')}</p>
+              <p className="text-2xs text-muted-fg mt-0.5">{t('webhookSectionDesc')}</p>
             </div>
 
             {isLoadingWebhooks ? (
@@ -670,7 +670,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   <div key={w.id} className="p-3 rounded-lg bg-muted/5 border border-border/30 flex items-center justify-between gap-3 group">
                     <div className="overflow-hidden">
                       <p className="text-xs font-bold text-foreground/80 truncate">{w.name}</p>
-                      <p className="text-[10px] text-muted-fg truncate font-mono">{w.url}</p>
+                      <p className="text-2xs text-muted-fg truncate font-mono">{w.url}</p>
                     </div>
                     <button
                       onClick={() => handleDeleteWebhook(w.id)}
@@ -728,9 +728,9 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   <Key className="w-4 h-4 text-primary" />
                   {t('apiKeysSectionTitle')}
                 </h3>
-                <p className="text-[11px] text-muted-fg mt-0.5">{t('apiKeysSectionDesc')}</p>
+                <p className="text-2xs text-muted-fg mt-0.5">{t('apiKeysSectionDesc')}</p>
               </div>
-              <span className="text-[10px] font-mono text-muted-fg">Prefijo: sa_live_</span>
+              <span className="text-2xs font-mono text-muted-fg">Prefijo: sa_live_</span>
             </div>
 
             {isLoadingKeys ? (
@@ -743,12 +743,12 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   <div key={key.id} className="p-3 rounded-lg bg-muted/5 border border-border/30 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold text-foreground/80">{key.name}</p>
-                      <p className="text-[10px] text-muted-fg font-mono mt-0.5">Prefix ID: {key.keyPrefix}</p>
+                      <p className="text-2xs text-muted-fg font-mono mt-0.5">Prefix ID: {key.keyPrefix}</p>
                     </div>
 
                     <div className="flex items-center gap-1.5">
                       {key.expiresAt && (
-                        <span className="text-[9px] text-muted-fg bg-muted/10 border border-border/40 px-1.5 py-0.5 rounded">
+                        <span className="text-2xs text-muted-fg bg-muted/10 border border-border/40 px-1.5 py-0.5 rounded">
                           Expira: {new Date(key.expiresAt).toLocaleDateString()}
                         </span>
                       )}
@@ -768,10 +768,10 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
             {createdClearKey && (
               <div className="p-4 mb-4 rounded-lg bg-cyan-950/20 border border-primary/20 space-y-2 animate-in slide-in-from-top-2 duration-300">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-2xs font-bold text-primary uppercase tracking-wider flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5" /> {t('apiKeysGeneratedTitle')}
                   </span>
-                  <span className="text-[9px] text-muted-fg">{t('apiKeysCopyWarning')}</span>
+                  <span className="text-2xs text-muted-fg">{t('apiKeysCopyWarning')}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 bg-card border border-border/40 p-2.5 rounded font-mono text-xs text-foreground/80 overflow-x-auto select-all">
                   <span className="break-all">{createdClearKey}</span>
@@ -814,7 +814,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               </span>
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">{t('bulkTitle')}</h3>
-                <p className="text-[11px] text-muted-fg mt-0.5">{t('bulkDesc')}</p>
+                <p className="text-2xs text-muted-fg mt-0.5">{t('bulkDesc')}</p>
               </div>
             </div>
 
@@ -870,7 +870,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               ✕
             </button>
 
-            <div className="text-center space-y-1">                  <span className="text-[10px] font-extrabold tracking-widest text-[var(--primary)] bg-primary/10 px-3 py-1 rounded-full uppercase">{t('pricingBadge')}</span>
+            <div className="text-center space-y-1">                  <span className="text-2xs font-extrabold tracking-widest text-[var(--primary)] bg-primary/10 px-3 py-1 rounded-full uppercase">{t('pricingBadge')}</span>
               <h2 className="text-2xl font-black text-white tracking-tight mt-3">{t('pricingTitle')}</h2>
               <p className="text-xs text-muted-fg max-w-lg mx-auto">
                 {t('pricingDesc')}
@@ -890,7 +890,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">{t('planStarter')}</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$49</span>
-                    <span className="text-[11px] font-bold text-muted-fg">{t('planPerMonth')}</span>
+                    <span className="text-2xs font-bold text-muted-fg">{t('planPerMonth')}</span>
                   </div>
                   <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
                     <li className="flex items-center gap-2">✓ 10 Recursos Activos</li>
@@ -916,14 +916,14 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   ? 'border-[var(--primary)] bg-[var(--primary)]/[0.03] shadow-[0_4px_30px_rgba(6,182,212,0.15)]'
                   : 'border-border/50 bg-muted/1 hover:border-border'
               }`}>
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black tracking-widest text-[var(--primary)] bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-full uppercase">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xs font-black tracking-widest text-[var(--primary)] bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-full uppercase">
                   {t('planRecommended')}
                 </span>
                 <div className="space-y-3">
                   <p className="text-xs font-bold text-[var(--primary)] uppercase tracking-widest">{t('planBusiness')}</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$149</span>
-                    <span className="text-[11px] font-bold text-muted-fg">{t('planPerMonth')}</span>
+                    <span className="text-2xs font-bold text-muted-fg">{t('planPerMonth')}</span>
                   </div>
                   <ul className="text-xs text-foreground/80 space-y-2.5 pt-2">
                     <li className="flex items-center gap-2">✓ 50 Recursos Activos</li>
@@ -953,7 +953,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                   <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">{t('planEnterprise')}</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-black text-white">$499</span>
-                    <span className="text-[11px] font-bold text-muted-fg">{t('planPerMonth')}</span>
+                    <span className="text-2xs font-bold text-muted-fg">{t('planPerMonth')}</span>
                   </div>
                   <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
                     <li className="flex items-center gap-2">✓ Recursos Ilimitados</li>

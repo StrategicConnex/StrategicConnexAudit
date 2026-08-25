@@ -43,7 +43,7 @@ export default function OfflinePage() {
         </button>
 
         {/* Footer */}
-        <p className="mt-12 text-[10px] text-[#52525b] uppercase tracking-widest">
+        <p className="mt-12 text-2xs text-[#52525b] uppercase tracking-widest">
           SCAUDIT Enterprise Network Intelligence
         </p>
       </div>

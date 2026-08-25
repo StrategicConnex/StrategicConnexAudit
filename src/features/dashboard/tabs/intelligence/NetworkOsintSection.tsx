@@ -57,7 +57,7 @@ export function NetworkOsintSection({
                       <Globe className="w-5 h-5 text-primary animate-pulse" />
                       Diagnóstico de Red y OSINT Avanzado
                     </h3>
-                    <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
+                    <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">
                       Topología de perímetro de red, enrutamiento de paquetes y análisis de huella pública (Open Source Intelligence)
                     </p>
                   </div>
@@ -73,7 +73,7 @@ export function NetworkOsintSection({
                           Información de Registro (WHOIS/RDAP)
                         </h4>
                         {whois?.success && (
-                          <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                          <span className="text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
                             Dominio Activo
                           </span>
                         )}
@@ -84,22 +84,22 @@ export function NetworkOsintSection({
                           {/* Registrar & Dates */}
                           <div className="space-y-4">
                             <div className="space-y-1">
-                              <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Registrador Autorizado</span>
+                              <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Registrador Autorizado</span>
                               <span className="text-sm font-extrabold text-foreground">{whois.registrar || 'Desconocido'}</span>
                             </div>
 
                             <div className="space-y-2">
-                              <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Fechas de Registro</span>
+                              <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Fechas de Registro</span>
                               <div className="space-y-1 bg-muted/10 border border-border/50 rounded-lg p-2.5">
-                                <div className="flex justify-between text-[10px]">
+                                <div className="flex justify-between text-2xs">
                                   <span className="text-muted-fg font-bold uppercase">Creado:</span>
                                   <span className="text-foreground/80 font-mono">{whois.createdDate ? new Date(whois.createdDate).toLocaleDateString('es-ES') : 'N/A'}</span>
                                 </div>
-                                <div className="flex justify-between text-[10px]">
+                                <div className="flex justify-between text-2xs">
                                   <span className="text-muted-fg font-bold uppercase">Actualizado:</span>
                                   <span className="text-foreground/80 font-mono">{whois.updatedDate ? new Date(whois.updatedDate).toLocaleDateString('es-ES') : 'N/A'}</span>
                                 </div>
-                                <div className="flex justify-between text-[10px] border-t border-border/50 pt-1 mt-1">
+                                <div className="flex justify-between text-2xs border-t border-border/50 pt-1 mt-1">
                                   <span className="text-muted-fg font-bold uppercase">Expira:</span>
                                   <span className="text-foreground/80 font-mono">{whois.expiresDate ? new Date(whois.expiresDate).toLocaleDateString('es-ES') : 'N/A'}</span>
                                 </div>
@@ -115,7 +115,7 @@ export function NetworkOsintSection({
                                   ? 'bg-[oklch(75% 0.13 80)]/5 border-[oklch(75% 0.13 80)]/20 text-[oklch(75% 0.13 80)]' 
                                   : 'bg-chartreuse/5 border-chartreuse/20 text-chartreuse'
                               }`}>
-                                <span className="text-[9px] font-bold uppercase tracking-wider block">Tiempo hasta Renovación</span>
+                                <span className="text-2xs font-bold uppercase tracking-wider block">Tiempo hasta Renovación</span>
                                 <span className="text-sm font-black">{remainingDays} días</span>
                               </div>
                             )}
@@ -124,32 +124,32 @@ export function NetworkOsintSection({
                           {/* Domain Status & Nameservers */}
                           <div className="space-y-4 flex flex-col">
                             <div className="space-y-1.5">
-                              <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Estados de Dominio (Registry Status)</span>
+                              <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Estados de Dominio (Registry Status)</span>
                               <div className="flex flex-wrap gap-1">
                                 {whois.status && whois.status.length > 0 ? (
                                   whois.status.slice(0, 3).map((st, idx) => (
-                                    <span key={idx} className="text-[8px] font-bold px-2 py-0.5 rounded bg-muted text-muted-fg border border-border/50 truncate max-w-full">
+                                    <span key={idx} className="text-2xs font-bold px-2 py-0.5 rounded bg-muted text-muted-fg border border-border/50 truncate max-w-full">
                                       {st.split(' ')[0]}
                                     </span>
                                   ))
                                 ) : (
-                                  <span className="text-[9px] text-muted-fg">Ningún estado especial reportado</span>
+                                  <span className="text-2xs text-muted-fg">Ningún estado especial reportado</span>
                                 )}
                               </div>
                             </div>
 
                             <div className="space-y-1.5 flex-1 flex flex-col justify-end">
-                              <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Servidores de Nombres (Auth DNS)</span>
+                              <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Servidores de Nombres (Auth DNS)</span>
                               <div className="bg-muted/5 border border-border/50 rounded-lg p-2.5 space-y-1 flex-1 overflow-y-auto max-h-[120px]">
                                 {whois.nameservers && whois.nameservers.length > 0 ? (
                                   whois.nameservers.map((ns, idx) => (
-                                    <div key={idx} className="flex items-center gap-1.5 text-[9px] text-muted-fg font-mono">
+                                    <div key={idx} className="flex items-center gap-1.5 text-2xs text-muted-fg font-mono">
                                       <span className="w-1 h-1 bg-indigo-500 rounded-full shrink-0"></span>
                                       <span className="truncate">{ns}</span>
                                     </div>
                                   ))
                                 ) : (
-                                  <span className="text-[9px] text-muted-fg">Ningún servidor DNS delegado</span>
+                                  <span className="text-2xs text-muted-fg">Ningún servidor DNS delegado</span>
                                 )}
                               </div>
                             </div>
@@ -159,7 +159,7 @@ export function NetworkOsintSection({
                         <div className="flex-1 flex flex-col justify-center items-center text-center p-6 bg-muted/1 border border-dashed border-border/50 rounded-xl gap-2">
                           <Globe className="w-8 h-8 text-muted-fg" />
                           <span className="text-xs font-bold text-muted-fg">Detalles WHOIS No Disponibles</span>
-                          <p className="text-[10px] text-muted-fg max-w-xs leading-relaxed">
+                          <p className="text-2xs text-muted-fg max-w-xs leading-relaxed">
                             No se encontraron registros de registro de dominio público para este objetivo. Esto ocurre en IPs directas o subdominios internos.
                           </p>
                         </div>
@@ -173,7 +173,7 @@ export function NetworkOsintSection({
                           <Activity className="w-4 h-4 text-chartreuse" />
                           Rendimiento y Escudo Perimetral
                         </h4>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                        <span className={`text-2xs font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
                           cdnWaf?.detected 
                             ? 'bg-chartreuse/10 text-chartreuse border-chartreuse/20' 
                             : 'bg-[oklch(75% 0.13 80)]/10 text-[oklch(75% 0.13 80)] border-[oklch(75% 0.13 80)]/20'
@@ -185,7 +185,7 @@ export function NetworkOsintSection({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
                         {/* Ping Performance with Animated Pulsing Ring */}
                         <div className="flex flex-col items-center justify-center text-center border-r border-border/50 pr-0 md:pr-6 gap-3">
-                          <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Latencia de Conexión (TCP Ping)</span>
+                          <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Latencia de Conexión (TCP Ping)</span>
                           
                           {ping?.success ? (
                             <div className="relative flex items-center justify-center w-24 h-24 mt-1">
@@ -222,17 +222,17 @@ export function NetworkOsintSection({
                                 }`}>
                                   {ping.latencyMs}
                                 </span>
-                                <span className="text-[8px] text-muted-fg uppercase font-black tracking-widest">ms</span>
+                                <span className="text-2xs text-muted-fg uppercase font-black tracking-widest">ms</span>
                               </div>
                             </div>
                           ) : (
                             <div className="w-20 h-20 rounded-full border border-destructive/20 bg-destructive/5 flex flex-col items-center justify-center text-center mt-1">
                               <ShieldAlert className="w-8 h-8 text-destructive animate-pulse" />
-                              <span className="text-[8px] text-destructive font-extrabold uppercase mt-1">TIMEOUT</span>
+                              <span className="text-2xs text-destructive font-extrabold uppercase mt-1">TIMEOUT</span>
                             </div>
                           )}
 
-                          <span className="text-[9px] text-muted-fg font-medium">
+                          <span className="text-2xs text-muted-fg font-medium">
                             {ping?.success 
                               ? `Handshake TCP puerto ${ping.port} completado` 
                               : `Conexión rechazada o caída (Puertos 80/443)`}
@@ -242,7 +242,7 @@ export function NetworkOsintSection({
                         {/* WAF Shield details */}
                         <div className="flex flex-col justify-center gap-4">
                           <div className="space-y-2">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Tecnología Cortafuegos Web (WAF)</span>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Tecnología Cortafuegos Web (WAF)</span>
                             <div className="flex items-center gap-3 bg-muted/10 border border-border/50 p-3 rounded-xl transition-colors duration-300 group-hover:bg-muted/20">
                               <div className={`p-2.5 rounded-lg ${
                                 cdnWaf?.detected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-fg'
@@ -253,14 +253,14 @@ export function NetworkOsintSection({
                                 <span className="text-xs font-black text-foreground block">
                                   {cdnWaf?.detected ? cdnWaf.name : 'Proxy Directo Origin'}
                                 </span>
-                                <span className="text-[9px] text-muted-fg font-bold block uppercase tracking-wider mt-0.5">
+                                <span className="text-2xs text-muted-fg font-bold block uppercase tracking-wider mt-0.5">
                                   Proveedor: {cdnWaf?.detected ? cdnWaf.provider : 'Ninguno (Servidor Expuesto)'}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          <p className="text-[9.5px] text-muted-fg leading-relaxed">
+                          <p className="text-2xs text-muted-fg leading-relaxed">
                             {cdnWaf?.detected 
                               ? `Protección perimetral activa. Las solicitudes maliciosas, ataques DDoS de capa 7 e inyecciones SQL son filtrados por el CDN en el Edge antes de tocar tu servidor.`
                               : `¡Alerta de Perímetro! Al no contar con protección WAF/CDN, la dirección IP real de tu servidor web está expuesta directamente a ataques DDoS, escaneos de puertos automatizados y exploits.`}
@@ -276,7 +276,7 @@ export function NetworkOsintSection({
                           <Cpu className="w-4 h-4 text-primary" />
                           Geolocalización e Identidad de Red (ASN/PTR)
                         </h4>
-                        <span className="text-[9px] text-muted-fg font-mono uppercase tracking-wider">
+                        <span className="text-2xs text-muted-fg font-mono uppercase tracking-wider">
                           {asnGeo?.ipVersion ? `IPv${asnGeo.ipVersion}` : 'IP'} Address
                         </span>
                       </div>
@@ -318,9 +318,9 @@ export function NetworkOsintSection({
 
                           <div className="relative z-20 flex flex-col items-center text-center space-y-1 p-2 rounded-xl bg-[#020204]/60 backdrop-blur-md border border-border/70 mt-4">
                             <MapPin className="w-6 h-6 text-primary animate-bounce drop-shadow-[0_0_8px_rgba(98,113,196,0.6)]" />
-                            <span className="text-[10px] font-black text-foreground drop-shadow-md">{asnGeo?.cityName || 'Ciudad Desconocida'}, {asnGeo?.countryCode || 'N/A'}</span>
-                            <span className="text-[8px] text-muted-fg font-mono tracking-wider uppercase bg-black/50 px-1.5 py-0.5 rounded">Coords: {asnGeo?.latitude?.toFixed(4) ?? '0.0000'}, {asnGeo?.longitude?.toFixed(4) ?? '0.0000'}</span>
-                            <span className="text-[9px] bg-muted/80 text-primary border border-primary/30 px-2 py-0.5 rounded mt-1 max-w-[150px] truncate block font-bold">
+                            <span className="text-2xs font-black text-foreground drop-shadow-md">{asnGeo?.cityName || 'Ciudad Desconocida'}, {asnGeo?.countryCode || 'N/A'}</span>
+                            <span className="text-2xs text-muted-fg font-mono tracking-wider uppercase bg-black/50 px-1.5 py-0.5 rounded">Coords: {asnGeo?.latitude?.toFixed(4) ?? '0.0000'}, {asnGeo?.longitude?.toFixed(4) ?? '0.0000'}</span>
+                            <span className="text-2xs bg-muted/80 text-primary border border-primary/30 px-2 py-0.5 rounded mt-1 max-w-[150px] truncate block font-bold">
                               {asnGeo?.countryName || 'País Desconocido'}
                             </span>
                           </div>
@@ -329,7 +329,7 @@ export function NetworkOsintSection({
                         {/* Network Metadata ASN / Reverse DNS list */}
                         <div className="space-y-4 flex flex-col justify-between">
                           <div className="space-y-1">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Dirección IP de Destino</span>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Dirección IP de Destino</span>
                             <span 
                               className="text-xs font-mono font-extrabold text-foreground block bg-muted/10 border border-border/50 p-1.5 rounded truncate max-w-full overflow-hidden"
                               title={asnGeo?.ipAddress || 'Desconocido'}
@@ -338,25 +338,25 @@ export function NetworkOsintSection({
                             </span>
                             {(asnGeo?.ipv4 || asnGeo?.ipv6) && (
                               <div className="flex gap-2 mt-1">
-                                {asnGeo?.ipv4 && <span className="text-[9px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20" title={asnGeo?.ipv4}>IPv4: {asnGeo?.ipv4}</span>}
-                                {asnGeo?.ipv6 && <span className="text-[9px] font-mono text-muted-fg bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 truncate max-w-[120px]" title={asnGeo?.ipv6}>IPv6: {asnGeo?.ipv6}</span>}
+                                {asnGeo?.ipv4 && <span className="text-2xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20" title={asnGeo?.ipv4}>IPv4: {asnGeo?.ipv4}</span>}
+                                {asnGeo?.ipv6 && <span className="text-2xs font-mono text-muted-fg bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 truncate max-w-[120px]" title={asnGeo?.ipv6}>IPv6: {asnGeo?.ipv6}</span>}
                               </div>
                             )}
                           </div>
 
                           <div className="space-y-1">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Sistema Autónomo (ASN)</span>
-                            <span className="text-[10px] text-foreground/80 font-bold block">
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Sistema Autónomo (ASN)</span>
+                            <span className="text-2xs text-foreground/80 font-bold block">
                               {asnGeo?.asn !== 'Desconocido' ? `ASN: ${asnGeo?.asn}` : 'ASN Desconocido'}
                             </span>
-                            <span className="text-[10px] text-muted-fg font-medium block truncate max-w-[200px]" title={asnGeo?.asName || ''}>
+                            <span className="text-2xs text-muted-fg font-medium block truncate max-w-[200px]" title={asnGeo?.asName || ''}>
                               {asnGeo?.asName || 'Proveedor de Red Desconocido'}
                             </span>
                           </div>
 
                           <div className="space-y-1">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Resolución Inversa (PTR / Reverse DNS)</span>
-                            <div className="bg-muted/5 border border-border/50 rounded-lg p-2 max-h-[60px] overflow-y-auto font-mono text-[9px] text-muted-fg space-y-0.5">
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Resolución Inversa (PTR / Reverse DNS)</span>
+                            <div className="bg-muted/5 border border-border/50 rounded-lg p-2 max-h-[60px] overflow-y-auto font-mono text-2xs text-muted-fg space-y-0.5">
                               {reverseDns && reverseDns.length > 0 ? (
                                 reverseDns.map((ptr, idx) => (
                                   <div key={idx} className="truncate select-all" title={ptr}>
@@ -364,7 +364,7 @@ export function NetworkOsintSection({
                                   </div>
                                 ))
                               ) : (
-                                <span className="text-muted-fg block text-[9px]">No se encontró registro PTR inverso</span>
+                                <span className="text-muted-fg block text-2xs">No se encontró registro PTR inverso</span>
                               )}
                             </div>
                           </div>
@@ -382,7 +382,7 @@ export function NetworkOsintSection({
                         {(() => {
                           const listedCount = dnsbl?.filter(item => item.listed).length || 0;
                           return (
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                            <span className={`text-2xs font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
                               listedCount > 0 
                                 ? 'bg-destructive/10 text-destructive border-destructive/20' 
                                 : 'bg-chartreuse/10 text-chartreuse border-chartreuse/20'
@@ -396,14 +396,14 @@ export function NetworkOsintSection({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
                         {/* DNSBL Status list */}
                         <div className="space-y-3">
-                          <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Monitoreo de Listas DNSBL</span>
+                          <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Monitoreo de Listas DNSBL</span>
                           
                           <div className="space-y-2">
                             {dnsbl && dnsbl.length > 0 ? (
                               dnsbl.map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between bg-muted/5 border border-border/50 p-2 rounded-lg text-[10px]">
+                                <div key={idx} className="flex items-center justify-between bg-muted/5 border border-border/50 p-2 rounded-lg text-2xs">
                                   <span className="font-extrabold text-foreground/80">{item.list}</span>
-                                  <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                  <span className={`px-2 py-0.5 rounded text-2xs font-black uppercase ${
                                     item.listed 
                                       ? 'bg-destructive/10 text-destructive border border-destructive/20' 
                                       : 'bg-chartreuse/10 text-chartreuse border border-chartreuse/20'
@@ -415,9 +415,9 @@ export function NetworkOsintSection({
                             ) : (
                               // Fallback default checks
                               ['Spamhaus ZEN', 'SORBS DNSBL', 'Barracuda BRBL'].map((name, idx) => (
-                                <div key={idx} className="flex items-center justify-between bg-muted/5 border border-border/50 p-2 rounded-lg text-[10px]">
+                                <div key={idx} className="flex items-center justify-between bg-muted/5 border border-border/50 p-2 rounded-lg text-2xs">
                                   <span className="font-extrabold text-foreground/80">{name}</span>
-                                  <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-chartreuse/10 text-chartreuse border border-chartreuse/20">
+                                  <span className="px-2 py-0.5 rounded text-2xs font-black uppercase bg-chartreuse/10 text-chartreuse border border-chartreuse/20">
                                     Seguro
                                   </span>
                                 </div>
@@ -428,19 +428,19 @@ export function NetworkOsintSection({
 
                         {/* Co-hosted domains neighborhood inspector */}
                         <div className="space-y-2 flex flex-col justify-between">
-                          <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block">Dominios en el mismo Servidor ({reverseIp?.length || 0})</span>
+                          <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">Dominios en el mismo Servidor ({reverseIp?.length || 0})</span>
                           
                           <div className="bg-card/40 border border-border/50 rounded-lg p-2.5 flex-1 flex flex-col justify-between max-h-[120px] overflow-y-auto">
                             {reverseIp && reverseIp.length > 0 ? (
                               <div className="space-y-1">
                                 {reverseIp.slice(0, 10).map((dom, idx) => (
-                                  <div key={idx} className="flex items-center gap-1.5 text-[9.5px] font-mono text-muted-fg hover:text-foreground transition-colors duration-150 truncate">
+                                  <div key={idx} className="flex items-center gap-1.5 text-2xs font-mono text-muted-fg hover:text-foreground transition-colors duration-150 truncate">
                                     <span className="w-1 h-1 bg-primary rounded-full shrink-0"></span>
                                     <span className="truncate">{dom}</span>
                                   </div>
                                 ))}
                                 {reverseIp.length > 10 && (
-                                  <div className="text-[8px] text-muted-fg font-bold uppercase tracking-wider pt-1 border-t border-border/50 text-center">
+                                  <div className="text-2xs text-muted-fg font-bold uppercase tracking-wider pt-1 border-t border-border/50 text-center">
                                     + {reverseIp.length - 10} dominios adicionales
                                   </div>
                                 )}
@@ -448,8 +448,8 @@ export function NetworkOsintSection({
                             ) : (
                               <div className="flex flex-col justify-center items-center text-center p-3 h-full gap-1">
                                 <Server className="w-5 h-5 text-muted-fg/60" />
-                                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-wider block">IP Aislada o Compartida</span>
-                                <p className="text-[8px] text-muted-fg leading-relaxed">
+                                <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider block">IP Aislada o Compartida</span>
+                                <p className="text-2xs text-muted-fg leading-relaxed">
                                   No se detectaron vecinos públicos alojados en este nodo.
                                 </p>
                               </div>
@@ -469,12 +469,12 @@ export function NetworkOsintSection({
                           <Compass className="w-4 h-4 text-primary" />
                           Traza Topológica de Tránsito de Paquetes (Visual Traceroute)
                         </h4>
-                        <p className="text-[9px] text-muted-fg mt-0.5">
+                        <p className="text-2xs text-muted-fg mt-0.5">
                           Mapa conceptual interactivo del trayecto y retardos de enrutamiento IP desde la puerta local hasta el destino
                         </p>
                       </div>
                       {traceroute && traceroute.length > 0 && (
-                        <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-mono uppercase tracking-wider font-bold">
+                        <span className="text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-mono uppercase tracking-wider font-bold">
                           {traceroute.length} Nodos
                         </span>
                       )}
@@ -569,7 +569,7 @@ export function NetworkOsintSection({
                                   {/* Pulsing glow ring based on latency */}
                                   <span className={`absolute -inset-1 rounded-full animate-ring-pulse ${pulseRingColor}`} />
                                   
-                                  <div className={`w-[38px] h-[38px] rounded-full border-2 flex items-center justify-center font-black text-[11px] relative z-10 transition-[color,border-color,box-shadow,transform,width,height] duration-300 group-hover/hop:scale-115 group-hover/hop:border-primary group-hover/hop:text-primary group-hover/hop:shadow-[0_0_20px_rgba(98,113,196,0.5)] ${latencyColor}`}>
+                                  <div className={`w-[38px] h-[38px] rounded-full border-2 flex items-center justify-center font-black text-2xs relative z-10 transition-[color,border-color,box-shadow,transform,width,height] duration-300 group-hover/hop:scale-115 group-hover/hop:border-primary group-hover/hop:text-primary group-hover/hop:shadow-[0_0_20px_rgba(98,113,196,0.5)] ${latencyColor}`}>
                                     {hop.hop}
                                   </div>
                                 </div>
@@ -577,25 +577,25 @@ export function NetworkOsintSection({
                                 {/* Step Label Details */}
                                 <div className="space-y-1 text-left md:text-center flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 md:justify-center">
-                                    <span className="text-[10.5px] font-black text-foreground block max-w-[120px] truncate group-hover/hop:text-primary transition-colors duration-200" title={hop.hostname}>
+                                    <span className="text-2xs font-black text-foreground block max-w-[120px] truncate group-hover/hop:text-primary transition-colors duration-200" title={hop.hostname}>
                                       {hop.hostname}
                                     </span>
                                     {hop.countryCode && hop.countryCode !== 'LAN' && (
-                                      <span className="text-[8px] bg-muted/20 text-muted-fg border border-border/70 font-extrabold uppercase px-1 rounded scale-90 select-none">
+                                      <span className="text-2xs bg-muted/20 text-muted-fg border border-border/70 font-extrabold uppercase px-1 rounded scale-90 select-none">
                                         {hop.countryCode}
                                       </span>
                                     )}
                                   </div>
                                   
-                                  <span className="text-[9px] font-mono text-muted-fg block truncate" title={hop.ip}>{hop.ip}</span>
+                                  <span className="text-2xs font-mono text-muted-fg block truncate" title={hop.ip}>{hop.ip}</span>
                                   
-                                  <span className="text-[9.5px] text-muted-fg font-bold block leading-snug truncate max-w-[140px]" title={hop.asnOrg || ''}>
+                                  <span className="text-2xs text-muted-fg font-bold block leading-snug truncate max-w-[140px]" title={hop.asnOrg || ''}>
                                     {hop.asnOrg}
                                   </span>
 
                                   {/* Latency badge */}
                                   <div className="pt-0.5 flex items-center gap-1.5 md:justify-center">
-                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded font-mono border ${
+                                    <span className={`text-2xs font-black px-2 py-0.5 rounded font-mono border ${
                                       hop.latencyMs < 50 
                                         ? 'bg-chartreuse/10 text-chartreuse border-chartreuse/20' 
                                         : hop.latencyMs < 150 
@@ -605,7 +605,7 @@ export function NetworkOsintSection({
                                       {hop.latencyMs} ms
                                     </span>
                                     {hop.asn && (
-                                      <span className="text-[8.5px] text-muted-fg font-mono font-bold select-none">{hop.asn}</span>
+                                      <span className="text-2xs text-muted-fg font-mono font-bold select-none">{hop.asn}</span>
                                     )}
                                   </div>
                                 </div>
@@ -613,38 +613,38 @@ export function NetworkOsintSection({
                                 {/* PREMIUM HOVER INTERACTIVE TOOLTIP POPOVER */}
                                 <div className="group-hover/hop:opacity-100 group-hover/hop:translate-y-0 opacity-0 translate-y-2 pointer-events-none absolute bottom-[105%] left-1/2 -translate-x-1/2 mb-4 bg-muted/[0.95] backdrop-blur-xl border border-border p-4.5 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.9),0_0_20px_rgba(255,255,255,0.01)] transition-[opacity,transform] duration-300 w-64 z-50 flex flex-col gap-3 text-xs select-text text-left font-sans">
                                   <div className="flex items-center justify-between border-b border-border/70 pb-2">
-                                    <span className="text-[8px] font-extrabold text-muted-fg uppercase tracking-widest">DETALLES DEL SALTO #{hop.hop}</span>
-                                    <span className="text-[9px] font-mono text-primary font-extrabold">{hop.type?.toUpperCase() || 'UNKNOWN'}</span>
+                                    <span className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest">DETALLES DEL SALTO #{hop.hop}</span>
+                                    <span className="text-2xs font-mono text-primary font-extrabold">{hop.type?.toUpperCase() || 'UNKNOWN'}</span>
                                   </div>
                                   
                                   <div className="space-y-2">
                                     <div className="space-y-0.5">
-                                      <span className="text-[8px] font-bold text-muted-fg uppercase tracking-wider block">Servidor (Host)</span>
-                                      <span className="text-[11px] font-black text-foreground block break-all leading-normal">{hop.hostname}</span>
+                                      <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider block">Servidor (Host)</span>
+                                      <span className="text-2xs font-black text-foreground block break-all leading-normal">{hop.hostname}</span>
                                     </div>
                                     <div className="flex justify-between gap-4">
                                       <div className="space-y-0.5 flex-1 min-w-0">
-                                        <span className="text-[8px] font-bold text-muted-fg tracking-wider block">Dirección IP</span>
-                                        <span className="text-[10px] font-mono text-foreground/80 font-bold block truncate select-all">{hop.ip}</span>
+                                        <span className="text-2xs font-bold text-muted-fg tracking-wider block">Dirección IP</span>
+                                        <span className="text-2xs font-mono text-foreground/80 font-bold block truncate select-all">{hop.ip}</span>
                                       </div>
                                       {hop.countryCode && (
                                         <div className="space-y-0.5 text-right shrink-0">
-                                          <span className="text-[8px] font-bold text-muted-fg tracking-wider block">Geolocalización</span>
-                                          <span className="text-[10px] font-bold text-foreground/80 block">
+                                          <span className="text-2xs font-bold text-muted-fg tracking-wider block">Geolocalización</span>
+                                          <span className="text-2xs font-bold text-foreground/80 block">
                                             {hop.cityName ? `${hop.cityName}, ` : ''}{hop.countryCode}
                                           </span>
                                         </div>
                                       )}
                                     </div>
                                     <div className="space-y-0.5 border-t border-border/50 pt-2">
-                                      <span className="text-[8px] font-bold text-muted-fg tracking-wider block">Sistema Autónomo e ISP</span>
-                                      <span className="text-[10px] text-foreground/80 font-bold block leading-snug truncate" title={hop.asnOrg || ''}>{hop.asnOrg || 'Proveedor Local'}</span>
-                                      {hop.asn && <span className="text-[9px] text-muted-fg font-mono font-bold">{hop.asn}</span>}
+                                      <span className="text-2xs font-bold text-muted-fg tracking-wider block">Sistema Autónomo e ISP</span>
+                                      <span className="text-2xs text-foreground/80 font-bold block leading-snug truncate" title={hop.asnOrg || ''}>{hop.asnOrg || 'Proveedor Local'}</span>
+                                      {hop.asn && <span className="text-2xs text-muted-fg font-mono font-bold">{hop.asn}</span>}
                                     </div>
                                     
                                     {/* HSL-tuned relative latency comparison bar */}
                                     <div className="space-y-1.5 border-t border-border/50 pt-2">
-                                      <div className="flex justify-between text-[9px] font-bold uppercase">
+                                      <div className="flex justify-between text-2xs font-bold uppercase">
                                         <span className="text-muted-fg">Latencia</span>
                                         <span className="text-foreground font-mono">{hop.latencyMs} ms</span>
                                       </div>
@@ -670,7 +670,7 @@ export function NetworkOsintSection({
                       <div className="flex flex-col justify-center items-center text-center py-10 bg-muted/1 border border-dashed border-border/50 rounded-xl gap-2">
                         <Compass className="w-10 h-10 text-muted-fg animate-spin" style={{ animationDuration: '6s' }} />
                         <span className="text-xs font-bold text-muted-fg">Generando Topología de Tránsito</span>
-                        <p className="text-[10px] text-muted-fg max-w-xs leading-relaxed">
+                        <p className="text-2xs text-muted-fg max-w-xs leading-relaxed">
                           La traza de enrutamiento se modela y mapea en tiempo real según el retardo y la geolocalización detectada para el host objetivo.
                         </p>
                       </div>

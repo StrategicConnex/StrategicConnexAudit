@@ -299,7 +299,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      className="flex items-center gap-1.5 text-[10px] font-bold text-muted-fg hover:text-primary transition-colors cursor-pointer"
+      className="flex items-center gap-1.5 text-2xs font-bold text-muted-fg hover:text-primary transition-colors cursor-pointer"
     >
       {copied ? <Check className="w-3.5 h-3.5 text-chartreuse" /> : <Copy className="w-3.5 h-3.5" />}
       {copied ? 'Copied!' : 'Copy'}
@@ -316,7 +316,7 @@ function MethodBadge({ method }: { method: string }) {
     DELETE: 'bg-destructive/15 text-destructive border-destructive/30',
   };
   return (
-    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded border ${colors[method] || 'bg-muted/10 text-muted-fg border-border'} uppercase tracking-wider`}>
+    <span className={`text-2xs font-extrabold px-2.5 py-0.5 rounded border ${colors[method] || 'bg-muted/10 text-muted-fg border-border'} uppercase tracking-wider`}>
       {method}
     </span>
   );
@@ -327,13 +327,13 @@ function MethodBadge({ method }: { method: string }) {
 function AuthBadge({ type }: { type: string }) {
   if (type === 'api-key') {
     return (
-      <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+      <span className="flex items-center gap-1 text-2xs font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
         <Key className="w-3 h-3" /> API Key
       </span>
     );
   }
   return (
-    <span className="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+    <span className="flex items-center gap-1 text-2xs font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
       <Lock className="w-3 h-3" /> Session
     </span>
   );
@@ -370,7 +370,7 @@ function EndpointCard({ ep, defaultOpen }: { ep: EndpointDoc; defaultOpen: boole
           {/* Headers */}
           {ep.headers && ep.headers.length > 0 && (
             <div>
-              <h5 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-3">Required Headers</h5>
+              <h5 className="text-2xs font-bold text-muted-fg uppercase tracking-widest mb-3">Required Headers</h5>
               <div className="space-y-2">
                 {ep.headers.map((h, i) => (
                   <div key={i} className="flex items-start gap-3 text-xs">
@@ -386,11 +386,11 @@ function EndpointCard({ ep, defaultOpen }: { ep: EndpointDoc; defaultOpen: boole
           {/* Query Params */}
           {ep.query && ep.query.length > 0 && (
             <div>
-              <h5 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-3">Query Parameters</h5>
+              <h5 className="text-2xs font-bold text-muted-fg uppercase tracking-widest mb-3">Query Parameters</h5>
               <div className="overflow-hidden border border-border rounded-xl">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-muted/10 text-muted-fg font-bold text-[9px] uppercase tracking-wider">
+                    <tr className="bg-muted/10 text-muted-fg font-bold text-2xs uppercase tracking-wider">
                       <th className="p-3 text-left">Name</th>
                       <th className="p-3 text-left">Type</th>
                       <th className="p-3 text-left">Required</th>
@@ -419,11 +419,11 @@ function EndpointCard({ ep, defaultOpen }: { ep: EndpointDoc; defaultOpen: boole
           {/* Body Params */}
           {ep.body && ep.body.length > 0 && (
             <div>
-              <h5 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-3">Request Body</h5>
+              <h5 className="text-2xs font-bold text-muted-fg uppercase tracking-widest mb-3">Request Body</h5>
               <div className="overflow-hidden border border-border rounded-xl">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-muted/10 text-muted-fg font-bold text-[9px] uppercase tracking-wider">
+                    <tr className="bg-muted/10 text-muted-fg font-bold text-2xs uppercase tracking-wider">
                       <th className="p-3 text-left">Name</th>
                       <th className="p-3 text-left">Type</th>
                       <th className="p-3 text-left">Required</th>
@@ -452,12 +452,12 @@ function EndpointCard({ ep, defaultOpen }: { ep: EndpointDoc; defaultOpen: boole
           {/* cURL Example */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h5 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
+              <h5 className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
                 <Terminal className="w-3.5 h-3.5" /> cURL Example
               </h5>
               <CopyButton text={ep.curlExample} />
             </div>
-            <pre className="bg-black text-[11px] font-mono text-foreground/80 p-4 rounded-xl border border-border overflow-x-auto leading-relaxed">
+            <pre className="bg-black text-2xs font-mono text-foreground/80 p-4 rounded-xl border border-border overflow-x-auto leading-relaxed">
               {ep.curlExample}
             </pre>
           </div>
@@ -465,12 +465,12 @@ function EndpointCard({ ep, defaultOpen }: { ep: EndpointDoc; defaultOpen: boole
           {/* Response */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h5 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
+              <h5 className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
                 <Server className="w-3.5 h-3.5" /> Response
               </h5>
               <CopyButton text={ep.responseExample} />
             </div>
-            <pre className="bg-black text-[11px] font-mono text-foreground/80 p-4 rounded-xl border border-border overflow-x-auto leading-relaxed max-h-80 overflow-y-auto">
+            <pre className="bg-black text-2xs font-mono text-foreground/80 p-4 rounded-xl border border-border overflow-x-auto leading-relaxed max-h-80 overflow-y-auto">
               {ep.responseExample}
             </pre>
           </div>
@@ -493,7 +493,7 @@ function SchemaCard({ schema }: { schema: SchemaDoc }) {
       >
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-foreground font-mono">{schema.name}</span>
-          <span className="text-[10px] text-muted-fg">{schema.description}</span>
+          <span className="text-2xs text-muted-fg">{schema.description}</span>
         </div>
         {open ? <ChevronDown className="w-4 h-4 text-muted-fg" /> : <ChevronRight className="w-4 h-4 text-muted-fg" />}
       </button>
@@ -502,7 +502,7 @@ function SchemaCard({ schema }: { schema: SchemaDoc }) {
           <div className="overflow-hidden border border-border rounded-xl">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-muted/10 text-muted-fg font-bold text-[9px] uppercase tracking-wider">
+                <tr className="bg-muted/10 text-muted-fg font-bold text-2xs uppercase tracking-wider">
                   <th className="p-3 text-left">Field</th>
                   <th className="p-3 text-left">Type</th>
                   <th className="p-3 text-left">Description</th>
@@ -512,7 +512,7 @@ function SchemaCard({ schema }: { schema: SchemaDoc }) {
                 {schema.fields.map((f, i) => (
                   <tr key={i} className="hover:bg-muted/5">
                     <td className="p-3 font-mono text-primary">{f.name}</td>
-                    <td className="p-3 font-mono text-chartreuse text-[10px]">{f.type}</td>
+                    <td className="p-3 font-mono text-chartreuse text-2xs">{f.type}</td>
                     <td className="p-3 text-muted-fg">{f.description}</td>
                   </tr>
                 ))}
@@ -657,7 +657,7 @@ export default function DocsApiPage() {
                 <div className="flex items-center gap-2">
                   <Key className="w-4 h-4 text-purple-400" />
                   <span className="font-bold text-foreground">API Key Auth</span>
-                  <span className="text-[9px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Public API</span>
+                  <span className="text-2xs bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Public API</span>
                 </div>
                 <p className="text-xs">Used by <code className="text-primary font-mono">/api/public/v1/*</code> endpoints.</p>
                 <ol className="text-xs space-y-1 list-decimal list-inside text-muted-fg">
@@ -670,7 +670,7 @@ export default function DocsApiPage() {
                 <div className="flex items-center gap-2">
                   <Lock className="w-4 h-4 text-primary" />
                   <span className="font-bold text-foreground">Session Auth</span>
-                  <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Dashboard</span>
+                  <span className="text-2xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Dashboard</span>
                 </div>
                 <p className="text-xs">Used by dashboard endpoints (API keys management, PDF reports).</p>
                 <ol className="text-xs space-y-1 list-decimal list-inside text-muted-fg">
@@ -721,18 +721,18 @@ export default function DocsApiPage() {
           <div className="overflow-hidden border border-border rounded-xl">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-muted/10 text-muted-fg font-bold text-[9px] uppercase tracking-wider">
+                <tr className="bg-muted/10 text-muted-fg font-bold text-2xs uppercase tracking-wider">
                   <th className="p-3 text-left">Code</th>
                   <th className="p-3 text-left">Description</th>
                   <th className="p-3 text-left">Response Body</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
-                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">400</td><td className="p-3 text-muted-fg">Bad request — missing or invalid parameters</td><td className="p-3 font-mono text-muted-fg text-[10px]">{'{ "success": false, "error": "..." }'}</td></tr>
-                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">401</td><td className="p-3 text-muted-fg">Unauthorized — missing or invalid API key</td><td className="p-3 font-mono text-muted-fg text-[10px]">{'{ "success": false, "error": "..." }'}</td></tr>
-                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">404</td><td className="p-3 text-muted-fg">Not found — project, investigation, or key not found</td><td className="p-3 font-mono text-muted-fg text-[10px]">{'{ "success": false, "error": "..." }'}</td></tr>
-                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">429</td><td className="p-3 text-muted-fg">Rate limit exceeded — slow down requests</td><td className="p-3 font-mono text-muted-fg text-[10px]">{'{ "success": false, "error": "Rate limit exceeded" }'}</td></tr>
-                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">500</td><td className="p-3 text-muted-fg">Internal server error — contact support if persistent</td><td className="p-3 font-mono text-muted-fg text-[10px]">{'{ "success": false, "error": "..." }'}</td></tr>
+                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">400</td><td className="p-3 text-muted-fg">Bad request — missing or invalid parameters</td><td className="p-3 font-mono text-muted-fg text-2xs">{'{ "success": false, "error": "..." }'}</td></tr>
+                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">401</td><td className="p-3 text-muted-fg">Unauthorized — missing or invalid API key</td><td className="p-3 font-mono text-muted-fg text-2xs">{'{ "success": false, "error": "..." }'}</td></tr>
+                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">404</td><td className="p-3 text-muted-fg">Not found — project, investigation, or key not found</td><td className="p-3 font-mono text-muted-fg text-2xs">{'{ "success": false, "error": "..." }'}</td></tr>
+                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">429</td><td className="p-3 text-muted-fg">Rate limit exceeded — slow down requests</td><td className="p-3 font-mono text-muted-fg text-2xs">{'{ "success": false, "error": "Rate limit exceeded" }'}</td></tr>
+                <tr className="hover:bg-muted/5"><td className="p-3 font-mono text-primary">500</td><td className="p-3 text-muted-fg">Internal server error — contact support if persistent</td><td className="p-3 font-mono text-muted-fg text-2xs">{'{ "success": false, "error": "..." }'}</td></tr>
               </tbody>
             </table>
           </div>

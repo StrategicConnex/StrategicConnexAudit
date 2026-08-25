@@ -28,7 +28,7 @@ const renderInlineMarkdown = (text: string) => {
     }
     if (token.type === 'code') {
       return (
-        <code key={idx} className="font-mono text-primary bg-primary/10 border-primary/20 px-1.5 py-0.5 rounded text-[11px] font-semibold">
+        <code key={idx} className="font-mono text-primary bg-primary/10 border-primary/20 px-1.5 py-0.5 rounded text-2xs font-semibold">
           {token.content}
         </code>
       );
@@ -68,7 +68,7 @@ export function CopilotConsole({
           <h3 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary animate-pulse" /> Copilot de Remediación Técnica con IA
           </h3>
-          <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
+          <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">
             Genera scripts Nginx, configuraciones DNS y directivas SPF/DMARC a medida
           </p>
         </div>
@@ -158,14 +158,14 @@ export function CopilotConsole({
             </svg>
 
             <div className="absolute text-center mt-44">
-              <span className="text-[10px] bg-muted/40 text-primary border border-primary/20 px-3.5 py-1.5 rounded-full font-mono font-bold tracking-widest animate-pulse uppercase">
+              <span className="text-2xs bg-muted/40 text-primary border border-primary/20 px-3.5 py-1.5 rounded-full font-mono font-bold tracking-widest animate-pulse uppercase">
                 AI_COPILOT_REASONING
               </span>
             </div>
           </div>
 
           {/* Right Side: Step-by-Step Interactive Scanning Checklist Log */}
-          <div className="w-full lg:w-1/2 p-6 rounded-2xl bg-muted/60 border border-border/70 relative overflow-hidden font-mono text-[11px] leading-relaxed text-muted-fg pl-6 lg:pl-8 text-left shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)]">
+          <div className="w-full lg:w-1/2 p-6 rounded-2xl bg-muted/60 border border-border/70 relative overflow-hidden font-mono text-2xs leading-relaxed text-muted-fg pl-6 lg:pl-8 text-left shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)]">
             {/* Retro console scan lines overlay */}
             <div className="absolute inset-0 pointer-events-none bg-scanlines opacity-[0.03]" />
 
@@ -175,7 +175,7 @@ export function CopilotConsole({
                 <div className="w-2 h-2 rounded-full bg-[oklch(75% 0.13 80)]/80" />
                 <div className="w-2 h-2 rounded-full bg-chartreuse/80" />
               </div>
-              <span className="text-[8px] font-black text-muted-fg uppercase tracking-widest ml-2">CONSOLA DE EJECUCIÓN CO-PILOTO</span>
+              <span className="text-2xs font-black text-muted-fg uppercase tracking-widest ml-2">CONSOLA DE EJECUCIÓN CO-PILOTO</span>
             </div>
 
             <div className="space-y-3.5 font-mono">
@@ -212,12 +212,12 @@ export function CopilotConsole({
 
           {/* Actions & controls bar */}
           <div className="flex items-center justify-between px-1.5">
-            <span className="text-[9px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+            <span className="text-2xs font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
               <Terminal className="w-3.5 h-3.5" /> Plan de Acción e Instrucciones de Despliegue
             </span>
             <button
               onClick={onCopyPlan}
-              className="text-[9px] font-bold uppercase tracking-widest text-muted-fg hover:text-foreground transition-colors flex items-center gap-1 bg-muted/5 border border-border/50 px-3.5 py-2 rounded-xl cursor-pointer"
+              className="text-2xs font-bold uppercase tracking-widest text-muted-fg hover:text-foreground transition-colors flex items-center gap-1 bg-muted/5 border border-border/50 px-3.5 py-2 rounded-xl cursor-pointer"
             >
               {planCopied ? (
                 <>
@@ -262,7 +262,7 @@ export function CopilotConsole({
                       <ul key={idx} className="space-y-2.5 my-3 pl-1.5">
                         {block.items?.map((item, itemIdx) => (
                           <li key={itemIdx} className="flex items-start gap-2.5 text-foreground/80 text-xs leading-relaxed">
-                            <span className="text-primary font-bold mt-1 select-none text-[9px]">&bull;</span>
+                            <span className="text-primary font-bold mt-1 select-none text-2xs">&bull;</span>
                             <div className="flex-1">{renderInlineMarkdown(item)}</div>
                           </li>
                         ))}
@@ -281,7 +281,7 @@ export function CopilotConsole({
                   case 'code':
                     return (
                       <div key={idx} className="border border-border rounded-xl overflow-hidden my-4 bg-[#0a0a0f] shadow-md">
-                        <div className="bg-[#0f0f16] px-4 py-2 border-b border-border/50 flex items-center justify-between text-[10px] font-bold tracking-widest text-muted-fg uppercase select-none">
+                        <div className="bg-[#0f0f16] px-4 py-2 border-b border-border/50 flex items-center justify-between text-2xs font-bold tracking-widest text-muted-fg uppercase select-none">
                           <span>{block.language || 'código'}</span>
                           <button
                             onClick={() => {
@@ -302,7 +302,7 @@ export function CopilotConsole({
                             )}
                           </button>
                         </div>
-                        <pre className="p-4 overflow-x-auto text-[11px] font-mono text-foreground/80 bg-background leading-relaxed">
+                        <pre className="p-4 overflow-x-auto text-2xs font-mono text-foreground/80 bg-background leading-relaxed">
                           <code>{block.content}</code>
                         </pre>
                       </div>
@@ -323,7 +323,7 @@ export function CopilotConsole({
           <div className="flex justify-end">
             <button
               onClick={onReset}
-              className="text-[9px] font-bold uppercase tracking-widest text-muted-fg hover:text-foreground transition-colors"
+              className="text-2xs font-bold uppercase tracking-widest text-muted-fg hover:text-foreground transition-colors"
             >
               Volver a Generar
             </button>

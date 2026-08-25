@@ -138,11 +138,11 @@ export function IncidentBriefModal({
             <div>
               <h2 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
                 Incident Brief
-                <span className="text-[9px] font-black uppercase tracking-widest bg-destructive/15 text-destructive border border-destructive/25 px-2 py-0.5 rounded">
+                <span className="text-2xs font-black uppercase tracking-widest bg-destructive/15 text-destructive border border-destructive/25 px-2 py-0.5 rounded">
                   {criticalCount > 0 ? 'CRÍTICO' : 'ALTO'}
                 </span>
               </h2>
-              <p className="text-[11px] text-muted-fg mt-0.5 font-mono">{target}</p>
+              <p className="text-2xs text-muted-fg mt-0.5 font-mono">{target}</p>
             </div>
           </div>
 
@@ -150,7 +150,7 @@ export function IncidentBriefModal({
             {brief && (
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 text-[10px] font-bold text-muted-fg hover:text-white bg-muted/30 hover:bg-muted/50 border border-border px-3 py-2 rounded-lg transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-2xs font-bold text-muted-fg hover:text-white bg-muted/30 hover:bg-muted/50 border border-border px-3 py-2 rounded-lg transition-colors cursor-pointer"
               >
                 {copied ? <Check aria-hidden="true" className="w-3.5 h-3.5 text-chartreuse" /> : <Copy aria-hidden="true" className="w-3.5 h-3.5" />}
                 {copied ? 'Copiado' : 'Copiar'}
@@ -170,20 +170,20 @@ export function IncidentBriefModal({
         <div className="flex items-center gap-4 px-6 py-3 border-b border-border/50 bg-muted/5">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-destructive" />
-            <span className="text-[10px] font-extrabold text-muted-fg uppercase tracking-wider">{criticalCount} Críticos</span>
+            <span className="text-2xs font-extrabold text-muted-fg uppercase tracking-wider">{criticalCount} Críticos</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[oklch(75% 0.13 80)]" />
-            <span className="text-[10px] font-extrabold text-muted-fg uppercase tracking-wider">{highCount} Altos</span>
+            <span className="text-2xs font-extrabold text-muted-fg uppercase tracking-wider">{highCount} Altos</span>
           </div>
           {score != null && (
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-primary" />
-              <span className="text-[10px] font-extrabold text-muted-fg uppercase tracking-wider">Score: {score}/100</span>
+              <span className="text-2xs font-extrabold text-muted-fg uppercase tracking-wider">Score: {score}/100</span>
             </div>
           )}
           <div className="flex items-center gap-1.5 ml-auto">
-            <span className="text-[9px] text-muted-fg font-mono">
+            <span className="text-2xs text-muted-fg font-mono">
               {new Date().toLocaleString('es-ES')}
             </span>
           </div>
@@ -220,7 +220,7 @@ export function IncidentBriefModal({
                 <p className="text-xs text-muted-fg">Analizando hallazgos con motor de IA</p>
               </div>
               {/* Animated steps */}
-              <div className="space-y-2 font-mono text-[10px] text-muted-fg mt-2">
+              <div className="space-y-2 font-mono text-2xs text-muted-fg mt-2">
                 {['Correlacionando hallazgos críticos...', 'Construyendo timeline del incidente...', 'Evaluando vectores de ataque...', 'Redactando recomendaciones ejecutivas...'].map((step, i) => (
                   <div key={i} className="flex items-center gap-2" style={{ animationDelay: `${i * 0.4}s` }}>
                     <div className="w-1.5 h-1.5 rounded-full bg-destructive/60 animate-pulse" style={{ animationDelay: `${i * 0.3}s` }} />
@@ -236,7 +236,7 @@ export function IncidentBriefModal({
               <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-bold text-destructive">{error}</p>
-                <button onClick={handleGenerate} className="text-[10px] text-muted-fg hover:text-white mt-1.5 transition-colors cursor-pointer">
+                <button onClick={handleGenerate} className="text-2xs text-muted-fg hover:text-white mt-1.5 transition-colors cursor-pointer">
                   Reintentar →
                 </button>
               </div>
@@ -281,13 +281,13 @@ export function IncidentBriefModal({
 
         {/* Footer */}
         <div className="p-4 border-t border-border/50 bg-card rounded-b-2xl flex items-center justify-between">
-          <p className="text-[9px] font-extrabold text-muted-fg uppercase tracking-widest">
+          <p className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest">
             IA Experimental · Verificar datos críticos con equipo técnico
           </p>
           {brief && (
             <button
               onClick={handleGenerate}
-              className="text-[10px] font-bold text-muted-fg hover:text-white transition-colors cursor-pointer"
+              className="text-2xs font-bold text-muted-fg hover:text-white transition-colors cursor-pointer"
             >
               Regenerar →
             </button>
