@@ -81,7 +81,7 @@ export function NewProjectModal() {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/80 text-foreground rounded-full transition-[color,background-color,border-color,box-shadow] shadow-[0_4px_12px_rgba(98,113,196,0.2)] hover:shadow-[0_4px_16px_rgba(98,113,196,0.3)] border border-primary/20 font-bold text-[11px] uppercase tracking-widest"
+        className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/80 text-foreground rounded-full transition-[color,background-color,border-color,box-shadow] shadow-[0_4px_12px_rgba(98,113,196,0.2)] hover:shadow-[0_4px_16px_rgba(98,113,196,0.3)] border border-primary/20 font-bold text-2xs uppercase tracking-widest"
       >
         <Plus size={14} strokeWidth={3} />
         <span>Nuevo Proyecto</span>
@@ -115,7 +115,7 @@ export function NewProjectModal() {
             
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-5 cursor-auto">
               <div className="space-y-2">
-                <label htmlFor="name" className="text-[10px] font-extrabold text-muted-fg uppercase tracking-widest ml-1">Nombre del Proyecto</label>
+                <label htmlFor="name" className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest ml-1">Nombre del Proyecto</label>
                 <input 
                   type="text" 
                   id="name" 
@@ -125,12 +125,12 @@ export function NewProjectModal() {
                   required
                 />
                 {state?.errors?.name && (
-                  <p className="text-destructive text-[10px] font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.name[0]}</p>
+                  <p className="text-destructive text-2xs font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.name[0]}</p>
                 )}
               </div>
               
               <div className="space-y-2">
-                <label htmlFor="baseUrl" className="text-[10px] font-extrabold text-muted-fg uppercase tracking-widest ml-1">URL Base (Dominio)</label>
+                <label htmlFor="baseUrl" className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest ml-1">URL Base (Dominio)</label>
                 <input 
                   type="url" 
                   id="baseUrl" 
@@ -140,7 +140,7 @@ export function NewProjectModal() {
                   required
                 />
                 {state?.errors?.baseUrl && (
-                  <p className="text-destructive text-[10px] font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.baseUrl[0]}</p>
+                  <p className="text-destructive text-2xs font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.baseUrl[0]}</p>
                 )}
               </div>
 
@@ -158,7 +158,7 @@ export function NewProjectModal() {
                     setState(null);
                     setPosition({ x: 0, y: 0 });
                   }}
-                  className="text-[11px] font-extrabold uppercase tracking-widest text-muted-fg hover:text-white transition-colors"
+                  className="text-2xs font-extrabold uppercase tracking-widest text-muted-fg hover:text-white transition-colors"
                   disabled={isPending}
                 >
                   Cancelar
@@ -166,7 +166,7 @@ export function NewProjectModal() {
                 <button 
                   type="submit" 
                   disabled={isPending}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-foreground text-background font-extrabold rounded-full hover:bg-foreground/90 transition-[color,background-color,opacity,box-shadow] disabled:opacity-50 text-[11px] uppercase tracking-widest shadow-md hover:shadow-[0_2px_15px_rgba(255,255,255,0.1)]"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-foreground text-background font-extrabold rounded-full hover:bg-foreground/90 transition-[color,background-color,opacity,box-shadow] disabled:opacity-50 text-2xs uppercase tracking-widest shadow-md hover:shadow-[0_2px_15px_rgba(255,255,255,0.1)]"
                 >
                   {isPending ? <Loader2 size={14} className="animate-spin text-black" /> : 'Crear Proyecto'}
                 </button>

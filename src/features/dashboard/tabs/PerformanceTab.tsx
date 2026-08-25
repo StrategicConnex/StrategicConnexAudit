@@ -92,7 +92,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
             {/* Live badge */}
             <div className="flex items-center gap-2 bg-chartreuse/10 border border-chartreuse/20 px-3.5 py-1.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-chartreuse scan-pulse" />
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-chartreuse">
+              <span className="text-2xs font-extrabold uppercase tracking-widest text-chartreuse">
                 {t('liveBadge')}
               </span>
             </div>
@@ -100,7 +100,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
             <button
               onClick={handleSync}
               disabled={syncing}
-              className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-muted-fg hover:text-primary transition-[color,background-color,border-color,opacity] px-4 py-2.5 rounded-xl bg-muted/10 border border-border hover:border-primary/30 hover:bg-muted/20 cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 text-2xs font-extrabold uppercase tracking-widest text-muted-fg hover:text-primary transition-[color,background-color,border-color,opacity] px-4 py-2.5 rounded-xl bg-muted/10 border border-border hover:border-primary/30 hover:bg-muted/20 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-primary' : ''}`} />
               {syncing ? t('syncingButton') : t('syncButton')}
@@ -134,7 +134,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
               </h3>
               <Info className="w-3.5 h-3.5 text-muted-fg cursor-help hover:text-muted-fg/80 transition-colors" />
             </div>
-            <div className="flex items-center gap-1 bg-muted/10 border border-border px-2.5 py-1 rounded-lg text-[10px] text-muted-fg font-bold uppercase tracking-wider cursor-pointer hover:bg-muted/20 transition-colors">
+            <div className="flex items-center gap-1 bg-muted/10 border border-border px-2.5 py-1 rounded-lg text-2xs text-muted-fg font-bold uppercase tracking-wider cursor-pointer hover:bg-muted/20 transition-colors">
               <span>{t('last30m')}</span>
               <ChevronRight size={10} className="rotate-90" />
             </div>
@@ -146,11 +146,11 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
             {/* LCP */}
             <div className="glass-card rounded-xl p-5 flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1">
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1">
                   {t('lcpLabel')}
                   <Info className="w-3 h-3 text-muted-fg/60 hover:text-muted-fg cursor-help" />
                 </span>
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-md border text-chartreuse bg-chartreuse/10 border-chartreuse/20 uppercase tracking-wider">
+                <span className="text-2xs font-bold px-2 py-0.5 rounded-md border text-chartreuse bg-chartreuse/10 border-chartreuse/20 uppercase tracking-wider">
                   {t('lcpGood')}
                 </span>
               </div>
@@ -161,7 +161,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
                 <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden border border-border/30">
                   <div className="bg-gradient-to-r from-chartreuse to-primary h-full rounded-full w-[85%]" />
                 </div>
-                <div className="flex justify-between text-[9px] text-muted-fg font-semibold tracking-wider uppercase mt-1">
+                <div className="flex justify-between text-2xs text-muted-fg font-semibold tracking-wider uppercase mt-1">
                   <span className="text-chartreuse font-bold">{t('lcpStatus')}</span>
                   <span>1.8s</span>
                 </div>
@@ -171,11 +171,11 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
             {/* CLS */}
             <div className="glass-card rounded-xl p-5 flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1">
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1">
                   {t('clsLabel')}
                   <Info className="w-3 h-3 text-muted-fg/60 hover:text-muted-fg cursor-help" />
                 </span>
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-md border text-chartreuse bg-chartreuse/10 border-chartreuse/20 uppercase tracking-wider">
+                <span className="text-2xs font-bold px-2 py-0.5 rounded-md border text-chartreuse bg-chartreuse/10 border-chartreuse/20 uppercase tracking-wider">
                   {t('lcpGood')}
                 </span>
               </div>
@@ -186,7 +186,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
                 <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden border border-border/30">
                   <div className="bg-gradient-to-r from-chartreuse to-primary h-full rounded-full w-[92%]" />
                 </div>
-                <div className="flex justify-between text-[9px] text-muted-fg font-semibold tracking-wider uppercase mt-1">
+                <div className="flex justify-between text-2xs text-muted-fg font-semibold tracking-wider uppercase mt-1">
                   <span className="text-chartreuse font-bold">{t('clsStatus')}</span>
                   <span>0.03</span>
                 </div>
@@ -196,11 +196,11 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
             {/* INP — Recharts AreaChart sparkline */}
             <div className="glass-card rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1">
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1">
                   {t('inpLabel')}
                   <Info className="w-3 h-3 text-muted-fg/60 hover:text-muted-fg cursor-help" />
                 </span>
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-md border text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/10 border-[oklch(75% 0.13 80)]/20 uppercase tracking-wider">
+                <span className="text-2xs font-bold px-2 py-0.5 rounded-md border text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/10 border-[oklch(75% 0.13 80)]/20 uppercase tracking-wider">
                   {t('inpNeedsImprovement')}
                 </span>
               </div>
@@ -236,7 +236,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
                 <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden border border-border/30">
                   <div className="bg-gradient-to-r from-[oklch(75% 0.13 80)] to-[oklch(80% 0.12 90)] h-full rounded-full w-[65%]" />
                 </div>
-                <div className="flex justify-between text-[9px] font-semibold tracking-wider uppercase mt-1">
+                <div className="flex justify-between text-2xs font-semibold tracking-wider uppercase mt-1">
                   <span className="text-[oklch(75% 0.13 80)] font-bold">{t('inpWarning')}</span>
                   <span className="text-muted-fg">{t('inpThreshold')}</span>
                 </div>
@@ -246,11 +246,11 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
             {/* Overall Score — Recharts PieChart semi-circle */}
             <div className="glass-card rounded-xl p-5 flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1">
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1">
                   {t('scoreLabel')}
                   <Info className="w-3 h-3 text-muted-fg/60 hover:text-muted-fg cursor-help" />
                 </span>
-                <span className="text-[9px] font-extrabold text-primary">{t('indexLabel')} 91.4</span>
+                <span className="text-2xs font-extrabold text-primary">{t('indexLabel')} 91.4</span>
               </div>
 
               <div className="flex items-center justify-center h-28 relative mt-2">
@@ -280,7 +280,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
                 {/* Overlaid text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-end pb-3 pointer-events-none">
                   <span className="text-4xl font-extrabold tracking-tighter text-foreground leading-none">91.4</span>
-                  <span className="text-[10px] font-black text-primary uppercase tracking-widest mt-1.5 scan-pulse">
+                  <span className="text-2xs font-black text-primary uppercase tracking-widest mt-1.5 scan-pulse">
                     {t('excellent')}
                   </span>
                 </div>
@@ -332,14 +332,14 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
                 <span className="text-4xl font-black text-foreground tracking-tighter flex items-baseline">
                   94<span className="text-muted-fg/60 text-lg font-bold">/100</span>
                 </span>
-                <span className="text-[9px] font-black text-muted-fg uppercase tracking-widest">
+                <span className="text-2xs font-black text-muted-fg uppercase tracking-widest">
                   {t('liveIndex')}
                 </span>
               </div>
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-6 justify-center w-full text-[10px] font-extrabold uppercase tracking-widest text-muted-fg">
+            <div className="flex items-center gap-6 justify-center w-full text-2xs font-extrabold uppercase tracking-widest text-muted-fg">
               <LegendDot color={COLORS.destructive} label={t('legendCritical')} />
               <LegendDot color={COLORS.warning} label={t('legendWarning')} />
               <LegendDot color={COLORS.chartreuse} label={t('legendGood')} />
@@ -347,7 +347,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
 
             {/* Status */}
             <div className="text-center space-y-1 pt-2 w-full border-t border-border/50">
-              <span className="block text-[9px] uppercase font-black tracking-widest text-muted-fg">
+              <span className="block text-2xs uppercase font-black tracking-widest text-muted-fg">
                 {t('healthStatus')}
               </span>
               <span className="block text-2xl font-black text-chartreuse uppercase tracking-tight scan-pulse">
@@ -420,7 +420,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
                       <h4 className="font-extrabold text-foreground text-base truncate tracking-tight">
                         {project.name}
                       </h4>
-                      <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest truncate">
+                      <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest truncate">
                         {project.domain}
                       </p>
                     </div>
@@ -441,7 +441,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
                       className={`w-2 h-2 rounded-full animate-pulse ${isGood ? 'bg-chartreuse' : 'bg-[oklch(75% 0.13 80)]'}`}
                     />
                     <span
-                      className={`text-[10px] font-extrabold uppercase tracking-widest ${isGood ? 'text-chartreuse' : 'text-[oklch(75% 0.13 80)]'}`}
+                      className={`text-2xs font-extrabold uppercase tracking-widest ${isGood ? 'text-chartreuse' : 'text-[oklch(75% 0.13 80)]'}`}
                     >
                       {label}
                     </span>
@@ -449,7 +449,7 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
 
                   <Link
                     href={`/projects/${project.id}`}
-                    className="text-[9px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-[color,background-color,border-color,opacity,transform] transform translate-x-2 group-hover:translate-x-0 bg-primary/10 border border-primary/20 px-3.5 py-2 rounded-xl hover:bg-primary/20"
+                    className="text-2xs font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-[color,background-color,border-color,opacity,transform] transform translate-x-2 group-hover:translate-x-0 bg-primary/10 border border-primary/20 px-3.5 py-2 rounded-xl hover:bg-primary/20"
                   >
                     {t('viewAudit')} <ChevronRight size={12} strokeWidth={2.5} />
                   </Link>

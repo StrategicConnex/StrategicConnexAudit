@@ -41,10 +41,10 @@ export const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/60 shadow-sm",
       },
       size: {
-        xs: "h-7 px-2.5 text-[9px] rounded-md gap-1.5",
-        sm: "h-8 px-3 text-[10px] rounded-lg gap-1.5",
-        md: "h-10 px-4 text-[10px] rounded-lg gap-2",
-        lg: "h-11 px-6 text-[11px] rounded-xl gap-2",
+        xs: "h-7 px-2.5 text-2xs rounded-md gap-1.5",
+        sm: "h-8 px-3 text-2xs rounded-lg gap-1.5",
+        md: "h-10 px-4 text-2xs rounded-lg gap-2",
+        lg: "h-11 px-6 text-2xs rounded-xl gap-2",
         icon: "size-8 rounded-lg",
       },
       shape: {

@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SCAUDIT — Enterprise Cyber Intelligence Design System v3
+   SCAUDIT — Enterprise Cyber Intelligence Design System v4
    Tailwind CSS v4 with OKLCH color tokens.
-   
-   Design DNA: Server-room precision — the inside of a fully-lit data center
-   rack. Deep indigo-charcoal backgrounds, clean indigo primary, and a single
-   chartreuse accent used sparingly as a live-signal marker.
-   
+
+   Design DNA: Olive + Gold + Teal NOC — the war-room of a network
+   operations center at night. Near-black olive backgrounds, gold as the
+   single saturated accent (live signals, primary actions, focus), teal as
+   the secondary data hue. Multi-hue accents are reserved for data-viz.
+
    Font stack: Space Grotesk (display/data), Inter (body/UI), JetBrains Mono
    (terminal/code).
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -32,7 +33,6 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-indigo: oklch(68% 0.14 230);
   --color-chartreuse: var(--chartreuse);
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
@@ -56,6 +56,14 @@
   --color-accent-cyan: var(--accent-cyan);
   --color-accent-indigo: var(--accent-indigo);
   --color-accent-violet: var(--accent-violet);
+
+  /* ─── Escala tipográfica (v4) — reemplaza a text-[Npx] ────────────────
+     Solo se añade 2xs (11px): los defaults de Tailwind (xs=12, sm=14,
+     base=16, lg=18) quedan intactos para no alterar el código existente.
+     Mínimo absoluto 11px: por debajo, el texto UPPERCASE con tracking en
+     dark shimmera y falla WCAG para texto esencial. */
+  --text-2xs: 0.6875rem;   /* 11px */
+  --text-2xs--line-height: 1.45;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -204,7 +212,7 @@
   --card-fg: oklch(15% 0.018 100);
   --popover: oklch(100% 0 0);
   --popover-fg: oklch(15% 0.018 100);
-  --primary: oklch(50% 0.12 85);
+  --primary: oklch(45% 0.13 85);
   --primary-fg: oklch(99% 0.003 100);
   --secondary: oklch(90% 0.015 185);
   --secondary-fg: oklch(20% 0.02 100);
@@ -217,7 +225,7 @@
   --destructive-fg: oklch(99% 0.003 100);
   --border: oklch(86% 0.012 100);
   --input: oklch(92% 0.01 100);
-  --ring: oklch(50% 0.12 85);
+  --ring: oklch(45% 0.13 85);
   --radius: 12px;
 
   --surface: oklch(100% 0 0);
@@ -231,7 +239,7 @@
   --chart-grid: oklch(87% 0.012 265 / 0.7);
   --chart-axis: oklch(55% 0.02 260);
   --chart-label: oklch(45% 0.02 260);
-  --chart-primary: oklch(50% 0.12 85);
+  --chart-primary: oklch(45% 0.13 85);
   --chart-secondary: oklch(40% 0.08 185);
   --chart-success: oklch(42% 0.12 145);
   --chart-warning: oklch(55% 0.14 85);
@@ -239,13 +247,13 @@
   --chart-tooltip: oklch(100% 0 0 / 0.97);
 
   --glass-border: oklch(87% 0.012 265 / 0.75);
-  --glass-border-strong: oklch(50% 0.12 85 / 0.14);
+  --glass-border-strong: oklch(45% 0.13 85 / 0.14);
   --shadow-card: 0 8px 24px -8px oklch(20% 0.02 265 / 0.14);
-  --shadow-hero: 0 12px 40px -12px oklch(50% 0.12 85 / 0.18),
+  --shadow-hero: 0 12px 40px -12px oklch(45% 0.13 85 / 0.18),
                  inset 0 1px 0 oklch(100% 0 0 / 0.85);
   --gradient-surface: linear-gradient(160deg, oklch(100% 0 0 / 0.85), oklch(96% 0.008 100 / 0.9));
   --gradient-surface-hero: linear-gradient(160deg, oklch(100% 0 0 / 0.9), oklch(95% 0.01 100 / 0.95));
-  --gradient-primary: linear-gradient(135deg, oklch(50% 0.12 85), oklch(42% 0.10 100));
+  --gradient-primary: linear-gradient(135deg, oklch(45% 0.13 85), oklch(38% 0.10 100));
   --gradient-accent: linear-gradient(135deg, oklch(40% 0.08 185), oklch(35% 0.07 170));
 
   /* Fondo de red neuronal — azul eléctrico intenso, legible sobre light.
@@ -266,7 +274,7 @@
   --shimmer-a: oklch(15% 0.02 100 / 0.04);
   --shimmer-b: oklch(15% 0.02 100 / 0.09);
   --scan-line: oklch(15% 0.02 100 / 0.05);
-  --selection-bg: oklch(50% 0.12 85 / 0.16);
+  --selection-bg: oklch(45% 0.13 85 / 0.16);
   --selection-fg: oklch(15% 0.02 100);
   --scroll-thumb: oklch(80% 0.012 100);
   --scroll-thumb-hover: oklch(70% 0.015 100);
@@ -307,6 +315,21 @@
 @keyframes pulse-beat {
   0%, 100% { opacity: 0.4; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.03); }
+}
+
+/* Momento firma del hero: barra de luz que barre la card una sola vez al
+   cargar (escaneo de encendido). Respeta prefers-reduced-motion vía
+   motion-reduce:hidden/animate-none en el consumidor. */
+@keyframes hero-scan {
+  0%   { transform: translateX(-120%); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateX(320%); opacity: 0; }
+}
+
+@utility hero-scan {
+  background: linear-gradient(90deg, transparent, oklch(72% 0.14 85 / 0.10) 45%, oklch(72% 0.14 85 / 0.16) 50%, oklch(72% 0.14 85 / 0.10) 55%, transparent);
+  animation: hero-scan 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both;
 }
 
 /* ─── View Transitions API — route enter/exit ──────────────────────────

@@ -126,7 +126,7 @@ export function PushSubscribeButton() {
   // States that don't render a button
   if (state === "unsupported") {
     return (
-      <div className="flex items-center gap-2 text-[11px] text-muted-fg/70">
+      <div className="flex items-center gap-2 text-2xs text-muted-fg/70">
         <BellOff size={14} />
         Push no soportado en este navegador
       </div>
@@ -135,7 +135,7 @@ export function PushSubscribeButton() {
 
   if (state === "denied") {
     return (
-      <div className="flex items-center gap-2 text-[11px] text-chart-warning/80">
+      <div className="flex items-center gap-2 text-2xs text-chart-warning/80">
         <BellOff size={14} />
         Notificaciones bloqueadas
       </div>

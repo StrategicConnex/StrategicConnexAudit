@@ -17,7 +17,7 @@ export function ProjectsTab({ dashboardData, NewProjectModal }: ProjectsTabProps
     <div className="space-y-6 relative z-10 font-sans text-zinc-100">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[19px] font-extrabold tracking-tight text-white">{t('title')}</h2>
+          <h2 className="text-lg font-extrabold tracking-tight text-white">{t('title')}</h2>
           <p className="text-xs text-zinc-500 mt-1">{t('description')}</p>
         </div>
       </div>
@@ -33,7 +33,7 @@ export function ProjectsTab({ dashboardData, NewProjectModal }: ProjectsTabProps
             <Plus className="w-7 h-7" />
           </div>
           <div className="space-y-1">
-            <h4 className="font-extrabold text-white text-[15px] tracking-tight">¿Agregar un nuevo dominio?</h4>
+            <h4 className="font-extrabold text-white text-base tracking-tight">¿Agregar un nuevo dominio?</h4>
             <p className="text-xs text-zinc-500 max-w-[200px] mx-auto leading-relaxed">Somete tu sitio web a una auditoría técnica profunda impulsada por IA.</p>
           </div>
           <NewProjectModal />

@@ -27,7 +27,7 @@ export function MitreBadge({ technique, size = 'sm', showTooltip = true }: {
 }) {
   const [showInfo, setShowInfo] = useState(false);
   const colors = getTacticColor(technique.tactic);
-  const sizeClasses = size === 'sm' ? 'text-[8px] px-1.5 py-0.5 gap-1' : 'text-[10px] px-2.5 py-1 gap-1.5';
+  const sizeClasses = size === 'sm' ? 'text-2xs px-1.5 py-0.5 gap-1' : 'text-2xs px-2.5 py-1 gap-1.5';
 
   return (
     <span className="relative inline-flex items-center">
@@ -51,12 +51,12 @@ export function MitreBadge({ technique, size = 'sm', showTooltip = true }: {
             <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className={`text-[9px] font-bold ${colors.text}`}>{technique.id}</span>
-                <span className="text-[8px] text-muted-fg uppercase tracking-wider">{technique.tactic}</span>
+                <span className={`text-2xs font-bold ${colors.text}`}>{technique.id}</span>
+                <span className="text-2xs text-muted-fg uppercase tracking-wider">{technique.tactic}</span>
               </div>
-              <p className="text-[10px] text-foreground/80 leading-relaxed font-medium">{technique.name}</p>
-              <p className="text-[9px] text-muted-fg leading-relaxed">{technique.description}</p>
-              <a href={technique.url} target="_blank" rel="noopener noreferrer" className="text-[8px] text-primary hover:text-primary/80 transition-colors block mt-1" onClick={(e) => e.stopPropagation()}>Ver en MITRE ATTACK &rarr;</a>
+              <p className="text-2xs text-foreground/80 leading-relaxed font-medium">{technique.name}</p>
+              <p className="text-2xs text-muted-fg leading-relaxed">{technique.description}</p>
+              <a href={technique.url} target="_blank" rel="noopener noreferrer" className="text-2xs text-primary hover:text-primary/80 transition-colors block mt-1" onClick={(e) => e.stopPropagation()}>Ver en MITRE ATTACK &rarr;</a>
             </div>
           </div>
         </div>

@@ -18,7 +18,7 @@ export function QuickMetricsHud({ investigation }: QuickMetricsHudProps) {
           <ShieldCheck className="w-5 h-5 text-chartreuse" />
         </div>
         <div>
-          <span className="text-[10px] font-mono text-muted-fg uppercase tracking-wider">Firewall Status</span>
+          <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Firewall Status</span>
           <h4 className="text-sm font-semibold text-foreground mt-0.5">EgressGuard Activo</h4>
         </div>
       </div>
@@ -28,7 +28,7 @@ export function QuickMetricsHud({ investigation }: QuickMetricsHudProps) {
           <Activity className="w-5 h-5 text-blue-400" />
         </div>
         <div>
-          <span className="text-[10px] font-mono text-muted-fg uppercase tracking-wider">Métricas Escaneadas</span>
+          <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Métricas Escaneadas</span>
           <h4 className="text-sm font-semibold text-foreground mt-0.5">16 Herramientas Core</h4>
         </div>
       </div>
@@ -42,7 +42,7 @@ export function QuickMetricsHud({ investigation }: QuickMetricsHudProps) {
           )}
         </div>
         <div>
-          <span className="text-[10px] font-mono text-muted-fg uppercase tracking-wider">Estado Auditoría</span>
+          <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Estado Auditoría</span>
           <h4 className="text-sm font-semibold text-foreground mt-0.5">
             {investigation
               ? investigation.status === "running"

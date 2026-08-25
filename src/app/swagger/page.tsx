@@ -113,7 +113,7 @@ export default function SwaggerPage() {
       <div className="max-w-[1200px] mx-auto px-6 pt-8 pb-4">
         <Link
           href="/docs/api"
-          className="inline-flex items-center gap-1.5 text-[10px] text-muted-fg hover:text-primary transition-colors"
+          className="inline-flex items-center gap-1.5 text-2xs text-muted-fg hover:text-primary transition-colors"
         >
           <ArrowLeft className="w-3 h-3" /> Back to API Reference
         </Link>

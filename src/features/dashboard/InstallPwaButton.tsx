@@ -71,7 +71,7 @@ export function InstallPwaButton() {
       <button
         onClick={handleInstall}
         title="Instalar SCAUDIT como aplicación"
-        className="relative flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1.5 rounded-lg border transition-[color,background-color,border-color,transform] duration-300 hover:scale-[1.03] text-chartreuse bg-chartreuse/10 border-chartreuse/20 hover:bg-chartreuse/20"
+        className="relative flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-widest px-2.5 py-1.5 rounded-lg border transition-[color,background-color,border-color,transform] duration-300 hover:scale-[1.03] text-chartreuse bg-chartreuse/10 border-chartreuse/20 hover:bg-chartreuse/20"
       >
         <Download className="w-3 h-3" />
         <span className="hidden sm:inline">Instalar</span>

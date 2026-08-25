@@ -131,7 +131,7 @@ export default function ToolCatalog() {
       <div className="flex px-4 py-3 overflow-x-auto border-b border-border bg-card/50 gap-2 scrollbar-none">
         <button
           onClick={() => setSelectedCategory("all")}
-          className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg border text-[11px] font-mono tracking-wide uppercase transition-colors shrink-0 ${
+          className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg border text-2xs font-mono tracking-wide uppercase transition-colors shrink-0 ${
             selectedCategory === "all"
               ? "bg-foreground text-background border-foreground font-semibold"
               : "bg-muted border-border text-muted-fg hover:text-foreground"
@@ -146,7 +146,7 @@ export default function ToolCatalog() {
             <button
               key={key}
               onClick={() => setSelectedCategory(key as ToolCategory)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-mono tracking-wide uppercase transition-colors shrink-0 ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-2xs font-mono tracking-wide uppercase transition-colors shrink-0 ${
                 selectedCategory === key
                   ? "bg-foreground text-background border-foreground font-semibold"
                   : "bg-muted border-border text-muted-fg hover:text-foreground"
@@ -187,12 +187,12 @@ export default function ToolCatalog() {
                   </span>
                   
                   {/* SaaS Plan Badge */}
-                  <span className={`text-[9px] font-mono font-medium border rounded px-1.5 py-0.5 tracking-wider uppercase ${planStyles[tool.requiredPlan]}`}>
+                  <span className={`text-2xs font-mono font-medium border rounded px-1.5 py-0.5 tracking-wider uppercase ${planStyles[tool.requiredPlan]}`}>
                     {tool.requiredPlan}
                   </span>
                 </div>
 
-                <p className="text-[11px] text-muted-fg leading-relaxed mb-3 pr-2">
+                <p className="text-2xs text-muted-fg leading-relaxed mb-3 pr-2">
                   {tool.description}
                 </p>
 
@@ -200,17 +200,17 @@ export default function ToolCatalog() {
                 <div className="flex items-center justify-between border-t border-border/40 pt-2.5 mt-auto">
                   <div className="flex items-center space-x-2">
                     {/* Risk Badge */}
-                    <span className={`text-[9px] font-mono border rounded-md px-1.5 py-0.5 ${riskConfig.bg} ${riskConfig.text}`}>
+                    <span className={`text-2xs font-mono border rounded-md px-1.5 py-0.5 ${riskConfig.bg} ${riskConfig.text}`}>
                       {riskConfig.label}
                     </span>
 
                     {/* Cost Badge */}
-                    <span className="text-[9px] font-mono text-muted-fg">
+                    <span className="text-2xs font-mono text-muted-fg">
                       Coste: <strong className="text-muted-fg font-medium">{tool.costUnits} U</strong>
                     </span>
                   </div>
 
-                  <span className="text-[9px] font-mono text-muted-fg tracking-wider group-hover:text-muted-fg transition-colors">
+                  <span className="text-2xs font-mono text-muted-fg tracking-wider group-hover:text-muted-fg transition-colors">
                     {tool.id}
                   </span>
                 </div>
@@ -223,7 +223,7 @@ export default function ToolCatalog() {
             <p className="text-xs font-medium text-muted-fg">
               No se encontraron herramientas
             </p>
-            <p className="text-[10px] text-muted-fg mt-1 max-w-[200px]">
+            <p className="text-2xs text-muted-fg mt-1 max-w-[200px]">
               Intenta buscando con palabras clave o seleccionando otra categoría.
             </p>
           </div>

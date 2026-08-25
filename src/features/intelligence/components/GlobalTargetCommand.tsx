@@ -140,7 +140,7 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
           {inputVal.trim() && (
             <div className={`hidden sm:flex items-center space-x-2 border rounded-lg px-2.5 py-1.5 mr-2 ${styleConfig.bg} transition-colors duration-300`}>
               <IconComponent className={`w-3.5 h-3.5 ${styleConfig.text}`} />
-              <span className={`text-[11px] font-medium tracking-wide uppercase font-mono ${styleConfig.text}`}>
+              <span className={`text-2xs font-medium tracking-wide uppercase font-mono ${styleConfig.text}`}>
                 {styleConfig.label}
               </span>
             </div>
@@ -159,7 +159,7 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
 
       {/* Real-time Dynamic Status and Security Guidance */}
       {inputVal.trim() && !localError && !apiError && (
-        <div className="flex flex-wrap items-center justify-between px-3 text-[11px] text-muted-fg font-mono gap-y-2">
+        <div className="flex flex-wrap items-center justify-between px-3 text-2xs text-muted-fg font-mono gap-y-2">
           <div className="flex items-center space-x-2">
             <span className="w-1.5 h-1.5 rounded-full bg-chartreuse animate-pulse" />
             <span>Target activo: <strong className="text-muted-fg font-normal">{inputVal}</strong></span>

@@ -44,7 +44,7 @@ export function ApiHealthBadge({ health, loading, onRefresh }: ApiHealthBadgePro
   return (
     <button
       onClick={onRefresh}
-      className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono transition-colors group ${colorClass}`}
+      className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-2xs font-mono transition-colors group ${colorClass}`}
       title={`${LABELS[status] || "Desconocido"} — ${health.summary.healthy}/${health.summary.total} servicios operativos. Click para refrescar.`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${dotClass} animate-pulse`} />

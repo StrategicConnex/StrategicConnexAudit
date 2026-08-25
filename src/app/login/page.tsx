@@ -223,7 +223,7 @@ function LoginContent() {
             </div>
           </div>
 
-          <p className="mt-6 text-center text-[10px] sm:text-xs text-muted-fg/40">
+          <p className="mt-6 text-center text-2xs sm:text-xs text-muted-fg/40">
             {t('footerProtected')} & StrategicAudit Pro Infrastructure
           </p>
         </div>
@@ -364,14 +364,14 @@ function LoginContent() {
                 }}
               >
                 {validationState === 'invalid' && validationReason && (
-                  <p className="text-[11px] sm:text-xs text-destructive mt-1.5 ml-1 flex items-center gap-1.5"
+                  <p className="text-2xs sm:text-xs text-destructive mt-1.5 ml-1 flex items-center gap-1.5"
                      style={{ animation: 'message-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                     <AlertCircle className="w-3 h-3 shrink-0" />
                     {validationReason}
                   </p>
                 )}
                 {validationState === 'valid' && (
-                  <p className="text-[11px] sm:text-xs text-chartreuse/80 mt-1.5 ml-1 flex items-center gap-1"
+                  <p className="text-2xs sm:text-xs text-chartreuse/80 mt-1.5 ml-1 flex items-center gap-1"
                      style={{ animation: 'message-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                     <CheckCircle2 className="w-3 h-3 shrink-0" />
                     {t('emailValid')}
@@ -439,10 +439,10 @@ function LoginContent() {
                   </>
                 )}
               </span>
-            </button>              <p className="text-[10px] sm:text-xs text-muted-fg/70 text-center leading-relaxed">
+            </button>              <p className="text-2xs sm:text-xs text-muted-fg/70 text-center leading-relaxed">
               {t('footerText')}
               {validationState === 'invalid' && validationReason?.toLowerCase().includes('desechable') && (
-                <span className="block mt-1.5 text-amber-400/60 text-[10px] sm:text-xs">
+                <span className="block mt-1.5 text-amber-400/60 text-2xs sm:text-xs">
                   {t('disposableEmail')}
                 </span>
               )}
@@ -451,7 +451,7 @@ function LoginContent() {
 
           {/* Footer */}
           <div className="mt-7 sm:mt-8 pt-5 sm:pt-6 border-t border-border">
-            <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-muted-fg/60">
+            <div className="flex items-center justify-center gap-2 text-2xs sm:text-xs text-muted-fg/60">
               <Shield className="w-3 h-3" />
               <span>{t('footerProtected')}</span>
               <span className="text-border mx-1">·</span>
@@ -463,7 +463,7 @@ function LoginContent() {
             <ThemeSwitcher />
             <LanguageSwitcher mini />
           </div>
-          <p className="mt-2 text-center text-[10px] sm:text-xs text-muted-fg/40">
+          <p className="mt-2 text-center text-2xs sm:text-xs text-muted-fg/40">
           {t('footerBrand')}
         </p>
       </div>

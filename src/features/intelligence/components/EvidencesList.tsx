@@ -44,7 +44,7 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, 
           </span>
         </div>
         {isDemo && (
-          <span className="text-[10px] bg-muted text-muted-fg border border-border px-2 py-0.5 rounded uppercase font-mono">Demo</span>
+          <span className="text-2xs bg-muted text-muted-fg border border-border px-2 py-0.5 rounded uppercase font-mono">Demo</span>
         )}
       </div>
 
@@ -71,12 +71,12 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, 
                   <div className="flex items-center space-x-2">
                     <span className="text-xs font-semibold text-foreground">{item.title}</span>
                     {item.source && (
-                      <span className="font-mono text-[9px] text-muted-fg bg-muted px-1.5 py-0.5 rounded border border-border">
+                      <span className="font-mono text-2xs text-muted-fg bg-muted px-1.5 py-0.5 rounded border border-border">
                         {item.source}
                       </span>
                     )}
                   </div>
-                  <span className={`text-[9px] font-mono uppercase font-semibold px-2 py-0.5 rounded ${
+                  <span className={`text-2xs font-mono uppercase font-semibold px-2 py-0.5 rounded ${
                     SEVERITY_CLASSES[severity] || "bg-blue-500/10 text-blue-400 border border-blue-500/20"
                   }`}>
                     Severidad: {severity}
@@ -86,8 +86,8 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, 
                   {item.description || item.desc}
                 </p>
                 {item.recommendation && (
-                  <div className="mt-3 p-2.5 bg-background rounded-lg border border-border text-[11px] font-mono text-chartreuse/90 leading-normal">
-                    <span className="text-[10px] text-muted-fg block mb-1">RECOMENDACIÓN DE REMEDIACIÓN:</span>
+                  <div className="mt-3 p-2.5 bg-background rounded-lg border border-border text-2xs font-mono text-chartreuse/90 leading-normal">
+                    <span className="text-2xs text-muted-fg block mb-1">RECOMENDACIÓN DE REMEDIACIÓN:</span>
                     {item.recommendation}
                   </div>
                 )}

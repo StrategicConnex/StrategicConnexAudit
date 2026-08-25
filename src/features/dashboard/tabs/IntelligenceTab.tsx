@@ -348,7 +348,7 @@ export function IntelligenceTab({
         
         {/* Project Selector inside Workspace */}
         <div className="glass-card p-5">
-          <label className="block text-[10px] font-bold text-muted-fg uppercase tracking-widest mb-2">
+          <label className="block text-2xs font-bold text-muted-fg uppercase tracking-widest mb-2">
             {t('activeProject')}
           </label>
           <div className="relative">
@@ -372,10 +372,10 @@ export function IntelligenceTab({
         {/* History List Card */}
         <div className="glass-card flex-1 flex flex-col min-h-[300px] overflow-hidden">
           <div className="p-5 border-b border-border flex items-center justify-between bg-muted/1">
-            <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-2">
+            <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-2">
               <History className="w-3.5 h-3.5" /> {t('analysisHistory')}
             </h3>
-            <span className="text-[10px] bg-muted/5 border border-border/50 px-2 py-0.5 rounded-full font-bold">
+            <span className="text-2xs bg-muted/5 border border-border/50 px-2 py-0.5 rounded-full font-bold">
               {investigations.length}
             </span>
           </div>
@@ -408,23 +408,23 @@ export function IntelligenceTab({
                       </span>
                       <div className="flex items-center gap-1.5">
                         {driftStates[inv.id] && (
-                          <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded border border-destructive/30 text-destructive bg-destructive/10 animate-pulse">
+                          <span className="text-2xs font-extrabold px-1.5 py-0.5 rounded border border-destructive/30 text-destructive bg-destructive/10 animate-pulse">
                             DRIFT
                           </span>
                         )}
                         {inv.score !== null ? (
-                          <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded border ${scoreInfo?.color.split(' ')[0]} ${scoreInfo?.color.split(' ')[1]}`}>
+                          <span className={`text-2xs font-extrabold px-2 py-0.5 rounded border ${scoreInfo?.color.split(' ')[0]} ${scoreInfo?.color.split(' ')[1]}`}>
                             {inv.score}
                           </span>
                         ) : (
-                          <span className="text-[9px] bg-muted/5 border border-border/50 text-muted-fg px-2 py-0.5 rounded font-bold">
+                          <span className="text-2xs bg-muted/5 border border-border/50 text-muted-fg px-2 py-0.5 rounded font-bold">
                             Pendiente
                           </span>
                         )}
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between text-[9px] text-muted-fg uppercase tracking-wider">
+                    <div className="flex items-center justify-between text-2xs text-muted-fg uppercase tracking-wider">
                       <span>{inv.targetType}</span>
                       <span>
                         {new Date(inv.createdAt).toLocaleDateString('es-ES', { 
@@ -460,7 +460,7 @@ export function IntelligenceTab({
           <div className="relative z-10 flex flex-col gap-6">
             <div>
               <h3 className="font-extrabold text-foreground text-base tracking-tight">{t('scanInfrastructure')}</h3>
-              <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
+              <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">
                 {t('scanSubtitle')}
               </p>
             </div>
@@ -514,38 +514,38 @@ export function IntelligenceTab({
                 <span className="w-3 h-3 rounded-full bg-[oklch(75% 0.13 80)]/80 shadow-[0_0_8px_rgba(180,120,30,0.5)]" />
                 <span className="w-3 h-3 rounded-full bg-chartreuse/80 shadow-[0_0_8px_rgba(140,200,80,0.5)]" />
               </div>
-              <span className="text-[10px] text-chartreuse/60 font-mono font-bold tracking-widest flex items-center gap-2.5 uppercase">
+              <span className="text-2xs text-chartreuse/60 font-mono font-bold tracking-widest flex items-center gap-2.5 uppercase">
                 <Terminal className="w-3.5 h-3.5 text-chartreuse animate-pulse" /> terminal://intelligence-engine.v3.bin
               </span>
-              <div className="flex items-center gap-1.5 bg-chartreuse/40 border border-chartreuse/20 px-3 py-1 rounded-md font-mono text-[9px] text-chartreuse font-extrabold shadow-[0_0_10px_rgba(140,200,80,0.1)]">
+              <div className="flex items-center gap-1.5 bg-chartreuse/40 border border-chartreuse/20 px-3 py-1 rounded-md font-mono text-2xs text-chartreuse font-extrabold shadow-[0_0_10px_rgba(140,200,80,0.1)]">
                 <Activity className="w-2.5 h-2.5 animate-pulse text-chartreuse" /> LIVE_SCAN
               </div>
             </div>
 
             {/* Terminal Top Status Metrics Panel */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-8 py-5 bg-background/90 border-b border-chartreuse/10 relative z-30 font-mono text-[9px] text-muted-fg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-8 py-5 bg-background/90 border-b border-chartreuse/10 relative z-30 font-mono text-2xs text-muted-fg">
               <div className="space-y-1 border-r border-chartreuse/5 pr-4">
-                <span className="block text-[8px] font-bold text-muted-fg uppercase tracking-widest">MÓDULO DE INTELIGENCIA</span>
+                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">MÓDULO DE INTELIGENCIA</span>
                 <span className="font-extrabold text-foreground/80 uppercase truncate block">
                   {progressPercent < 30 ? 'INICIALIZACIÓN' : progressPercent < 60 ? 'MÉTRICAS DNS / WHOIS' : progressPercent < 90 ? 'CUBIERTA SSL/TLS' : 'COMPILACIÓN FINAL'}
                 </span>
               </div>
               <div className="space-y-1 border-r border-chartreuse/5 pr-4">
-                <span className="block text-[8px] font-bold text-muted-fg uppercase tracking-widest">TASA DE TRANSFERENCIA</span>
+                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">TASA DE TRANSFERENCIA</span>
                 <span className="font-extrabold text-chartreuse block">{scanSpeed}</span>
               </div>
               <div className="space-y-1 border-r border-chartreuse/5 pr-4">
-                <span className="block text-[8px] font-bold text-muted-fg uppercase tracking-widest">TIEMPO TRANSCURRIDO</span>
+                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">TIEMPO TRANSCURRIDO</span>
                 <span className="font-extrabold text-foreground/80 block">{elapsedTime}s</span>
               </div>
               <div className="space-y-1">
-                <span className="block text-[8px] font-bold text-muted-fg uppercase tracking-widest">PROGRESO GENERAL</span>
+                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">PROGRESO GENERAL</span>
                 <span className="font-extrabold text-chartreuse/90 block">{progressPercent}%</span>
               </div>
             </div>
 
             {/* Retro Phosphor Screen Body */}
-            <div className="p-8 font-mono text-[11.5px] leading-relaxed text-chartreuse/90 bg-background max-h-[350px] overflow-y-auto flex flex-col gap-3.5 border-b border-chartreuse/10 relative z-30 scroll-smooth">
+            <div className="p-8 font-mono text-xs leading-relaxed text-chartreuse/90 bg-background max-h-[350px] overflow-y-auto flex flex-col gap-3.5 border-b border-chartreuse/10 relative z-30 scroll-smooth">
               {scanProgress.map((line, idx) => (
                 <div key={idx} className="animate-in fade-in duration-200 font-semibold font-mono tracking-wide flex items-start gap-1">
                   <span className="text-chartreuse/50 select-none">&gt;</span>
@@ -566,7 +566,7 @@ export function IntelligenceTab({
 
             {/* Terminal Live Bar Indicator with Visual Progress Bar */}
             <div className="p-6 bg-background flex flex-col md:flex-row items-center justify-between gap-4 px-8 relative z-30 shrink-0">
-              <div className="flex items-center justify-between w-full md:w-auto text-[10px] text-chartreuse/80 font-bold uppercase tracking-widest">
+              <div className="flex items-center justify-between w-full md:w-auto text-2xs text-chartreuse/80 font-bold uppercase tracking-widest">
                 <span className="flex items-center gap-2.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-chartreuse animate-ping shadow-[0_0_8px_rgba(140,200,80,0.8)]" />
                   {scanStatusMessage || 'Inicializando motor...'}
@@ -581,7 +581,7 @@ export function IntelligenceTab({
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                <span className="font-mono text-[10px] text-chartreuse font-extrabold min-w-[32px] text-right">
+                <span className="font-mono text-2xs text-chartreuse font-extrabold min-w-[32px] text-right">
                   {progressPercent}%
                 </span>
               </div>
@@ -598,7 +598,7 @@ export function IntelligenceTab({
               
               {/* Score Gauge — Velocímetro SVG Cinematico */}
               <div className="glass-card p-8 flex flex-col items-center justify-center text-center gap-4 md:col-span-1">
-                <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">
+                <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest">
                   {t('securityIndex')}
                 </h3>
 
@@ -618,7 +618,7 @@ export function IntelligenceTab({
                 {driftData?.hasDrift && driftData.changes.length > 0 && (
                   <div className="flex flex-col gap-1.5 w-full">
                     {driftData.changes.slice(0, 2).map((change, i) => (
-                      <div key={i} className={`flex items-center gap-1.5 text-[9px] font-bold px-2 py-1 rounded border ${
+                      <div key={i} className={`flex items-center gap-1.5 text-2xs font-bold px-2 py-1 rounded border ${
                         change.severity === 'critical'
                           ? 'bg-destructive/10 border-destructive/20 text-destructive'
                           : change.severity === 'warning'
@@ -630,7 +630,7 @@ export function IntelligenceTab({
                       </div>
                     ))}
                     {driftData.changes.length > 2 && (
-                      <span className="text-[9px] text-muted-fg">+{driftData.changes.length - 2} cambios más</span>
+                      <span className="text-2xs text-muted-fg">+{driftData.changes.length - 2} cambios más</span>
                     )}
                   </div>
                 )}
@@ -640,17 +640,17 @@ export function IntelligenceTab({
               <div className="glass-card p-8 flex flex-col justify-between gap-6 md:col-span-2">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest">
+                    <span className="text-2xs bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest">
                       {t('analysisComplete')}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-fg font-medium">
+                      <span className="text-2xs text-muted-fg font-medium">
                         {new Date(selectedDetails.investigation.createdAt).toLocaleString('es-ES')}
                       </span>
                       {/* Attack Surface toggle */}
                       <button
                         onClick={() => setShowAttackSurface(prev => !prev)}
-                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
                           showAttackSurface
                             ? 'bg-primary/15 border-primary/30 text-primary'
                             : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -662,7 +662,7 @@ export function IntelligenceTab({
                       {/* Geo Map toggle */}
                       <button
                         onClick={() => setShowGeoMap(prev => !prev)}
-                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
                           showGeoMap
                             ? 'bg-primary/15 border-primary/30 text-primary'
                             : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -674,7 +674,7 @@ export function IntelligenceTab({
                       {/* History toggle */}
                       <button
                         onClick={() => { setHistoryDefaultTab('dns'); setShowHistory(prev => !prev); }}
-                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
                           showHistory && historyDefaultTab === 'dns'
                             ? 'bg-primary/15 border-primary/30 text-primary'
                             : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -686,7 +686,7 @@ export function IntelligenceTab({
                       {/* WHOIS History toggle */}
                       <button
                         onClick={() => { setHistoryDefaultTab('whois'); setShowHistory(prev => !prev); }}
-                        className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg border transition-colors duration-200 cursor-pointer ${
                           showHistory && historyDefaultTab === 'whois'
                             ? 'bg-primary/15 border-primary/30 text-primary'
                             : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -726,7 +726,7 @@ export function IntelligenceTab({
                   ].map((group, idx) => (
                     <div key={idx} className="bg-muted/5 border border-border/50 p-3 rounded-xl flex flex-col gap-1 items-center justify-center text-center">
                       <span className={`text-base font-extrabold ${group.color}`}>{group.count}</span>
-                      <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest">{group.label}</span>
+                      <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{group.label}</span>
                     </div>
                   ))}
                 </div>
@@ -738,7 +738,7 @@ export function IntelligenceTab({
                     className="w-full flex items-center justify-center gap-2 bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 hover:border-destructive/40 text-destructive font-extrabold text-xs px-4 py-3 rounded-xl transition-[color,background-color,border-color,transform] duration-300 hover:scale-[1.01] cursor-pointer group"
                   >                        <FileText className="w-4 h-4 group-hover:animate-pulse" />
                     {t('generateBrief')}
-                    <span className="text-[9px] font-black bg-destructive/20 border border-destructive/30 px-2 py-0.5 rounded uppercase tracking-wider">
+                    <span className="text-2xs font-black bg-destructive/20 border border-destructive/30 px-2 py-0.5 rounded uppercase tracking-wider">
                       {selectedDetails.findings.filter(f => f.severity === 'critical' || f.severity === 'high').length} hallazgos
                     </span>
                   </button>
@@ -756,7 +756,7 @@ export function IntelligenceTab({
                       <Network className="w-4 h-4 text-primary" />
                       Attack Surface Graph
                     </h3>
-                    <p className="text-[10px] text-muted-fg mt-0.5">
+                    <p className="text-2xs text-muted-fg mt-0.5">
                       Topología de red del objetivo con vectores de exposición
                     </p>
                   </div>
@@ -784,7 +784,7 @@ export function IntelligenceTab({
                       <MapPin className="w-4 h-4 text-primary" />
                       Geolocalización de Infraestructura
                     </h3>
-                    <p className="text-[10px] text-muted-fg mt-0.5">
+                    <p className="text-2xs text-muted-fg mt-0.5">
                       Ubicación geográfica de activos de red, ASN y traceroute hops
                     </p>
                   </div>
@@ -830,7 +830,7 @@ export function IntelligenceTab({
             <div className="glass-card overflow-hidden">
               <div className="p-8 border-b border-border bg-muted/1">
                 <h3 className="font-extrabold text-foreground text-base tracking-tight">Hallazgos e Ineficiencias de Red</h3>
-                <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
+                <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">
                   Lista de vulnerabilidades clasificadas por severidad con evidencia técnica
                 </p>
               </div>
@@ -870,11 +870,11 @@ export function IntelligenceTab({
                               <h4 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
                                 {finding.title}
                                 <span className="inline-flex items-center gap-1.5 ml-2"><AutoMitreBadge findingTitle={finding.title} toolId={finding.toolId} size="sm" /></span>
-                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${getSeverityBadge(finding.severity)}`}>
+                                <span className={`text-2xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${getSeverityBadge(finding.severity)}`}>
                                   {finding.severity}
                                 </span>
                               </h4>
-                              <p className="text-[10px] font-bold text-muted-fg uppercase tracking-wider mt-2 flex items-center gap-1.5">
+                              <p className="text-2xs font-bold text-muted-fg uppercase tracking-wider mt-2 flex items-center gap-1.5">
                                 <Server className="w-3.5 h-3.5" /> Activo: <span className="text-foreground/80 font-mono font-medium bg-background px-1.5 py-0.5 rounded border border-border/50">{finding.affectedAsset || 'General'}</span>
                               </p>
                             </div>
@@ -884,7 +884,7 @@ export function IntelligenceTab({
                         {/* Description & Recommendations */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs leading-relaxed pt-4 border-t border-border/50">
                           <div className="space-y-2.5">
-                            <h5 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
+                            <h5 className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
                               <Info className="w-3.5 h-3.5" /> Contexto Técnico
                             </h5>
                             <p className="text-muted-fg font-medium">
@@ -893,7 +893,7 @@ export function IntelligenceTab({
                           </div>
                           {finding.recommendation && (
                             <div className="space-y-2.5">
-                              <h5 className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${severityConfig.icon}`}>
+                              <h5 className={`text-2xs font-bold uppercase tracking-widest flex items-center gap-1.5 ${severityConfig.icon}`}>
                                 <Shield className="w-3.5 h-3.5" /> Plan de Acción
                               </h5>
                               <p className="text-foreground/80 font-medium bg-black/20 p-3.5 rounded-lg border border-border/30">
@@ -907,17 +907,17 @@ export function IntelligenceTab({
                         {finding.evidence && Object.keys(finding.evidence).length > 0 && (
                           <div className="mt-2 bg-card border border-border/50 p-4 rounded-xl relative overflow-hidden group">
                             <div className="flex justify-between items-center mb-3">
-                              <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
+                              <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
                                 <Terminal className="w-3.5 h-3.5 text-muted-fg" /> Evidencia RAW
                               </span>
                               <button
                                 onClick={() => handleCopyToClipboard(JSON.stringify(finding.evidence, null, 2))}
-                                className="text-[9px] font-bold uppercase tracking-widest text-muted-fg hover:text-foreground transition-colors cursor-pointer bg-muted/10 hover:bg-muted/30 border border-border/70 px-2.5 py-1 rounded"
+                                className="text-2xs font-bold uppercase tracking-widest text-muted-fg hover:text-foreground transition-colors cursor-pointer bg-muted/10 hover:bg-muted/30 border border-border/70 px-2.5 py-1 rounded"
                               >
                                 Copiar Payload
                               </button>
                             </div>
-                            <pre className="text-[10px] font-mono text-muted-fg overflow-x-auto select-all max-h-[140px] leading-relaxed p-3 bg-background rounded-lg border border-border/30">
+                            <pre className="text-2xs font-mono text-muted-fg overflow-x-auto select-all max-h-[140px] leading-relaxed p-3 bg-background rounded-lg border border-border/30">
                               {JSON.stringify(finding.evidence, null, 2)}
                             </pre>
                           </div>
@@ -937,7 +937,7 @@ export function IntelligenceTab({
                   <h3 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
                     <History className="w-4 h-4 text-primary" /> Timeline de Ejecución
                   </h3>
-                  <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
+                  <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">
                     Secuencia de eventos y estado del análisis
                   </p>
                 </div>
@@ -949,7 +949,7 @@ export function IntelligenceTab({
                         <div className="absolute -left-[7px] top-1.5 w-3 h-3 rounded-full bg-card border-2 border-primary shadow-[0_0_8px_rgba(98,113,196,0.5)]" />
                         
                         <div className="flex flex-col gap-1">
-                          <span className="text-[9px] font-bold text-primary uppercase tracking-widest bg-primary/10 border border-primary/20 px-2 py-0.5 rounded w-fit">
+                          <span className="text-2xs font-bold text-primary uppercase tracking-widest bg-primary/10 border border-primary/20 px-2 py-0.5 rounded w-fit">
                             {new Date(evt.createdAt).toLocaleTimeString()} · {evt.eventType}
                           </span>
                           <span className="text-xs font-medium text-foreground/80">
@@ -962,7 +962,7 @@ export function IntelligenceTab({
                     {selectedDetails.investigation.status !== 'completed' && (
                       <div className="relative pl-6 animate-pulse mt-7">
                         <div className="absolute -left-[7px] top-1.5 w-3 h-3 rounded-full bg-card border-2 border-chartreuse shadow-[0_0_8px_rgba(140,200,80,0.5)]" />
-                        <span className="text-[9px] font-bold text-chartreuse uppercase tracking-widest bg-chartreuse/10 border border-chartreuse/20 px-2 py-0.5 rounded w-fit">
+                        <span className="text-2xs font-bold text-chartreuse uppercase tracking-widest bg-chartreuse/10 border border-chartreuse/20 px-2 py-0.5 rounded w-fit">
                           Escaneando en vivo...
                         </span>
                       </div>
@@ -977,7 +977,7 @@ export function IntelligenceTab({
               <div className="glass-card overflow-hidden">
                 <div className="p-8 border-b border-border bg-muted/1">
                   <h3 className="font-extrabold text-foreground text-base tracking-tight">Activos Técnicos Descubiertos</h3>
-                  <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest mt-0.5">
+                  <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">
                     Infraestructura mapeada durante la auditoría
                   </p>
                 </div>
@@ -990,7 +990,7 @@ export function IntelligenceTab({
                           <Server className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <span className="block text-[8px] font-bold text-muted-fg uppercase tracking-widest">
+                          <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">
                             {asset.assetType}
                           </span>
                           <span className="block text-xs font-bold text-foreground truncate font-mono mt-0.5">
@@ -999,7 +999,7 @@ export function IntelligenceTab({
                         </div>
                       </div>
                       {asset.ip && (
-                        <span className="text-[9px] bg-muted/5 border border-border/50 text-muted-fg font-mono px-2 py-0.5 rounded">
+                        <span className="text-2xs bg-muted/5 border border-border/50 text-muted-fg font-mono px-2 py-0.5 rounded">
                           {asset.ip}
                         </span>
                       )}

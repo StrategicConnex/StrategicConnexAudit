@@ -120,7 +120,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5 mb-1">
+          <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5 mb-1">
             <BarChart3 className="w-3.5 h-3.5 text-primary" />
             Industry Benchmarking
           </h3>
@@ -128,7 +128,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
             Tu desempeno vs {benchmarks.totalProjects} proyecto{benchmarks.totalProjects !== 1 ? "s" : ""} activos
           </p>
         </div>
-        <span className="text-[9px] font-mono text-muted-fg">{new Date(benchmarks.computedAt).toLocaleString()}</span>
+        <span className="text-2xs font-mono text-muted-fg">{new Date(benchmarks.computedAt).toLocaleString()}</span>
       </div>
 
       {/* 3 metric cards */}
@@ -137,22 +137,22 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
         <div className="rounded-xl p-4 border transition-[border-color,transform] duration-300 hover:scale-[1.02]"
           style={{ background: "oklch(100% 0 0 / 0.02)", borderColor: "oklch(15% 0.008 265 / 0.3)" }}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
+            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
               <Activity className="w-3 h-3 text-primary" /> Uptime
             </span>
             {yourMetrics && (
-              <span className={"text-[9px] font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (uptimeRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : uptimeRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : uptimeRank.rank === "below" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
+              <span className={"text-2xs font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (uptimeRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : uptimeRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : uptimeRank.rank === "below" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
                 {uptimeRank.rank === "top" || uptimeRank.rank === "above" ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                 {uptimeRank.label}
               </span>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><p className="text-[9px] text-muted-fg">Tu proyecto</p><p className="text-lg font-extrabold text-foreground font-display">{yourMetrics ? yourMetrics.uptimePercent + "%" : "--"}</p></div>
-            <div><p className="text-[9px] text-muted-fg">Mediana industria</p><p className="text-lg font-extrabold text-foreground/70 font-display">{benchmarks.uptime.median}%</p></div>
+            <div><p className="text-2xs text-muted-fg">Tu proyecto</p><p className="text-lg font-extrabold text-foreground font-display">{yourMetrics ? yourMetrics.uptimePercent + "%" : "--"}</p></div>
+            <div><p className="text-2xs text-muted-fg">Mediana industria</p><p className="text-lg font-extrabold text-foreground/70 font-display">{benchmarks.uptime.median}%</p></div>
           </div>
           <div className="mt-3 pt-3 border-t" style={{ borderColor: "oklch(15% 0.008 265 / 0.15)" }}>
-            <div className="flex justify-between text-[9px] text-muted-fg">
+            <div className="flex justify-between text-2xs text-muted-fg">
               <span>P25: {benchmarks.uptime.p25}%</span><span>P75: {benchmarks.uptime.p75}%</span><span>P95: {benchmarks.uptime.p95}%</span>
             </div>
           </div>
@@ -162,22 +162,22 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
         <div className="rounded-xl p-4 border transition-[border-color,transform] duration-300 hover:scale-[1.02]"
           style={{ background: "oklch(100% 0 0 / 0.02)", borderColor: "oklch(15% 0.008 265 / 0.3)" }}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
+            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
               <Zap className="w-3 h-3 text-primary" /> Latencia
             </span>
             {yourMetrics && (
-              <span className={"text-[9px] font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (latencyRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : latencyRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : latencyRank.rank === "below" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
+              <span className={"text-2xs font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (latencyRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : latencyRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : latencyRank.rank === "below" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
                 {latencyRank.rank === "top" || latencyRank.rank === "above" ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                 {latencyRank.label}
               </span>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><p className="text-[9px] text-muted-fg">Tu proyecto</p><p className="text-lg font-extrabold text-foreground font-display">{yourMetrics?.avgLatencyMs ? yourMetrics.avgLatencyMs + "ms" : "--"}</p></div>
-            <div><p className="text-[9px] text-muted-fg">Mediana industria</p><p className="text-lg font-extrabold text-foreground/70 font-display">{benchmarks.latency.median}ms</p></div>
+            <div><p className="text-2xs text-muted-fg">Tu proyecto</p><p className="text-lg font-extrabold text-foreground font-display">{yourMetrics?.avgLatencyMs ? yourMetrics.avgLatencyMs + "ms" : "--"}</p></div>
+            <div><p className="text-2xs text-muted-fg">Mediana industria</p><p className="text-lg font-extrabold text-foreground/70 font-display">{benchmarks.latency.median}ms</p></div>
           </div>
           <div className="mt-3 pt-3 border-t" style={{ borderColor: "oklch(15% 0.008 265 / 0.15)" }}>
-            <div className="flex justify-between text-[9px] text-muted-fg">
+            <div className="flex justify-between text-2xs text-muted-fg">
               <span>P25: {benchmarks.latency.p25}ms</span><span>P75: {benchmarks.latency.p75}ms</span><span>P95: {benchmarks.latency.p95}ms</span>
             </div>
           </div>
@@ -187,22 +187,22 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
         <div className="rounded-xl p-4 border transition-[border-color,transform] duration-300 hover:scale-[1.02]"
           style={{ background: "oklch(100% 0 0 / 0.02)", borderColor: "oklch(15% 0.008 265 / 0.3)" }}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
+            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
               <ShieldCheck className="w-3 h-3 text-primary" /> Health Score
             </span>
             {yourMetrics && (
-              <span className={"text-[9px] font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (scoreRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : scoreRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : scoreRank.rank === "below" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
+              <span className={"text-2xs font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (scoreRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : scoreRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : scoreRank.rank === "below" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
                 {scoreRank.rank === "top" || scoreRank.rank === "above" ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                 {scoreRank.label}
               </span>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><p className="text-[9px] text-muted-fg">Tu proyecto</p><p className="text-lg font-extrabold text-foreground font-display">{yourMetrics?.score != null ? yourMetrics.score + "/100" : "--"}</p></div>
-            <div><p className="text-[9px] text-muted-fg">Mediana industria</p><p className="text-lg font-extrabold text-foreground/70 font-display">{benchmarks.healthScore.median}/100</p></div>
+            <div><p className="text-2xs text-muted-fg">Tu proyecto</p><p className="text-lg font-extrabold text-foreground font-display">{yourMetrics?.score != null ? yourMetrics.score + "/100" : "--"}</p></div>
+            <div><p className="text-2xs text-muted-fg">Mediana industria</p><p className="text-lg font-extrabold text-foreground/70 font-display">{benchmarks.healthScore.median}/100</p></div>
           </div>
           <div className="mt-3 pt-3 border-t" style={{ borderColor: "oklch(15% 0.008 265 / 0.15)" }}>
-            <div className="flex justify-between text-[9px] text-muted-fg">
+            <div className="flex justify-between text-2xs text-muted-fg">
               <span>P25: {benchmarks.healthScore.p25}</span><span>P75: {benchmarks.healthScore.p75}</span><span>P95: {benchmarks.healthScore.p95}</span>
             </div>
           </div>
@@ -214,7 +214,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
         <div className="rounded-xl border p-5" style={{ background: "oklch(100% 0 0 / 0.02)", borderColor: "oklch(15% 0.008 265 / 0.3)" }}>
           <div className="flex items-center gap-2 mb-4">
             <Radar className="w-4 h-4 text-primary" />
-            <h4 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Performance Radar</h4>
+            <h4 className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Performance Radar</h4>
           </div>
           <div className="w-full" style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -229,17 +229,17 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
             </ResponsiveContainer>
           </div>
           <div className="flex items-center justify-center gap-6 mt-2">
-            <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-fg uppercase tracking-widest">
+            <span className="flex items-center gap-1.5 text-2xs font-bold text-muted-fg uppercase tracking-widest">
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--accent)" }} /> Industria
             </span>
-            <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-fg uppercase tracking-widest">
+            <span className="flex items-center gap-1.5 text-2xs font-bold text-muted-fg uppercase tracking-widest">
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--primary)" }} /> Tu proyecto
             </span>
           </div>
         </div>
       )}
 
-      <p className="text-[10px] text-muted-fg/60 text-center pt-2">
+      <p className="text-2xs text-muted-fg/60 text-center pt-2">
         Basado en {benchmarks.uptime.count} proyectos con datos de uptime, {benchmarks.latency.count} con latencia y {benchmarks.healthScore.count} con health scores.
       </p>
     </div>

@@ -171,7 +171,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
             <History className="w-4 h-4 text-primary" />
             Historial DNS / WHOIS
           </h3>
-          <p className="text-[10px] text-muted-fg mt-0.5">
+          <p className="text-2xs text-muted-fg mt-0.5">
             Evolución histórica de registros DNS y datos WHOIS
           </p>
         </div>
@@ -209,7 +209,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
         <div className="flex gap-1.5 mt-3">
           <button
             onClick={() => setActiveTab('dns')}
-            className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
               activeTab === 'dns'
                 ? 'bg-primary/15 border-primary/30 text-primary'
                 : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -218,12 +218,12 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
             <Network className="w-3 h-3" />
             DNS
             {dnsChangeCount > 0 && (
-              <span className="text-[8px] bg-destructive/10 text-destructive border border-destructive/20 px-1.5 py-0.5 rounded-full font-bold">{dnsChangeCount}</span>
+              <span className="text-2xs bg-destructive/10 text-destructive border border-destructive/20 px-1.5 py-0.5 rounded-full font-bold">{dnsChangeCount}</span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('whois')}
-            className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
               activeTab === 'whois'
                 ? 'bg-primary/15 border-primary/30 text-primary'
                 : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -232,12 +232,12 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
             <BookMarked className="w-3 h-3" />
             WHOIS
             {whoisChangeCount > 0 && (
-              <span className="text-[8px] bg-destructive/10 text-destructive border border-destructive/20 px-1.5 py-0.5 rounded-full font-bold">{whoisChangeCount}</span>
+              <span className="text-2xs bg-destructive/10 text-destructive border border-destructive/20 px-1.5 py-0.5 rounded-full font-bold">{whoisChangeCount}</span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('timeline')}
-            className={`flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
               activeTab === 'timeline'
                 ? 'bg-primary/15 border-primary/30 text-primary'
                 : 'bg-muted/10 border-border text-muted-fg hover:text-foreground/80'
@@ -246,7 +246,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
             <TrendingDown className="w-3 h-3" />
             Timeline
             {timeline && timeline.totalChanges > 0 && (
-              <span className="text-[8px] text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/10 border border-[oklch(75% 0.13 80)]/20 px-1.5 py-0.5 rounded-full font-bold">{timeline.totalChanges}</span>
+              <span className="text-2xs text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/10 border border-[oklch(75% 0.13 80)]/20 px-1.5 py-0.5 rounded-full font-bold">{timeline.totalChanges}</span>
             )}
           </button>
         </div>
@@ -275,7 +275,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
             <div className="p-8 text-center">
               <Shield className="w-8 h-8 text-chartreuse mx-auto mb-3" />
               <p className="text-xs text-chartreuse font-bold">Sin cambios detectados</p>
-              <p className="text-[9px] text-muted-fg/60 mt-1">No hay variaciones entre el último snapshot y el anterior.</p>
+              <p className="text-2xs text-muted-fg/60 mt-1">No hay variaciones entre el último snapshot y el anterior.</p>
             </div>
           ) : (
             <div className="divide-y divide-white/[0.04]">
@@ -288,20 +288,20 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                   <div key={`tl-${idx}`} className="p-4 hover:bg-muted/5 transition-colors">
                     <div className="flex items-start gap-3">
                       {isDns ? (
-                        <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded border ${colors!.bg} ${colors!.text} ${colors!.border} uppercase shrink-0 mt-0.5`}>
+                        <span className={`text-2xs font-extrabold px-2 py-0.5 rounded border ${colors!.bg} ${colors!.text} ${colors!.border} uppercase shrink-0 mt-0.5`}>
                           {change.recordType}
                         </span>
                       ) : (
-                        <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded border ${sevStyle} uppercase shrink-0 mt-0.5 flex items-center gap-1`}>
+                        <span className={`text-2xs font-extrabold px-2 py-0.5 rounded border ${sevStyle} uppercase shrink-0 mt-0.5 flex items-center gap-1`}>
                           {getSeverityIcon(change.severity || 'info')} {change.label || 'WHOIS'}
                         </span>
                       )}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[9px] font-bold text-foreground/80">{change.query || change.domain || searchQuery}</span>
-                          <span className="text-[8px] text-muted-fg">{change.detectedAt ? fmtDate(change.detectedAt) : ''}</span>
+                          <span className="text-2xs font-bold text-foreground/80">{change.query || change.domain || searchQuery}</span>
+                          <span className="text-2xs text-muted-fg">{change.detectedAt ? fmtDate(change.detectedAt) : ''}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-[9px] font-mono">
+                        <div className="flex items-center gap-2 text-2xs font-mono">
                           {change.previousValue !== null ? (
                             <span className="text-destructive/70 line-through truncate max-w-[140px]">{change.previousValue}</span>
                           ) : (
@@ -311,14 +311,14 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                           <span className="text-chartreuse/80 truncate max-w-[140px]">{change.currentValue}</span>
                         </div>
                       </div>
-                      <span className={`text-[7px] font-bold uppercase tracking-widest shrink-0 ${sevStyle}`}>
+                      <span className={`text-2xs font-bold uppercase tracking-widest shrink-0 ${sevStyle}`}>
                         {isDns ? (change.type || 'changed') : sev}
                       </span>
                     </div>
                   </div>
                 );
               })}
-              <div className="p-3 text-center text-[8px] text-muted-fg border-t border-white/[0.04]">
+              <div className="p-3 text-center text-2xs text-muted-fg border-t border-white/[0.04]">
                 {timeline.totalChanges} cambios entre {fmtDate(timeline.fromDate)} y {fmtDate(timeline.toDate)}
               </div>
             </div>
@@ -329,7 +329,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
             <div className="p-8 text-center">
               <Globe className="w-8 h-8 text-muted-fg mx-auto mb-3" />
               <p className="text-xs text-muted-fg">No hay registros DNS histricos para este proyecto.</p>
-              <p className="text-[9px] text-muted-fg/60 mt-1">Los datos se generan automáticamente al escanear un dominio.</p>
+              <p className="text-2xs text-muted-fg/60 mt-1">Los datos se generan automáticamente al escanear un dominio.</p>
             </div>
           ) : (
             <div className="divide-y divide-white/[0.04]">
@@ -344,16 +344,16 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                       className="w-full flex items-center justify-between p-4 hover:bg-muted/5 transition-colors cursor-pointer text-left"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded border ${colors.bg} ${colors.text} ${colors.border} uppercase shrink-0`}>
+                        <span className={`text-2xs font-extrabold px-2 py-0.5 rounded border ${colors.bg} ${colors.text} ${colors.border} uppercase shrink-0`}>
                           {snap.recordType}
                         </span>
                         <div className="min-w-0">
                           <span className="text-xs font-bold text-foreground truncate block max-w-[280px]">{snap.query}</span>
-                          <span className="text-[9px] text-muted-fg font-mono truncate block max-w-[280px]">{snap.value}</span>
+                          <span className="text-2xs text-muted-fg font-mono truncate block max-w-[280px]">{snap.value}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[8px] text-muted-fg">{snap.snapshotDate ? fmtDate(snap.snapshotDate) : ''}</span>
+                        <span className="text-2xs text-muted-fg">{snap.snapshotDate ? fmtDate(snap.snapshotDate) : ''}</span>
                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-fg" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-fg" />}
                       </div>
                     </button>
@@ -361,12 +361,12 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                       <div className="px-4 pb-4 pt-0 bg-muted/[0.02] border-t border-white/[0.03] animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="grid grid-cols-2 gap-3 pt-3">
                           <div className="bg-muted/5 border border-border/50 rounded-lg p-3">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block mb-1">Valor</span>
-                            <code className="text-[10px] text-foreground/80 font-mono break-all">{snap.value}</code>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block mb-1">Valor</span>
+                            <code className="text-2xs text-foreground/80 font-mono break-all">{snap.value}</code>
                           </div>
                           <div className="bg-muted/5 border border-border/50 rounded-lg p-3">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block mb-1">TTL</span>
-                            <span className="text-[10px] text-foreground/80 font-bold">{snap.ttl !== null ? `${snap.ttl}s` : 'N/A'}</span>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block mb-1">TTL</span>
+                            <span className="text-2xs text-foreground/80 font-bold">{snap.ttl !== null ? `${snap.ttl}s` : 'N/A'}</span>
                           </div>
                         </div>
                       </div>
@@ -375,7 +375,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                 );
               })}
               {totalDns > 30 && (
-                <div className="p-4 text-center text-[9px] text-muted-fg border-t border-white/[0.04]">
+                <div className="p-4 text-center text-2xs text-muted-fg border-t border-white/[0.04]">
                   Mostrando 30 de {totalDns} registros. Usá el filtro para acotar.
                 </div>
               )}
@@ -387,7 +387,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
             <div className="p-8 text-center">
               <BookMarked className="w-8 h-8 text-muted-fg mx-auto mb-3" />
               <p className="text-xs text-muted-fg">No hay snapshots WHOIS históricos para este proyecto.</p>
-              <p className="text-[9px] text-muted-fg/60 mt-1">Los datos se generan al escanear un dominio con whois.full.</p>
+              <p className="text-2xs text-muted-fg/60 mt-1">Los datos se generan al escanear un dominio con whois.full.</p>
             </div>
           ) : (
             <div className="divide-y divide-white/[0.04]">
@@ -408,19 +408,19 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                         <Server className="w-4 h-4 text-muted-fg shrink-0" />
                         <div className="min-w-0">
                           <span className="text-xs font-bold text-foreground truncate block max-w-[200px]">{snap.domain}</span>
-                          <span className="text-[9px] text-muted-fg truncate block max-w-[200px]">{snap.registrar || 'Registrador desconocido'}</span>
+                          <span className="text-2xs text-muted-fg truncate block max-w-[200px]">{snap.registrar || 'Registrador desconocido'}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {daysRemaining !== null && daysRemaining <= 30 && (
-                          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full border ${
+                          <span className={`text-2xs font-extrabold px-1.5 py-0.5 rounded-full border ${
                             daysRemaining <= 0 ? SEVERITY_STYLES.critical : SEVERITY_STYLES.warning
                           }`}>
                             {daysRemaining <= 0 ? 'EXPIRADO' : `${daysRemaining}d`}
                           </span>
                         )}
                         {snap.diffSummary && (
-                          <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded-full border text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/10 border-[oklch(75% 0.13 80)]/20">
+                          <span className="text-2xs font-extrabold px-1.5 py-0.5 rounded-full border text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/10 border-[oklch(75% 0.13 80)]/20">
                             CAMBIO
                           </span>
                         )}
@@ -431,30 +431,30 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                       <div className="px-4 pb-4 pt-0 bg-muted/[0.02] border-t border-white/[0.03] animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="grid grid-cols-2 gap-3 pt-3">
                           <div className="bg-muted/5 border border-border/50 rounded-lg p-3">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block mb-1">Registrador</span>
-                            <span className="text-[10px] text-foreground/80 font-medium break-all">{snap.registrar || '/'}</span>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block mb-1">Registrador</span>
+                            <span className="text-2xs text-foreground/80 font-medium break-all">{snap.registrar || '/'}</span>
                           </div>
                           <div className="bg-muted/5 border border-border/50 rounded-lg p-3">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block mb-1">Organización</span>
-                            <span className="text-[10px] text-foreground/80 font-medium break-all">{snap.registrantOrg || '/'}</span>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block mb-1">Organización</span>
+                            <span className="text-2xs text-foreground/80 font-medium break-all">{snap.registrantOrg || '/'}</span>
                           </div>
                           <div className="bg-muted/5 border border-border/50 rounded-lg p-3">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block mb-1">Creación</span>
-                            <span className="text-[10px] text-foreground/80 font-medium">{fmtDate(snap.createdDate)}</span>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block mb-1">Creación</span>
+                            <span className="text-2xs text-foreground/80 font-medium">{fmtDate(snap.createdDate)}</span>
                           </div>
                           <div className="bg-muted/5 border border-border/50 rounded-lg p-3">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block mb-1">Expiración</span>
-                            <span className={`text-[10px] font-medium ${daysRemaining !== null && daysRemaining <= 0 ? 'text-destructive' : daysRemaining !== null && daysRemaining < 30 ? 'text-[oklch(75% 0.13 80)]' : 'text-foreground/80'}`}>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block mb-1">Expiración</span>
+                            <span className={`text-2xs font-medium ${daysRemaining !== null && daysRemaining <= 0 ? 'text-destructive' : daysRemaining !== null && daysRemaining < 30 ? 'text-[oklch(75% 0.13 80)]' : 'text-foreground/80'}`}>
                               {fmtDate(snap.expiresDate)}
                               {daysRemaining !== null && daysRemaining > 0 && daysRemaining <= 30 && ` (${daysRemaining}d)`}
                             </span>
                           </div>
                           <div className="bg-muted/5 border border-border/50 rounded-lg p-3 col-span-2">
-                            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-widest block mb-1">Nameservers</span>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest block mb-1">Nameservers</span>
                             <div className="flex flex-wrap gap-1">
                               {snap.nameservers.length > 0 ? snap.nameservers.map((ns, ni) => (
-                                <code key={ni} className="text-[9px] text-foreground/70 font-mono bg-muted/10 border border-border/30 px-1.5 py-0.5 rounded">{ns}</code>
-                              )) : <span className="text-[10px] text-muted-fg italic">Sin nameservers</span>}
+                                <code key={ni} className="text-2xs text-foreground/70 font-mono bg-muted/10 border border-border/30 px-1.5 py-0.5 rounded">{ns}</code>
+                              )) : <span className="text-2xs text-muted-fg italic">Sin nameservers</span>}
                             </div>
                           </div>
                         </div>
@@ -463,16 +463,16 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                           <div className="mt-3 p-3 rounded-xl bg-[oklch(75% 0.13 80)]/[0.03] border border-[oklch(75% 0.13 80)]/15">
                             <div className="flex items-center gap-1.5 mb-2">
                               <TrendingDown className="w-3 h-3 text-[oklch(75% 0.13 80)]" />
-                              <span className="text-[8px] font-bold text-[oklch(75% 0.13 80)] uppercase tracking-widest">Cambios Detectados</span>
+                              <span className="text-2xs font-bold text-[oklch(75% 0.13 80)] uppercase tracking-widest">Cambios Detectados</span>
                             </div>
-                            <p className="text-[10px] text-foreground/70 leading-relaxed">{snap.diffSummary}</p>
+                            <p className="text-2xs text-foreground/70 leading-relaxed">{snap.diffSummary}</p>
                           </div>
                         )}
 
                         {snap.abuseContact && (
                           <div className="mt-3 flex items-center gap-2">
                             <Mail className="w-3 h-3 text-muted-fg" />
-                            <span className="text-[9px] text-muted-fg">Abuso: {snap.abuseContact}</span>
+                            <span className="text-2xs text-muted-fg">Abuso: {snap.abuseContact}</span>
                           </div>
                         )}
                       </div>
@@ -481,7 +481,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                 );
               })}
               {totalWhois > 30 && (
-                <div className="p-4 text-center text-[9px] text-muted-fg border-t border-white/[0.04]">
+                <div className="p-4 text-center text-2xs text-muted-fg border-t border-white/[0.04]">
                   Mostrando 30 de {totalWhois} snapshots. Usá el filtro para acotar.
                 </div>
               )}
@@ -492,7 +492,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
 
       {/* Footer stats */}
       {data && (
-        <div className="p-3 border-t border-border bg-muted/[0.02] flex items-center justify-between text-[8px] text-muted-fg uppercase tracking-widest font-bold">
+        <div className="p-3 border-t border-border bg-muted/[0.02] flex items-center justify-between text-2xs text-muted-fg uppercase tracking-widest font-bold">
           <span className="flex items-center gap-1.5">
             <Clock className="w-2.5 h-2.5" /> 
             Último: {data.dns?.lastSeen || data.whois?.lastSeen ? fmtDate(data.dns?.lastSeen || data.whois?.lastSeen) : 'N/A'}

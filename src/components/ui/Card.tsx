@@ -3,14 +3,29 @@ import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════
    SCAUDIT Card — compound primitive over the `glass-card` @utility
-   (globals.css). Matches the DS: deep indigo-charcoal glass surfaces.
+   (globals.css). Matches the DS: olive-charcoal glass surfaces.
+   variant="hero" uses the elevated glass-card-hero treatment.
    ═══════════════════════════════════════════════════════════════════════ */
 
-export function Card({ className, ref, ...props }: HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> }) {
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  ref?: React.Ref<HTMLDivElement>;
+  /** default: glass · hero: glass elevado (firma) · elevation: superficie
+   *  sólida sin borde (patrón Vercel — jerarquía por luminancia, el blur
+   *  se reserva para overlays donde separa del contenido) */
+  variant?: "default" | "hero" | "elevation";
+}
+
+export function Card({ className, variant = "default", ref, ...props }: CardProps) {
   return (
     <div
       ref={ref}
-      className={cn("glass-card rounded-2xl relative", className)}
+      className={cn(
+        "rounded-2xl relative",
+        variant === "hero" && "glass-card-hero",
+        variant === "default" && "glass-card",
+        variant === "elevation" && "bg-surface-elevated shadow-[var(--shadow-card)]",
+        className,
+      )}
       {...props}
     />
   );

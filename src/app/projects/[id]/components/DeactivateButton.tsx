@@ -34,7 +34,7 @@ export default function DeactivateButton({ projectId }: { projectId: string }) {
     <button 
       onClick={handleDeactivate}
       disabled={isPending}
-      className="h-9 px-4 rounded-apple-pill text-[10px] font-bold uppercase tracking-[0.1em] text-red-500/50 hover:text-red-500 hover:bg-red-500/5 transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed group"
+      className="h-9 px-4 rounded-apple-pill text-2xs font-bold uppercase tracking-[0.1em] text-red-500/50 hover:text-red-500 hover:bg-red-500/5 transition-all flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed group"
     >
       {isPending ? (
         <Loader2 className="w-3 h-3 animate-spin" />

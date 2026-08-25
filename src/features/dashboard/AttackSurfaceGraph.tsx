@@ -194,7 +194,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
         {Object.entries(NODE_COLORS).map(([type, cfg]) => (
           <div key={type} className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.stroke }} />
-            <span className="text-[9px] font-bold text-muted-fg uppercase tracking-wider">{cfg.label}</span>
+            <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">{cfg.label}</span>
           </div>
         ))}
       </div>
@@ -415,11 +415,11 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
 
       {/* Node count summary */}
       <div className="flex items-center gap-3 mt-2">
-        <span className="text-[9px] font-bold text-muted-fg uppercase tracking-wider">
+        <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">
           {nodes.length} nodos · {edges.length} conexiones
         </span>
         {nodes.some(n => n.severity === 'critical') && (
-          <span className="text-[9px] font-extrabold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded uppercase tracking-wider">
+          <span className="text-2xs font-extrabold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded uppercase tracking-wider">
             ⚠ Riesgo Crítico Detectado
           </span>
         )}

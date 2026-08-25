@@ -64,7 +64,7 @@ export function MermaidBlock({ code, id, className }: MermaidBlockProps) {
   if (error) {
     return (
       <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 text-destructive text-xs font-mono">
-        <span className="font-extrabold uppercase tracking-widest text-[9px] block mb-1">Diagrama no renderizado</span>
+        <span className="font-extrabold uppercase tracking-widest text-2xs block mb-1">Diagrama no renderizado</span>
         {error}
       </div>
     );

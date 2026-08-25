@@ -33,7 +33,7 @@ export function LanguageSwitcher({ mini = false }: { mini?: boolean }) {
       <button
         onClick={handleSwitch}
         disabled={isPending}
-        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-fg/60 hover:text-foreground transition-[color,opacity] cursor-pointer disabled:opacity-50"
+        className="flex items-center gap-1.5 text-2xs font-medium text-muted-fg/60 hover:text-foreground transition-[color,opacity] cursor-pointer disabled:opacity-50"
         title="Switch language"
       >
         {isPending ? (
@@ -60,7 +60,7 @@ export function LanguageSwitcher({ mini = false }: { mini?: boolean }) {
       ) : (
         <Globe size={14} className="shrink-0" />
       )}
-      <span className="font-bold uppercase tracking-wider text-[10px]">{nextInfo.flag}</span>
+      <span className="font-bold uppercase tracking-wider text-2xs">{nextInfo.flag}</span>
       <span>{nextInfo.switchTo}</span>
     </button>
   );

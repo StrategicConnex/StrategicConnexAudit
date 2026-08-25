@@ -44,7 +44,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         {/* Header section */}
         <div className="flex items-start justify-between relative z-10 min-w-0 mb-6">
           <div className="min-w-0 flex-1 pr-4">
-            <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest mb-1.5 flex items-center gap-1">
+            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest mb-1.5 flex items-center gap-1">
               <ShieldCheck className="w-3 h-3 text-primary" />
               Nodo Protegido
             </span>
@@ -58,7 +58,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
           {/* Health score circular badge */}
           <div className={`w-12 h-12 rounded-full border flex flex-col items-center justify-center shrink-0 transition-[color,border-color,opacity] duration-500 ${healthStyle.badge}`}>
-            <span className="text-[8px] font-extrabold tracking-wider -mb-0.5 uppercase opacity-80">{healthScore}</span>
+            <span className="text-2xs font-extrabold tracking-wider -mb-0.5 uppercase opacity-80">{healthScore}</span>
           </div>
         </div>
 
@@ -68,7 +68,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             {project.latestAudit?.status === 'completed' ? (
               <>
                 <Activity size={14} className="text-chartreuse" />
-                <span className="text-foreground/80 font-bold text-[10px] tracking-wide uppercase">Activo</span>
+                <span className="text-foreground/80 font-bold text-2xs tracking-wide uppercase">Activo</span>
               </>
             ) : (
               <>
@@ -76,23 +76,23 @@ export function ProjectCard({ project }: ProjectCardProps) {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                 </span>
-                <span className="text-foreground/80 font-bold text-[10px] tracking-wide uppercase ml-1">Escaneando</span>
+                <span className="text-foreground/80 font-bold text-2xs tracking-wide uppercase ml-1">Escaneando</span>
               </>
             )}
           </div>
           <div className="flex items-center gap-1.5 bg-muted/10 border border-border/50 px-2.5 py-1.5 rounded-md">
             <Globe size={14} className="text-muted-fg" />
-            <span className="text-foreground/80 font-bold text-[10px] tracking-wide uppercase">{project.integrations?.length || 0} Conex.</span>
+            <span className="text-foreground/80 font-bold text-2xs tracking-wide uppercase">{project.integrations?.length || 0} Conex.</span>
           </div>
         </div>
 
         {/* Action bar footer */}
         <div className="pt-4 border-t border-border/50 flex items-center justify-between relative z-10 mt-auto">
-          <span className="text-[9px] font-bold text-muted-fg/60 uppercase tracking-widest flex items-center gap-1.5">
+          <span className="text-2xs font-bold text-muted-fg/60 uppercase tracking-widest flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-muted-fg/40" />
             Sync: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Never'}
           </span>
-          <span className="text-[10px] uppercase tracking-widest text-primary font-extrabold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-[color,opacity,transform] transform translate-x-2 group-hover:translate-x-0">
+          <span className="text-2xs uppercase tracking-widest text-primary font-extrabold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-[color,opacity,transform] transform translate-x-2 group-hover:translate-x-0">
             Analizar <ChevronRight size={14} strokeWidth={2.5} />
           </span>
         </div>

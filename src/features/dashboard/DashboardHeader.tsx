@@ -42,7 +42,7 @@ export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderP
         <h1 className="text-lg font-bold tracking-tight text-foreground">
           {getTitle()}
         </h1>
-        <p className="hidden sm:block text-[9px] font-extrabold text-primary uppercase tracking-widest mt-0.5">
+        <p className="hidden sm:block text-2xs font-extrabold text-primary uppercase tracking-widest mt-0.5">
           {getSubtitle()}
         </p>
       </div>

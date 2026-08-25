@@ -150,10 +150,10 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
         </Link>
         <div className="flex flex-col text-left min-w-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-white bg-white/20 px-2 py-0.5 rounded border border-white/30 shrink-0">Cybersecurity Audit</span>
+            <span className="text-2xs font-bold uppercase tracking-[0.1em] text-white bg-white/20 px-2 py-0.5 rounded border border-white/30 shrink-0">Cybersecurity Audit</span>
             <h1 className="text-sm font-bold text-foreground truncate max-w-[150px] sm:max-w-[300px] md:max-w-[450px]" title={project.name}>/ {project.name}</h1>
           </div>
-          <span className="text-[10px] text-muted-foreground font-mono tracking-tighter truncate uppercase">{auditId.substring(0, 12)}</span>
+          <span className="text-2xs text-muted-foreground font-mono tracking-tighter truncate uppercase">{auditId.substring(0, 12)}</span>
         </div>
         
         <div className="ml-auto flex items-center gap-3">
@@ -178,7 +178,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
             {/* Círculo de Score de Salud SEO - High Impact */}
             <div className="glass-card rounded-2xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group shadow-2xl border border-white/10 tech-scanline">
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-              <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.15em] mb-4 text-technical">SEO Quality Score</h3>
+              <h3 className="text-2xs font-bold text-muted-foreground uppercase tracking-[0.15em] mb-4 text-technical">SEO Quality Score</h3>
               
               <div className="relative w-36 h-36 flex items-center justify-center mb-4">
                 <svg className="w-full h-full transform -rotate-90 drop-shadow-[0_0_15px_rgba(16,185,129,0.2)]">
@@ -217,11 +217,11 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                     {audit.status === 'completed' ? `${healthScore}` : '--'}
                     <span className="text-xl text-muted-foreground">%</span>
                   </span>
-                  <span className="text-[10px] text-green-400 uppercase font-bold tracking-widest mt-1">Calidad</span>
+                  <span className="text-2xs text-green-400 uppercase font-bold tracking-widest mt-1">Calidad</span>
                 </div>
               </div>
               
-              <p className="text-[11px] text-muted-foreground mt-1 max-w-[200px] leading-relaxed">
+              <p className="text-2xs text-muted-foreground mt-1 max-w-[200px] leading-relaxed">
                 {healthScore >= 90 ? "Estado óptimo de excelencia técnica y ciberseguridad." :
                  healthScore >= 70 ? "Bases sólidas. Aplique ajustes recomendados para escalar." :
                  audit.status === 'completed' ? "Requiere intervención inmediata para mitigar riesgos." : "Procesando inteligencia técnica..."}
@@ -235,10 +235,10 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                   <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-600 border border-red-500/30 flex items-center justify-center mb-3">
                     <AlertCircle className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-technical">Hallazgos Críticos</h4>
+                  <h4 className="text-2xs font-bold text-muted-foreground uppercase tracking-widest text-technical">Hallazgos Críticos</h4>
                   <p className="text-4xl font-black mt-1 text-foreground">{audit.status === 'completed' ? criticalIssues.length : '--'}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-4 border-t border-border/20 pt-2 text-left font-medium">Prioridad de ejecución inmediata.</p>
+                <p className="text-2xs text-muted-foreground mt-4 border-t border-border/20 pt-2 text-left font-medium">Prioridad de ejecución inmediata.</p>
               </div>
 
               <div className="glass-card rounded-2xl p-6 flex flex-col justify-between">
@@ -365,14 +365,14 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-left">Simulador de Resultados (SERP)</h3>
                   </div>
                   <div className="bg-zinc-950/40 border border-border/50 shadow-2xl p-6 rounded-xl space-y-1.5 text-left max-w-2xl font-sans relative">
-                    <div className="absolute top-4 right-4 text-[9px] font-bold text-zinc-500 border border-zinc-700/50 px-2 py-0.5 rounded-full bg-zinc-800 uppercase tracking-tighter">Google Desktop Preview</div>
-                    <div className="flex items-center gap-2 text-[14px] text-zinc-400 mb-1">
+                    <div className="absolute top-4 right-4 text-2xs font-bold text-zinc-500 border border-zinc-700/50 px-2 py-0.5 rounded-full bg-zinc-800 uppercase tracking-tighter">Google Desktop Preview</div>
+                    <div className="flex items-center gap-2 text-sm text-zinc-400 mb-1">
                       <span className="truncate">{project.domain}</span>
                     </div>
-                    <h4 className="text-[20px] text-[#8ab4f8] hover:underline cursor-pointer font-medium leading-tight truncate">
+                    <h4 className="text-xl text-[#8ab4f8] hover:underline cursor-pointer font-medium leading-tight truncate">
                       {crawl.title || "Sin título configurado"}
                     </h4>
-                    <p className="text-[14px] text-zinc-400 leading-snug line-clamp-2 mt-1">
+                    <p className="text-sm text-zinc-400 leading-snug line-clamp-2 mt-1">
                       {crawl.metaDescription || "Configure una meta descripción para aumentar el CTR (Click-Through Rate). Sin ella, Google mostrará fragmentos de texto aleatorios de su sitio."}
                     </p>
                   </div>
@@ -396,7 +396,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                       
                       {/* Infografía de Longitud */}
                       <div className="mb-4 space-y-2">
-                        <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+                        <div className="flex justify-between text-2xs text-muted-foreground font-mono">
                           <span>0</span>
                           <span className="text-green-500 font-bold">Óptimo (50-60)</span>
                           <span>100+</span>
@@ -425,8 +425,8 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
 
                       {/* Recomendación Dinámica */}
                       {(!crawl.title || crawl.title.length < 30 || crawl.title.length > 60) && (
-                        <div className="p-3 rounded-lg bg-blue-500/10 border-l-[3px] border-blue-500 text-[12px] text-blue-300 font-medium text-left">
-                          <span className="font-bold uppercase tracking-wider text-[10px] text-blue-400 block mb-1">Recomendación Técnica:</span>
+                        <div className="p-3 rounded-lg bg-blue-500/10 border-l-[3px] border-blue-500 text-xs text-blue-300 font-medium text-left">
+                          <span className="font-bold uppercase tracking-wider text-2xs text-blue-400 block mb-1">Recomendación Técnica:</span>
                           {!crawl.title ? "Implementar etiqueta <title> única de 50-60 caracteres." : 
                            crawl.title.length < 30 ? "El título es demasiado corto. Incluya palabras clave estratégicas (Ej: IT/OT Security)." : 
                            "El título excede los 60 caracteres y se recortará en buscadores. Reduzca el texto."}
@@ -444,7 +444,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                       
                       {/* Infografía de Longitud */}
                       <div className="mb-4 space-y-2">
-                        <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+                        <div className="flex justify-between text-2xs text-muted-foreground font-mono">
                           <span>0</span>
                           <span className="text-green-500 font-bold">Óptimo (120-155)</span>
                           <span>200+</span>
@@ -473,8 +473,8 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
 
                       {/* Recomendación Dinámica */}
                       {(!crawl.metaDescription || crawl.metaDescription.length < 120 || crawl.metaDescription.length > 160) && (
-                        <div className="p-3 rounded-lg bg-blue-500/10 border-l-[3px] border-blue-500 text-[12px] text-blue-300 font-medium text-left">
-                          <span className="font-bold uppercase tracking-wider text-[10px] text-blue-400 block mb-1">Recomendación Técnica:</span>
+                        <div className="p-3 rounded-lg bg-blue-500/10 border-l-[3px] border-blue-500 text-xs text-blue-300 font-medium text-left">
+                          <span className="font-bold uppercase tracking-wider text-2xs text-blue-400 block mb-1">Recomendación Técnica:</span>
                           {!crawl.metaDescription ? "Añadir meta-description persuasiva con llamado a la acción (CTA)." : 
                            crawl.metaDescription.length < 120 ? "La descripción es muy breve. Aproveche hasta 155 caracteres para mejorar el CTR." : 
                            "La descripción es muy larga (>160 car.). Google la recortará, diluyendo el mensaje."}
@@ -534,7 +534,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
 
                     {/* Fila de H2 - Visibilidad Mejorada */}
                     <div className="p-6 space-y-4 bg-muted/20 text-left">
-                      <div className="flex items-center gap-2 text-[11px] font-bold tracking-[0.15em] text-muted-foreground uppercase font-mono">
+                      <div className="flex items-center gap-2 text-2xs font-bold tracking-[0.15em] text-muted-foreground uppercase font-mono">
                         <Heading2 className="w-4 h-4" />
                         Subtítulos H2 (Contenido Semántico)
                       </div>
@@ -542,8 +542,8 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-4">
                           {crawl.h2Tags.map((h2, index) => (
                             <div key={index} className="flex gap-3 items-start py-2.5 px-4 rounded-xl bg-background border border-border/40 shadow-sm transition-hover hover:border-primary/20">
-                              <span className="text-[9px] bg-primary/10 text-primary rounded px-2 py-0.5 font-mono shrink-0 mt-1 border border-primary/10 font-bold uppercase">H2</span>
-                              <span className="text-[13px] text-foreground font-medium leading-snug">{h2}</span>
+                              <span className="text-2xs bg-primary/10 text-primary rounded px-2 py-0.5 font-mono shrink-0 mt-1 border border-primary/10 font-bold uppercase">H2</span>
+                              <span className="text-sm text-foreground font-medium leading-snug">{h2}</span>
                             </div>
                           ))}
                         </div>
@@ -581,7 +581,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                                 ${issue.severity === 'critical' ? 'bg-red-500/10 border border-red-500/20' : 'bg-yellow-500/10 border border-yellow-500/20'}`}
                               >
                                 {issue.severity === 'critical' ? <AlertCircle className="w-8 h-8 text-red-400 mb-1" /> : <AlertTriangle className="w-8 h-8 text-yellow-400 mb-1" />}
-                                <span className={`text-[10px] font-bold uppercase tracking-wider ${issue.severity === 'critical' ? 'text-red-400' : 'text-yellow-400'}`}>
+                                <span className={`text-2xs font-bold uppercase tracking-wider ${issue.severity === 'critical' ? 'text-red-400' : 'text-yellow-400'}`}>
                                   {issue.severity === 'critical' ? "CRÍTICO" : "AVISO"}
                                 </span>
                               </div>
@@ -592,7 +592,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                                   <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded border border-zinc-700 uppercase font-mono font-semibold">{issue.category}</span>
                                   
                                   {/* Insignia Impact Score Mejorada */}
-                                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border bg-blue-500/10 text-blue-400 border-blue-500/20 flex items-center gap-1">
+                                  <span className="text-2xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border bg-blue-500/10 text-blue-400 border-blue-500/20 flex items-center gap-1">
                                     <Sparkles className="w-3 h-3 text-blue-400" /> Score de Impacto: {impact.score}/100
                                   </span>
                                 </div>
@@ -603,15 +603,15 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
                                 {/* Matrices de Impacto Infográficas */}
                                 <div className="grid grid-cols-3 gap-2 pt-3 max-w-md">
                                   <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 flex flex-col items-center justify-center text-center">
-                                    <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold mb-1">Prioridad</span>
+                                    <span className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1">Prioridad</span>
                                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${impact.urgency === 'Alta' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}>{impact.urgency}</span>
                                   </div>
                                   <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 flex flex-col items-center justify-center text-center">
-                                    <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold mb-1">Dificultad</span>
+                                    <span className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1">Dificultad</span>
                                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${impact.difficulty === 'Alta' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : impact.difficulty === 'Media' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>{impact.difficulty}</span>
                                   </div>
                                   <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 flex flex-col items-center justify-center text-center">
-                                    <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold mb-1">Retorno (ROI)</span>
+                                    <span className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1">Retorno (ROI)</span>
                                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${impact.roi.includes('Alto') ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>{impact.roi}</span>
                                   </div>
                                 </div>

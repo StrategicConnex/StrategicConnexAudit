@@ -85,7 +85,7 @@ function MiniDonut({ value, max, color }: { value: number; max: number; color: s
         className="transition-all duration-1000"
       />
       <text x={36} y={36} textAnchor="middle" dominantBaseline="central"
-        className="fill-foreground text-[13px] font-bold font-mono">
+        className="fill-foreground text-sm font-bold font-mono">
         {value}
       </text>
     </svg>
@@ -129,7 +129,7 @@ export default function MitreCoveragePage() {
               <div>
                 <p className="text-2xl font-bold text-accent-blue font-mono">{coverage.totalTechniques}</p>
                 <p className="text-xs text-muted-foreground font-medium mt-0.5">Técnicas MITRE Cubiertas</p>
-                <p className="text-[10px] text-muted-foreground mt-1">
+                <p className="text-2xs text-muted-foreground mt-1">
                   De 700+ técnicas en MITRE ATT&CK Enterprise v15
                 </p>
               </div>
@@ -141,7 +141,7 @@ export default function MitreCoveragePage() {
               <div>
                 <p className="text-2xl font-bold text-accent-purple font-mono">{coverage.totalTactics}</p>
                 <p className="text-xs text-muted-foreground font-medium mt-0.5">Tácticas Alcanzadas</p>
-                <p className="text-[10px] text-muted-foreground mt-1">
+                <p className="text-2xs text-muted-foreground mt-1">
                   De 14 tácticas en la matriz Enterprise
                 </p>
               </div>
@@ -153,7 +153,7 @@ export default function MitreCoveragePage() {
               <div>
                 <p className="text-2xl font-bold text-accent-cyan font-mono">{coverage.totalTools}</p>
                 <p className="text-xs text-muted-foreground font-medium mt-0.5">Herramientas de Escaneo</p>
-                <p className="text-[10px] text-muted-foreground mt-1">
+                <p className="text-2xs text-muted-foreground mt-1">
                   Cada una mapeada a 1+ técnica MITRE
                 </p>
               </div>
@@ -166,10 +166,10 @@ export default function MitreCoveragePage() {
            ═══════════════════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <span className="w-6 h-6 rounded-full bg-accent-blue/15 flex items-center justify-center text-[11px]">📊</span>
+            <span className="w-6 h-6 rounded-full bg-accent-blue/15 flex items-center justify-center text-2xs">📊</span>
             <div>
               <h2 className="text-sm font-semibold text-foreground">Cobertura por Táctica</h2>
-              <p className="text-[10px] text-muted-foreground">Cantidad de herramientas de escaneo que aportan a cada táctica MITRE</p>
+              <p className="text-2xs text-muted-foreground">Cantidad de herramientas de escaneo que aportan a cada táctica MITRE</p>
             </div>
           </div>
 
@@ -212,7 +212,7 @@ export default function MitreCoveragePage() {
                   <div className="border-t border-border px-5 py-4 space-y-4 bg-surface-muted/60">
                     {/* Technique badges */}
                     <div>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2.5">
+                      <p className="text-2xs text-muted-foreground uppercase tracking-wider font-semibold mb-2.5">
                         Técnicas MITRE ({techniques.length})
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -222,9 +222,9 @@ export default function MitreCoveragePage() {
                             href={tech.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-medium transition-colors hover:brightness-110 ${getColor(tech.tactic).light} ${getColor(tech.tactic).text} border-border hover:border-foreground/20`}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-2xs font-medium transition-colors hover:brightness-110 ${getColor(tech.tactic).light} ${getColor(tech.tactic).text} border-border hover:border-foreground/20`}
                           >
-                            <span className="font-mono font-bold text-[10px]">{tech.id}</span>
+                            <span className="font-mono font-bold text-2xs">{tech.id}</span>
                             <span className="opacity-70">·</span>
                             <span>{tech.name.split("/").pop()?.trim() || tech.name}</span>
                           </a>
@@ -234,7 +234,7 @@ export default function MitreCoveragePage() {
 
                     {/* Tools list */}
                     <div>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+                      <p className="text-2xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">
                         Herramientas ({toolCount})
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -243,7 +243,7 @@ export default function MitreCoveragePage() {
                           ?.tools.map((toolId) => (
                             <span
                               key={toolId}
-                              className="px-2 py-0.5 rounded text-[10px] font-mono text-muted-foreground bg-surface-muted border border-border"
+                              className="px-2 py-0.5 rounded text-2xs font-mono text-muted-foreground bg-surface-muted border border-border"
                             >
                               {toolId}
                             </span>
@@ -262,10 +262,10 @@ export default function MitreCoveragePage() {
            ═══════════════════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <span className="w-6 h-6 rounded-full bg-accent-purple/15 flex items-center justify-center text-[11px]">📋</span>
+            <span className="w-6 h-6 rounded-full bg-accent-purple/15 flex items-center justify-center text-2xs">📋</span>
             <div>
               <h2 className="text-sm font-semibold text-foreground">Catálogo Completo de Técnicas</h2>
-              <p className="text-[10px] text-muted-foreground">Todas las técnicas MITRE cubiertas con herramientas asociadas</p>
+              <p className="text-2xs text-muted-foreground">Todas las técnicas MITRE cubiertas con herramientas asociadas</p>
             </div>
           </div>
 
@@ -273,11 +273,11 @@ export default function MitreCoveragePage() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-surface-muted border-b border-border">
-                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Técnica</th>
-                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Nombre</th>
-                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Táctica</th>
-                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Herramientas</th>
-                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-[10px]">Descripción</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-2xs">Técnica</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-2xs">Nombre</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-2xs">Táctica</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-2xs">Herramientas</th>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-semibold tracking-wider uppercase text-2xs">Descripción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -288,14 +288,14 @@ export default function MitreCoveragePage() {
                         href={tech.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`font-mono font-bold text-[11px] ${getColor(tech.tactic).text} hover:underline`}
+                        className={`font-mono font-bold text-2xs ${getColor(tech.tactic).text} hover:underline`}
                       >
                         {tech.id}
                       </a>
                     </td>
                     <td className="py-3 px-4 text-foreground font-medium whitespace-nowrap">{tech.name}</td>
                     <td className="py-3 px-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium ${getColor(tech.tactic).light} ${getColor(tech.tactic).text}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-medium ${getColor(tech.tactic).light} ${getColor(tech.tactic).text}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${getColor(tech.tactic).bar}`} />
                         {tech.tactic}
                       </span>
@@ -303,12 +303,12 @@ export default function MitreCoveragePage() {
                     <td className="py-3 px-4">
                       <div className="flex flex-wrap gap-1 max-w-[280px]">
                         {tools.slice(0, 4).map((t) => (
-                          <span key={t} className="px-1.5 py-0.5 rounded text-[9px] font-mono text-muted-foreground bg-surface-muted border border-border">
+                          <span key={t} className="px-1.5 py-0.5 rounded text-2xs font-mono text-muted-foreground bg-surface-muted border border-border">
                             {t}
                           </span>
                         ))}
                         {tools.length > 4 && (
-                          <span className="text-[9px] text-muted-foreground px-1.5 py-0.5">+{tools.length - 4}</span>
+                          <span className="text-2xs text-muted-foreground px-1.5 py-0.5">+{tools.length - 4}</span>
                         )}
                       </div>
                     </td>
@@ -342,7 +342,7 @@ export default function MitreCoveragePage() {
             <p className="flex items-center gap-2">
               <span className="text-muted-foreground">🔄</span>
               El mapeo se actualiza cuando se agregan nuevas herramientas de escaneo. Fuente:{" "}
-              <code className="text-muted-foreground font-mono text-[10px] bg-surface-muted px-1.5 py-0.5 rounded">src/shared/data/mitre-mapping.ts</code>
+              <code className="text-muted-foreground font-mono text-2xs bg-surface-muted px-1.5 py-0.5 rounded">src/shared/data/mitre-mapping.ts</code>
             </p>
           </div>
         </section>

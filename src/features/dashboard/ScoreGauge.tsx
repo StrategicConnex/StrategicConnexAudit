@@ -149,7 +149,7 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
           >
             {animatedScore}
           </span>
-          <span className="text-[9px] font-extrabold text-muted-fg uppercase tracking-widest mt-0.5">/100</span>
+          <span className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest mt-0.5">/100</span>
         </div>
 
         {/* Outer glow ring */}
@@ -163,12 +163,12 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
 
       {/* Label + Delta */}
       <div className="flex items-center gap-2">
-        <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full border uppercase tracking-widest ${config.bg} ${config.textColor}`}>
+        <span className={`text-2xs font-extrabold px-3 py-1 rounded-full border uppercase tracking-widest ${config.bg} ${config.textColor}`}>
           {config.label}
         </span>
 
         {delta !== null && (
-          <span className={`text-[10px] font-extrabold flex items-center gap-0.5 px-2 py-0.5 rounded-full border ${
+          <span className={`text-2xs font-extrabold flex items-center gap-0.5 px-2 py-0.5 rounded-full border ${
             delta > 0
               ? 'text-chartreuse bg-chartreuse/10 border-chartreuse/20'
               : delta < 0
@@ -189,7 +189,7 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
 
       {/* Benchmark percentile badge */}
       {benchmark && (
-        <div className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${
+        <div className={`text-2xs font-extrabold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${
           benchmark.rank === 'top'
             ? 'text-chartreuse bg-chartreuse/10 border-chartreuse/20'
             : benchmark.rank === 'above'
@@ -210,7 +210,7 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
       {projectId && (
         <div className="flex items-center gap-1 mt-1 opacity-70">
           <Activity className={`w-3 h-3 ${pulse ? 'text-blue-400 animate-pulse' : 'text-muted-fg'}`} />
-          <span className="text-[9px] font-medium text-muted-fg">
+          <span className="text-2xs font-medium text-muted-fg">
             Live metrics
           </span>
         </div>

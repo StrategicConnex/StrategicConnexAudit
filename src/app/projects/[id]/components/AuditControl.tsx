@@ -223,7 +223,7 @@ export default function AuditControl({ projectId }: AuditControlProps) {
       {errorMessage && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-apple-sm bg-red-500/5 border border-red-500/10 max-w-xs animate-in fade-in slide-in-from-top-1">
           <AlertCircle className="w-3 h-3 text-red-500" />
-          <span className="text-[10px] text-red-500/80 font-medium text-right leading-tight">
+          <span className="text-2xs text-red-500/80 font-medium text-right leading-tight">
             {errorMessage}
           </span>
         </div>
@@ -232,7 +232,7 @@ export default function AuditControl({ projectId }: AuditControlProps) {
       {showWorkerWarning && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-apple-sm bg-apple-gray/50 border border-apple-ink/5 max-w-xs animate-pulse">
           <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-          <span className="text-[10px] text-apple-ink/60 font-medium text-right leading-tight">
+          <span className="text-2xs text-apple-ink/60 font-medium text-right leading-tight">
             Server response delayed. Waiting for analyzer...
           </span>
         </div>

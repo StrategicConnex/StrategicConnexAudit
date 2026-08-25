@@ -171,12 +171,12 @@ function EndpointSelector({
         className="w-full flex items-center justify-between p-4 bg-black/40 backdrop-blur-sm border border-border rounded-2xl hover:border-primary/30 transition-all cursor-pointer"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <span className={`shrink-0 text-[10px] font-extrabold px-2 py-1 rounded border uppercase tracking-wider ${methodColor(active?.method || 'GET')}`}>
+          <span className={`shrink-0 text-2xs font-extrabold px-2 py-1 rounded border uppercase tracking-wider ${methodColor(active?.method || 'GET')}`}>
             {active?.method || 'GET'}
           </span>
           <div className="min-w-0">
             <code className="text-sm font-mono text-foreground/90 truncate block">{active?.path}</code>
-            <span className="text-[10px] text-muted-fg mt-0.5 block">{active?.title}</span>
+            <span className="text-2xs text-muted-fg mt-0.5 block">{active?.title}</span>
           </div>
         </div>
         {open ? <ChevronDown className="w-4 h-4 text-muted-fg shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-fg shrink-0" />}
@@ -193,19 +193,19 @@ function EndpointSelector({
                   ep.id === selected ? 'bg-primary/5 border-l-2 border-l-primary' : ''
                 }`}
               >
-                <span className={`shrink-0 text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wider ${methodColor(ep.method)}`}>
+                <span className={`shrink-0 text-2xs font-extrabold px-2 py-0.5 rounded border uppercase tracking-wider ${methodColor(ep.method)}`}>
                   {ep.method}
                 </span>
                 <div className="min-w-0 flex-1">
                   <code className="text-xs font-mono text-foreground/80 block truncate">{ep.path}</code>
-                  <span className="text-[9px] text-muted-fg block">{ep.title}</span>
+                  <span className="text-2xs text-muted-fg block">{ep.title}</span>
                 </div>
                 {ep.auth === 'api-key' ? (
-                  <span className="shrink-0 flex items-center gap-1 text-[8px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="shrink-0 flex items-center gap-1 text-2xs font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
                     <Key className="w-2.5 h-2.5" /> Key
                   </span>
                 ) : (
-                  <span className="shrink-0 flex items-center gap-1 text-[8px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="shrink-0 flex items-center gap-1 text-2xs font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
                     <Lock className="w-2.5 h-2.5" /> Sess
                   </span>
                 )}
@@ -245,7 +245,7 @@ function ApiKeyInput({
           {show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
         </button>
       </div>
-      <p className="text-[9px] text-purple-400/60 mt-1 px-1">
+      <p className="text-2xs text-purple-400/60 mt-1 px-1">
         Your API key stays in this browser. We never send it anywhere except to SCAUDIT.
       </p>
     </div>
@@ -265,8 +265,8 @@ function ParamInput({
     <div className="space-y-1.5">
       <label className="flex items-center gap-2 text-xs">
         <code className="font-mono text-primary">{param.name}</code>
-        {param.required && <span className="text-destructive text-[9px] font-bold">Required</span>}
-        <span className="text-muted-fg text-[9px]">{param.type}</span>
+        {param.required && <span className="text-destructive text-2xs font-bold">Required</span>}
+        <span className="text-muted-fg text-2xs">{param.type}</span>
       </label>
       <input
         type="text"
@@ -275,7 +275,7 @@ function ParamInput({
         placeholder={param.placeholder || param.name}
         className="w-full px-3.5 py-2.5 bg-black/40 backdrop-blur-sm border border-border rounded-xl text-xs font-mono text-foreground placeholder-muted-fg/40 outline-none focus:border-primary/40 transition-all"
       />
-      <p className="text-[9px] text-muted-fg/60">{param.description}</p>
+      <p className="text-2xs text-muted-fg/60">{param.description}</p>
     </div>
   );
 }
@@ -294,12 +294,12 @@ function HistoryLog({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">
+        <h4 className="text-2xs font-bold text-muted-fg uppercase tracking-widest">
           Request History ({entries.length})
         </h4>
         <button
           onClick={onClear}
-          className="text-[9px] text-muted-fg hover:text-destructive transition-colors cursor-pointer"
+          className="text-2xs text-muted-fg hover:text-destructive transition-colors cursor-pointer"
         >
           Clear
         </button>
@@ -311,14 +311,14 @@ function HistoryLog({
             onClick={() => onReplay(i)}
             className="w-full flex items-center gap-3 px-3 py-2 bg-black/30 border border-border rounded-lg hover:bg-muted/10 transition-all cursor-pointer text-left group"
           >
-            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0 ${methodColor(entry.method)}`}>
+            <span className={`text-2xs font-extrabold px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0 ${methodColor(entry.method)}`}>
               {entry.method}
             </span>
-            <span className={`text-[10px] font-mono font-bold shrink-0 ${statusColor(entry.status)}`}>
+            <span className={`text-2xs font-mono font-bold shrink-0 ${statusColor(entry.status)}`}>
               {entry.status}
             </span>
-            <code className="text-[9px] font-mono text-muted-fg truncate flex-1">{entry.path}</code>
-            <span className="text-[8px] text-muted-fg/50 shrink-0">{entry.duration}ms</span>
+            <code className="text-2xs font-mono text-muted-fg truncate flex-1">{entry.path}</code>
+            <span className="text-2xs text-muted-fg/50 shrink-0">{entry.duration}ms</span>
             <RotateCcw className="w-3 h-3 text-muted-fg/30 group-hover:text-primary transition-colors shrink-0" />
           </button>
         ))}
@@ -334,7 +334,7 @@ function JsonView({ data }: { data: unknown }) {
   const copyBtn = (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      className="flex items-center gap-1 text-[9px] font-bold text-muted-fg hover:text-primary transition-colors cursor-pointer"
+      className="flex items-center gap-1 text-2xs font-bold text-muted-fg hover:text-primary transition-colors cursor-pointer"
     >
       {copied ? <Check className="w-3 h-3 text-chartreuse" /> : <Copy className="w-3 h-3" />}
       {copied ? 'Copied!' : 'Copy'}
@@ -344,10 +344,10 @@ function JsonView({ data }: { data: unknown }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h5 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Response Body</h5>
+        <h5 className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Response Body</h5>
         {copyBtn}
       </div>
-      <pre className="bg-black/60 text-[10px] font-mono leading-relaxed p-4 rounded-xl border border-border overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
+      <pre className="bg-black/60 text-2xs font-mono leading-relaxed p-4 rounded-xl border border-border overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
         {text ? (
           <SyntaxHighlight json={escapeHtml(text)} />
         ) : (
@@ -584,7 +584,7 @@ export default function ApiPlaygroundPage() {
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <Link href="/docs/api" className="inline-flex items-center gap-1.5 text-[10px] text-muted-fg hover:text-primary transition-colors">
+            <Link href="/docs/api" className="inline-flex items-center gap-1.5 text-2xs text-muted-fg hover:text-primary transition-colors">
               <ArrowLeft className="w-3 h-3" /> Back to API Reference
             </Link>
             <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-3">
@@ -612,7 +612,7 @@ export default function ApiPlaygroundPage() {
               </h3>
               <ApiKeyInput value={apiKey} onChange={setApiKey} />
               {!apiKey && endpoint.auth === 'api-key' && (
-                <p className="text-[10px] text-amber-400/70 flex items-center gap-1">
+                <p className="text-2xs text-amber-400/70 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> This endpoint requires an API Key
                 </p>
               )}
@@ -634,8 +634,8 @@ export default function ApiPlaygroundPage() {
               {history.length === 0 && (
                 <div className="text-center py-6">
                   <Terminal className="w-8 h-8 text-muted-fg/20 mx-auto mb-2" />
-                  <p className="text-[10px] text-muted-fg/40">No requests yet.</p>
-                  <p className="text-[9px] text-muted-fg/30">Send your first request above.</p>
+                  <p className="text-2xs text-muted-fg/40">No requests yet.</p>
+                  <p className="text-2xs text-muted-fg/30">Send your first request above.</p>
                 </div>
               )}
             </div>
@@ -655,7 +655,7 @@ export default function ApiPlaygroundPage() {
                 onSelect={setSelectedEndpoint}
               />
 
-              <div className="flex items-center gap-2 text-[10px] text-muted-fg bg-black/30 px-4 py-2 rounded-xl border border-border">
+              <div className="flex items-center gap-2 text-2xs text-muted-fg bg-black/30 px-4 py-2 rounded-xl border border-border">
                 <Shield className="w-3 h-3 text-primary" />
                 {endpoint.description}
               </div>
@@ -669,7 +669,7 @@ export default function ApiPlaygroundPage() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    className={`flex-1 py-3 text-2xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                       activeTab === tab
                         ? 'text-primary border-b-2 border-primary bg-primary/5'
                         : 'text-muted-fg hover:text-foreground hover:bg-muted/5'
@@ -690,7 +690,7 @@ export default function ApiPlaygroundPage() {
                     {/* Query params */}
                     {endpoint.params.filter((p) => p.in === 'query').length > 0 && (
                       <div className="space-y-3">
-                        <h4 className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Query Parameters</h4>
+                        <h4 className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Query Parameters</h4>
                         {endpoint.params.filter((p) => p.in === 'query').map((p) => (
                           <ParamInput
                             key={p.name}
@@ -706,11 +706,11 @@ export default function ApiPlaygroundPage() {
                     {endpoint.params.filter((p) => p.in === 'body').length > 0 && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Body Parameters</h4>
+                          <h4 className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Body Parameters</h4>
                           <div className="flex gap-1">
                             <button
                               onClick={() => setBodyMode('form')}
-                              className={`text-[8px] font-bold px-2 py-1 rounded-full border uppercase tracking-wider transition-all cursor-pointer ${
+                              className={`text-2xs font-bold px-2 py-1 rounded-full border uppercase tracking-wider transition-all cursor-pointer ${
                                 bodyMode === 'form'
                                   ? 'text-primary border-primary bg-primary/10'
                                   : 'text-muted-fg border-border hover:text-foreground'
@@ -720,7 +720,7 @@ export default function ApiPlaygroundPage() {
                             </button>
                             <button
                               onClick={() => setBodyMode('raw')}
-                              className={`text-[8px] font-bold px-2 py-1 rounded-full border uppercase tracking-wider transition-all cursor-pointer ${
+                              className={`text-2xs font-bold px-2 py-1 rounded-full border uppercase tracking-wider transition-all cursor-pointer ${
                                 bodyMode === 'raw'
                                   ? 'text-chartreuse border-chartreuse/50 bg-chartreuse/10'
                                   : 'text-muted-fg border-border hover:text-foreground'
@@ -745,7 +745,7 @@ export default function ApiPlaygroundPage() {
                             <textarea
                               value={bodyRaw || endpoint.bodyTemplate || ''}
                               onChange={(e) => setBodyRaw(e.target.value)}
-                              className="w-full h-36 bg-black/60 text-[10px] font-mono text-foreground p-4 rounded-xl border border-border focus:border-primary/40 transition-all outline-none resize-none"
+                              className="w-full h-36 bg-black/60 text-2xs font-mono text-foreground p-4 rounded-xl border border-border focus:border-primary/40 transition-all outline-none resize-none"
                               placeholder="{}"
                             />
                           </div>
@@ -757,7 +757,7 @@ export default function ApiPlaygroundPage() {
                       <div className="text-center py-8">
                         <Terminal className="w-8 h-8 text-muted-fg/20 mx-auto mb-2" />
                         <p className="text-xs text-muted-fg/60">No parameters required.</p>
-                        <p className="text-[10px] text-muted-fg/40">This endpoint accepts no query or body parameters.</p>
+                        <p className="text-2xs text-muted-fg/40">This endpoint accepts no query or body parameters.</p>
                       </div>
                     )}
 
@@ -789,7 +789,7 @@ export default function ApiPlaygroundPage() {
                         <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs font-bold text-destructive">Error</p>
-                          <p className="text-[10px] text-destructive/80">{errorMsg}</p>
+                          <p className="text-2xs text-destructive/80">{errorMsg}</p>
                         </div>
                       </div>
                     )}
@@ -799,20 +799,20 @@ export default function ApiPlaygroundPage() {
                         {/* Status bar */}
                         <div className="flex items-center gap-4 p-3 bg-black/40 border border-border rounded-xl">
                           <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Status</span>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Status</span>
                             <span className={`text-sm font-extrabold font-mono ${statusColor(responseStatus)}`}>
                               {responseStatus}
                             </span>
                           </div>
                           <div className="h-4 w-px bg-border" />
                           <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Duration</span>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Duration</span>
                             <span className="text-xs font-mono text-foreground/70">{responseDuration}ms</span>
                           </div>
                           <div className="h-4 w-px bg-border" />
                           <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Method</span>
-                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase ${methodColor(endpoint.method)}`}>
+                            <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Method</span>
+                            <span className={`text-2xs font-extrabold px-1.5 py-0.5 rounded border uppercase ${methodColor(endpoint.method)}`}>
                               {endpoint.method}
                             </span>
                           </div>
@@ -820,13 +820,13 @@ export default function ApiPlaygroundPage() {
 
                         {/* Response headers (collapsible) */}
                         <details className="group">
-                          <summary className="flex items-center gap-1.5 text-[9px] font-bold text-muted-fg uppercase tracking-widest cursor-pointer hover:text-foreground transition-colors">
+                          <summary className="flex items-center gap-1.5 text-2xs font-bold text-muted-fg uppercase tracking-widest cursor-pointer hover:text-foreground transition-colors">
                             <ChevronRight className="w-3 h-3 group-open:rotate-90 transition-transform" />
                             Response Headers ({Object.keys(responseHeaders).length})
                           </summary>
                           <div className="mt-2 bg-black/40 border border-border rounded-xl p-3 max-h-40 overflow-y-auto">
                             {Object.entries(responseHeaders).map(([k, v]) => (
-                              <div key={k} className="flex items-start gap-3 py-1 text-[9px] border-b border-border/30 last:border-0">
+                              <div key={k} className="flex items-start gap-3 py-1 text-2xs border-b border-border/30 last:border-0">
                                 <code className="text-primary font-mono shrink-0">{k}</code>
                                 <code className="text-muted-fg font-mono break-all">{v}</code>
                               </div>
@@ -843,7 +843,7 @@ export default function ApiPlaygroundPage() {
                       <div className="text-center py-12">
                         <Play className="w-10 h-10 text-muted-fg/15 mx-auto mb-3" />
                         <p className="text-sm text-muted-fg/50">Waiting for your first request.</p>
-                        <p className="text-[10px] text-muted-fg/30">Fill in parameters above and click Send.</p>
+                        <p className="text-2xs text-muted-fg/30">Fill in parameters above and click Send.</p>
                       </div>
                     )}
                   </div>
@@ -853,20 +853,20 @@ export default function ApiPlaygroundPage() {
                 {activeTab === 'curl' && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-[9px] font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
+                      <h4 className="text-2xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-1.5">
                         <Terminal className="w-3 h-3" /> Generated Command
                       </h4>
                       <button
                         onClick={() => { navigator.clipboard.writeText(curlCommand()); }}
-                        className="flex items-center gap-1 text-[9px] font-bold text-muted-fg hover:text-primary transition-colors cursor-pointer"
+                        className="flex items-center gap-1 text-2xs font-bold text-muted-fg hover:text-primary transition-colors cursor-pointer"
                       >
                         <Copy className="w-3 h-3" /> Copy
                       </button>
                     </div>
-                    <pre className="bg-black/60 text-[10px] font-mono leading-relaxed p-4 rounded-xl border border-border overflow-x-auto whitespace-pre-wrap break-all">
+                    <pre className="bg-black/60 text-2xs font-mono leading-relaxed p-4 rounded-xl border border-border overflow-x-auto whitespace-pre-wrap break-all">
                       {escapeHtml(curlCommand())}
                     </pre>
-                    <p className="text-[9px] text-muted-fg/50">
+                    <p className="text-2xs text-muted-fg/50">
                       Copy this command to run from your terminal. For session endpoints, replace with your Supabase cookie.
                     </p>
                   </div>
@@ -877,8 +877,8 @@ export default function ApiPlaygroundPage() {
 
             {/* Quick Tips */}
             <div className="glass-card p-5">
-              <h4 className="text-[9px] font-bold text-muted-fg uppercase tracking-widest mb-3">Tips</h4>
-              <ul className="space-y-2 text-[10px] text-muted-fg/70">
+              <h4 className="text-2xs font-bold text-muted-fg uppercase tracking-widest mb-3">Tips</h4>
+              <ul className="space-y-2 text-2xs text-muted-fg/70">
                 <li className="flex items-start gap-2">
                   <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
                   <span>Get your API key from Settings → API Keys in the dashboard.</span>
@@ -898,7 +898,7 @@ export default function ApiPlaygroundPage() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-border pt-6 flex items-center justify-between text-[10px] text-muted-fg">
+        <div className="border-t border-border pt-6 flex items-center justify-between text-2xs text-muted-fg">
           <span>SCAUDIT · Enterprise Cyber Intelligence</span>
           <Link href="/docs/api" className="flex items-center gap-1 hover:text-primary transition-colors">
             <BookOpen className="w-3 h-3" /> API Reference

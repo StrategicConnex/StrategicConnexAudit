@@ -343,7 +343,7 @@ export function SettingsTab({
     const days = (new Date(expiresAt).getTime() - now) / 86400000;
     if (days <= 7 && days >= 0) {
       return (
-        <span className="text-[9px] bg-chart-warning/10 text-chart-warning border border-chart-warning/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+        <span className="text-2xs bg-chart-warning/10 text-chart-warning border border-chart-warning/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
           {Math.ceil(days)}d
         </span>
       );
@@ -369,11 +369,11 @@ export function SettingsTab({
         <div className="space-y-12 relative z-10">
           {/* IA integrations */}
           <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">{t('sectionAi')}</h3>
+            <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3">{t('sectionAi')}</h3>
             <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-colors">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[15px] font-bold text-foreground tracking-tight">{t('aiGatewayLabel')}</span>
-                <span className="text-[9px] font-bold bg-chartreuse/10 text-chartreuse px-3 py-1 rounded-full border border-chartreuse/20 uppercase tracking-wider">{t('aiGatewayBadge')}</span>
+                <span className="text-base font-bold text-foreground tracking-tight">{t('aiGatewayLabel')}</span>
+                <span className="text-2xs font-bold bg-chartreuse/10 text-chartreuse px-3 py-1 rounded-full border border-chartreuse/20 uppercase tracking-wider">{t('aiGatewayBadge')}</span>
               </div>
               <p className="text-xs text-muted-fg mb-6 leading-relaxed">{t('aiGatewayDesc')}</p>
               <input 
@@ -387,7 +387,7 @@ export function SettingsTab({
 
           {/* White label settings */}
           <div className="space-y-6">
-            <h3 className="text-[10px] font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3 flex items-center gap-2">
+            <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest border-b border-border pb-3 flex items-center gap-2">
               <Palette className="w-4 h-4 text-primary" /> {t('sectionBranding')}
             </h3>
             <div className="bg-muted/1 border border-border rounded-2xl p-8 hover:bg-muted/5 transition-colors">
@@ -395,7 +395,7 @@ export function SettingsTab({
               
               <div className="grid gap-8">
                 <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('brandingNameLabel')}</label>
+                  <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('brandingNameLabel')}</label>
                   <input 
                     type="text" 
                     placeholder={t('brandingNamePlaceholder')} 
@@ -408,7 +408,7 @@ export function SettingsTab({
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('brandingColorLabel')}</label>
+                    <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('brandingColorLabel')}</label>
                     <div className="flex gap-4 items-center">
                       <input 
                         type="color" 
@@ -429,7 +429,7 @@ export function SettingsTab({
                   </div>
                   
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('brandingLogoLabel')}</label>
+                    <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('brandingLogoLabel')}</label>
                     <input 
                       type="text" 
                       placeholder={t('brandingLogoPlaceholder')} 
@@ -444,7 +444,7 @@ export function SettingsTab({
               <div className="mt-12 flex justify-end">
                 <button 
                   onClick={handleSaveBranding}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-3.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-[color,background-color,box-shadow] flex items-center gap-3 group cursor-pointer"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-3.5 rounded-xl text-2xs font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:shadow-[0_0_25px_rgba(98,113,196,0.45)] transition-[color,background-color,box-shadow] flex items-center gap-3 group cursor-pointer"
                 >
                   <Save className="w-4 h-4 group-hover:scale-110 transition-transform text-primary-foreground" /> {t('brandingSaveButton')}
                 </button>
@@ -471,7 +471,7 @@ export function SettingsTab({
             </div>
             <a
               href="/settings/api-keys"
-              className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-[color,background-color,box-shadow] flex items-center gap-2 cursor-pointer"
+              className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl text-2xs font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-[color,background-color,box-shadow] flex items-center gap-2 cursor-pointer"
             >
               <BarChart3 className="w-4 h-4" /> {t('apiKeysDashboardButton')}
             </a>
@@ -487,7 +487,7 @@ export function SettingsTab({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysNameLabel')}</label>
+                <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysNameLabel')}</label>
                 <input 
                   type="text" 
                   required
@@ -499,7 +499,7 @@ export function SettingsTab({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysExpiryLabel')}</label>
+                <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysExpiryLabel')}</label>
                 <select
                   value={expiresDays}
                   onChange={(e) => setExpiresDays(Number(e.target.value))}
@@ -524,7 +524,7 @@ export function SettingsTab({
               <button
                 type="submit"
                 disabled={creatingKey || !newKeyName.trim()}
-                className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
+                className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground px-8 py-3 rounded-xl text-2xs font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
               >
                 {creatingKey ? (
                   <>
@@ -577,11 +577,11 @@ export function SettingsTab({
                         className="rounded border-border text-primary focus:ring-primary/20 bg-card"
                       />
                       <Clock className="w-3.5 h-3.5 text-chart-warning" />
-                      <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">{t('apiKeysFilterExpiringSoon')}</span>
+                      <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">{t('apiKeysFilterExpiringSoon')}</span>
                     </label>
                     <button
                       onClick={() => setSortNewestFirst(!sortNewestFirst)}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-2xs font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-colors cursor-pointer"
                     >
                       <ArrowUpDown className="w-3.5 h-3.5" />
                       {sortNewestFirst ? t('apiKeysSortNewest') : t('apiKeysSortOldest')}
@@ -593,19 +593,19 @@ export function SettingsTab({
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-border bg-muted/5 text-muted-fg font-bold">
-                        <th className="p-4 uppercase tracking-wider text-[9px]">{t('apiKeysColName')}</th>
-                        <th className="p-4 uppercase tracking-wider text-[9px]">{t('apiKeysColPrefix')}</th>
-                        <th className="p-4 uppercase tracking-wider text-[9px]">{t('apiKeysColScope')}</th>
+                        <th className="p-4 uppercase tracking-wider text-2xs">{t('apiKeysColName')}</th>
+                        <th className="p-4 uppercase tracking-wider text-2xs">{t('apiKeysColPrefix')}</th>
+                        <th className="p-4 uppercase tracking-wider text-2xs">{t('apiKeysColScope')}</th>
                         <th
-                          className="p-4 uppercase tracking-wider text-[9px] cursor-pointer hover:text-primary transition-colors select-none"
+                          className="p-4 uppercase tracking-wider text-2xs cursor-pointer hover:text-primary transition-colors select-none"
                           onClick={() => setSortNewestFirst(!sortNewestFirst)}
                         >                            <span className="flex items-center gap-1">
                               {t('apiKeysColCreated')}
                               <ArrowUpDown className="w-3 h-3" />
                             </span>
                         </th>
-                        <th className="p-4 uppercase tracking-wider text-[9px]">{t('apiKeysColExpiry')}</th>
-                        <th className="p-4 text-right uppercase tracking-wider text-[9px]">{t('apiKeysColAction')}</th>
+                        <th className="p-4 uppercase tracking-wider text-2xs">{t('apiKeysColExpiry')}</th>
+                        <th className="p-4 text-right uppercase tracking-wider text-2xs">{t('apiKeysColAction')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -625,7 +625,7 @@ export function SettingsTab({
                             </td>
                             <td className="p-4 font-mono tracking-wider text-primary">{key.keyPrefix}</td>
                             <td className="p-4">
-                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded border border-primary/20 font-mono text-[9px]">
+                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded border border-primary/20 font-mono text-2xs">
                                 {key.scope?.join(', ') || 'read, write'}
                               </span>
                             </td>
@@ -678,7 +678,7 @@ export function SettingsTab({
             {/* Active Project Selector */}
             {initialProjects.length > 0 && (
               <div className="flex flex-col gap-1.5 min-w-[220px]">
-                <label className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksProjectLabel')}</label>
+                <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('webhooksProjectLabel')}</label>
                 <select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId && setSelectedProjectId(e.target.value)}
@@ -703,7 +703,7 @@ export function SettingsTab({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksNameLabel')}</label>
+                  <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('webhooksNameLabel')}</label>
                   <input 
                     type="text" 
                     required
@@ -715,7 +715,7 @@ export function SettingsTab({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksUrlLabel')}</label>
+                  <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('webhooksUrlLabel')}</label>
                   <input 
                     type="url" 
                     required
@@ -729,7 +729,7 @@ export function SettingsTab({
 
               {/* Event Suscription */}
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest block">{t('webhooksEventsLabel')}</label>
+                <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">{t('webhooksEventsLabel')}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-colors cursor-pointer">
                     <input
@@ -740,7 +740,7 @@ export function SettingsTab({
                     />
                     <div>
                       <span className="text-xs font-bold text-foreground block font-mono">audit.completed</span>
-                      <span className="text-[10px] text-muted-fg">{t('webhooksEventAuditDesc')}</span>
+                      <span className="text-2xs text-muted-fg">{t('webhooksEventAuditDesc')}</span>
                     </div>
                   </label>
 
@@ -753,7 +753,7 @@ export function SettingsTab({
                     />
                     <div>
                       <span className="text-xs font-bold text-foreground block font-mono">alert.triggered</span>
-                      <span className="text-[10px] text-muted-fg">{t('webhooksEventAlertDesc')}</span>
+                      <span className="text-2xs text-muted-fg">{t('webhooksEventAlertDesc')}</span>
                     </div>
                   </label>
                 </div>
@@ -780,7 +780,7 @@ export function SettingsTab({
                 <button
                   type="submit"
                   disabled={creatingWebhook || !newWebhookName.trim() || !newWebhookUrl.trim() || webhookEvents.length === 0}
-                  className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
+                  className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground px-8 py-3 rounded-xl text-2xs font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(98,113,196,0.2)] transition-[color,background-color,opacity,box-shadow] flex items-center gap-2 cursor-pointer"
                 >
                   {creatingWebhook ? (
                     <>
@@ -827,7 +827,7 @@ export function SettingsTab({
                       <div className="space-y-3 flex-1 min-w-0">
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-bold text-foreground truncate">{wh.name}</span>
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                          <span className={`text-2xs font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
                             wh.active 
                               ? 'bg-chartreuse/10 text-chartreuse border-chartreuse/20' 
                               : 'bg-muted/60 text-muted-fg border-border/50'
@@ -840,7 +840,7 @@ export function SettingsTab({
                           {wh.url}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 pt-1 text-[9px] font-mono">
+                        <div className="flex flex-wrap items-center gap-2 pt-1 text-2xs font-mono">
                           <span className="text-muted-fg uppercase font-bold tracking-wider mr-2">{t('webhooksSubscribedTo')}</span>
                           {wh.events.map(ev => (
                             <span key={ev} className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded">
@@ -856,7 +856,7 @@ export function SettingsTab({
                             Se muestra completo UNA sola vez al crear el webhook (modal POST). */}
                         {wh.secretTokenPreview && (
                           <span
-                            className="bg-muted/60 border border-border text-muted-fg px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider"
+                            className="bg-muted/60 border border-border text-muted-fg px-4 py-2 rounded-xl text-2xs font-bold uppercase tracking-wider"
                             title={t('webhooksSecretMasked')}
                           >
                             {wh.secretTokenPreview}
@@ -896,10 +896,10 @@ export function SettingsTab({
 
             <div className="bg-muted border border-border rounded-xl p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysModalSecretLabel')}</span>
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('apiKeysModalSecretLabel')}</span>
                 <button
                   onClick={() => handleCopy(revealedClearKey, 'modal-key')}
-                  className="text-primary hover:text-primary/80 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                  className="text-primary hover:text-primary/80 text-2xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
                 >
                   {copiedId === 'modal-key' ? (
                     <>
@@ -924,7 +924,7 @@ export function SettingsTab({
                   setShowKeyModal(false);
                   setRevealedClearKey(null);
                 }}
-                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl border border-border/60 shadow-sm transition-[color,background-color,box-shadow] cursor-pointer"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 font-extrabold text-2xs uppercase tracking-widest px-8 py-3.5 rounded-xl border border-border/60 shadow-sm transition-[color,background-color,box-shadow] cursor-pointer"
               >
                 {t('apiKeysModalButton')}
               </button>
@@ -950,7 +950,7 @@ export function SettingsTab({
             <div className="bg-muted border border-border rounded-xl p-5 space-y-4">
               {/* VULN-002 fix: sin botón de copiar — el secreto solo se muestra una
                   vez (creación) para minimizar la superficie de exposición. */}
-              <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">{t('webhooksModalSecretLabel')}</span>
+              <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('webhooksModalSecretLabel')}</span>
 
               {/* Sin botón de copiar (VULN-002), el texto queda SELECCIONABLE a mano:
                   select-all sin select-none para que el usuario pueda guardarlo. */}
@@ -965,7 +965,7 @@ export function SettingsTab({
                   setShowWebhookModal(false);
                   setRevealedWebhookSecret(null);
                 }}
-                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl border border-border/60 shadow-sm transition-[color,background-color,box-shadow] cursor-pointer"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 font-extrabold text-2xs uppercase tracking-widest px-8 py-3.5 rounded-xl border border-border/60 shadow-sm transition-[color,background-color,box-shadow] cursor-pointer"
               >
                 {t('webhooksModalButton')}
               </button>

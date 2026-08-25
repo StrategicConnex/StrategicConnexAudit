@@ -17,7 +17,7 @@ export default function DocsNotFound() {
         </div>
 
         {/* Badge */}
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full bg-destructive/10 border border-destructive/20 text-destructive text-2xs font-bold uppercase tracking-wider whitespace-nowrap">
           <FileQuestion size={12} />
           Página no encontrada
         </div>
@@ -25,10 +25,10 @@ export default function DocsNotFound() {
 
       {/* Description */}
       <div className="max-w-md space-y-2">
-        <h2 className="text-[18px] font-bold tracking-tight">
+        <h2 className="text-lg font-bold tracking-tight">
           Esta ruta de documentación no existe
         </h2>
-        <p className="text-[14px] text-muted-fg leading-relaxed">
+        <p className="text-sm text-muted-fg leading-relaxed">
           La página que buscas no está disponible en la documentación.
           Revisá el listado de documentos disponibles o volvé al inicio.
         </p>
@@ -38,7 +38,7 @@ export default function DocsNotFound() {
       <div className="flex items-center gap-3">
         <Link
           href="/docs"
-          className="glass-card rounded-xl px-5 py-3 flex items-center gap-2.5 text-[13px] font-semibold text-foreground hover:bg-primary/5 hover:border-primary/20 transition-all duration-200 group"
+          className="glass-card rounded-xl px-5 py-3 flex items-center gap-2.5 text-sm font-semibold text-foreground hover:bg-primary/5 hover:border-primary/20 transition-all duration-200 group"
         >
           <BookOpen
             size={16}
@@ -48,7 +48,7 @@ export default function DocsNotFound() {
         </Link>
         <Link
           href="/"
-          className="glass-card rounded-xl px-5 py-3 flex items-center gap-2.5 text-[13px] font-semibold text-foreground hover:bg-primary/5 hover:border-primary/20 transition-all duration-200 group"
+          className="glass-card rounded-xl px-5 py-3 flex items-center gap-2.5 text-sm font-semibold text-foreground hover:bg-primary/5 hover:border-primary/20 transition-all duration-200 group"
         >
           <Home
             size={16}
@@ -59,17 +59,17 @@ export default function DocsNotFound() {
       </div>
 
       {/* Subtle search hint */}
-      <p className="text-[12px] text-muted-fg/60">
+      <p className="text-xs text-muted-fg/60">
         Rutas disponibles:{" "}
-        <code className="text-[11px] text-muted-fg bg-muted/30 px-1.5 py-0.5 rounded-md">
+        <code className="text-2xs text-muted-fg bg-muted/30 px-1.5 py-0.5 rounded-md">
           /docs/installation
         </code>
         {" "}
-        <code className="text-[11px] text-muted-fg bg-muted/30 px-1.5 py-0.5 rounded-md">
+        <code className="text-2xs text-muted-fg bg-muted/30 px-1.5 py-0.5 rounded-md">
           /docs/api
         </code>
         {" "}
-        <code className="text-[11px] text-muted-fg bg-muted/30 px-1.5 py-0.5 rounded-md">
+        <code className="text-2xs text-muted-fg bg-muted/30 px-1.5 py-0.5 rounded-md">
           /docs/changelog
         </code>
       </p>

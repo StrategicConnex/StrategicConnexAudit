@@ -91,12 +91,12 @@ export default function DocsPage() {
     <div className="space-y-10 animate-fade-in">
       {/* Header */}
       <div className="space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-bold uppercase tracking-wider">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-2xs font-bold uppercase tracking-wider">
           <BookOpen size={14} />
           Documentación
         </div>
         <h1 className="text-display">SCAUDIT Pro Docs</h1>
-        <p className="text-muted-fg text-[15px] max-w-2xl leading-relaxed">
+        <p className="text-muted-fg text-base max-w-2xl leading-relaxed">
           Documentación técnica de StrategicAudit Pro (SCAUDIT) — plataforma enterprise-grade
           de inteligencia de red, monitoreo de superficie de ataque y ciberseguridad continua.
         </p>
@@ -116,14 +116,14 @@ export default function DocsPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-[15px] tracking-tight truncate">
+                  <h3 className="font-bold text-base tracking-tight truncate">
                     {doc.title}
                   </h3>
-                  <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full border shrink-0 ${CATEGORY_BADGES[doc.category] || ""}`}>
+                  <span className={`text-2xs font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full border shrink-0 ${CATEGORY_BADGES[doc.category] || ""}`}>
                     {doc.category}
                   </span>
                 </div>
-                <p className="text-[13px] text-muted-fg leading-relaxed line-clamp-2">
+                <p className="text-sm text-muted-fg leading-relaxed line-clamp-2">
                   {doc.description}
                 </p>
               </div>
@@ -133,7 +133,7 @@ export default function DocsPage() {
       </div>
 
       {/* Footer */}
-      <div className="pt-6 border-t border-border text-[12px] text-muted-fg text-center">
+      <div className="pt-6 border-t border-border text-xs text-muted-fg text-center">
         StrategicConnex &copy; {new Date().getFullYear()} &middot;
         <a href="https://github.com/StrategicConnex/StrategicConnexAudit" className="ml-1.5 text-primary hover:underline">
           GitHub

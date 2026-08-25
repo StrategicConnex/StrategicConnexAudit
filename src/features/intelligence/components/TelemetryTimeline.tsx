@@ -42,7 +42,7 @@ export function TelemetryTimeline({ events, isActive, isDemo, demoEvents }: Tele
           </span>
         </div>
         {isDemo && (
-          <span className="text-[10px] bg-muted text-muted-fg border border-border px-2 py-0.5 rounded uppercase font-mono">Demo</span>
+          <span className="text-2xs bg-muted text-muted-fg border border-border px-2 py-0.5 rounded uppercase font-mono">Demo</span>
         )}
       </div>
 
@@ -63,19 +63,19 @@ export function TelemetryTimeline({ events, isActive, isDemo, demoEvents }: Tele
             return (
               <div key={item.id} className="p-3.5 flex items-start space-x-3 text-xs hover:bg-muted/50 transition-colors">
                 {tool && (
-                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-card border border-border text-muted-fg">
+                  <span className="font-mono text-2xs px-2 py-0.5 rounded bg-card border border-border text-muted-fg">
                     {tool}
                   </span>
                 )}
                 {!tool && (
-                  <span className={`font-mono text-[9px] px-2 py-0.5 rounded border ${eventClass}`}>
+                  <span className={`font-mono text-2xs px-2 py-0.5 rounded border ${eventClass}`}>
                     {eventType.toUpperCase()}
                   </span>
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-foreground leading-relaxed pr-4 font-mono">{item.message}</p>
                   {timestamp && (
-                    <span className="text-[10px] text-muted-fg mt-1 block">{timestamp}</span>
+                    <span className="text-2xs text-muted-fg mt-1 block">{timestamp}</span>
                   )}
                 </div>
               </div>

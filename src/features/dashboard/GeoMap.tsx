@@ -303,7 +303,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
       <div className="flex flex-col items-center justify-center py-16 text-muted-fg gap-3">
         <MapPin className="w-8 h-8 text-muted-fg/50" />
         <p className="text-xs font-medium">No hay datos de geolocalización disponibles</p>
-        <p className="text-[10px] text-muted-fg/60">Realiza un escaneo para ver la ubicación de los activos de red</p>
+        <p className="text-2xs text-muted-fg/60">Realiza un escaneo para ver la ubicación de los activos de red</p>
       </div>
     );
   }
@@ -314,13 +314,13 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
         {Object.entries(TYPE_COLORS).map(([type, color]) => (
           <div key={type} className="flex items-center gap-1.5 bg-[#0a0a0a]/80 backdrop-blur-sm border border-white/[0.06] px-2 py-1 rounded-md">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-[8px] font-bold text-muted-fg uppercase tracking-wider">{type}</span>
+            <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">{type}</span>
           </div>
         ))}
       </div>
 
       <div className="absolute bottom-3 right-3 z-[1000] bg-[#0a0a0a]/80 backdrop-blur-sm border border-white/[0.06] px-3 py-1.5 rounded-md">
-        <span className="text-[9px] font-bold text-muted-fg uppercase tracking-wider">
+        <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">
           {geoPoints.length} nodo{geoPoints.length !== 1 ? 's' : ''}
         </span>
       </div>

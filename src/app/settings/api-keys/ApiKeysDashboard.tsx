@@ -81,9 +81,9 @@ function StatCard({ icon, label, value, accent, sub }: {
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">{label}</p>
+        <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{label}</p>
         <p className="text-2xl font-extrabold tracking-tight text-foreground mt-0.5">{value}</p>
-        {sub && <p className="text-[10px] text-muted-fg mt-0.5">{sub}</p>}
+        {sub && <p className="text-2xs text-muted-fg mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -254,7 +254,7 @@ export default function ApiKeysDashboard() {
           API Keys
         </h1>
         <p className="text-sm text-muted-fg mt-2">
-          Manage programmatic access keys for the SCAUDIT REST API. Usage data is sourced from <code className="text-chartreuse text-[11px]">security_audit_logs</code> — counts reflect real API calls authenticated with each key.
+          Manage programmatic access keys for the SCAUDIT REST API. Usage data is sourced from <code className="text-chartreuse text-2xs">security_audit_logs</code> — counts reflect real API calls authenticated with each key.
         </p>
       </div>
 
@@ -294,7 +294,7 @@ export default function ApiKeysDashboard() {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
           <div className="space-y-2 md:col-span-2">
-            <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Name</label>
+            <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Name</label>
             <input
               type="text" required placeholder="e.g. CI/CD Pipeline"
               value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
@@ -302,7 +302,7 @@ export default function ApiKeysDashboard() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-muted-fg uppercase tracking-widest">Expiration</label>
+            <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Expiration</label>
             <select
               value={expiresDays} onChange={e => setExpiresDays(Number(e.target.value))}
               className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm font-bold focus:outline-none"
@@ -323,7 +323,7 @@ export default function ApiKeysDashboard() {
         <div className="flex justify-end">
           <button
             type="submit" disabled={creating || !newKeyName.trim()}
-            className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all flex items-center gap-2 cursor-pointer"
+            className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl text-2xs font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all flex items-center gap-2 cursor-pointer"
           >
             {creating ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
@@ -355,18 +355,18 @@ export default function ApiKeysDashboard() {
                 onChange={e => setExpiringSoon(e.target.checked)}
                 className="rounded border-zinc-700 text-primary focus:ring-primary/20 bg-black" />
               <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-[10px] font-bold text-muted-fg uppercase tracking-wider">Expiring</span>
+              <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">Expiring</span>
             </label>
             <button
               onClick={() => setSortNewest(!sortNewest)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-2xs font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
               {sortNewest ? 'Newest' : 'Oldest'}
             </button>
             <button onClick={fetchKeys}
               aria-label="Actualizar claves"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-2xs font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
               title="Refresh"
             >
               <RefreshCw aria-hidden="true" className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -390,13 +390,13 @@ export default function ApiKeysDashboard() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-border bg-muted/10 text-muted-fg font-bold">
-                  <th className="p-4 uppercase tracking-wider text-[9px]">Name</th>
-                  <th className="p-4 uppercase tracking-wider text-[9px]">Prefix</th>
-                  <th className="p-4 uppercase tracking-wider text-[9px]">Created</th>
-                  <th className="p-4 uppercase tracking-wider text-[9px]">Last Used</th>
-                  <th className="p-4 uppercase tracking-wider text-[9px]">Requests</th>
-                  <th className="p-4 uppercase tracking-wider text-[9px]">Expires</th>
-                  <th className="p-4 text-right uppercase tracking-wider text-[9px]">Actions</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Name</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Prefix</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Created</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Last Used</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Requests</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Expires</th>
+                  <th className="p-4 text-right uppercase tracking-wider text-2xs">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
@@ -412,12 +412,12 @@ export default function ApiKeysDashboard() {
                       <td className="p-4 text-white font-bold flex items-center gap-2">
                         {key.name}
                         {isExpiring && (
-                          <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-full font-bold">
+                          <span className="text-2xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-full font-bold">
                             {days}d
                           </span>
                         )}
                         {isExpired && (
-                          <span className="text-[9px] bg-destructive/10 text-destructive border border-destructive/20 px-1.5 py-0.5 rounded-full font-bold">
+                          <span className="text-2xs bg-destructive/10 text-destructive border border-destructive/20 px-1.5 py-0.5 rounded-full font-bold">
                             Expired
                           </span>
                         )}
@@ -426,17 +426,17 @@ export default function ApiKeysDashboard() {
                       <td className="p-4 text-muted-fg">{formatDate(key.createdAt)}</td>
                       <td className="p-4">
                         {key.lastUsedAt ? (
-                          <span className="text-chartreuse text-[10px]">{formatDateTime(key.lastUsedAt)}</span>
+                          <span className="text-chartreuse text-2xs">{formatDateTime(key.lastUsedAt)}</span>
                         ) : (
-                          <span className="text-muted-fg italic text-[10px]">Never used</span>
+                          <span className="text-muted-fg italic text-2xs">Never used</span>
                         )}
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="text-right min-w-[3ch]">
-                            <span className="text-white font-bold text-[11px]">{formatCount(totalReq)}</span>
+                            <span className="text-white font-bold text-2xs">{formatCount(totalReq)}</span>
                             {weekReq > 0 && (
-                              <span className="text-chartreuse text-[9px] ml-1">(+{formatCount(weekReq)}w)</span>
+                              <span className="text-chartreuse text-2xs ml-1">(+{formatCount(weekReq)}w)</span>
                             )}
                           </div>
                           <div className="flex flex-col gap-0.5">
@@ -501,10 +501,10 @@ export default function ApiKeysDashboard() {
             </div>
             <div className="bg-black border border-border rounded-xl p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-bold text-muted-fg uppercase tracking-widest">Secret Key</span>
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Secret Key</span>
                 <button
                   onClick={() => handleCopy(revealedKey, 'modal-key')}
-                  className="text-primary hover:text-primary/80 text-[10px] font-bold uppercase flex items-center gap-1.5 cursor-pointer"
+                  className="text-primary hover:text-primary/80 text-2xs font-bold uppercase flex items-center gap-1.5 cursor-pointer"
                 >
                   {copiedId === 'modal-key' ? (
                     <><Check className="w-3.5 h-3.5 text-chartreuse" /> Copied!</>
@@ -520,7 +520,7 @@ export default function ApiKeysDashboard() {
             <div className="flex justify-end">
               <button
                 onClick={() => { setShowModal(false); setRevealedKey(null); }}
-                className="bg-zinc-100 hover:bg-white text-black font-extrabold text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-xl transition-all cursor-pointer"
+                className="bg-zinc-100 hover:bg-white text-black font-extrabold text-2xs uppercase tracking-widest px-8 py-3.5 rounded-xl transition-all cursor-pointer"
               >
                 I Saved the Key
               </button>
@@ -531,7 +531,7 @@ export default function ApiKeysDashboard() {
 
       {/* API Reference link */}
       <div className="text-center border-t border-border pt-6">
-        <Link href="/docs/api" className="inline-flex items-center gap-1.5 text-[11px] text-muted-fg hover:text-primary transition-colors">
+        <Link href="/docs/api" className="inline-flex items-center gap-1.5 text-2xs text-muted-fg hover:text-primary transition-colors">
           <ExternalLink className="w-3.5 h-3.5" />
           View API documentation for authentication details
         </Link>

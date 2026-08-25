@@ -153,7 +153,7 @@ export function DownloadPdfButton({
     }
   }, [projectId, investigationId]);
 
-  const sizeClasses = size === 'sm' ? 'text-[10px] px-3 py-2 rounded-lg' : 'text-xs px-5 py-3 rounded-xl';
+  const sizeClasses = size === 'sm' ? 'text-2xs px-3 py-2 rounded-lg' : 'text-xs px-5 py-3 rounded-xl';
   const variantClasses = variant === 'ghost'
     ? 'bg-muted/5 border-border text-muted-fg hover:text-foreground hover:border-primary/30'
     : 'bg-primary/15 border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50';

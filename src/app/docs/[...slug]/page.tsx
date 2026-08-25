@@ -108,7 +108,7 @@ export default async function DocPage({ params }: Props) {
   return (
     <article className="prose-custom animate-fade-in">
       {/* Mobile breadcrumb */}
-      <div className="flex items-center gap-2 text-[12px] text-muted-fg mb-6 md:hidden">
+      <div className="flex items-center gap-2 text-xs text-muted-fg mb-6 md:hidden">
         <Link href="/docs" className="hover:text-primary transition-colors">Docs</Link>
         <span>/</span>
         <span className="truncate max-w-[200px]">{title}</span>
@@ -124,24 +124,24 @@ export default async function DocPage({ params }: Props) {
           ),
           h2: ({ children, ...props }) => (
             <h2
-              className="text-[20px] font-bold tracking-tight mt-10 mb-4 pb-2 border-b border-border/50"
+              className="text-xl font-bold tracking-tight mt-10 mb-4 pb-2 border-b border-border/50"
               {...props}
             >
               {children}
             </h2>
           ),
           h3: ({ children, ...props }) => (
-            <h3 className="text-[16px] font-bold tracking-tight mt-8 mb-3" {...props}>
+            <h3 className="text-base font-bold tracking-tight mt-8 mb-3" {...props}>
               {children}
             </h3>
           ),
           h4: ({ children, ...props }) => (
-            <h4 className="text-[14px] font-bold tracking-tight mt-6 mb-2" {...props}>
+            <h4 className="text-sm font-bold tracking-tight mt-6 mb-2" {...props}>
               {children}
             </h4>
           ),
           p: ({ children, ...props }) => (
-            <p className="text-[14.5px] leading-relaxed text-foreground/80 mb-4" {...props}>
+            <p className="text-sm leading-relaxed text-foreground/80 mb-4" {...props}>
               {children}
             </p>
           ),
@@ -160,14 +160,14 @@ export default async function DocPage({ params }: Props) {
             const isInline = !className;
             return isInline ? (
               <code
-                className="bg-muted/40 text-[13px] px-1.5 py-0.5 rounded border border-border/30 font-mono"
+                className="bg-muted/40 text-sm px-1.5 py-0.5 rounded border border-border/30 font-mono"
                 {...props}
               >
                 {children}
               </code>
             ) : (
               <code
-                className="block bg-muted/30 text-[13px] p-4 rounded-xl border border-border/30 font-mono overflow-x-auto whitespace-pre-wrap my-4 leading-relaxed"
+                className="block bg-muted/30 text-sm p-4 rounded-xl border border-border/30 font-mono overflow-x-auto whitespace-pre-wrap my-4 leading-relaxed"
                 {...props}
               >
                 {children}
@@ -181,7 +181,7 @@ export default async function DocPage({ params }: Props) {
           ),
           table: ({ children, ...props }) => (
             <div className="overflow-x-auto my-6 rounded-xl border border-border/50">
-              <table className="w-full text-[13px]" {...props}>
+              <table className="w-full text-sm" {...props}>
                 {children}
               </table>
             </div>
@@ -192,7 +192,7 @@ export default async function DocPage({ params }: Props) {
             </thead>
           ),
           th: ({ children, ...props }) => (
-            <th className="text-left px-4 py-3 font-bold text-muted-fg text-[11px] uppercase tracking-wider" {...props}>
+            <th className="text-left px-4 py-3 font-bold text-muted-fg text-2xs uppercase tracking-wider" {...props}>
               {children}
             </th>
           ),
@@ -212,13 +212,13 @@ export default async function DocPage({ params }: Props) {
             </ol>
           ),
           li: ({ children, ...props }) => (
-            <li className="text-[14.5px] leading-relaxed text-foreground/80 pl-1" {...props}>
+            <li className="text-sm leading-relaxed text-foreground/80 pl-1" {...props}>
               {children}
             </li>
           ),
           blockquote: ({ children, ...props }) => (
             <blockquote
-              className="border-l-4 border-primary/30 pl-4 my-6 py-2 bg-primary/5 rounded-r-xl text-[14px] text-foreground/70 italic"
+              className="border-l-4 border-primary/30 pl-4 my-6 py-2 bg-primary/5 rounded-r-xl text-sm text-foreground/70 italic"
               {...props}
             >
               {children}
