@@ -74,7 +74,9 @@ export const intelligenceToolRuns = pgTable("intelligence_tool_runs", {
 // 3. Hallazgos y Vulnerabilidades Detectadas
 export const intelligenceFindings = pgTable("intelligence_findings", {
   id: uuid("id").defaultRandom().primaryKey(),
-  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "cascade" }).notNull(),
+  // Nullable desde 2026-08-25: los hallazgos [ADV-REAL] nacen de assessments
+  // de adversario sin investigación padre (drizzle/2026-08-25_adversary_real.sql).
+  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "cascade" }),
   toolRunId: uuid("tool_run_id").references(() => intelligenceToolRuns.id, { onDelete: "set null" }),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
   severity: findingSeverityEnum("severity").notNull(),

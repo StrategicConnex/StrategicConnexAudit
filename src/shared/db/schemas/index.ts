@@ -53,6 +53,9 @@ export const projects = pgTable("projects", {
   // Soft delete ampliado (panel admin): visibilidad granular
   isDeleted: boolean("is_deleted").notNull().default(false),
   isHidden: boolean("is_hidden").notNull().default(false),
+  // Gate legal de evaluación activa (adversary real assessment):
+  // el propietario consiente explícitamente pruebas no destructivas contra su dominio.
+  activeTestingAuthorized: boolean("active_testing_authorized").notNull().default(false),
 });
 
 // 3. Subscription Plans

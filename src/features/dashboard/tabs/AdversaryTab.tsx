@@ -6,6 +6,7 @@ import {
   Crosshair, ShieldOff, ShieldCheck, AlertTriangle, Loader2,
   Terminal, ChevronDown, Clock, Activity, ArrowRight
 } from 'lucide-react';
+import { RealAssessmentSection } from './RealAssessmentSection';
 
 interface ScenarioDef {
   mitreId: string;
@@ -219,6 +220,9 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
           <span>{error}</span>
         </div>
       )}
+
+      {/* Evaluación Real (no destructiva + agente AI) — encima de las simulaciones */}
+      <RealAssessmentSection projectId={projectId} />
 
       {/* Run output */}
       {runOutput && (

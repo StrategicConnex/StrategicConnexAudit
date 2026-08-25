@@ -6,8 +6,8 @@
  */
 
 import {
-  pgTable, uuid, text, timestamp, integer,
-  jsonb, index, pgEnum, uniqueIndex
+  pgTable, uuid, text, timestamp, integer, boolean,
+  jsonb, index, pgEnum, uniqueIndex, numeric
 } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { projects, users } from "./index";
@@ -144,6 +144,53 @@ export const adversaryTaskNodes = pgTable("adversary_task_nodes", {
   index("idx_adv_task_nodes_mitre").on(t.mitreId),
 ]);
 
+// ─── Evaluación Real de Adversarios (no destructiva) ───────────────────────
+// Una ejecución completa del motor de checks reales contra el dominio del
+// proyecto. Requiere projects.active_testing_authorized = true (consentimiento).
+export const adversaryAssessments = pgTable("adversary_assessments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+  status: text("status").notNull().default("pending"),
+  target: text("target").notNull(),
+  riskScore: integer("risk_score"),
+  summary: text("summary"),
+  modelUsed: text("model_used"),
+  evidenceCount: integer("evidence_count").notNull().default(0),
+  checksTotal: integer("checks_total").notNull().default(0),
+  checksPassed: integer("checks_passed").notNull().default(0),
+  rawEvidence: jsonb("raw_evidence").$type<Record<string, unknown>>(),
+  analysisFailed: boolean("analysis_failed").notNull().default(false),
+  error: text("error"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index("idx_adv_assessments_project_status").on(t.projectId, t.status),
+  index("idx_adv_assessments_project_created").on(t.projectId, t.createdAt),
+]);
+
+export const adversaryVulnerabilities = pgTable("adversary_vulnerabilities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assessmentId: uuid("assessment_id").references(() => adversaryAssessments.id, { onDelete: "cascade" }).notNull(),
+  title: text("title").notNull(),
+  severity: text("severity").notNull(),
+  cvssScore: numeric("cvss_score", { precision: 3, scale: 1 }),
+  cweId: text("cwe_id"),
+  owaspCategory: text("owasp_category"),
+  mitreId: text("mitre_id"),
+  description: text("description").notNull(),
+  evidence: jsonb("evidence").$type<Record<string, unknown>>(),
+  remediation: text("remediation").array().notNull().default([]),
+  references: text("references").array().notNull().default([]),
+  confidence: numeric("confidence", { precision: 3, scale: 2 }).notNull().default("0.80"),
+  aiModel: text("ai_model"),
+  falsePositive: boolean("false_positive").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index("idx_adv_vulns_assessment_severity").on(t.assessmentId, t.severity),
+]);
+
 // ─── Tipos exportados ──────────────────────────────────────────────────────
 
 export type AdversaryScenario = typeof adversaryScenarios.$inferSelect;
@@ -154,3 +201,7 @@ export type AdversaryEngagement = typeof adversaryEngagements.$inferSelect;
 export type AdversaryEngagementInsert = typeof adversaryEngagements.$inferInsert;
 export type AdversaryTaskNode = typeof adversaryTaskNodes.$inferSelect;
 export type AdversaryTaskNodeInsert = typeof adversaryTaskNodes.$inferInsert;
+export type AdversaryAssessment = typeof adversaryAssessments.$inferSelect;
+export type AdversaryAssessmentInsert = typeof adversaryAssessments.$inferInsert;
+export type AdversaryVulnerability = typeof adversaryVulnerabilities.$inferSelect;
+export type AdversaryVulnerabilityInsert = typeof adversaryVulnerabilities.$inferInsert;

@@ -27,7 +27,38 @@ export type AITaskType =
   | "copilot-remediation"
   | "incident-brief"
   | "general-chat"
-  | "seo-report";
+  | "seo-report"
+  | "adversary-analysis";
+
+// ─── Tools / Structured Outputs (OpenRouter, estándar OpenAI) ────────────────
+
+export interface OpenRouterToolDef {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    /** JSON Schema de los argumentos. */
+    parameters: Record<string, unknown>;
+  };
+}
+
+export interface AIToolCall {
+  id: string;
+  name: string;
+  /** Argumentos crudos (string JSON) — el caller valida con Zod. */
+  arguments: string;
+}
+
+export type AIResponseFormat =
+  | { type: "json_schema"; name: string; schema: Record<string, unknown> }
+  | { type: "json_object" };
+
+/** Mensaje tool (resultado de un handler) para el bucle agéntico. */
+export interface AIToolResultMessage {
+  role: "tool";
+  tool_call_id: string;
+  content: string;
+}
 
 export interface AIRequestOptions {
   /** Task type for routing */
@@ -38,6 +69,12 @@ export interface AIRequestOptions {
   temperature?: number;
   /** Max tokens override (default 4096) */
   maxTokens?: number;
+  /** Funciones que el modelo puede decidir invocar (function calling). */
+  tools?: OpenRouterToolDef[];
+  /** Política de invocación (default "auto" cuando hay tools). */
+  toolChoice?: "auto" | "none";
+  /** Forzar salida JSON estructurada (solo modelos con soporte verificado). */
+  responseFormat?: AIResponseFormat;
 }
 
 export interface AIResponse {
@@ -46,6 +83,8 @@ export interface AIResponse {
   modelUsed: string;
   latencyMs: number;
   fromCache?: boolean;
+  /** Presente cuando el modelo decidió invocar funciones (tools). */
+  toolCalls?: AIToolCall[];
   error?: string;
 }
 
@@ -83,12 +122,47 @@ const FREE_META_MODEL = "openrouter/free";
  *   - nvidia/nemotron-3.5-content-safety:free → clasificador, no chat
  */
 /**
- * Task routing table — maps task types to ordered fallback model chains.
- * The first model in each chain is always "openrouter/free" (meta-model router).
- * Subsequent models are individual :free models ordered by capability.
+ * Capacidades VERIFICADAS en vivo (scripts/test-model-capabilities.mjs,
+ * 2026-08-25): cada modelo pasó una llamada real con `tools` (tool_calls
+ * bien formados) y/o con `response_format: json_schema` (JSON válido).
  *
- * This is exported so the healthcheck endpoint can auto-discover which
- * models to test without duplicating the list.
+ *   nemotron-3-ultra-550b-a55b:free    → tools ✅  json_schema ✅  (482ms/554ms;
+ *                                        OJO: 502 upstream intermitente embebido
+ *                                        en HTTP 200 — callModel lo detecta por
+ *                                        choices ausente y cae al siguiente)
+ *   nemotron-3-nano-omni-30b:free      → tools ✅  json_schema ✅  (458ms/559ms;
+ *                                        smoke test E2E del día OK)
+ *   nemotron-3-super-120b-a12b:free    → tools ✅  json_schema ❌ (falló en vivo;
+ *                                        usar parsing por prompt con este)
+ *   nemotron-3.5-lightning:free        → tools ✅  json_schema ❌
+ *   dots-3-note-preview:free           → tools ✅  json_schema ⚠️ timeout 45s
+ *
+ * Retirados del pool ese día:
+ *   openai/gpt-oss-20b:free      → 404 "unavailable for free"
+ *   google/gemma-4-26b-a4b-it:free → 429 upstream persistente
+ */
+export const MODEL_CAPABILITIES: Record<string, { supportsTools: boolean; supportsStructuredOutput: boolean }> = {
+  "nvidia/nemotron-3-ultra-550b-a55b:free": { supportsTools: true, supportsStructuredOutput: true },
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": { supportsTools: true, supportsStructuredOutput: true },
+  "nvidia/nemotron-3-super-120b-a12b:free": { supportsTools: true, supportsStructuredOutput: false },
+  "nvidia/nemotron-3.5-lightning:free": { supportsTools: true, supportsStructuredOutput: false },
+  "dots-studio/dots-3-note-preview:free": { supportsTools: true, supportsStructuredOutput: false },
+};
+
+export function modelCapabilities(modelId: string) {
+  return MODEL_CAPABILITIES[modelId] ?? { supportsTools: false, supportsStructuredOutput: false };
+}
+
+/**
+ * Task routing table — maps task types to ordered fallback model chains.
+ *
+ * CADENAS JSON-CRÍTICAS (adversary-analysis, seo-report): SIN el router
+ * aleatorio openrouter/free — solo modelos explícitos verificados en vivo
+ * para la capacidad que necesita cada tarea. El router selecciona modelos
+ * al azar; cuando la salida debe ser JSON parseable, eso no es aceptable.
+ *
+ * CADENAS DE CHAT GENERAL: mantienen openrouter/free primero porque la
+ * identidad del modelo es irrelevante para texto libre.
  */
 export const TASK_ROUTING: Record<AITaskType, string[]> = {
   "copilot-remediation": [
@@ -115,9 +189,20 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
   // ejecutivo de 4096 tokens NO termina en 20s en modelos :free (verificado
   // en producción: 3×20s de timeout → fallback resiliente sin mermaid).
   // Peor caso 2×50s = 100s < maxDuration=120s en Vercel.
+  // SIN router: el informe se consume como texto estructurado.
   "seo-report": [
-    FREE_META_MODEL,
+    "nvidia/nemotron-3-super-120b-a12b:free",
     "nvidia/nemotron-3-ultra-550b-a55b:free",
+  ],
+  // JSON-crítico + function calling: SOLO modelos con verificación en vivo
+  // (ver MODEL_CAPABILITIES). Orden según smoke test del día: nano-omni
+  // primero (tools+json OK); ultra también pasó pero Nvidia devolvía 502
+  // intermitente embebido en HTTP 200 ese día; super como fallback de
+  // calidad general (salida JSON validada por prompt, no schema nativo).
+  "adversary-analysis": [
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
   ],
 };
 
@@ -140,6 +225,9 @@ export const MODEL_TIMEOUTS: Record<AITaskType, number> = {
   // tardan 30-70s en generarlo. Cadena acotada a 2 modelos → peor caso
   // 2×50s=100s + overhead ≈ 113s < maxDuration=120s.
   "seo-report": 50_000,
+  // Corre dentro de Trigger.dev (sin presupuesto Vercel): los JSON de
+  // vulnerabilidades con remediación son generaciones largas.
+  "adversary-analysis": 60_000,
 };
 
 // ─── Simple In-Memory Response Cache ────────────────────────────────────────
@@ -187,18 +275,29 @@ const openRouterCircuitBreaker = new RedisCircuitBreaker("openrouter_api", {
 
 /**
  * Calls OpenRouter with the given model and messages.
- * Returns the response content or throws on failure.
+ * Returns the raw assistant message (content + tool_calls si los hay).
  *
  * Supports both the openrouter/free meta-model router and individual
  * :free model slugs. Both work with a free API key (no billing required).
  */
+interface RawAssistantMessage {
+  role?: "assistant";
+  content: string | null;
+  tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>;
+}
+
 async function callModel(
   modelId: string,
-  messages: AIMessage[],
+  messages: Array<AIMessage | RawAssistantMessage | AIToolResultMessage>,
   temperature: number,
   maxTokens: number,
-  timeoutMs: number
-): Promise<string> {
+  timeoutMs: number,
+  opts?: {
+    tools?: OpenRouterToolDef[];
+    toolChoice?: "auto" | "none";
+    responseFormat?: AIResponseFormat;
+  }
+): Promise<RawAssistantMessage> {
   const baseUrl = envSecrets.openRouterBaseUrl || "https://openrouter.ai/api/v1";
   const apiKey = envSecrets.openRouterApiKey;
 
@@ -206,6 +305,35 @@ async function callModel(
     throw new Error(
       "OPENROUTER_API_KEY not configured. Get a FREE key at https://openrouter.ai/keys — no credit card needed."
     );
+  }
+
+  const body: Record<string, unknown> = {
+    model: modelId,
+    messages,
+    temperature,
+    max_tokens: maxTokens,
+  };
+
+  if (opts?.tools && opts.tools.length > 0) {
+    body.tools = opts.tools;
+    body.tool_choice = opts.toolChoice ?? "auto";
+  }
+  if (opts?.responseFormat) {
+    if (opts.responseFormat.type === "json_schema") {
+      body.response_format = {
+        type: "json_schema",
+        json_schema: {
+          name: opts.responseFormat.name,
+          strict: true,
+          schema: opts.responseFormat.schema,
+        },
+      };
+      // Solo enrutar a providers que soporten json_schema nativo
+      // (docs OpenRouter → Provider Routing / require_parameters).
+      body.provider = { ...(body.provider as object ?? {}), require_parameters: true };
+    } else {
+      body.response_format = { type: "json_object" };
+    }
   }
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -216,15 +344,7 @@ async function callModel(
       "HTTP-Referer": "https://scaudit.app",
       "X-Title": "StrategicAudit Pro",
     },
-    body: JSON.stringify({
-      model: modelId,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    }),
-    // Timeout por tarea (MODEL_TIMEOUTS): los reportes largos necesitan más
-    // tiempo que el chat corto. El peor caso por cadena queda dentro de
-    // maxDuration=120s en Vercel.
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
 
@@ -251,13 +371,21 @@ async function callModel(
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
+  const message = data.choices?.[0]?.message;
 
-  if (!content) {
-    throw new Error(`Empty response from model ${modelId}`);
+  // Upstream puede devolver HTTP 200 con el error EMBEBIDO (visto con Nvidia:
+  // {"error":{...code:502}}) — tratarlo como fallo del modelo para que la
+  // cadena caiga al siguiente en vez de devolver basura.
+  if (!message || (!message.content && !Array.isArray(message.tool_calls))) {
+    const embedded = data.error?.message ?? data.error?.code;
+    throw new Error(
+      embedded
+        ? `Upstream ${modelId}: ${String(embedded).slice(0, 120)}`
+        : `Empty response from model ${modelId}`
+    );
   }
 
-  return content;
+  return message as RawAssistantMessage;
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
@@ -267,9 +395,12 @@ async function callModel(
  *
  * Uses ONLY free models from OpenRouter — no paid tokens required.
  * Strategy:
- *   1. Check in-memory cache for identical recent requests (5 min TTL)
- *   2. Try "openrouter/free" (meta-model router that auto-selects best free model)
- *   3. On failure, try specialized :free models in fallback chain
+ *   1. Check in-memory cache for identical recent requests (5 min TTL;
+ *      desactivada cuando hay tools — las respuestas dependen del estado)
+ *   2. Recorre la cadena de la tarea: para cadenas JSON-críticas son solo
+ *      modelos explícitos verificados; para chat general empieza por el
+ *      router openrouter/free
+ *   3. Si el modelo devuelve tool_calls, se exponen en AIResponse.toolCalls
  *   4. If no API key configured, return graceful contextual message
  *
  * Rate limits (free tier, no billing):
@@ -281,18 +412,21 @@ export async function callAIWithFallback(
 ): Promise<AIResponse> {
   const { taskType, messages, temperature = 0.3, maxTokens = 4096 } = options;
   const startTime = Date.now();
+  const useTools = !!options.tools && options.tools.length > 0;
 
-  // 1. Check cache
-  const cacheKey = buildCacheKey(taskType, messages);
-  const cached = getCached(cacheKey);
-  if (cached) {
-    return {
-      success: true,
-      content: cached.content,
-      modelUsed: cached.modelId,
-      latencyMs: 0,
-      fromCache: true,
-    };
+  // 1. Check cache (solo sin tools: los handlers devuelven estado mutable)
+  if (!useTools) {
+    const cacheKey = buildCacheKey(taskType, messages);
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return {
+        success: true,
+        content: cached.content,
+        modelUsed: cached.modelId,
+        latencyMs: 0,
+        fromCache: true,
+      };
+    }
   }
 
   // 2. Check if API key is configured
@@ -321,25 +455,38 @@ export async function callAIWithFallback(
   for (let i = 0; i < modelChain.length; i++) {
     const modelId = modelChain[i];
     try {
-      const content = await openRouterCircuitBreaker.execute(async () => {
-        return await callModel(modelId!, messages, temperature, maxTokens, timeoutMs);
+      const message = await openRouterCircuitBreaker.execute(async () => {
+        return await callModel(modelId!, messages, temperature, maxTokens, timeoutMs, {
+          tools: options.tools,
+          toolChoice: options.toolChoice,
+          responseFormat: options.responseFormat,
+        });
       });
 
       const latencyMs = Date.now() - startTime;
+      const toolCalls: AIToolCall[] | undefined = message.tool_calls?.map((tc) => ({
+        id: tc.id,
+        name: tc.function.name,
+        arguments: tc.function.arguments,
+      }));
 
-      // Cache successful response
-      setCache(cacheKey, content, modelId!);
+      // Cache solo respuestas de contenido puro sin tools
+      if (!useTools && !toolCalls?.length) {
+        setCache(buildCacheKey(taskType, messages), message.content ?? "", modelId!);
+      }
 
       console.log(
-        `[AI Router] ${taskType} → ${modelId} (${latencyMs}ms) ` +
+        `[AI Router] ${taskType} → ${modelId} (${latencyMs}ms)` +
+          `${toolCalls?.length ? ` [${toolCalls.length} tool_calls]` : ""} ` +
           `[attempt ${i + 1}/${modelChain.length}]`
       );
 
       return {
         success: true,
-        content,
+        content: message.content ?? "",
         modelUsed: modelId!,
         latencyMs,
+        ...(toolCalls?.length ? { toolCalls } : {}),
       };
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
@@ -357,6 +504,100 @@ export async function callAIWithFallback(
     modelUsed: modelChain[modelChain.length - 1]!,
     latencyMs: Date.now() - startTime,
     error: `All ${modelChain.length} AI models failed:\n${errors.join("\n")}`,
+  };
+}
+
+// ─── Bucle agéntico (function calling con handlers reales) ──────────────────
+
+export interface AgentLoopOptions extends AIRequestOptions {
+  /**
+   * Handlers registrables por nombre de función. El modelo decide CUÁNDO
+   * llamarlos; el registro valida argumentos y ejecuta código real.
+   */
+  toolHandlers: Map<string, (args: unknown) => Promise<unknown>>;
+  /** Máximo de rondas herramienta→modelo (default 6; evita loops infinitos). */
+  maxIterations?: number;
+}
+
+export interface AgentLoopResult {
+  success: boolean;
+  content: string;
+  modelUsed?: string;
+  /** Trazabilidad: qué funciones invocó el modelo y cuántas veces. */
+  toolInvocations: Array<{ name: string; ok: boolean }>;
+  error?: string;
+}
+
+/**
+ * Bucle agéntico sobre callAIWithFallback: envía mensajes → si el modelo
+ * responde tool_calls, ejecuta los handlers del registro → anexa los
+ * resultados como mensajes role:"tool" → repite hasta respuesta final o
+ * agotar iteraciones. Compatible con la cadena de fallbacks completa.
+ */
+export async function callAIAgentLoop(options: AgentLoopOptions): Promise<AgentLoopResult> {
+  const { toolHandlers, maxIterations = 6, ...aiOptions } = options;
+  const conversation: Array<AIMessage | RawAssistantMessage | AIToolResultMessage> = [...aiOptions.messages];
+  const toolInvocations: AgentLoopResult["toolInvocations"] = [];
+  let lastModel: string | undefined;
+
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    const res = await callAIWithFallback({ ...aiOptions, messages: conversation as AIMessage[] });
+    if (!res.success) {
+      return { success: false, content: "", toolInvocations, modelUsed: lastModel, error: res.error };
+    }
+    lastModel = res.modelUsed;
+
+    // Respuesta final: texto sin más tool_calls
+    if (!res.toolCalls || res.toolCalls.length === 0) {
+      return { success: true, content: res.content, modelUsed: res.modelUsed, toolInvocations };
+    }
+
+    // Anexar el mensaje assistant con las tool_calls (formato OpenAI)
+    conversation.push({
+      role: "assistant",
+      content: res.content || null,
+      tool_calls: res.toolCalls.map((tc) => ({
+        id: tc.id,
+        function: { name: tc.name, arguments: tc.arguments },
+      })),
+    });
+
+    // Ejecutar cada handler y anexar su resultado
+    for (const tc of res.toolCalls) {
+      const handler = toolHandlers.get(tc.name);
+      let resultPayload: string;
+      if (!handler) {
+        resultPayload = JSON.stringify({ error: `Función desconocida: ${tc.name}` });
+        toolInvocations.push({ name: tc.name, ok: false });
+      } else {
+        try {
+          let args: unknown = {};
+          try { args = tc.arguments ? JSON.parse(tc.arguments) : {}; } catch { /* args vacíos */ }
+          const out = await handler(args);
+          resultPayload = JSON.stringify(out ?? { ok: true }).slice(0, 30_000);
+          toolInvocations.push({ name: tc.name, ok: true });
+        } catch (err) {
+          // El error se devuelve AL MODELO para que corrija los argumentos
+          resultPayload = JSON.stringify({
+            error: err instanceof Error ? err.message : String(err),
+          });
+          toolInvocations.push({ name: tc.name, ok: false });
+        }
+      }
+      conversation.push({
+        role: "tool",
+        tool_call_id: tc.id,
+        content: resultPayload,
+      } satisfies AIToolResultMessage);
+    }
+  }
+
+  return {
+    success: false,
+    content: "",
+    toolInvocations,
+    modelUsed: lastModel,
+    error: `Bucle agéntico agotó ${maxIterations} iteraciones sin respuesta final`,
   };
 }
 
@@ -449,6 +690,22 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
       "(clics, impresiones, posición, usuarios activos). El análisis " +
       "generativo potenciado por IA está deshabilitado.\n\n" +
       "**Para activarlo:** Configura `OPENROUTER_API_KEY` en tu servidor.\n" +
+      "Regístrate gratis en https://openrouter.ai/keys — sin tarjeta de crédito.",
+  },
+  "adversary-analysis": {
+    en:
+      "## ⚠️ Real Assessment — AI Analysis Disabled\n\n" +
+      "The OpenRouter API key (`OPENROUTER_API_KEY`) is not configured.\n" +
+      "Raw evidence was collected and stored; automated vulnerability\n" +
+      "classification is unavailable until the key is set.\n\n" +
+      "**To enable it:** Set `OPENROUTER_API_KEY` in your server environment.\n" +
+      "Sign up free at https://openrouter.ai/keys — no credit card needed.",
+    es:
+      "## ⚠️ Evaluación Real — Análisis IA Deshabilitado\n\n" +
+      "La clave de OpenRouter (`OPENROUTER_API_KEY`) no está configurada.\n" +
+      "La evidencia cruda fue recolectada y almacenada; la clasificación\n" +
+      "automática de vulnerabilidades no está disponible hasta configurarla.\n\n" +
+      "**Para activarla:** Configura `OPENROUTER_API_KEY` en tu servidor.\n" +
       "Regístrate gratis en https://openrouter.ai/keys — sin tarjeta de crédito.",
   },
 };
