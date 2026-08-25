@@ -65,14 +65,22 @@ const FREE_META_MODEL = "openrouter/free";
  * 2. On failure, try individual :free models in a task-optimized order.
  * 3. Keep trying remaining :free models in order until one works.
  *
- * Tested working :free models (live test 2026-08-24):
- *   - nvidia/nemotron-3-super-120b-a12b:free               (419ms, general)
- *   - nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free   (421ms, general)
- *   - google/gemma-4-26b-a4b-it:free                       (678ms, best instruction following)
+ * Tested working :free models (live test 2026-08-24, barrido completo del
+ * catálogo — ver scripts/test-free-models.mjs):
+ *   - nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free   (436ms, general)
+ *   - nvidia/nemotron-3-super-120b-a12b:free               (444ms, mejor calidad)
+ *   - nvidia/nemotron-3.5-lightning:free                   (459ms, nueva gen)
+ *   - nvidia/nemotron-3-ultra-550b-a55b:free               (480ms, 1M ctx)
+ *   - dots-studio/dots-3-note-preview:free                 (1178ms, general)
  *
  * Retirados del pool (verificados en live test 2026-08-24):
- *   - nvidia/nemotron-3-nano-30b-a3b:free  → 404, ya no disponible como :free
- *   - nvidia/nemotron-3-ultra-550b-a55b:free → timeout >15s constante
+ *   - nvidia/nemotron-3-nano-30b-a3b:free    → 404, ya no disponible como :free
+ *   - google/gemma-4-26b-a4b-it:free         → 429 upstream persistente
+ *   - google/gemma-4-31b-it:free             → 429 upstream persistente
+ *   - z-ai/glm-5.2:free                      → 429
+ *   - thinkingmachines/inkling(-small):free  → 403, solo agentic harnesses
+ *   - poolside/laguna-* / cohere/north-mini-code / liquid/lfm-2.5 → respuesta vacía
+ *   - nvidia/nemotron-3.5-content-safety:free → clasificador, no chat
  */
 /**
  * Task routing table — maps task types to ordered fallback model chains.
@@ -85,23 +93,23 @@ const FREE_META_MODEL = "openrouter/free";
 export const TASK_ROUTING: Record<AITaskType, string[]> = {
   "copilot-remediation": [
     FREE_META_MODEL,
-    "google/gemma-4-26b-a4b-it:free",
-    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "nvidia/nemotron-3.5-lightning:free",
+    "dots-studio/dots-3-note-preview:free",
   ],
   "incident-brief": [
     FREE_META_MODEL,
-    "google/gemma-4-26b-a4b-it:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
+    "nvidia/nemotron-3.5-lightning:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "dots-studio/dots-3-note-preview:free",
   ],
   "general-chat": [
     FREE_META_MODEL,
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "google/gemma-4-26b-a4b-it:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
+    "nvidia/nemotron-3.5-lightning:free",
   ],
   // Acotada a 2 modelos con timeout largo (ver MODEL_TIMEOUTS): un reporte
   // ejecutivo de 4096 tokens NO termina en 20s en modelos :free (verificado
@@ -109,7 +117,7 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
   // Peor caso 2×50s = 100s < maxDuration=120s en Vercel.
   "seo-report": [
     FREE_META_MODEL,
-    "google/gemma-4-26b-a4b-it:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
   ],
 };
 

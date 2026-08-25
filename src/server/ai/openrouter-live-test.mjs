@@ -54,11 +54,11 @@ const TEST_MESSAGE = {
 // cadenas de fallback por tarea). Mantener en sync al añadir/quitar modelos.
 const MODELS = [
   { id: 'openrouter/free', label: '🤖 Meta-model (openrouter/free)' },
-  { id: 'google/gemma-4-26b-a4b-it:free', label: '💎 Gemma 4 26B' },
-  { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', label: '🧠 Nemotron 3 Nano Omni' },
   { id: 'nvidia/nemotron-3-super-120b-a12b:free', label: '🧠 Nemotron 3 Super' },
+  { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', label: '🧠 Nemotron 3 Nano Omni' },
+  { id: 'nvidia/nemotron-3.5-lightning:free', label: '⚡ Nemotron 3.5 Lightning' },
   { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: '🧠 Nemotron 3 Ultra' },
-  { id: 'nvidia/nemotron-3-nano-30b-a3b:free', label: '🧠 Nemotron 3 Nano' },
+  { id: 'dots-studio/dots-3-note-preview:free', label: '📝 Dots 3 Note Preview' },
 ];
 
 async function testModel(modelId, timeoutMs = 15_000) {
