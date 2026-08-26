@@ -35,14 +35,20 @@ export async function executeMitreEvaluation(evaluationId: string): Promise<void
       .where(eq(mitreEvaluations.id, evaluationId));
 
     // ── 1. Fase de ejecución real ──
-    const run = await runMitreEvaluation(evaluation.target);
+    const run = await runMitreEvaluation(evaluation.target, ({ done, total, currentStep }) => {
+      directDb
+        .update(mitreEvaluations)
+        .set({ checksDone: done, checksTotal: total, currentStep, updatedAt: new Date() })
+        .where(eq(mitreEvaluations.id, evaluationId))
+        .catch(() => { /* progreso no bloqueante */ });
+    });
     if (!run.success || !run.evidence) {
       throw new Error(run.error ?? "El motor MITRE no devolvió evidencia");
     }
 
     await directDb
       .update(mitreEvaluations)
-      .set({ status: "analyzing", rawEvidence: run.evidence as unknown as Record<string, unknown>, updatedAt: new Date() })
+      .set({ status: "analyzing", currentStep: "análisis AI", rawEvidence: run.evidence as unknown as Record<string, unknown>, updatedAt: new Date() })
       .where(eq(mitreEvaluations.id, evaluationId));
 
     // ── 2. Fase AI por técnica ──

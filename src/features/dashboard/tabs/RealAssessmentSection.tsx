@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
+import { AssessmentProgressBar } from './AssessmentProgressBar';
 import {
   Radar, Loader2, AlertTriangle, ChevronDown, ShieldAlert,
   FileDown, CheckCircle2, XCircle, Clock, Zap
@@ -17,6 +18,8 @@ interface AssessmentRow {
   evidenceCount: number;
   checksTotal: number;
   checksPassed: number;
+  checksDone: number;
+  currentStep: string | null;
   analysisFailed: boolean;
   error: string | null;
   createdAt: string;
@@ -223,14 +226,20 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
 
       {/* ── Evaluación en curso ── */}
       {active && (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
-          <div className="flex items-center gap-2.5 mb-3">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3">
+          <div className="flex items-center gap-2.5">
             <Loader2 className="w-4 h-4 text-primary animate-spin" />
             <span className="text-xs font-bold text-primary uppercase tracking-widest">{t('assessmentActive')}</span>
           </div>
+          <AssessmentProgressBar
+            status={active.status}
+            checksDone={active.checksDone ?? 0}
+            checksTotal={active.checksTotal ?? 0}
+            currentStep={active.currentStep ?? null}
+          />
           <p className="text-2xs text-muted-fg">
-            Estado: <span className="font-bold text-foreground">{active.status === 'analyzing' ? t('analyzingAI') : active.status}</span>
-            {" · "}Target: <span className="font-mono">{active.target}</span>
+            {t('statusLabel')} <span className="font-bold text-foreground">{active.status}</span>
+            {" · "}{t('targetLabel')} <span className="font-mono">{active.target}</span>
           </p>
         </div>
       )}

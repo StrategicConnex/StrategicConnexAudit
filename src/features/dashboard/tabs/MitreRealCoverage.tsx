@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Target, Loader2, ChevronDown, ShieldAlert, ShieldCheck, BookOpen, Zap } from 'lucide-react';
+import { AssessmentProgressBar } from './AssessmentProgressBar';
 
 export type MitreVerdict = 'exposed' | 'not_exposed' | 'not_externally_testable' | 'error';
 
@@ -16,6 +17,9 @@ export interface MitreEvaluationRow {
   exposedCount: number;
   protectedCount: number;
   manualOnlyCount: number;
+  checksDone: number;
+  checksTotal: number;
+  currentStep: string | null;
   error: string | null;
   createdAt: string;
 }
@@ -171,9 +175,17 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
       )}
 
       {active && (
-        <div className="flex items-center gap-2 p-3 rounded-xl border border-primary/20 bg-primary/5">
-          <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-          <span className="text-2xs font-bold text-primary uppercase tracking-widest">{t('mitreRunning', { status: active.status })}</span>
+        <div className="p-3 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+            <span className="text-2xs font-bold text-primary uppercase tracking-widest">{t('mitreRunning', { status: active.status })}</span>
+          </div>
+          <AssessmentProgressBar
+            status={active.status}
+            checksDone={active.checksDone ?? 0}
+            checksTotal={active.checksTotal ?? 0}
+            currentStep={active.currentStep ?? null}
+          />
         </div>
       )}
 

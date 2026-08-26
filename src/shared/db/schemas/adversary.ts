@@ -158,6 +158,9 @@ export const adversaryAssessments = pgTable("adversary_assessments", {
   evidenceCount: integer("evidence_count").notNull().default(0),
   checksTotal: integer("checks_total").notNull().default(0),
   checksPassed: integer("checks_passed").notNull().default(0),
+  // Progreso en vivo (polling de la UI): check en curso y completados
+  currentStep: text("current_step"),
+  checksDone: integer("checks_done").notNull().default(0),
   rawEvidence: jsonb("raw_evidence").$type<Record<string, unknown>>(),
   analysisFailed: boolean("analysis_failed").notNull().default(false),
   error: text("error"),
@@ -203,6 +206,10 @@ export const mitreEvaluations = pgTable("mitre_evaluations", {
   exposedCount: integer("exposed_count").notNull().default(0),
   protectedCount: integer("protected_count").notNull().default(0),
   manualOnlyCount: integer("manual_only_count").notNull().default(0),
+  // Progreso en vivo (polling de la UI)
+  currentStep: text("current_step"),
+  checksDone: integer("checks_done").notNull().default(0),
+  checksTotal: integer("checks_total").notNull().default(0),
   rawEvidence: jsonb("raw_evidence").$type<Record<string, unknown>>(),
   error: text("error"),
   startedAt: timestamp("started_at", { withTimezone: true }),

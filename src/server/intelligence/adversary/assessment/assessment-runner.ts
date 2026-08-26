@@ -61,6 +61,8 @@ export interface RunAssessmentOptions {
   target: string;
   /** Inyectable para tests deterministas. */
   catalog?: CheckDefinition[];
+  /** Progreso en vivo: se invoca tras cada check completado. */
+  onProgress?: (info: { done: number; total: number; currentStep: string }) => Promise<void> | void;
 }
 
 export async function runRealAssessment(
@@ -91,9 +93,12 @@ export async function runRealAssessment(
 
   const catalog = options.catalog ?? ASSESSMENT_CATALOG;
   const results: CheckResult[] = [];
+  const total = catalog.length;
 
   for (let i = 0; i < catalog.length; i++) {
     const check = catalog[i]!;
+    // Progreso ANTES de ejecutar: la UI muestra el check en curso
+    await options.onProgress?.({ done: i, total, currentStep: check.name });
     if (i > 0) await delay(DELAY_BETWEEN_CHECKS_MS);
     try {
       const result = await Promise.race([
@@ -119,6 +124,8 @@ export async function runRealAssessment(
       });
     }
   }
+
+  await options.onProgress?.({ done: total, total, currentStep: "análisis AI" });
 
   return {
     success: true,

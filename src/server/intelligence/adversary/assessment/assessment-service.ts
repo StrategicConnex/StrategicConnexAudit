@@ -49,7 +49,18 @@ export async function executeAssessment(assessmentId: string): Promise<void> {
       .set({ status: "running", startedAt: new Date(), updatedAt: new Date() })
       .where(eq(adversaryAssessments.id, assessmentId));
 
-    const run = await runRealAssessment({ target: assessment.target });
+    const run = await runRealAssessment({
+      target: assessment.target,
+      // Progreso en vivo: la UI hace polling y lee current_step/checks_done.
+      // Fire-and-forget: un fallo de esta UPDATE jamás aborta la evaluación.
+      onProgress: ({ done, currentStep }) => {
+        directDb
+          .update(adversaryAssessments)
+          .set({ checksDone: done, currentStep, updatedAt: new Date() })
+          .where(eq(adversaryAssessments.id, assessmentId))
+          .catch(() => { /* progreso no bloqueante */ });
+      },
+    });
     if (!run.success || !run.evidence) {
       throw new Error(run.error ?? "El motor de evaluación no devolvió evidencia");
     }
@@ -58,6 +69,7 @@ export async function executeAssessment(assessmentId: string): Promise<void> {
       .update(adversaryAssessments)
       .set({
         status: "analyzing",
+        currentStep: "análisis AI",
         evidenceCount: run.evidence.checks.length,
         checksTotal: run.evidence.checks.length,
         checksPassed: run.evidence.checks.filter((c) => c.status === "pass").length,

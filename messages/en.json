@@ -493,6 +493,10 @@
     "realPrefixManual": "REAL: MANUAL",
     "solutions": "Solutions",
     "playbookTitle": "Internal validation playbook",
-    "pdfFullReport": "Full PDF report →"
+    "pdfFullReport": "Full PDF report →",
+    "progressChecksDone": "{done}/{total} checks completed",
+    "progressCurrent": "Running: {step}",
+    "progressAI": "Analyzing evidence with AI (may take 1-2 min)",
+    "progressStarting": "Starting assessment…"
   }
 }

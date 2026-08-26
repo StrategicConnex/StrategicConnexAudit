@@ -493,6 +493,10 @@
     "realPrefixManual": "REAL: MANUAL",
     "solutions": "Soluciones",
     "playbookTitle": "Playbook de validación interna",
-    "pdfFullReport": "Informe PDF completo →"
+    "pdfFullReport": "Informe PDF completo →",
+    "progressChecksDone": "{done}/{total} verificaciones completadas",
+    "progressCurrent": "En curso: {step}",
+    "progressAI": "Analizando evidencia con IA (puede tardar 1-2 min)",
+    "progressStarting": "Iniciando evaluación…"
   }
 }

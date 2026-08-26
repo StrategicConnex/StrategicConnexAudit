@@ -71,7 +71,8 @@ async function runCheck(ctx: CheckContext, plan: MitreTechniquePlan, checkId: st
 }
 
 export async function runMitreEvaluation(
-  target: string
+  target: string,
+  onProgress?: (info: { done: number; total: number; currentStep: string }) => Promise<void> | void
 ): Promise<{ success: boolean; evidence?: MitreBatchEvidence; error?: string }> {
   const startedAt = new Date();
   const host = extractTargetHost(target);
@@ -94,8 +95,14 @@ export async function runMitreEvaluation(
   const results: MitreTechniqueEvidence[] = [];
   // Cache por check id: varias técnicas comparten checks (no repetir requests)
   const checkCache = new Map<string, CheckResult>();
+  const total = plans.length;
+  let done = 0;
 
   for (const plan of plans) {
+    // Progreso ANTES de evaluar la técnica
+    await onProgress?.({ done, total, currentStep: `${plan.scenario.mitreId} ${plan.scenario.name}` });
+    done++;
+
     if (plan.notExternallyTestable) {
       results.push({
         mitreId: plan.scenario.mitreId,
