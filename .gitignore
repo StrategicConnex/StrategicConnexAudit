@@ -39,6 +39,7 @@ yarn-error.log*
 
 # dev logs & temp files
 next-dev.log
+dev-audit.log
 *.bak
 design-report.html
 

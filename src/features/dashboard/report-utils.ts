@@ -150,18 +150,14 @@ export function parseMarkdownReport(text: string): ParsedReport {
  * Extrae los bloques ```mermaid ... ``` del texto crudo del reporte para
  * renderizarlos como diagramas SVG con el componente MermaidBlock.
  * Devuelve un array de { code } en orden de aparición.
+ * Reutiliza parseMarkdown() (lib/rendering) como único fence-scanner para
+ * que ambos parsers no deriven.
  */
-// TODO(C01): unificar este fence-scanning con parseMarkdown() de
-// lib/rendering/markdown.ts para evitar que ambos parsers deriven.
 export function extractMermaidBlocks(text: string): { code: string }[] {
-  const blocks: { code: string }[] = [];
-  const regex = /```mermaid\s*\n([\s\S]*?)```/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(text)) !== null) {
-    const code = match[1]!.trim();
-    if (code) blocks.push({ code });
-  }
-  return blocks;
+  return parseMarkdown(text)
+    .filter((block) => block.type === "code" && block.language === "mermaid")
+    .map((block) => ({ code: (block.content ?? "").trim() }))
+    .filter((block) => block.code !== "");
 }
 
 /**
@@ -237,6 +233,7 @@ function parseNumericValue(value: string): number | null {
  */
 export { escapeHtml } from '@/shared/utils/html';
 import { escapeHtml } from '@/shared/utils/html';
+import { parseMarkdown } from '@/features/intelligence/lib/rendering/markdown';
 
 // ─── HTML Generator ───────────────────────────────────────────────────────────
 
