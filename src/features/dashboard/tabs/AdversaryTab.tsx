@@ -7,6 +7,7 @@ import {
   Terminal, ChevronDown, Clock, Activity, ArrowRight
 } from 'lucide-react';
 import { RealAssessmentSection } from './RealAssessmentSection';
+import { MitreRealCoverage, type MitreVerdict } from './MitreRealCoverage';
 
 interface ScenarioDef {
   mitreId: string;
@@ -55,6 +56,7 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
   const [reportingResult, setReportingResult] = useState(false);
   const [expandedScenario, setExpandedScenario] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [mitreVerdicts, setMitreVerdicts] = useState<Record<string, MitreVerdict>>({});
 
   const fetchScenarios = useCallback(async () => {
     if (!projectId) return;
@@ -224,6 +226,9 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
       {/* Evaluación Real (no destructiva + agente AI) — encima de las simulaciones */}
       <RealAssessmentSection projectId={projectId} />
 
+      {/* Cobertura MITRE real — veredicto por técnica + playbooks AI */}
+      <MitreRealCoverage projectId={projectId} onVerdicts={setMitreVerdicts} />
+
       {/* Run output */}
       {runOutput && (
         <div className="backdrop-blur-xl border border-chartreuse/20 bg-background rounded-2xl overflow-hidden">
@@ -309,6 +314,20 @@ export function AdversaryTab({ projectId, initialProjects = [], setSelectedProje
                     {scenario.severity === 'critical' ? '!!!' : scenario.severity === 'high' ? '!!' : scenario.severity === 'medium' ? '!' : '-'}
                     <span>{scenario.severity.charAt(0).toUpperCase() + scenario.severity.slice(1)}</span>
                   </span>
+                  {/* Veredicto REAL (evaluación MITRE) cuando existe */}
+                  {mitreVerdicts[scenario.mitreId] && (
+                    <span className={`text-2xs font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                      mitreVerdicts[scenario.mitreId] === 'exposed'
+                        ? 'text-destructive bg-destructive/10 border-destructive/20'
+                        : mitreVerdicts[scenario.mitreId] === 'not_exposed'
+                        ? 'text-chartreuse bg-chartreuse/10 border-chartreuse/20'
+                        : 'text-primary bg-primary/10 border-primary/20'
+                    }`}>
+                      {mitreVerdicts[scenario.mitreId] === 'exposed' ? 'REAL: EXPUESTA'
+                        : mitreVerdicts[scenario.mitreId] === 'not_exposed' ? 'REAL: PROTEGIDA'
+                        : 'REAL: MANUAL'}
+                    </span>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-2xs font-mono text-muted-fg bg-muted/10 px-1.5 py-0.5 rounded">{scenario.mitreId}</span>

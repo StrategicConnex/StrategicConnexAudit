@@ -5,6 +5,11 @@ import {
   getToolsByTactic,
   type MitreTechnique,
 } from "@/server/intelligence/mitre/mapping";
+import { createClient } from "@/shared/lib/supabase/server";
+import { withRLS } from "@/shared/db/rls";
+import { projects as projectsTable } from "@/shared/db/schemas";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { MitreRealSection, type MitreProjectOption } from "@/features/dashboard/MitreRealSection";
 
 // NOTE: intentionally NOT force-static — the CSP nonce (src/proxy.ts) requires
 // dynamic rendering so Next.js can apply the per-request nonce to inline scripts.
@@ -94,8 +99,32 @@ function MiniDonut({ value, max, color }: { value: number; max: number; color: s
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function MitreCoveragePage() {
+async function getUserProjects(): Promise<MitreProjectOption[]> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+    const rows = await withRLS(user.id, async (tx) =>
+      tx
+        .select({ id: projectsTable.id, name: projectsTable.name, domain: projectsTable.domain })
+        .from(projectsTable)
+        .where(
+          and(
+            eq(projectsTable.ownerId, user.id),
+            and(isNull(projectsTable.deletedAt), eq(projectsTable.isDeleted, false), eq(projectsTable.isHidden, false))
+          )
+        )
+        .orderBy(desc(projectsTable.createdAt))
+    );
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
+export default async function MitreCoveragePage() {
   const { coverage, tacticData, maxTools, allTechniques } = buildCoverageData();
+  const userProjects = await getUserProjects();
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
@@ -117,6 +146,16 @@ export default function MitreCoveragePage() {
       </header>
 
       <main id="main-content" tabIndex={-1} className="max-w-6xl mx-auto px-6 py-8 space-y-10">
+
+        {/* ═══════════════════════════════════════════════════════════════
+           Section 0: Cobertura REAL por proyecto (pruebas + agente AI)
+           ═══════════════════════════════════════════════════════════════ */}
+        {userProjects.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold text-foreground mb-3">Cobertura Real — pruebas automatizadas con IA</h2>
+            <MitreRealSection projects={userProjects} />
+          </section>
+        )}
 
         {/* ═══════════════════════════════════════════════════════════════
            Section 1: Global Summary (3 stat cards)

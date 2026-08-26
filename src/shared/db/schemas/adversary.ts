@@ -191,6 +191,47 @@ export const adversaryVulnerabilities = pgTable("adversary_vulnerabilities", {
   index("idx_adv_vulns_assessment_severity").on(t.assessmentId, t.severity),
 ]);
 
+// ─── Cobertura MITRE Real (batch por proyecto) ─────────────────────────────
+export const mitreEvaluations = pgTable("mitre_evaluations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+  status: text("status").notNull().default("pending"),
+  target: text("target").notNull(),
+  riskScore: integer("risk_score"),
+  summary: text("summary"),
+  modelUsed: text("model_used"),
+  exposedCount: integer("exposed_count").notNull().default(0),
+  protectedCount: integer("protected_count").notNull().default(0),
+  manualOnlyCount: integer("manual_only_count").notNull().default(0),
+  rawEvidence: jsonb("raw_evidence").$type<Record<string, unknown>>(),
+  error: text("error"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index("idx_mitre_eval_project_status").on(t.projectId, t.status),
+  index("idx_mitre_eval_project_created").on(t.projectId, t.createdAt),
+]);
+
+export const mitreTechniqueResults = pgTable("mitre_technique_results", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  evaluationId: uuid("evaluation_id").references(() => mitreEvaluations.id, { onDelete: "cascade" }).notNull(),
+  mitreId: text("mitre_id").notNull(),
+  tactic: text("tactic").notNull(),
+  techniqueName: text("technique_name").notNull(),
+  verdict: text("verdict").notNull(),
+  confidence: numeric("confidence", { precision: 3, scale: 2 }).notNull().default("0.80"),
+  evidence: jsonb("evidence").$type<Record<string, unknown>>(),
+  summary: text("summary"),
+  remediation: text("remediation").array().notNull().default([]),
+  playbook: text("playbook").array().notNull().default([]),
+  aiModel: text("ai_model"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index("idx_mitre_tech_results_evaluation").on(t.evaluationId, t.verdict),
+]);
+
 // ─── Tipos exportados ──────────────────────────────────────────────────────
 
 export type AdversaryScenario = typeof adversaryScenarios.$inferSelect;
@@ -205,3 +246,7 @@ export type AdversaryAssessment = typeof adversaryAssessments.$inferSelect;
 export type AdversaryAssessmentInsert = typeof adversaryAssessments.$inferInsert;
 export type AdversaryVulnerability = typeof adversaryVulnerabilities.$inferSelect;
 export type AdversaryVulnerabilityInsert = typeof adversaryVulnerabilities.$inferInsert;
+export type MitreEvaluation = typeof mitreEvaluations.$inferSelect;
+export type MitreEvaluationInsert = typeof mitreEvaluations.$inferInsert;
+export type MitreTechniqueResult = typeof mitreTechniqueResults.$inferSelect;
+export type MitreTechniqueResultInsert = typeof mitreTechniqueResults.$inferInsert;
