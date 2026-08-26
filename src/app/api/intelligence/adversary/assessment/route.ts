@@ -11,6 +11,7 @@ import { z } from "zod";
 import { tasks } from "@trigger.dev/sdk";
 import { runAdversaryAssessment } from "@/trigger/adversary-assessment.trigger";
 import { extractTargetHost } from "@/server/intelligence/adversary/sandbox-executor";
+import { failStaleAssessments } from "@/server/intelligence/adversary/assessment/assessment-service";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -138,6 +139,10 @@ export async function GET(req: NextRequest) {
     if (!project) {
       return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
     }
+
+    // Recovery: marca como failed las evaluaciones huérfanas (worker muerto)
+    // para que el polling no muestre una barra congelada indefinidamente.
+    await failStaleAssessments();
 
     if (assessmentId) {
       const [assessment] = await db

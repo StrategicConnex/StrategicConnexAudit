@@ -16,9 +16,50 @@ import {
 } from "@/shared/db/schemas/adversary";
 import { intelligenceFindings } from "@/shared/db/schemas/intelligence";
 import { projects } from "@/shared/db/schemas";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, lt } from "drizzle-orm";
 import { runRealAssessment } from "./assessment-runner";
 import { analyzeAssessment } from "./ai-analyst";
+
+/**
+ * Recovery: una fila `pending` sin worker (p.ej. Trigger.dev dev CLI caído)
+ * o un `running`/`analyzing` zombi bloquean la UI para siempre. El polling
+ * del runner refresca `updatedAt` en cada check, así que solo caducan filas
+ * realmente huérfanas.
+ */
+const PENDING_STALE_MS = 2 * 60 * 1000;
+const ACTIVE_STALE_MS = 15 * 60 * 1000;
+
+export async function failStaleAssessments(): Promise<void> {
+  const now = new Date();
+  try {
+    await directDb
+      .update(adversaryAssessments)
+      .set({
+        status: "failed",
+        error: "Timeout: la evaluación nunca inició (¿Trigger.dev worker activo?). Relanza la evaluación.",
+        completedAt: now,
+        updatedAt: now,
+      })
+      .where(and(
+        eq(adversaryAssessments.status, "pending"),
+        lt(adversaryAssessments.updatedAt, new Date(now.getTime() - PENDING_STALE_MS)),
+      ));
+    await directDb
+      .update(adversaryAssessments)
+      .set({
+        status: "failed",
+        error: "Timeout: la evaluación quedó sin progreso. Relánzala.",
+        completedAt: now,
+        updatedAt: now,
+      })
+      .where(and(
+        inArray(adversaryAssessments.status, ["running", "analyzing"]),
+        lt(adversaryAssessments.updatedAt, new Date(now.getTime() - ACTIVE_STALE_MS)),
+      ));
+  } catch (err) {
+    console.error("[assessment] failStaleAssessments falló (no bloqueante):", err instanceof Error ? err.message : err);
+  }
+}
 
 export async function executeAssessment(assessmentId: string): Promise<void> {
   const [assessment] = await directDb
