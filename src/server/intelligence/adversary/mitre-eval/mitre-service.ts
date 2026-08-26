@@ -4,7 +4,7 @@
  * pending → running (checks reales) → analyzing (agente AI) → completed
  */
 
-import { db, directDb } from "@/shared/db";
+import { directDb } from "@/shared/db";
 import { mitreEvaluations, mitreTechniqueResults } from "@/shared/db/schemas/adversary";
 import { projects } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
@@ -168,11 +168,20 @@ export async function executeMitreEvaluation(evaluationId: string): Promise<void
       })
       .where(eq(mitreEvaluations.id, evaluationId));
   } catch (err) {
+    // Sanitizado: nunca persistas el dump SQL de Drizzle crudo (se renderiza en la UI)
+    const raw = err instanceof Error ? err.message : String(err);
+    const cause = (err as { cause?: { message?: string; detail?: string } })?.cause;
+    const short = raw.startsWith("Failed query")
+      ? "Fallo de base de datos al persistir la evaluación MITRE"
+      : raw.slice(0, 300);
+    const errorText = cause?.message
+      ? `${short} | causa: ${cause.message.slice(0, 200)}${cause.detail ? ` (${cause.detail.slice(0, 120)})` : ""}`
+      : short;
     await directDb
       .update(mitreEvaluations)
       .set({
         status: "failed",
-        error: err instanceof Error ? err.message : String(err),
+        error: errorText,
         completedAt: new Date(),
         updatedAt: new Date(),
       })

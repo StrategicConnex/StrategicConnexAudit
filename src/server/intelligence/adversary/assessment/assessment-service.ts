@@ -9,7 +9,7 @@
  * [ADV-REAL] en intelligence_findings para visibilidad unificada.
  */
 
-import { db, directDb } from "@/shared/db";
+import { directDb } from "@/shared/db";
 import {
   adversaryAssessments,
   adversaryVulnerabilities,
@@ -106,26 +106,37 @@ export async function executeAssessment(assessmentId: string): Promise<void> {
         aiModel: analysis.modelUsed ?? null,
       });
 
-      // Réplica en findings unificados del dashboard
-      await db.insert(intelligenceFindings).values({
-        investigationId: null,
-        projectId: assessment.projectId,
-        severity: vuln.severity,
-        confidence: String(vuln.confidence),
-        title: `[ADV-REAL] ${vuln.title}`,
-        description: `${vuln.description}\n\nEvidencia: ${vuln.evidenceSummary}`,
-        recommendation: vuln.remediation.map((r, i) => `${i + 1}. ${r}`).join("\n"),
-        evidence: {
-          assessmentId,
-          cweId: vuln.cweId ?? null,
-          owaspCategory: vuln.owaspCategory ?? null,
-          mitreId: vuln.mitreId ?? null,
-          cvssScore: vuln.cvssScore,
-          references: vuln.references ?? [],
-          aiModel: analysis.modelUsed ?? null,
-        },
-        affectedAsset: assessment.target,
-      });
+      // Réplica en findings unificados del dashboard.
+      // SECURITY/robustez: usa directDb (conexión de servicio, bypass RLS) —
+      // es un job background sin request context; el pool RLS (`db`) depende
+      // de request.jwt.claims y falla en runtimes sin sesión (visto en prod).
+      // Además, la réplica NUNCA debe romper el assessment: los datos
+      // canónicos ya están en adversary_vulnerabilities.
+      try {
+        await directDb.insert(intelligenceFindings).values({
+          investigationId: null,
+          projectId: assessment.projectId,
+          severity: vuln.severity,
+          confidence: String(vuln.confidence),
+          title: `[ADV-REAL] ${vuln.title}`,
+          description: `${vuln.description}\n\nEvidencia: ${vuln.evidenceSummary}`,
+          recommendation: vuln.remediation.map((r, i) => `${i + 1}. ${r}`).join("\n"),
+          evidence: {
+            assessmentId,
+            cweId: vuln.cweId ?? null,
+            owaspCategory: vuln.owaspCategory ?? null,
+            mitreId: vuln.mitreId ?? null,
+            cvssScore: vuln.cvssScore,
+            references: vuln.references ?? [],
+            aiModel: analysis.modelUsed ?? null,
+          },
+          affectedAsset: assessment.target,
+        });
+      } catch (findingErr) {
+        // No bloqueante: log con causa pg para diagnóstico, sigue con el resto
+        const cause = (findingErr as { cause?: { message?: string } })?.cause?.message ?? "";
+        console.error("[assessment] réplica finding falló (no bloqueante):", cause || String(findingErr));
+      }
     }
 
     // 4. Cerrar con resumen ejecutivo
@@ -142,11 +153,21 @@ export async function executeAssessment(assessmentId: string): Promise<void> {
       })
       .where(eq(adversaryAssessments.id, assessmentId));
   } catch (err) {
+    // Sanitizado: nunca persistas el dump SQL de Drizzle crudo (se renderiza
+    // en la UI). Mensaje corto + causa pg real para diagnóstico.
+    const raw = err instanceof Error ? err.message : String(err);
+    const cause = (err as { cause?: { message?: string; detail?: string } })?.cause;
+    const short = raw.startsWith("Failed query")
+      ? "Fallo de base de datos al persistir la evaluación"
+      : raw.slice(0, 300);
+    const errorText = cause?.message
+      ? `${short} | causa: ${cause.message.slice(0, 200)}${cause.detail ? ` (${cause.detail.slice(0, 120)})` : ""}`
+      : short;
     await directDb
       .update(adversaryAssessments)
       .set({
         status: "failed",
-        error: err instanceof Error ? err.message : String(err),
+        error: errorText,
         completedAt: new Date(),
         updatedAt: new Date(),
       })
