@@ -9,6 +9,7 @@ import DeactivateButton from './components/DeactivateButton';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
 import { ExportCsvButton } from '@/features/dashboard/ExportCsvButton';
+import { RumIntegrationCard } from './components/RumIntegrationCard';
 import { computeVitalsAverages } from '@/shared/utils/rum';
 
 export const dynamic = 'force-dynamic';
@@ -122,6 +123,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         memory: log.memory && typeof log.memory === 'object' ? log.memory : null
       })));
 
+      // Stats de instalación RUM (verificación en vivo de la integración)
+      const rumStats = {
+        totalEvents: vitalsLogs.length,
+        lastEventAt: vitalsLogs[0]?.recordedAt?.toISOString() ?? null,
+        uniqueSessions: new Set(vitalsLogs.map(l => l.sessionId).filter(Boolean)).size,
+      };
+
       return {
         project,
         projectAudits,
@@ -130,6 +138,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         criticalIssuesCount,
         currentUptimeStatus,
         vitalsAverages,
+        rumStats,
         latestCompletedAudit
       };
     });
@@ -165,7 +174,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, currentUptimeStatus, vitalsAverages, latestCompletedAudit } = data;
+  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, currentUptimeStatus, vitalsAverages, rumStats, latestCompletedAudit } = data;
   
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans relative overflow-hidden">
@@ -323,27 +332,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               </div>
             </div>
             
-            <div className="mt-12 p-8 bg-surface-muted/60 rounded-2xl border border-border relative overflow-hidden">
-              <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 relative z-10">
-                <h3 className="text-2xs font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
-                  <Server className="w-4 h-4 text-accent-cyan" /> Integración RUM (Real User Monitoring)
-                </h3>
-                <Link href={`/scripts/vitals.js`} className="text-2xs font-bold text-accent-cyan hover:text-accent-cyan/80 transition-colors uppercase tracking-widest">Documentación Técnica →</Link>
-              </div>
-              <p className="text-sm text-muted-foreground mb-6 max-w-2xl leading-relaxed relative z-10">
-                Inserte este fragmento en el head de su sitio web para comenzar a capturar métricas de rendimiento reales de sus visitantes directamente en su consola de StrategicAudit Pro.
-              </p>
-              <div className="relative group overflow-hidden rounded-xl border border-border">
-                <code className="block text-xs font-mono bg-background text-foreground p-6 overflow-x-auto whitespace-pre leading-relaxed">
-{`<script 
-  src="${appUrl}/scripts/vitals.js" 
-  data-project-id="${project.id}" 
-  defer>
-</script>`}
-                </code>
-              </div>
-            </div>
+            <RumIntegrationCard
+              projectId={project.id}
+              appUrl={appUrl}
+              stats={rumStats}
+            />
           </section>
           
           {/* Sección de Reportes */}
