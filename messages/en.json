@@ -31,7 +31,11 @@
     "footerEnterprise": "Enterprise Grade",
     "footerBrand": "StrategicAudit Pro — Enterprise Cyber Intelligence",
     "loading": "Loading...",
-    "authCodeError": "Could not complete sign-in. The link may have expired or was already used. Please request a new one."
+    "authCodeError": "Could not complete sign-in. The link may have expired or was already used. Please request a new one.",
+    "passwordToggle": "Password sign-in",
+    "passwordPlaceholder": "Password",
+    "passwordVerifying": "Verifying…",
+    "passwordSubmit": "Sign in"
   },
   "sidebar": {
     "brand": "StrategicAudit",

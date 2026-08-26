@@ -31,7 +31,11 @@
     "footerEnterprise": "Enterprise Grade",
     "footerBrand": "StrategicAudit Pro — Enterprise Cyber Intelligence",
     "loading": "Cargando...",
-    "authCodeError": "No se pudo completar el inicio de sesión. El enlace puede haber expirado o ya fue utilizado. Solicita uno nuevo."
+    "authCodeError": "No se pudo completar el inicio de sesión. El enlace puede haber expirado o ya fue utilizado. Solicita uno nuevo.",
+    "passwordToggle": "Acceso con contraseña",
+    "passwordPlaceholder": "Contraseña",
+    "passwordVerifying": "Verificando…",
+    "passwordSubmit": "Iniciar sesión"
   },
   "sidebar": {
     "brand": "StrategicAudit",

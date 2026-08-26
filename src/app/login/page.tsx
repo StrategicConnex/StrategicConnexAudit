@@ -488,7 +488,7 @@ const handlePasswordLogin = async (e: React.FormEvent) => {
           className="w-full text-center text-2xs text-muted-fg/70 hover:text-muted-fg transition-colors uppercase tracking-widest font-bold"
           aria-expanded={showPasswordLogin}
         >
-          {showPasswordLogin ? '− ' : '+ '} Acceso con contraseña
+          {showPasswordLogin ? '− ' : '+ '} {t('passwordToggle')}
         </button>
 
         {showPasswordLogin && (
@@ -498,7 +498,7 @@ const handlePasswordLogin = async (e: React.FormEvent) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              placeholder="Contraseña"
+              placeholder={t('passwordPlaceholder')}
               className="block w-full px-4 py-2.5 bg-input/50 border border-border rounded-xl text-sm
                          focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/50
                          text-foreground placeholder:text-muted-fg/50 transition-colors"
@@ -510,7 +510,7 @@ const handlePasswordLogin = async (e: React.FormEvent) => {
                          border border-border hover:bg-secondary/30 disabled:opacity-50
                          disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Verificando…' : 'Iniciar sesión'}
+              {loading ? t('passwordVerifying') : t('passwordSubmit')}
             </button>
           </form>
         )}
