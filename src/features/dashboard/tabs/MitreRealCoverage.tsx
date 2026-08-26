@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { Target, Loader2, ChevronDown, ShieldAlert, ShieldCheck, BookOpen, Zap } from 'lucide-react';
 
 export type MitreVerdict = 'exposed' | 'not_exposed' | 'not_externally_testable' | 'error';
@@ -31,12 +32,22 @@ export interface MitreResultRow {
   playbook: string[];
 }
 
-const VERDICT_STYLE: Record<MitreVerdict, { label: string; cls: string }> = {
-  exposed: { label: 'EXPUESTA', cls: 'text-destructive bg-destructive/10 border-destructive/20' },
-  not_exposed: { label: 'PROTEGIDA', cls: 'text-chartreuse bg-chartreuse/10 border-chartreuse/20' },
-  not_externally_testable: { label: 'MANUAL', cls: 'text-primary bg-primary/10 border-primary/20' },
-  error: { label: 'SIN DATOS', cls: 'text-muted-fg bg-muted/10 border-border/50' },
+// Labels i18n resueltos en render (t) — solo clases aquí
+const VERDICT_CLS: Record<MitreVerdict, string> = {
+  exposed: 'text-destructive bg-destructive/10 border-destructive/20',
+  not_exposed: 'text-chartreuse bg-chartreuse/10 border-chartreuse/20',
+  not_externally_testable: 'text-primary bg-primary/10 border-primary/20',
+  error: 'text-muted-fg bg-muted/10 border-border/50',
 };
+
+function verdictLabel(verdict: MitreVerdict, t: ReturnType<typeof useTranslations>): string {
+  switch (verdict) {
+    case 'exposed': return t('verdictExposed');
+    case 'not_exposed': return t('verdictProtected');
+    case 'not_externally_testable': return t('verdictManual');
+    default: return t('verdictNoData');
+  }
+}
 
 interface Props {
   projectId: string;
@@ -45,6 +56,7 @@ interface Props {
 }
 
 export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
+  const t = useTranslations('adversaryReal');
   const [authorized, setAuthorized] = useState(false);
   const [evaluations, setEvaluations] = useState<MitreEvaluationRow[]>([]);
   const [selected, setSelected] = useState<{ evaluation: MitreEvaluationRow; results: MitreResultRow[] } | null>(null);
@@ -116,7 +128,7 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
         setSelected(null);
         await fetchState();
       } else {
-        setError(data.error ?? 'Error al lanzar la evaluación MITRE');
+        setError(data.error ?? t('networkError'));
       }
     } catch {
       setError('Error de conexión');
@@ -133,18 +145,17 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
         <div>
           <h4 className="text-sm font-extrabold text-foreground flex items-center gap-2">
             <Target className="w-4 h-4 text-destructive" />
-            Cobertura MITRE Real
+            {t('mitreTitle')}
           </h4>
           <p className="text-2xs text-muted-fg mt-1 max-w-xl leading-relaxed">
-            Cada técnica del catálogo se prueba de verdad contra el dominio autorizado.
-            Las técnicas internas reciben un playbook AI de validación para tu SIEM/EDR.
+            {t('mitreDesc')}
           </p>
         </div>
         {!active && (
           <button onClick={launch} disabled={launching || !authorized}
-            title={authorized ? undefined : 'Requiere autorización de evaluación activa'}
+            title={authorized ? undefined : t('needConsentTitle')}
             className="flex items-center gap-2 bg-foreground text-background font-bold text-2xs uppercase tracking-widest px-4 py-2 rounded-xl cursor-pointer active:scale-95 disabled:opacity-40 transition-all shrink-0">
-            {launching ? <><Loader2 className="w-3 h-3 animate-spin" /> Lanzando…</> : <><Zap className="w-3 h-3" /> Evaluar técnicas</>}
+            {launching ? <><Loader2 className="w-3 h-3 animate-spin" /> {t('launching')}</> : <><Zap className="w-3 h-3" /> {t('mitreLaunch')}</>}
           </button>
         )}
       </div>
@@ -155,14 +166,14 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
 
       {!authorized && !active && evaluations.length === 0 && (
         <p className="text-2xs text-muted-fg p-3 rounded-lg border border-border/50 bg-muted/5">
-          Activa la autorización de evaluación activa (sección superior) para ejecutar pruebas MITRE reales.
+          {t('needConsent')}
         </p>
       )}
 
       {active && (
         <div className="flex items-center gap-2 p-3 rounded-xl border border-primary/20 bg-primary/5">
           <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-          <span className="text-2xs font-bold text-primary uppercase tracking-widest">Evaluando técnicas — estado: {active.status}</span>
+          <span className="text-2xs font-bold text-primary uppercase tracking-widest">{t('mitreRunning', { status: active.status })}</span>
         </div>
       )}
 
@@ -186,9 +197,9 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
         <div className="space-y-3">
           {selected.evaluation.summary && (
             <div className="grid grid-cols-3 gap-2 mb-2">
-              <Stat n={selected.evaluation.exposedCount} label="Expuestas" tone="destructive" />
-              <Stat n={selected.evaluation.protectedCount} label="Protegidas" tone="chartreuse" />
-              <Stat n={selected.evaluation.manualOnlyCount} label="Solo manual" tone="primary" />
+              <Stat n={selected.evaluation.exposedCount} label={t("statExposed")} tone="destructive" />
+              <Stat n={selected.evaluation.protectedCount} label={t("statProtected")} tone="chartreuse" />
+              <Stat n={selected.evaluation.manualOnlyCount} label={t("statManual")} tone="primary" />
             </div>
           )}
           {selected.evaluation.summary && (
@@ -202,7 +213,7 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
 
           <div className="space-y-1.5">
             {selected.results.map((r) => {
-              const style = VERDICT_STYLE[r.verdict];
+              const style = { label: verdictLabel(r.verdict, t), cls: VERDICT_CLS[r.verdict] };
               const open = expandedResult === r.id;
               const hasDetail = r.remediation.length > 0 || r.playbook.length > 0 || r.summary;
               return (
@@ -221,7 +232,7 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
                       {r.summary && <p className="text-2xs text-foreground/75 leading-relaxed">{r.summary}</p>}
                       {r.remediation.length > 0 && (
                         <div>
-                          <span className="text-2xs font-bold text-chartreuse uppercase tracking-widest block mb-1">Soluciones</span>
+                          <span className="text-2xs font-bold text-chartreuse uppercase tracking-widest block mb-1">{t('solutions')}</span>
                           <ol className="space-y-0.5">
                             {r.remediation.map((s, i) => (
                               <li key={i} className="text-2xs text-foreground/70 flex gap-1.5"><span className="text-chartreuse font-bold">{i + 1}.</span>{s}</li>
@@ -232,7 +243,7 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
                       {r.playbook.length > 0 && (
                         <div className="rounded-lg bg-primary/5 border border-primary/10 p-2.5">
                           <span className="text-2xs font-bold text-primary uppercase tracking-widest flex items-center gap-1 mb-1">
-                            <BookOpen className="w-3 h-3" /> Playbook de validación interna
+                            <BookOpen className="w-3 h-3" /> {t('playbookTitle')}
                           </span>
                           <ol className="space-y-1">
                             {r.playbook.map((s, i) => (
@@ -244,7 +255,7 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
                       <a href={`/api/intelligence/adversary/mitre/report/pdf?projectId=${projectId}&evaluationId=${selected.evaluation.id}`}
                         target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-2xs text-primary hover:underline">
-                        Informe PDF completo →
+                        {t('pdfFullReport')}
                       </a>
                     </div>
                   )}

@@ -149,10 +149,10 @@ export default async function MitreCoveragePage() {
 
         {/* ═══════════════════════════════════════════════════════════════
            Section 0: Cobertura REAL por proyecto (pruebas + agente AI)
+           El heading vive dentro del wrapper cliente (i18n).
            ═══════════════════════════════════════════════════════════════ */}
         {userProjects.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-foreground mb-3">Cobertura Real — pruebas automatizadas con IA</h2>
             <MitreRealSection projects={userProjects} />
           </section>
         )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Radar, Loader2, AlertTriangle, ChevronDown, ShieldAlert,
   FileDown, CheckCircle2, XCircle, Clock, Zap
@@ -44,6 +45,7 @@ const SEV_COLORS: Record<string, string> = {
 };
 
 export function RealAssessmentSection({ projectId }: { projectId: string }) {
+  const t = useTranslations('adversaryReal');
   const [authorized, setAuthorized] = useState<boolean>(false);
   const [domain, setDomain] = useState<string>('');
   const [assessments, setAssessments] = useState<AssessmentRow[]>([]);
@@ -60,7 +62,7 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
       const res = await fetch(`/api/intelligence/adversary/assessment?projectId=${projectId}`);
       const data = await res.json();
       if (!data.success) {
-        setError(data.error ?? 'Error al cargar evaluaciones');
+        setError(data.error ?? t('loadError'));
         return;
       }
       setAuthorized(data.authorized === true);
@@ -145,7 +147,7 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
         setSelected(null);
         await fetchState(false);
       } else {
-        setError(data.error ?? 'Error al lanzar la evaluación');
+        setError(data.error ?? t('networkError'));
       }
     } catch {
       setError('Error de conexión');
@@ -162,7 +164,7 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
     return (
       <div className="glass-card p-8 flex items-center justify-center">
         <Loader2 className="w-5 h-5 text-primary animate-spin" />
-        <span className="ml-3 text-xs text-muted-fg">Cargando evaluación real…</span>
+        <span className="ml-3 text-xs text-muted-fg">{t('loading')}</span>
       </div>
     );
   }
@@ -174,15 +176,13 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
         <div>
           <h3 className="text-base font-extrabold text-foreground tracking-tight flex items-center gap-2.5">
             <Radar className="w-5 h-5 text-primary" />
-            Evaluación Real de Seguridad
+            {t('assessmentTitle')}
           </h3>
           <p className="text-2xs text-muted-fg mt-1 max-w-2xl leading-relaxed">
-            Pruebas NO destructivas contra <span className="font-mono text-primary">{domain}</span>:
-            TLS, cabeceras, archivos expuestos, SQLi/XSS con payloads únicos y más.
-            Un agente AI analiza la evidencia y genera el informe con remediación.
+            {t('assessmentDesc', { domain: domain || '—' })}
             {domain && (
               <>
-                {' '}· <a href={`/api/intelligence/adversary/report/pdf?projectId=${projectId}`} className="text-primary hover:underline">Descargar PDF</a>
+                {' '}· <a href={`/api/intelligence/adversary/report/pdf?projectId=${projectId}`} className="text-primary hover:underline">{t('downloadPdf')}</a>
               </>
             )}
           </p>
@@ -190,7 +190,7 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
         {!active && authorized && (
           <button onClick={launch} disabled={launching}
             className="flex items-center gap-2 bg-primary text-primary-foreground font-bold text-2xs uppercase tracking-widest px-5 py-2.5 rounded-xl cursor-pointer active:scale-95 disabled:opacity-50 transition-all shrink-0">
-            {launching ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Lanzando…</> : <><Zap className="w-3.5 h-3.5" /> Ejecutar evaluación</>}
+            {launching ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('launching')}</> : <><Zap className="w-3.5 h-3.5" /> {t('launch')}</>}
           </button>
         )}
       </div>
@@ -208,8 +208,8 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
             className="mt-0.5 w-4 h-4 accent-[var(--primary)] cursor-pointer"
           />
           <span className="text-2xs text-foreground/70 leading-relaxed">
-            <strong className={authorized ? 'text-chartreuse' : 'text-foreground'}>Autorizo pruebas activas no destructivas</strong>{' '}
-            contra este dominio por mi cuenta o de mi organización. Sin esta autorización, solo se ejecuta análisis pasivo.
+            <strong className={authorized ? 'text-chartreuse' : 'text-foreground'}>{t('consentStrong')}</strong>{' '}
+            {t('consentRest')}
           </span>
         </div>
       </label>
@@ -226,10 +226,10 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
         <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
           <div className="flex items-center gap-2.5 mb-3">
             <Loader2 className="w-4 h-4 text-primary animate-spin" />
-            <span className="text-xs font-bold text-primary uppercase tracking-widest">Evaluación en curso</span>
+            <span className="text-xs font-bold text-primary uppercase tracking-widest">{t('assessmentActive')}</span>
           </div>
           <p className="text-2xs text-muted-fg">
-            Estado: <span className="font-bold text-foreground">{active.status === 'analyzing' ? 'Analizando evidencia con IA' : active.status}</span>
+            Estado: <span className="font-bold text-foreground">{active.status === 'analyzing' ? t('analyzingAI') : active.status}</span>
             {" · "}Target: <span className="font-mono">{active.target}</span>
           </p>
         </div>
@@ -256,11 +256,11 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
           {selected && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatBox label="Riesgo" value={selected.assessment.riskScore !== null ? `${selected.assessment.riskScore}/100` : '—'}
+                <StatBox label={t("statRisk")} value={selected.assessment.riskScore !== null ? `${selected.assessment.riskScore}/100` : '—'}
                   tone={selected.assessment.riskScore !== null && selected.assessment.riskScore >= 60 ? 'destructive' : selected.assessment.riskScore !== null && selected.assessment.riskScore >= 30 ? 'warning' : 'chartreuse'} />
-                <StatBox label="Checks" value={`${selected.assessment.checksPassed}/${selected.assessment.checksTotal}`} tone="primary" />
-                <StatBox label="Vulnerabilidades" value={String(selected.vulnerabilities.length)} tone="destructive" />
-                <StatBox label="Modelo AI" value={selected.assessment.modelUsed ?? (selected.assessment.analysisFailed ? 'falló' : '—')} tone="muted" small />
+                <StatBox label={t("statChecks")} value={`${selected.assessment.checksPassed}/${selected.assessment.checksTotal}`} tone="primary" />
+                <StatBox label={t("statVulns")} value={String(selected.vulnerabilities.length)} tone="destructive" />
+                <StatBox label={t("statModel")} value={selected.assessment.modelUsed ?? (selected.assessment.analysisFailed ? t("modelFailed") : '—')} tone="muted" small />
               </div>
 
               {selected.assessment.summary && (
@@ -335,13 +335,13 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
               {selected.vulnerabilities.length === 0 && !selected.assessment.analysisFailed && selected.assessment.status === 'completed' && (
                 <div className="flex items-center gap-2 p-4 rounded-xl border border-chartreuse/20 bg-chartreuse/5 text-2xs text-chartreuse font-bold">
                   <CheckCircle2 className="w-4 h-4" />
-                  Sin vulnerabilidades confirmadas en esta evaluación.
+                  {t('noVulns')}
                 </div>
               )}
               {selected.assessment.analysisFailed && (
                 <div className="flex items-center gap-2 p-4 rounded-xl border border-border/50 bg-muted/5 text-2xs text-muted-fg">
                   <XCircle className="w-4 h-4" />
-                  El agente AI no pudo analizar la evidencia. Los datos crudos quedaron registrados en la base de datos.
+                  {t('analysisFailed')}
                 </div>
               )}
             </div>
@@ -352,7 +352,7 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
       {!active && assessments.length === 0 && (
         <div className="flex items-center gap-2 p-4 rounded-xl border border-border/50 bg-muted/5 text-2xs text-muted-fg">
           <Clock className="w-4 h-4" />
-          Aún no hay evaluaciones reales para este proyecto.
+          {t('noAssessments')}
         </div>
       )}
     </div>

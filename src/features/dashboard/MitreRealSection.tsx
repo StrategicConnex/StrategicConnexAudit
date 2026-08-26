@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { MitreRealCoverage } from '@/features/dashboard/tabs/MitreRealCoverage';
 
 export interface MitreProjectOption {
@@ -14,20 +15,22 @@ export interface MitreProjectOption {
  * selector de proyecto + motor MITRE real compartido con el tab Adversario.
  */
 export function MitreRealSection({ projects }: { projects: MitreProjectOption[] }) {
+  const t = useTranslations('adversaryReal');
   const [selectedId, setSelectedId] = useState(projects[0]?.id ?? '');
 
   if (projects.length === 0) {
     return (
       <div className="glass-card p-6 text-xs text-muted-fg">
-        Inicia sesión y crea un proyecto para ejecutar evaluaciones MITRE reales sobre tu dominio.
+        {t('emptyProjects')}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      <h2 className="text-sm font-semibold text-foreground">{t('realHeading')}</h2>
       <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Proyecto:</label>
+        <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{t('projectLabel')}</label>
         <select
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
