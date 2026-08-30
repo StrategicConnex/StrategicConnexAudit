@@ -1,5 +1,6 @@
 'use server';
 
+import { logger } from "@/lib/logger";
 import { ActionState, authenticatedAction } from "@/shared/lib/actions";
 import { z } from "zod";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
@@ -55,7 +56,7 @@ export const triggerAudit = authenticatedAction(
 );
 
 async function runLocalAudit(projectId: string, auditId: string, userId: string) {
-  console.log(`[LocalAudit] Iniciando ${auditId}`);
+  logger.info("LocalAudit iniciando", { auditId });
   try {
     const [audit] = await directDb.update(audits)
       .set({ status: "running", startedAt: new Date() })
@@ -69,7 +70,7 @@ async function runLocalAudit(projectId: string, auditId: string, userId: string)
 
     const targetUrl = normalizeUrl(project.domain);
     const analysis = await analyzeUrl(targetUrl);
-    console.log(`[LocalAudit] Status: ${analysis.statusCode}`);
+    logger.info("LocalAudit status", { auditId, statusCode: analysis.statusCode });
 
     await directDb.insert(crawlResults).values({
       auditId, url: targetUrl,
@@ -102,13 +103,13 @@ async function runLocalAudit(projectId: string, auditId: string, userId: string)
     if (issuesToInsert.length > 0) await directDb.insert(issues).values(issuesToInsert);
 
     await directDb.update(audits).set({ status: "completed", completedAt: new Date() }).where(eq(audits.id, auditId));
-    console.log(`[LocalAudit] ${auditId} completada.`);
+    logger.info("LocalAudit completada", { auditId });
   } catch (err: unknown) {
     const auditErr = err as { message?: string };
-    console.error(`[LocalAudit] Error ${auditId}:`, auditErr);
+    logger.error("LocalAudit error", { auditId, error: auditErr });
     try {
       await directDb.update(audits).set({ status: "failed", errorMessage: auditErr.message || "Error", completedAt: new Date() }).where(eq(audits.id, auditId));
-    } catch (dbErr) { console.error("[LocalAudit] Fallback error:", dbErr); }
+    } catch (dbErr) { logger.error("LocalAudit fallback error", { error: dbErr }); }
   }
 }
 
@@ -166,9 +167,9 @@ export const startAuditAction = async (data: z.infer<typeof AuditSchema>): Promi
       return { data: { success: true, auditId: result.data.auditId } };
     } catch (triggerError: unknown) {
       const te = triggerError as { message?: string };
-      console.warn("[Audit] Trigger.dev no disponible, usando fallback local:", te?.message);
+      logger.warn("Trigger.dev no disponible, usando fallback local", { error: te?.message });
       runLocalAudit(result.data.projectId!, result.data.auditId!, result.data.userId!)
-        .catch((e: unknown) => console.error("[Audit] Fallback error:", e));
+        .catch((e: unknown) => logger.error("Audit fallback error", { error: e }));
       return { data: { success: true, auditId: result.data.auditId } };
     }
   }

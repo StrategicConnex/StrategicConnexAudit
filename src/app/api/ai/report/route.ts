@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from "@/lib/logger";
 import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets } from '@/shared/db/schemas';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
@@ -161,7 +162,7 @@ export const POST = withRateLimit(
       }
 
       // Fallback to resilient pre-compiled report when AI is unavailable
-      console.warn('AI Router fallback: generando reporte resiliente.');
+      logger.warn('AI Router fallback: generando reporte resiliente');
       const fallbackReport = generateResilientReport(project, {
         totalClicks, totalImpressions, avgCtr, avgPosition,
         totalActiveUsers, totalConversions, avgEngagementRate,
@@ -170,7 +171,7 @@ export const POST = withRateLimit(
       return NextResponse.json({ success: true, report: fallbackReport, isFallback: true });
 
     } catch (error) {
-      console.error('Error en el endpoint de reportes por IA:', error);
+      logger.error('Error en el endpoint de reportes por IA', { error });
 
       return NextResponse.json({
         success: true,

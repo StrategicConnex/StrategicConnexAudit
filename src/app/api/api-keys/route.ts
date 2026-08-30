@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from "@/lib/logger";
 import { createClient } from '@/shared/lib/supabase/server';
 import {
   createApiKey,
@@ -29,7 +30,7 @@ export async function GET(_req: NextRequest) {
       keys,
     });
   } catch (error: unknown) {
-    console.error('GET /api/api-keys failure:', error);
+    logger.error('GET /api/api-keys failure', { error });
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
       message: 'Save this key now — it will not be shown again.',
     });
   } catch (error: unknown) {
-    console.error('POST /api/api-keys failure:', error);
+    logger.error('POST /api/api-keys failure', { error });
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -116,7 +117,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'API key revoked' });
   } catch (error: unknown) {
-    console.error('DELETE /api/api-keys failure:', error);
+    logger.error('DELETE /api/api-keys failure', { error });
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

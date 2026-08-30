@@ -1,5 +1,6 @@
 'use server';
 
+import { logger } from "@/lib/logger";
 import { authenticatedAction } from "@/shared/lib/actions";
 import { z } from 'zod';
 import { projects, users } from '@/shared/db/schemas';
@@ -57,7 +58,7 @@ export const createProject = authenticatedAction(
       } catch (userSyncError) {
         // Fallo en sincronizacin de usuario (ej: tabla subscriptionPlans no existe en dev)
         // No bloquea la creacin del proyecto
-        console.warn("User sync fall (no bloquea):", userSyncError);
+        logger.warn("User sync fall (no bloquea)", { error: userSyncError });
       }
 
       // 2. Creacin del proyecto (Dispara el TRIGGER de cuotas en Postgres)
@@ -80,7 +81,7 @@ export const createProject = authenticatedAction(
         };
       }
 
-      console.error("Error al crear proyecto:", error);
+      logger.error("Error al crear proyecto", { error });
       throw error; // Dejamos que el logger de authenticatedAction capture el resto
     }
   }

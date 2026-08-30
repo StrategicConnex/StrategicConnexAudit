@@ -20,6 +20,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { envSecrets } from "@/shared/config/env-secrets";
 import { directDb } from "@/shared/db";
 import { aiHealthLogs } from "@/shared/db/schemas/health";
@@ -194,7 +195,7 @@ async function persistResult(result: HealthCheckResult, triggerSource: string): 
 
     return inserted?.id || null;
   } catch (err) {
-    console.error("[AI Healthcheck] Failed to persist result:", err instanceof Error ? err.message : err);
+    logger.error("AI Healthcheck: Failed to persist result", { error: err instanceof Error ? err.message : err });
     return null;
   }
 }
@@ -208,10 +209,7 @@ export async function GET(request: Request) {
     // 1. Auth check (timing-safe, fail-closed en producción sin CRON_SECRET)
     if (!isCronAuthorized(request)) {
       const hasSecret = !!process.env.CRON_SECRET;
-      console.error(
-        "[AI Healthcheck] Rechazada invocación no autorizada" +
-        (hasSecret ? "." : " — CRON_SECRET environment variable is not configured.")
-      );
+      logger.error("AI Healthcheck: Rechazada invocación no autorizada", { hasSecret });
       return NextResponse.json({
         success: false,
         error: hasSecret ? "Unauthorized" : "CRON_SECRET no configurado en el servidor",
@@ -305,10 +303,7 @@ export async function GET(request: Request) {
     }
 
     if (failedModels.length > 0) {
-      console.warn(
-        `[AI Healthcheck] ${failedModels.length}/${modelsTotal} models FAILED. ` +
-        `Events logged to security_audit_logs for SIEM detection.`
-      );
+      logger.warn("AI Healthcheck: Models FAILED", { failed: failedModels.length, total: modelsTotal });
     }
 
     return NextResponse.json({
@@ -321,7 +316,7 @@ export async function GET(request: Request) {
 
   } catch (error) {
     const err = error as { message?: string };
-    console.error("[AI Healthcheck] Fatal error:", error);
+    logger.error("AI Healthcheck: Fatal error", { error });
     return NextResponse.json({
       success: false,
       error: `AI Healthcheck error: ${err.message || "Unknown"}`,

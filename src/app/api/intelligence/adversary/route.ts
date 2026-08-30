@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/shared/lib/supabase/server";
 import { db, directDb } from "@/shared/db";
 import {
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    console.error("Error en GET /api/intelligence/adversary:", error);
+    logger.error("Error en GET /api/intelligence/adversary", { error });
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
       { status: 500 }
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest) {
       output: result.output,
     });
   } catch (error: unknown) {
-    console.error("Error en POST /api/intelligence/adversary:", error);
+    logger.error("Error en POST /api/intelligence/adversary", { error });
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
       { status: 500 }
@@ -238,7 +239,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    console.error("Error en PATCH /api/intelligence/adversary:", error);
+    logger.error("Error en PATCH /api/intelligence/adversary", { error });
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
       { status: 500 }

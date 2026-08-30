@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/shared/lib/supabase/server";
 import { db } from "@/shared/db";
 import {
@@ -79,15 +80,15 @@ export async function POST(req: NextRequest) {
         evaluationId: evaluation!.id,
       });
     } catch (err) {
-      console.warn("[mitre] Trigger.dev no disponible, fallback local:", err instanceof Error ? err.message : err);
+      logger.warn("mitre: Trigger.dev no disponible, fallback local", { error: err instanceof Error ? err.message : err });
       void import("@/server/intelligence/adversary/mitre-eval/mitre-service").then(({ executeMitreEvaluation }) =>
-        executeMitreEvaluation(evaluation!.id).catch((e) => console.error("[mitre] fallback error:", e))
+        executeMitreEvaluation(evaluation!.id).catch((e) => logger.error("mitre: fallback error", { error: e }))
       );
     }
 
     return NextResponse.json({ success: true, evaluationId: evaluation!.id });
   } catch (error: unknown) {
-    console.error("Error en POST mitre:", error);
+    logger.error("Error en POST mitre", { error });
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
@@ -139,7 +140,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, evaluations });
   } catch (error: unknown) {
-    console.error("Error en GET mitre:", error);
+    logger.error("Error en GET mitre", { error });
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }

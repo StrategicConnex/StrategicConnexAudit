@@ -415,7 +415,7 @@ export async function POST(req: NextRequest) {
             investigationId: invId,
             eventType: "error",
             message: `Error crítico de ejecución: ${msg}`,
-            payload: { error: error instanceof Error ? error.stack : error }
+            payload: { error: "Error interno del servidor" }
           });
         });
       } catch (dbErr) {
