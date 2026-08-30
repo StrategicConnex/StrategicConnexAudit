@@ -187,7 +187,7 @@ function DailyStatusChart({ daily }: { daily: DailyAggregate[] }) {
             stroke={colors.healthy}
             fill={colors.healthy}
             fillOpacity={0.2}
-            name="Healthy"
+            name="Saludable"
           />
           <Area
             type="monotone"
@@ -196,7 +196,7 @@ function DailyStatusChart({ daily }: { daily: DailyAggregate[] }) {
             stroke={colors.degraded}
             fill={colors.degraded}
             fillOpacity={0.2}
-            name="Degraded"
+            name="Degradado"
           />
           <Area
             type="monotone"
@@ -205,7 +205,7 @@ function DailyStatusChart({ daily }: { daily: DailyAggregate[] }) {
             stroke={colors.unhealthy}
             fill={colors.unhealthy}
             fillOpacity={0.2}
-            name="Unhealthy"
+            name="No Saludable"
           />
         </AreaChart>
       </ResponsiveContainer>

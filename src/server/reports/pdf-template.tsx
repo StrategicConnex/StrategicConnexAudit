@@ -359,7 +359,7 @@ function CoverPage({ data }: { data: PdfReportData }) {
       <View style={styles.coverLine} />
 
       <Text style={{ ...styles.coverScore, color: scoreClass }}>{score}</Text>
-      <Text style={styles.coverScoreLabel}>Security Score /100</Text>
+      <Text style={styles.coverScoreLabel}>Puntuación de Seguridad /100</Text>
 
       {/* Dots gauge */}
       <View style={styles.dotRow}>
@@ -375,12 +375,12 @@ function CoverPage({ data }: { data: PdfReportData }) {
         ))}
       </View>
 
-      <Text style={styles.coverDate}>Generated: {data.date}</Text>
+      <Text style={styles.coverDate}>Generado: {data.date}</Text>
 
       {data.branding?.agencyName ? (
         <Text style={styles.coverAgency}>Powered by {data.branding.agencyName}</Text>
       ) : (
-        <Text style={styles.coverAgency}>SCAUDIT · Enterprise Cyber Intelligence</Text>
+        <Text style={styles.coverAgency}>SCAUDIT · Inteligencia Ciber Empresarial</Text>
       )}
     </Page>
   );
@@ -396,7 +396,7 @@ function SectionPage({ section }: { section: PdfSection }) {
       <View style={styles.sectionDivider} />
 
       {section.score != null && (
-        <Text style={styles.sectionScore}>Score: {section.score}/100  ·  {section.totalFindings ?? section.findings.length} findings ({section.severeCount ?? 0} severe)</Text>
+        <Text style={styles.sectionScore}>Puntuación: {section.score}/100  ·  {section.totalFindings ?? section.findings.length} hallazgos ({section.severeCount ?? 0} severos)</Text>
       )}
 
       {section.summary && (
@@ -407,11 +407,11 @@ function SectionPage({ section }: { section: PdfSection }) {
       <View style={styles.metricsRow}>
         <View style={styles.metricCard}>
           <Text style={styles.metricValue}>{section.totalFindings ?? section.findings.length}</Text>
-          <Text style={styles.metricLabel}>Findings</Text>
+          <Text style={styles.metricLabel}>Hallazgos</Text>
         </View>
         <View style={styles.metricCard}>
           <Text style={{ ...styles.metricValue, color: THEME.destructive }}>{section.severeCount ?? 0}</Text>
-          <Text style={styles.metricLabel}>Critical/High</Text>
+          <Text style={styles.metricLabel}>Críticos/Altos</Text>
         </View>
         {section.score != null && (
           <View style={styles.metricCard}>
@@ -421,7 +421,7 @@ function SectionPage({ section }: { section: PdfSection }) {
             }}>
               {section.score}
             </Text>
-            <Text style={styles.metricLabel}>Score</Text>
+            <Text style={styles.metricLabel}>Puntuación</Text>
           </View>
         )}
       </View>
@@ -429,7 +429,7 @@ function SectionPage({ section }: { section: PdfSection }) {
       {/* Findings */}
       {(section.findings ?? []).length > 0 ? (
         <>
-          <Text style={{ ...styles.sectionTitle, fontSize: 12, marginTop: 8 }}>Detailed Findings</Text>
+          <Text style={{ ...styles.sectionTitle, fontSize: 12, marginTop: 8 }}>Hallazgos Detallados</Text>
           <View style={{ height: 1, backgroundColor: THEME.border, marginBottom: 10 }} />
 
           {section.findings.slice(0, 50).map((f, i) => (
@@ -459,7 +459,7 @@ function SectionPage({ section }: { section: PdfSection }) {
         </>
       ) : (
         <Text style={{ fontSize: 9, color: THEME.fgDim, textAlign: 'center', marginTop: 20 }}>
-          No findings were detected for this target.
+          No se detectaron hallazgos para este objetivo.
         </Text>
       )}
     </Page>
@@ -490,10 +490,10 @@ function AssetsPage({ section }: { section: PdfSection }) {
 
   return (
     <Page size="A4" style={styles.contentPage}>
-      <Text style={styles.sectionTitle}>Discovered Assets — {section.title}</Text>
+      <Text style={styles.sectionTitle}>Activos Descubiertos — {section.title}</Text>
       <View style={styles.sectionDivider} />
       <Text style={{ fontSize: 8, color: THEME.fgMuted, marginBottom: 14 }}>
-        {assets.length} assets discovered across {Object.keys(groups).length} categories.
+        {assets.length} activos descubiertos en {Object.keys(groups).length} categorías.
       </Text>
 
       {Object.entries(groups).map(([type, items]) => (
@@ -533,7 +533,7 @@ function AssetsPage({ section }: { section: PdfSection }) {
 
           {items.length > 30 && (
             <Text style={{ fontSize: 7, color: THEME.fgDim, textAlign: 'center', marginTop: 2 }}>
-              … and {items.length - 30} more {type.replace(/_/g, ' ')} assets
+              … y {items.length - 30} activos más de tipo {type.replace(/_/g, ' ')}
             </Text>
           )}
         </View>
@@ -552,18 +552,18 @@ function SummaryTablePage({ sections }: { sections: PdfSection[] }) {
 
   return (
     <Page size="A4" style={styles.contentPage}>
-      <Text style={styles.sectionTitle}>Consolidated Findings</Text>
+      <Text style={styles.sectionTitle}>Hallazgos Consolidados</Text>
       <View style={styles.sectionDivider} />
       <Text style={{ fontSize: 8, color: THEME.fgMuted, marginBottom: 12 }}>
-        All {allFindings.length} findings across {sections.length} categories.
+        Los {allFindings.length} hallazgos en {sections.length} categorías.
       </Text>
 
       <View style={styles.table}>
         <View style={styles.tableHeader}>
           <View style={{ flex: 0.5 }}><Text style={styles.tableHeaderCell}>Sev</Text></View>
-          <View style={{ flex: 2 }}><Text style={styles.tableHeaderCell}>Title</Text></View>
-          <View style={{ flex: 1.5 }}><Text style={styles.tableHeaderCell}>Asset</Text></View>
-          <View style={{ flex: 1.2 }}><Text style={styles.tableHeaderCell}>Section</Text></View>
+          <View style={{ flex: 2 }}><Text style={styles.tableHeaderCell}>Título</Text></View>
+          <View style={{ flex: 1.5 }}><Text style={styles.tableHeaderCell}>Activo</Text></View>
+          <View style={{ flex: 1.2 }}><Text style={styles.tableHeaderCell}>Sección</Text></View>
         </View>
 
         {allFindings.slice(0, 100).map((f, i) => (
@@ -692,17 +692,17 @@ function OverviewPage({ data }: { data: PdfReportData }) {
 
   return (
     <Page size="A4" style={styles.contentPage}>
-      <Text style={styles.sectionTitle}>Executive Overview</Text>
+      <Text style={styles.sectionTitle}>Resumen Ejecutivo</Text>
       <View style={styles.sectionDivider} />
       <Text style={{ fontSize: 9, color: THEME.fgMuted, marginBottom: 16, lineHeight: 1.5 }}>
-        Summary of {data.sections.length} investigations covering {allFindings.length} total findings.
+        Resumen de {data.sections.length} investigaciones con {allFindings.length} hallazgos en total.
       </Text>
 
       {/* Donut Chart Row */}
       {allFindings.length > 0 && (
         <View wrap={false} style={{ marginBottom: 20 }}>
           <Text style={{ fontSize: 11, fontWeight: 'bold', color: THEME.primaryLight, marginBottom: 10 }}>
-            Severity Distribution
+            Distribución por Severidad
           </Text>
           <SeverityDonutChart findings={allFindings} />
         </View>
@@ -712,7 +712,7 @@ function OverviewPage({ data }: { data: PdfReportData }) {
       {scoredSections.length > 0 && (
         <View wrap={false}>
           <Text style={{ fontSize: 11, fontWeight: 'bold', color: THEME.primaryLight, marginBottom: 10 }}>
-            Scores by Investigation
+            Puntuaciones por Investigación
           </Text>
 
           <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
@@ -782,15 +782,15 @@ function OverviewPage({ data }: { data: PdfReportData }) {
       <View style={{ flexDirection: 'row', gap: 16, marginTop: 20, justifyContent: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <View style={{ width: 8, height: 8, backgroundColor: THEME.destructive, borderRadius: 2 }} />
-          <Text style={{ fontSize: 7, color: THEME.fgDim }}>0-39 Weak</Text>
+          <Text style={{ fontSize: 7, color: THEME.fgDim }}>0-39 Débil</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <View style={{ width: 8, height: 8, backgroundColor: THEME.warning, borderRadius: 2 }} />
-          <Text style={{ fontSize: 7, color: THEME.fgDim }}>40-69 Fair</Text>
+          <Text style={{ fontSize: 7, color: THEME.fgDim }}>40-69 Regular</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <View style={{ width: 8, height: 8, backgroundColor: THEME.chartreuse, borderRadius: 2 }} />
-          <Text style={{ fontSize: 7, color: THEME.fgDim }}>70-100 Good</Text>
+          <Text style={{ fontSize: 7, color: THEME.fgDim }}>70-100 Bueno</Text>
         </View>
       </View>
     </Page>
@@ -829,9 +829,9 @@ export function PdfReport({ data }: { data: PdfReportData }) {
 
   return (
     <Document
-      title={`Security Report - ${data.projectName}`}
+      title={`Informe de Seguridad - ${data.projectName}`}
       author={data.branding?.agencyName || 'SCAUDIT'}
-      subject={`Infrastructure Security Assessment for ${data.projectDomain}`}
+      subject={`Evaluación de Seguridad de Infraestructura para ${data.projectDomain}`}
     >
       {pages}
     </Document>
