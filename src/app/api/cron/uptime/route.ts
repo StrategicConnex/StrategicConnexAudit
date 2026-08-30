@@ -15,9 +15,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Get all active projects
+    // 2. Get active projects with pagination (max 100 per batch)
+    const PAGE_SIZE = 100;
     const activeProjects = await db.query.projects.findMany({
       where: and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)),
+      limit: PAGE_SIZE,
+      orderBy: [projects.createdAt],
     });
 
     if (activeProjects.length === 0) {

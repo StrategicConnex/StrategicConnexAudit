@@ -27,11 +27,13 @@ export async function GET(req: NextRequest) {
     // (aísla multi-tenant: el usuario solo puede leer proyectos que le pertenecen)
     const { assets, findings } = await withRLS(user.id, async (tx) => {
       const assets = await tx.query.intelligenceAssets.findMany({
-        where: eq(intelligenceAssets.projectId, projectId)
+        where: eq(intelligenceAssets.projectId, projectId),
+        limit: 500,
       });
 
       const findings = await tx.query.intelligenceFindings.findMany({
-        where: eq(intelligenceFindings.projectId, projectId)
+        where: eq(intelligenceFindings.projectId, projectId),
+        limit: 500,
       });
 
       return { assets, findings };

@@ -4,109 +4,13 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Globe, FileSearch, Siren, ShieldAlert } from "lucide-react";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { logger } from "@/lib/logger";
+import type { AuditLogEntry, ApiResponse, SiemAlertEntry, SiemAlertsApiResponse, Tab } from "./types";
+import { EVENT_LABELS, formatDate, timeAgo, truncate } from "./helpers";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
-type SecurityEventType =
-  | "rate_limit_hit"
-  | "open_redirect_attempt"
-  | "csp_violation"
-  | "auth_failure"
-  | "auth_success"
-  | "rate_limit_bypass"
-  | "invalid_input";
 
-interface AuditLogEntry {
-  id: string;
-  eventType: SecurityEventType;
-  ip: string;
-  userId: string | null;
-  path: string;
-  method: string;
-  userAgent: string | null;
-  metadata: Record<string, unknown>;
-  createdAt: string;
-}
 
-interface ApiResponse {
-  success: boolean;
-  logs: AuditLogEntry[];
-  total: number;
-  limit: number;
-  offset: number;
-  eventTypes: string[];
-  error?: string;
-}
-
-// ─── SIEM Alert Log Types (tabla independiente) ───────────────────────────────
-
-interface SiemAlertEntry {
-  id: string;
-  ruleEventType: string;
-  ip: string;
-  severity: string;
-  label: string;
-  count: number;
-  windowMinutes: number;
-  target: string;
-  status: "success" | "failed";
-  responseCode: number | null;
-  errorMessage: string | null;
-  metadata: Record<string, unknown>;
-  detectedAt: string;
-  createdAt: string;
-}
-
-interface SiemAlertsApiResponse {
-  success: boolean;
-  alerts: SiemAlertEntry[];
-  total: number;
-  limit: number;
-  offset: number;
-  ruleTypes: string[];
-  severities: string[];
-  breakdown: { success: number; failed: number };
-  error?: string;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const EVENT_LABELS: Record<string, { label: string; color: string; icon: string }> = {
-  rate_limit_hit:       { label: "Rate Limit Hit",        color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10",        icon: "⚠" },
-  open_redirect_attempt:{ label: "Open Redirect Attempt", color: "text-destructive border-destructive/30 bg-destructive/10",              icon: "↗" },
-  csp_violation:        { label: "CSP Violation",         color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10",     icon: "🔒" },
-  auth_failure:         { label: "Auth Failure",          color: "text-destructive border-destructive/30 bg-destructive/10",           icon: "✗" },
-  auth_success:         { label: "Auth Success",          color: "text-chartreuse border-chartreuse/30 bg-chartreuse/10",  icon: "✓" },
-  rate_limit_bypass:    { label: "Rate Limit Bypass",     color: "text-accent-purple border-accent-purple/30 bg-accent-purple/10",     icon: "⚡" },
-  invalid_input:        { label: "Invalid Input",         color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10",    icon: "⛔" },
-};
-
-function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString("es-ES", {
-      day: "2-digit", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit", second: "2-digit",
-    });
-  } catch { return iso; }
-}
-
-function timeAgo(iso: string): string {
-  try {
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "ahora";
-    if (mins < 60) return `hace ${mins}m`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `hace ${hrs}h`;
-    const days = Math.floor(hrs / 24);
-    return `hace ${days}d`;
-  } catch { return ""; }
-}
-
-function truncate(s: string, max: number): string {
-  return s.length > max ? s.slice(0, max) + "…" : s;
-}
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
 
@@ -281,8 +185,6 @@ function StatsBar({ logs, total }: { logs: AuditLogEntry[]; total: number }) {
     </div>
   );
 }
-
-type Tab = "events" | "siem" | "whois" | "dns";
 
 // ─── Tab Header ────────────────────────────────────────────────────────────────
 
