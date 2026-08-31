@@ -3,6 +3,7 @@
 import { Download, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { logger } from "@/lib/logger";
 
 export function ExportPdfButton({ targetElementId }: { targetElementId: string }) {
   const [isExporting, setIsExporting] = useState(false);
@@ -26,7 +27,7 @@ export function ExportPdfButton({ targetElementId }: { targetElementId: string }
         alert('Hubo un error al generar el PDF. Por favor intenta de nuevo.');
       }
     } catch (e) {
-      console.error(e);
+      logger.error("Error al exportar PDF", { error: e instanceof Error ? e.message : String(e) });
       alert('Error al exportar.');
     } finally {
       setIsExporting(false);

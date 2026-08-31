@@ -12,6 +12,7 @@ import { projects } from "@/shared/db/schemas";
 import { ADVERSARY_CATALOG } from "@/server/intelligence/adversary/catalog";
 import { runScenario } from "@/server/intelligence/adversary/scenario-runner";
 import { and, eq, isNull } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 
 const SCHEDULED_SCENARIOS = [
   "T1078.001",
@@ -25,14 +26,14 @@ export const periodicAdversarySimulation = schedules.task({
   id: "periodic-adversary-simulation",
   cron: "0 */6 * * *",
   run: async (payload) => {
-    console.log(`[AdversaryTrigger] Starting: ${payload.timestamp}`);
+    logger.info(`[AdversaryTrigger] Starting: ${payload.timestamp}`);
 
     const activeProjects = await db
       .select()
       .from(projects)
       .where(and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)));
 
-    console.log(`[AdversaryTrigger] ${activeProjects.length} active projects.`);
+    logger.info(`[AdversaryTrigger] ${activeProjects.length} active projects.`);
 
     type Summary = {
       projectId: string;
@@ -60,7 +61,7 @@ export const periodicAdversarySimulation = schedules.task({
           // de forma segura dentro del sandbox (allowlist + egress-guard).
           if (def.executorType === "manual") continue;
 
-          console.log(`[AdversaryTrigger] Running ${mitreId} for ${project.domain}`);
+          logger.info(`[AdversaryTrigger] Running ${mitreId} for ${project.domain}`);
 
           const result = await runScenario({
             scenarioMitreId: mitreId,
@@ -88,7 +89,7 @@ export const periodicAdversarySimulation = schedules.task({
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[AdversaryTrigger] Error in ${project.name}: ${msg}`);
+        logger.error(`[AdversaryTrigger] Error in ${project.name}: ${msg}`);
         summaries.push({
           projectId: project.id,
           domain: project.domain,
@@ -107,7 +108,7 @@ export const periodicAdversarySimulation = schedules.task({
     const errors = summaries.filter((r) => r.error);
     const successCount = summaries.length - errors.length;
 
-    console.log(
+    logger.info(
       `[AdversaryTrigger] Done: ${successCount}/${activeProjects.length} OK, ` +
       `${totalRun} scenarios (${totalPassed} passed, ${totalFailed} failed), ${errors.length} errors.`
     );

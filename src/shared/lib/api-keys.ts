@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { eq, and } from 'drizzle-orm';
 import { directDb } from '@/shared/db';
 import { developerApiKeys } from '@/shared/db/schemas';
+import { logger } from "@/lib/logger";
 
 const KEY_PREFIX = 'sa_live_';
 const KEY_BYTES = 32;
@@ -113,7 +114,7 @@ export async function authenticateApiKey(req: {
       },
     };
   } catch (err) {
-    console.error('[api-keys] authenticate error:', err);
+    logger.error('[api-keys] authenticate error:', err);
     return { authenticated: false, userId: null, error: 'Internal auth error' };
   }
 }
@@ -140,7 +141,7 @@ export async function createApiKey(
       },
     };
   } catch (err) {
-    console.error('[api-keys] create error:', err);
+    logger.error('[api-keys] create error:', err);
     return { error: 'Failed to create API key' };
   }
 }

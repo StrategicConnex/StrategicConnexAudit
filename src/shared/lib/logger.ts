@@ -3,6 +3,7 @@ import 'server-only';
 import { directDb } from "@/shared/db";
 import { auditLogs } from "@/shared/db/schemas";
 import { headers } from "next/headers";
+import { logger as consoleLogger } from "@/lib/logger";
 
 type LogLevel = 'info' | 'warn' | 'error' | 'security';
 
@@ -36,7 +37,7 @@ export const logger = {
       ? options.error.message 
       : (typeof options.error === 'string' ? options.error : undefined);
 
-    console.log(`[${timestamp}] ${icon} [${level.toUpperCase()}] ${options.action}`, {
+    consoleLogger.info(`[${timestamp}] ${icon} [${level.toUpperCase()}] ${options.action}`, {
       projectId: options.projectId,
       userId: options.userId,
       metadata: options.metadata,
@@ -69,7 +70,7 @@ export const logger = {
           userAgent: ua
         });
       } catch (logError) {
-        console.error("🚨 FALLO CRITICO AL GUARDAR AUDIT LOG:", logError);
+        consoleLogger.error("🚨 FALLO CRITICO AL GUARDAR AUDIT LOG:", { error: logError instanceof Error ? logError.message : String(logError) });
       }
     }
   },

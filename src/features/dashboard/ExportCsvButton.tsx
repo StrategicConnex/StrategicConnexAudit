@@ -3,6 +3,7 @@
 import { FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { logger } from "@/lib/logger";
 
 interface ExportCsvButtonProps {
   projectId: string;
@@ -27,7 +28,7 @@ export function ExportCsvButton({ projectId }: ExportCsvButtonProps) {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (e) {
-      console.error(e);
+      logger.error("Error al exportar CSV", { error: e instanceof Error ? e.message : String(e) });
       alert('Error al exportar CSV. Asegúrate de tener palabras clave configuradas.');
     } finally {
       setIsExporting(false);

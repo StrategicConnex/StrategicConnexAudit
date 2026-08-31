@@ -6,6 +6,8 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { withRLS } from "@/shared/db/rls";
 import { checkIntelScanRateLimit } from "@/shared/lib/ratelimit";
 import { runDiscovery } from "@/server/intelligence/discovery/orchestrator";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +81,7 @@ export async function GET(req: NextRequest) {
       project: assets.project,
     });
   } catch (err: unknown) {
-    console.error("Error fetching discovered assets:", err);
+    logger.error("Error fetching discovered assets:", { error: getErrorMessage(err) })
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
       { status: 500 }
@@ -175,7 +177,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    console.error("Error running discovery:", err);
+    logger.error("Error running discovery:", { error: getErrorMessage(err) })
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
       { status: 500 }

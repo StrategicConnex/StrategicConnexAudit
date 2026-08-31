@@ -303,7 +303,7 @@ export async function GET(request: Request) {
     }
 
     if (failedModels.length > 0) {
-      logger.warn("AI Healthcheck: Models FAILED", { failed: failedModels.length, total: modelsTotal });
+      logger.warn("AI Healthcheck: Models FAILED", { message: { failed: failedModels.length, total: modelsTotal } })
     }
 
     return NextResponse.json({

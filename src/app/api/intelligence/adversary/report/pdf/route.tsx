@@ -11,6 +11,7 @@ import {
   adversaryVulnerabilities,
 } from '@/shared/db/schemas';
 import { and, desc, eq } from 'drizzle-orm';
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -243,7 +244,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    console.error('Error generando PDF de adversario:', error);
+    logger.error('Error generando PDF de adversario:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

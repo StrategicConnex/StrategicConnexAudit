@@ -18,6 +18,7 @@
 import { logSecurityEvent } from "@/shared/lib/audit-log";
 import { WEBHOOK_FORMATTERS, persistDelivery, type SiemPattern } from "@/server/security/siem-exporter";
 import type { WhoisChange } from "@/server/intelligence/history/types";
+import { logger } from "@/lib/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -151,8 +152,8 @@ async function sendWhoisAlerts(
  *
  * Uso típico (fire-and-forget desde el executor):
  *   sendWhoisChangeAlerts(domain, changes)
- *     .then(result => console.log(`Alertas enviadas: ${result.alertsSent}`))
- *     .catch(err => console.error(err))
+ *     .then(result => logger.info(`Alertas enviadas: ${result.alertsSent}`))
+ *     .catch(err => logger.error(err))
  *
  * @param domain  - El dominio donde se detectaron los cambios
  * @param changes - Lista de cambios detectados por persistWhoisSnapshot()
@@ -177,7 +178,7 @@ export async function sendWhoisChangeAlerts(
 
   if (changes.length === 0) return result;
 
-  console.log(`[WHOIS Change Alert] ${changes.length} cambio(s) en ${domain}: ${changes.map((c) => `${c.label} (${c.severity})`).join(", ")}`);
+  logger.info(`[WHOIS Change Alert] ${changes.length} cambio(s) en ${domain}: ${changes.map((c) => `${c.label} (${c.severity})`).join(", ")}`);
 
   try {
     // Log each change to security audit trail
@@ -206,11 +207,11 @@ export async function sendWhoisChangeAlerts(
     result.alertsFailed = failed;
     result.errors.push(...sendErrors);
 
-    console.log(`[WHOIS Change Alert] Enviadas: ${sent}, Fallidas: ${failed} para ${domain}`);
+    logger.info(`[WHOIS Change Alert] Enviadas: ${sent}, Fallidas: ${failed} para ${domain}`);
   } catch (err: unknown) {
     const wErr = err as { message?: string };
     result.errors.push(`WHOIS change alert error: ${wErr.message || String(err)}`);
-    console.error(`[WHOIS Change Alert] Error:`, wErr.message || err);
+    logger.error(`[WHOIS Change Alert] Error:`, wErr.message || err);
   }
 
   return result;

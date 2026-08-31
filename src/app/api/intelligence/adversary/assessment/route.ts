@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (triggerErr) {
       // Fallback local (dev / Trigger.dev caído): ejecuta en background del proceso
-      logger.warn("assessment: Trigger.dev no disponible, fallback local", { error: triggerErr instanceof Error ? triggerErr.message : triggerErr });
+      logger.warn("assessment: Trigger.dev no disponible, fallback local", { message: { error: triggerErr instanceof Error ? triggerErr.message : triggerErr } })
       void import("@/server/intelligence/adversary/assessment/assessment-service").then(({ executeAssessment }) =>
         executeAssessment(assessment!.id).catch((e) => logger.error("assessment: fallback error", { error: e }))
       );

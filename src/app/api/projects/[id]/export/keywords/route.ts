@@ -3,6 +3,7 @@ import { keywordTargets, rankHistory } from '@/shared/db/schemas';
 import { eq, desc } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -86,7 +87,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Export CSV Error:', error);
+    logger.error('Export CSV Error:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

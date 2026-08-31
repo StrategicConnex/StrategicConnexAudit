@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
+import { logger } from "@/lib/logger";
 
 /**
  * RegisterServiceWorker — Registra el Service Worker al montar la app.
@@ -11,7 +12,7 @@ export function RegisterServiceWorker() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js', { scope: '/' })
         .then((reg) => {
-          console.log('[SW] Registered:', reg.scope);
+          logger.info('[SW] Registered:', reg.scope);
 
           // Solicitar permiso push si no fue denegado
           if ('PushManager' in window && Notification.permission === 'default') {
@@ -19,7 +20,7 @@ export function RegisterServiceWorker() {
           }
         })
         .catch((err) => {
-          console.warn('[SW] Registration failed:', err);
+          logger.warn('[SW] Registration failed:', err);
         });
     }
   }, []);

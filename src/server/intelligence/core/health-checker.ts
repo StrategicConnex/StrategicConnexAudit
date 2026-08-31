@@ -7,7 +7,7 @@
  */
 
 import { geoipCircuit, whoisCircuit, premiumApiCircuit, CircuitBreaker } from "./circuit-breaker";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 
 export type HealthStatus = "healthy" | "degraded" | "down";
@@ -86,12 +86,12 @@ class ExternalApiHealthChecker {
   start(): void {
     if (this.running) return;
     this.running = true;
-    console.log("[HealthChecker] Starting...");
+    logger.info("[HealthChecker] Starting...");
     this.runAllChecks();
     for (const c of cfg) {
       this.ids.push(setInterval(() => c.id === "dns" ? this.checkDns() : this.checkEP(c), c.checkIntervalMs));
     }
-    console.log("[HealthChecker] Active for " + cfg.length + " services.");
+    logger.info("[HealthChecker] Active for " + cfg.length + " services.");
   }
 
   stop(): void {
@@ -223,17 +223,13 @@ class ExternalApiHealthChecker {
         detectedAt: new Date().toISOString()
       });
       if (e.status === "down" || (e.status === "degraded" && prev === "healthy")) {
-        logger.security({
-          action: "EXTERNAL_API_DEGRADATION:" + c.id,
-          metadata: {
-            api: c.id, apiName: c.name,
-            previousStatus: prev, newStatus: e.status,
-            message: e.message, latencyMs: lat,
-            consecutiveFailures: e.consecutiveFailures,
-            circuitState: cs, endpoint: ep
-          }
-        }).catch(() => {});
-        console.warn("[HealthChecker] Degradation: " + c.name + " (" + prev + " -> " + e.status + ")");
+        logger.warn(`[SECURITY] EXTERNAL_API_DEGRADATION:${c.id} — ${c.name} ${prev} -> ${e.status}: ${e.message}`, {
+          api: c.id, apiName: c.name,
+          previousStatus: prev, newStatus: e.status,
+          latencyMs: lat, consecutiveFailures: e.consecutiveFailures,
+          circuitState: cs, endpoint: ep
+        });
+        logger.warn("[HealthChecker] Degradation: " + c.name + " (" + prev + " -> " + e.status + ")");
       }
     }
 

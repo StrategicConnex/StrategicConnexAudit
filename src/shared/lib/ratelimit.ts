@@ -2,6 +2,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 import { logSecurityEvent } from "./audit-log";
+import { logger } from "@/lib/logger";
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Redis Client (lazy, proxied para evitar eager instantiation en build)
@@ -288,7 +289,7 @@ function checkRateLimitInMemory(identifier: string, config: RateLimitConfig): Ra
  */
 async function checkRateLimitInternal(identifier: string, config: RateLimitConfig): Promise<RateLimitResult> {
   if (!process.env.UPSTASH_REDIS_REST_URL) {
-    console.warn(`[RateLimit] UPSTASH_REDIS_REST_URL no configurado. Usando fallback en memoria para ${config.prefix}.`);
+    logger.warn(`[RateLimit] UPSTASH_REDIS_REST_URL no configurado. Usando fallback en memoria para ${config.prefix}.`);
     return checkRateLimitInMemory(identifier, config);
   }
 
@@ -314,7 +315,7 @@ async function checkRateLimitInternal(identifier: string, config: RateLimitConfi
     }
   } catch (err) {
     // Redis unreachable — degradación graciosa, nunca 429 masivos
-    console.error(`[RateLimit] Redis unreachable for ${config.prefix}. Usando fallback en memoria.`, err);
+    logger.error(`[RateLimit] Redis unreachable for ${config.prefix}. Usando fallback en memoria.`, err);
     return checkRateLimitInMemory(identifier, config);
   }
 }
@@ -352,14 +353,12 @@ async function checkRateLimitInternal(identifier: string, config: RateLimitConfi
  *     }
  *   );
  */
-/* eslint-disable @typescript-eslint/no-explicit-any -- handler args are forwarded dynamically */
 export function withRateLimit<T extends Request = Request>(
   config: RateLimitConfig,
-  handler: (req: T, identifier: string, ...args: any[]) => Promise<Response>
-): (req: T, ...args: any[]) => Promise<Response> {
-  return async (req: T, ...args: any[]): Promise<Response> => {
+  handler: (req: T, identifier: string, ...args: unknown[]) => Promise<Response>
+): (req: T, ...args: unknown[]) => Promise<Response> {
+  return async (req: T, ...args: unknown[]): Promise<Response> => {
     try {
-/* eslint-enable @typescript-eslint/no-explicit-any */
       let identifier: string;
       // Extraer IP siempre (antes de auth para rate_limit_hit log)
       const requestIp = extractClientIp(req);
@@ -417,7 +416,7 @@ export function withRateLimit<T extends Request = Request>(
         headers: newHeaders,
       });
     } catch (error) {
-      console.error(`[withRateLimit:${config.prefix}] Error:`, error);
+      logger.error(`[withRateLimit:${config.prefix}] Error:`, error);
       return NextResponse.json(
         { error: "Error interno del servidor" },
         { status: 500 }

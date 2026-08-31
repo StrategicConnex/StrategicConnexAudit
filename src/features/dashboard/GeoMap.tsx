@@ -4,6 +4,7 @@ import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { MapPin } from 'lucide-react';
 import type { Map as LeafletMap } from 'leaflet';
 import type { Investigation } from './tabs/intelligence/types';
+import { logger } from "@/lib/logger";
 
 interface GeoLocation {
   lat: number;
@@ -272,7 +273,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
 
         mapInstanceRef.current = map;
       } catch (err) {
-        console.error('[GeoMap] Failed to initialize Leaflet:', err);
+        logger.error('[GeoMap] Failed to initialize Leaflet:', err);
       }
     };
 

@@ -77,6 +77,7 @@ import { whoisFullExecutor } from "../executors/whois-executors";
 import { tlsAdvancedExecutor } from "../executors/tls-advanced";
 import { subdomainTakeoverExecutor } from "../executors/subdomain-takeover";
 import { cveLookupExecutor } from "../executors/cve-lookup";
+import { logger } from "@/lib/logger";
 
 // ─── Single Source of Truth: pares executor + definition ────────────────────
 // El campo `executor` de cada definition se deriva de executor.id en init.
@@ -177,7 +178,7 @@ export function isKnownTool(toolId: string): toolId is ToolId {
  */
 export function registerTool(reg: ToolRegistration): void {
   if (isKnownTool(reg.definition.id)) {
-    console.warn(`[ToolRegistry] Se ignora registro dinámico que colisiona con tool nativo: ${reg.definition.id}`);
+    logger.warn(`[ToolRegistry] Se ignora registro dinámico que colisiona con tool nativo: ${reg.definition.id}`);
     return;
   }
   pluginExecutorRegistry.set(reg.definition.id, reg.executor);

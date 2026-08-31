@@ -9,6 +9,8 @@ import { db } from "@/shared/db";
 import { sql } from "drizzle-orm";
 import { anomalyDetections } from "@/shared/db/schemas/anomaly";
 import type { AnomalyMetricType, AnomalySeverity } from "@/shared/db/schemas/anomaly";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 const Z_INFO = 2;
 const Z_WARN = 3;
@@ -98,7 +100,7 @@ export async function persistAnomaly(
 
     return record?.id ?? null;
   } catch (err) {
-    console.error("[AnomalyDetector] Error persisting anomaly:", err);
+    logger.error("[AnomalyDetector] Error persisting anomaly:", { error: getErrorMessage(err) });
     return null;
   }
 }

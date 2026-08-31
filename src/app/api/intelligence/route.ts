@@ -19,6 +19,7 @@ import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
 import { Finding } from "@/server/intelligence/types/executor.types";
 import { buildResultMap, getPrimaryIp, buildScanResponse, buildScanMetadata } from "@/server/intelligence/core/scan-response";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +69,8 @@ export async function GET(req: NextRequest) {
         }
 
         const rawFindings = await tx.query.intelligenceFindings.findMany({
-          where: eq(intelligenceFindings.investigationId, investigationId)
+          where: eq(intelligenceFindings.investigationId, investigationId),
+          limit: 500
         });
 
         // Extract toolId from evidence._toolId stored during POST
@@ -79,11 +81,13 @@ export async function GET(req: NextRequest) {
 
         const events = await tx.query.intelligenceRunEvents.findMany({
           where: eq(intelligenceRunEvents.investigationId, investigationId),
-          orderBy: [desc(intelligenceRunEvents.createdAt)]
+          orderBy: [desc(intelligenceRunEvents.createdAt)],
+          limit: 500
         });
 
         const assets = await tx.query.intelligenceAssets.findMany({
-          where: eq(intelligenceAssets.investigationId, investigationId)
+          where: eq(intelligenceAssets.investigationId, investigationId),
+          limit: 100
         });
 
         return {
@@ -99,7 +103,8 @@ export async function GET(req: NextRequest) {
 
       const list = await tx.query.intelligenceInvestigations.findMany({
         where: eq(intelligenceInvestigations.projectId, projectId),
-        orderBy: [desc(intelligenceInvestigations.createdAt)]
+        orderBy: [desc(intelligenceInvestigations.createdAt)],
+        limit: 50
       });
 
       return {
@@ -117,7 +122,7 @@ export async function GET(req: NextRequest) {
       success: true,
       ...result.data
     });    } catch (error: unknown) {
-    console.error("GET intelligence failure:", error);
+    logger.error("GET intelligence failure:", { error: getErrorMessage(error) });
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor"
@@ -188,7 +193,7 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    console.log(`[Orchestrator] Iniciando auditoría integral modularizada para: ${normalizedTarget}`);
+    logger.info(`[Orchestrator] Iniciando auditoría integral modularizada para: ${normalizedTarget}`);
 
     // 5. Registrar la investigación con status "running"
     const investigation = await withRLS(user.id, async (tx) => {
@@ -396,7 +401,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: unknown) {
     const msg = getErrorMessage(error);
-    console.error("[Orchestrator Failure] Diagnostic engine execution failure:", error);
+    logger.error("[Orchestrator Failure] Diagnostic engine execution failure:", { error: msg });
 
     // Tratamiento resiliente ante fallos de ejecución: marcar como fallido
     if (createdInvestigationId && loggedInUserId) {
@@ -419,7 +424,7 @@ export async function POST(req: NextRequest) {
           });
         });
       } catch (dbErr) {
-        console.error("Failed to update failed state in DB:", dbErr);
+        logger.error("Failed to update failed state in DB:", { error: getErrorMessage(dbErr) });
       }
     }
 

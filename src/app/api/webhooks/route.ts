@@ -9,6 +9,8 @@ import { eq, and } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import crypto from "crypto";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +97,7 @@ export async function GET(req: NextRequest) {
       success: true,
       ...result.data
     });    } catch (error: unknown) {
-    console.error("GET webhooks route failure:", error);
+    logger.error("GET webhooks route failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor"
@@ -166,7 +168,7 @@ export async function POST(req: NextRequest) {
       success: true,
       ...result.data
     });    } catch (error: unknown) {
-    console.error("POST webhooks route failure:", error);
+    logger.error("POST webhooks route failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor"
@@ -219,7 +221,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({
       success: true
     });    } catch (error: unknown) {
-    console.error("DELETE webhooks route failure:", error);
+    logger.error("DELETE webhooks route failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor"

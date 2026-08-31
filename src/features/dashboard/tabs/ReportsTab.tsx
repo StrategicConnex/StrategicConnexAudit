@@ -9,6 +9,7 @@ import { parseMarkdownReport, extractMermaidBlocks, tableRowsToChartData } from 
 import { MermaidBlock } from '@/features/dashboard/MermaidBlock';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { ProjectRow } from '@/shared/db/types';
+import { logger } from "@/lib/logger";
 
 interface AIReportState {
   isGenerating: boolean;
@@ -104,7 +105,7 @@ export function ReportsTab({
                   alert(result.error);
                 }
               } catch (e) {
-                console.error(e);
+                logger.error("Error al exportar CSV", { error: e instanceof Error ? e.message : String(e) });
                 alert(t('csvError'));
               }
             }}

@@ -8,6 +8,8 @@ import {
 import { eq } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -98,7 +100,7 @@ export const POST = withRateLimit(
             projectId
           })
         }).catch(err => {
-          console.error(`Background bulk-scan failed for target ${cleanTarget}:`, err);
+          logger.error(`Background bulk-scan failed for target ${cleanTarget}:`, err);
         });
       }
 
@@ -113,7 +115,7 @@ export const POST = withRateLimit(
         }))
       });
     } catch (error: unknown) {
-      console.error("POST bulk scan route failure:", error);
+      logger.error("POST bulk scan route failure:", { error: getErrorMessage(error) })
       return NextResponse.json({
         success: false,
         error: "Error interno del servidor"

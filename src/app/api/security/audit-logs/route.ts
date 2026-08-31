@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq, and, gte, lte, ilike, sql } from "drizzle-orm";
+import { desc, eq, and, gte, lte, ilike, sql, type SQL } from "drizzle-orm";
 import { securityAuditLogs } from "@/shared/db/schemas";
 import { directDb } from "@/shared/db";
 import { requireAdmin } from "@/server/auth/admin";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +28,7 @@ export async function GET(req: NextRequest) {
     const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
 
     // 3. Build filters
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle condition array
-    const conditions: any[] = [];
+    const conditions: SQL[] = [];
 
     if (eventType && eventType !== "all") {
       conditions.push(eq(securityAuditLogs.eventType, eventType));
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
       eventTypes: distinctTypes.map(t => t.eventType),
     });
   } catch (error: unknown) {
-    console.error("GET /api/security/audit-logs failure:", error);
+    logger.error("GET /api/security/audit-logs failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor",

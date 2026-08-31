@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import * as schema from './schemas';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from "@/lib/logger";
 
 // Mantener el tipo de Drizzle para la inicialización perezosa
 type DbInstance = ReturnType<typeof drizzle<typeof schema>>;
@@ -18,7 +19,7 @@ function getSupabaseCa(): string | undefined {
   try {
     return fs.readFileSync(caPath, 'utf8');
   } catch {
-    console.warn('[DB] Supabase CA certificate not found at', caPath);
+    logger.warn('[DB] Supabase CA certificate not found at', caPath);
     return undefined;
   }
 }
@@ -36,7 +37,7 @@ function initDb(): DbInstance {
   const allowInsecureSsl = process.env.DB_ALLOW_INSECURE_SSL === 'true';
 
   if (isProduction && allowInsecureSsl) {
-    console.warn('[DB] WARNING: DB_ALLOW_INSECURE_SSL is enabled in production. Ensure this is intentional.');
+    logger.warn('[DB] WARNING: DB_ALLOW_INSECURE_SSL is enabled in production. Ensure this is intentional.');
   }
 
   // En desarrollo, queremos preservar la conexión a la base de datos a través de recargas HMR
@@ -47,16 +48,16 @@ function initDb(): DbInstance {
   const dbUrl = process.env.DATABASE_URL;
   let cleanUrl = dbUrl;
 
-  console.log("[DB Init] DATABASE_URL =", dbUrl ? dbUrl.replace(/:[^:@/]+@/, ":****@") : "undefined");
+  logger.info("[DB Init] DATABASE_URL =", dbUrl ? dbUrl.replace(/:[^:@/]+@/, ":****@") : "undefined");
 
   if (dbUrl) {
     try {
       const parsedUrl = new URL(dbUrl);
       parsedUrl.searchParams.delete('sslmode');
       cleanUrl = parsedUrl.toString();
-      console.log("[DB Init] cleanUrl =", cleanUrl.replace(/:[^:@/]+@/, ":****@"));
+      logger.info("[DB Init] cleanUrl =", cleanUrl.replace(/:[^:@/]+@/, ":****@"));
     } catch (err) {
-      console.error('Error parsing DATABASE_URL:', err);
+      logger.error('Error parsing DATABASE_URL:', err);
     }
   }
 
@@ -96,7 +97,7 @@ function initDirectDb(): DbInstance {
       parsedUrl.searchParams.delete('sslmode');
       cleanUrl = parsedUrl.toString();
     } catch (err) {
-      console.error('Error parsing DATABASE_URL for Direct Init:', err);
+      logger.error('Error parsing DATABASE_URL for Direct Init:', err);
     }
   }
 

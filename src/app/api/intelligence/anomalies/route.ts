@@ -19,6 +19,8 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { withRLS } from "@/shared/db/rls";
 import { anomalyDetections } from "@/shared/db/schemas/anomaly";
 import { eq, and, desc, isNull, gte, count, sql } from "drizzle-orm";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -104,7 +106,7 @@ export async function GET(req: NextRequest) {
       stats,
     });
   } catch (error: unknown) {
-    console.error("[AnomaliesAPI] Error:", error);
+    logger.error("[AnomaliesAPI] Error:", { error: getErrorMessage(error) })
     return NextResponse.json(
       { success: false, error: "Error interno del servidor" },
       { status: 500 }

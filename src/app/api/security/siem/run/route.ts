@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { runSiemExport } from "@/server/security/siem-exporter";
 import { isCronSecretMatched } from "@/server/auth/cron";
 import { requireAdmin } from "@/server/auth/admin";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120; // 2 minutes timeout
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
       durationMs: Date.now(),
     });
   } catch (error) {
-    console.error("POST /api/security/siem/run failure:", error);
+    logger.error("POST /api/security/siem/run failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor",

@@ -21,6 +21,7 @@ import { securityAuditLogs } from "@/shared/db/schemas/security-audit";
 import { eq, desc, and, gte } from "drizzle-orm";
 import crypto from "node:crypto";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { logger } from "@/lib/logger";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -50,27 +51,27 @@ const testDb = drizzle(directPool);
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function divider(label: string) {
-  console.log(`\n${"=".repeat(60)}`);
-  console.log(`  ${label}`);
-  console.log(`${"=".repeat(60)}`);
+  logger.info(`\n${"=".repeat(60)}`);
+  logger.info(`  ${label}`);
+  logger.info(`${"=".repeat(60)}`);
 }
 
 function pass(msg: string) {
-  console.log(`  [PASS] ${msg}`);
+  logger.info(`  [PASS] ${msg}`);
 }
 
 function fail(msg: string) {
-  console.log(`  [FAIL] ${msg}`);
+  logger.info(`  [FAIL] ${msg}`);
 }
 
 function info(msg: string) {
-  console.log(`  [INFO] ${msg}`);
+  logger.info(`  [INFO] ${msg}`);
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function runPipelineTest() {
-  console.log(`\n🚀 P0.2 DNS Pipeline Integration Test — ${TEST_DOMAIN}\n`);
+  logger.info(`\n🚀 P0.2 DNS Pipeline Integration Test — ${TEST_DOMAIN}\n`);
 
   // ─── 0. Validate DB connection ────────────────────────────────────────────
 
@@ -158,7 +159,7 @@ async function runPipelineTest() {
     if (rowsAfterFirst.length > 0) {
       pass(`${rowsAfterFirst.length} registros persistidos`);
       for (const r of rowsAfterFirst) {
-        console.log(`     [${r.recordType}] ${r.value}`);
+        logger.info(`     [${r.recordType}] ${r.value}`);
       }
     } else {
       fail("dns_history vacío post-1ra ejecución");
@@ -196,9 +197,9 @@ async function runPipelineTest() {
   if (outcome2.changes.length > 0) {
     pass(`Change detection ACTIVO — ${outcome2.changes.length} cambios:`);
     for (const c of outcome2.changes) {
-      console.log(`       [${c.recordType}] ${c.type}`);
-      console.log(`         "${c.previousValue ?? "(ninguno)"}"`);
-      console.log(`         → "${c.currentValue}"`);
+      logger.info(`       [${c.recordType}] ${c.type}`);
+      logger.info(`         "${c.previousValue ?? "(ninguno)"}"`);
+      logger.info(`         → "${c.currentValue}"`);
     }
   } else {
     info("No se detectaron cambios. Posible dedup por hash.");
@@ -258,7 +259,7 @@ async function runPipelineTest() {
       for (const e of dnsEvents) {
         const m = e.metadata as { recordType?: string; previousValue?: string; currentValue?: string } | null;
         if (!m) continue;
-        console.log(`     [${m.recordType}] "${m.previousValue}" → "${m.currentValue}"`);
+        logger.info(`     [${m.recordType}] "${m.previousValue}" → "${m.currentValue}"`);
       }
     } else if (outcome2.changes.length > 0) {
       fail("Hubo cambios pero no eventos de auditoría");
@@ -280,18 +281,18 @@ async function runPipelineTest() {
 
   const allOk = rowsAfterFirst.length > 0;
 
-  console.log(`\n  Proyecto:     ${projectId}`);
-  console.log(`  Dominio:      ${TEST_DOMAIN}`);
-  console.log(`  Snapshots 1ra: ${outcome1.snapshotsPersisted}`);
-  console.log(`  Snapshots 2da: ${outcome2.snapshotsPersisted}`);
-  console.log(`  Cambios:      ${outcome2.changes.length}`);
-  console.log(`  BD registros: ${rowsAfterFirst.length}`);
-  console.log(`\n  ${allOk ? "✅ PIPELINE DNS FUNCIONA CORRECTAMENTE" : "❌ PIPELINE DNS FALLÓ"}`);
+  logger.info(`\n  Proyecto:     ${projectId}`);
+  logger.info(`  Dominio:      ${TEST_DOMAIN}`);
+  logger.info(`  Snapshots 1ra: ${outcome1.snapshotsPersisted}`);
+  logger.info(`  Snapshots 2da: ${outcome2.snapshotsPersisted}`);
+  logger.info(`  Cambios:      ${outcome2.changes.length}`);
+  logger.info(`  BD registros: ${rowsAfterFirst.length}`);
+  logger.info(`\n  ${allOk ? "✅ PIPELINE DNS FUNCIONA CORRECTAMENTE" : "❌ PIPELINE DNS FALLÓ"}`);
 
   process.exit(allOk ? 0 : 1);
 }
 
 runPipelineTest().catch((err) => {
-  console.error("❌ Pipeline test crashed:", err);
+  logger.error("❌ Pipeline test crashed:", { error: getErrorMessage(err) });
   process.exit(1);
 });

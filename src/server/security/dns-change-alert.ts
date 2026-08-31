@@ -15,6 +15,7 @@
 import { logSecurityEvent } from "@/shared/lib/audit-log";
 import { WEBHOOK_FORMATTERS, persistDelivery, type SiemPattern } from "@/server/security/siem-exporter";
 import type { DnsChange } from "@/server/intelligence/history/types";
+import { logger } from "@/lib/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -174,8 +175,8 @@ async function sendDnsAlerts(
  *
  * Uso típico (integrado en processDnsResults):
  *   sendDnsChangeAlerts(domain, changes)
- *     .then(result => console.log(`Alertas enviadas: ${result.alertsSent}`))
- *     .catch(err => console.error(err))
+ *     .then(result => logger.info(`Alertas enviadas: ${result.alertsSent}`))
+ *     .catch(err => logger.error(err))
  *
  * @param domain  - El dominio donde se detectaron los cambios
  * @param changes - Lista de cambios detectados por detectDnsChanges()
@@ -200,7 +201,7 @@ export async function sendDnsChangeAlerts(
 
   if (changes.length === 0) return result;
 
-  console.log(`[DNS Change Alert] ${changes.length} cambio(s) en ${domain}: ${changes.map((c) => `${c.recordType} (${c.type})`).join(", ")}`);
+  logger.info(`[DNS Change Alert] ${changes.length} cambio(s) en ${domain}: ${changes.map((c) => `${c.recordType} (${c.type})`).join(", ")}`);
 
   try {
     // Log each change to security audit trail
@@ -229,11 +230,11 @@ export async function sendDnsChangeAlerts(
     result.alertsFailed = failed;
     result.errors.push(...sendErrors);
 
-    console.log(`[DNS Change Alert] Enviadas: ${sent}, Fallidas: ${failed} para ${domain}`);
+    logger.info(`[DNS Change Alert] Enviadas: ${sent}, Fallidas: ${failed} para ${domain}`);
   } catch (err: unknown) {
     const wErr = err as { message?: string };
     result.errors.push(`DNS change alert error: ${wErr.message || String(err)}`);
-    console.error(`[DNS Change Alert] Error:`, wErr.message || err);
+    logger.error(`[DNS Change Alert] Error:`, wErr.message || err);
   }
 
   return result;

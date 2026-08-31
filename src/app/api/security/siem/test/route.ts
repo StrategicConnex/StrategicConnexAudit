@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendTestAlert } from "@/server/security/siem-exporter";
 import { isCronSecretMatched } from "@/server/auth/cron";
 import { requireAdmin } from "@/server/auth/admin";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -45,7 +47,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("GET /api/security/siem/test failure:", error);
+    logger.error("GET /api/security/siem/test failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor",

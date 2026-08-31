@@ -14,6 +14,7 @@ import { eq, desc } from "drizzle-orm";
 import { ADVERSARY_CATALOG, type AdversaryScenarioDefinition } from "./catalog";
 import { runSandboxedCommand, type SandboxExecutionResult } from "./sandbox-executor";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { logger } from "@/lib/logger";
 
 export type ScenarioResult = "detected" | "missed" | "error";
 
@@ -255,7 +256,7 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
     };
   } catch (err: unknown) {
     const msg = getErrorMessage(err);
-    console.error(`[AdversaryRunner] Error ejecutando ${scenarioMitreId}:`, err);
+    logger.error(`[AdversaryRunner] Error ejecutando ${scenarioMitreId}:`, err);
 
     return {
       success: false,

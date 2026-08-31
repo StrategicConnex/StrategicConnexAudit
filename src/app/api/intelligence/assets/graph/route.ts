@@ -3,6 +3,8 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { withRLS } from "@/shared/db/rls";
 import { intelligenceAssets, intelligenceFindings } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 /**
  * Genera un grafo topológico (nodos y aristas compatibles con React Flow)
@@ -121,7 +123,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, data: { nodes, edges } });
 
   } catch (error: unknown) {
-    console.error("Graph API Error:", error);
+    logger.error("Graph API Error:", { error: getErrorMessage(error) })
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

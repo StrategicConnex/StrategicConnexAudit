@@ -22,6 +22,7 @@ import type { Project, Investigation, Finding, RunEvent, Asset } from './intelli
 import { NetworkOsintSection } from './intelligence/NetworkOsintSection';
 import { MailSecurityPanel } from './intelligence/MailSecurityPanel';
 import { CopilotConsole } from './intelligence/CopilotConsole';
+import { logger } from "@/lib/logger";
 
 interface IntelligenceTabProps {
   initialProjects: Project[];
@@ -109,10 +110,10 @@ export function IntelligenceTab({
           setSelectedDetails(null);
         }
       } else {
-        console.error(data.error);
+        logger.error(data.error);
       }
     } catch (err) {
-      console.error('Error fetching investigations:', err);
+      logger.error('Error fetching investigations:', err);
     }
   }, []);
 
@@ -131,10 +132,10 @@ export function IntelligenceTab({
         });
         setCopilotOutput(null); // Reset IA output when selection changes
       } else {
-        console.error(data.error);
+        logger.error(data.error);
       }
     } catch (err) {
-      console.error('Error fetching details:', err);
+      logger.error('Error fetching details:', err);
     }
   }, []);
 
@@ -163,7 +164,7 @@ export function IntelligenceTab({
             states[inv.id] = false;
           }
         } catch {
-          console.error("Drift check failed for", inv.id);
+          logger.error("Drift check failed for", inv.id);
         }
       });
       await Promise.all(checks);          if (Object.keys(states).length > 0) {

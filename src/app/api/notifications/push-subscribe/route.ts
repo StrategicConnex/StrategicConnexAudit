@@ -16,6 +16,7 @@ import { directDb } from "@/shared/db";
 import { pushSubscriptions } from "@/shared/db/schemas/push-subscriptions";
 import { eq, and } from "drizzle-orm";
 import { getVapidPublicKey } from "@/server/notifications/push";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, status: "subscribed" });
   } catch (error: unknown) {
-    console.error("[PushSubscribe] POST error:", (error as Error).message);
+    logger.error("[PushSubscribe] POST error:", (error as Error).message);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },
@@ -157,7 +158,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true, status: "unsubscribed" });
   } catch (error: unknown) {
-    console.error("[PushSubscribe] DELETE error:", (error as Error).message);
+    logger.error("[PushSubscribe] DELETE error:", (error as Error).message);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },
@@ -206,7 +207,7 @@ export async function GET(_req: NextRequest) {
       supported: !!publicKey,
     });
   } catch (error: unknown) {
-    console.error("[PushSubscribe] GET error:", (error as Error).message);
+    logger.error("[PushSubscribe] GET error:", (error as Error).message);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

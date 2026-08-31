@@ -11,19 +11,20 @@ import { db } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { runAllDetections } from "@/server/intelligence/anomaly/detector";
 import { and, eq, isNull } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 
 export const periodicAnomalyDetection = schedules.task({
   id: "periodic-anomaly-detection",
   cron: "*/15 * * * *",
   run: async (payload) => {
-    console.log(`[AnomalyDetector] Starting: ${payload.timestamp}`);
+    logger.info(`[AnomalyDetector] Starting: ${payload.timestamp}`);
 
     const activeProjects = await db
       .select()
       .from(projects)
       .where(and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)));
 
-    console.log(`[AnomalyDetector] ${activeProjects.length} active projects.`);
+    logger.info(`[AnomalyDetector] ${activeProjects.length} active projects.`);
 
     const summaries = [];
 
@@ -42,13 +43,13 @@ export const periodicAnomalyDetection = schedules.task({
         });
 
         if (totalAnomalies > 0) {
-          console.log(
+          logger.info(
             `[AnomalyDetector] ${project.domain}: ${totalAnomalies} anomalías detectadas.`
           );
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[AnomalyDetector] Error in ${project.name}:`, msg);
+        logger.error(`[AnomalyDetector] Error in ${project.name}:`, msg);
         summaries.push({
           projectId: project.id,
           domain: project.domain,
@@ -64,7 +65,7 @@ export const periodicAnomalyDetection = schedules.task({
     const errors = summaries.filter((r) => r.error);
     const successCount = summaries.length - errors.length;
 
-    console.log(
+    logger.info(
       `[AnomalyDetector] Done: ${successCount}/${activeProjects.length} OK, ` +
       `${totalAnomaliesAll} anomalías, ${errors.length} errors.`
     );

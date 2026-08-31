@@ -24,6 +24,8 @@ import { ToolExecutor, ExecutionContext, ExecutionResult, Finding } from "../typ
 import { ToolCategory, IntelligenceToolDefinition } from "../registry/tool-registry";
 import { getExecutor, registerTool, unregisterTool } from "../core/tool-registry";
 import type { PluginPackage } from "@/shared/db/schemas";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Types
@@ -395,7 +397,7 @@ export async function initializePluginExecutors(): Promise<void> {
       });
     } catch {
       // La tabla puede no existir aún (migración no ejecutada)
-      console.warn("[PluginExecutor] Tabla plugin_packages no disponible. Omitiendo registro de plugins oficiales.");
+      logger.warn("[PluginExecutor] Tabla plugin_packages no disponible. Omitiendo registro de plugins oficiales.");
       return;
     }
 
@@ -408,10 +410,10 @@ export async function initializePluginExecutors(): Promise<void> {
     }
 
     if (registeredCount > 0) {
-      console.log(`[PluginExecutor] ${registeredCount} plugin(s) oficial(es) registrados como ToolExecutors.`);
+      logger.info(`[PluginExecutor] ${registeredCount} plugin(s) oficial(es) registrados como ToolExecutors.`);
     }
   } catch (err) {
-    console.error("[PluginExecutor] Error inicializando plugin executors:", err);
+    logger.error("[PluginExecutor] Error inicializando plugin executors:", { error: getErrorMessage(err) });
   }
 }
 
@@ -442,7 +444,7 @@ export async function registerSinglePluginExecutor(pluginName: string): Promise<
     registerTool({ executor, definition: createPluginToolDefinition(pkg) });
     return true;
   } catch (err) {
-    console.error(`[PluginExecutor] Error registrando plugin '${pluginName}':`, err);
+    logger.error(`[PluginExecutor] Error registrando plugin '${pluginName}':`, err);
     return false;
   }
 }

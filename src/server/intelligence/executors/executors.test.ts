@@ -14,6 +14,7 @@ import { getExecutor, listToolDefinitions } from "../core/tool-registry";
 import { ExecutionContext, Finding } from "../types/executor.types";
 import { dnsDnssecExecutor, dnsPropagationExecutor, dnsZoneExecutor } from "./dns-advanced";
 import { websiteRedirectsExecutor, websiteCookiesExecutor, websiteCspExecutor } from "./website-executors";
+import { logger } from "@/lib/logger";
 
 // Mock del EgressGuard para que los tests pasen de forma determinista e inmediata sin tocar red real
 vi.mock("../security/egress-guard", () => ({
@@ -57,7 +58,7 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
     investigationId: "investigation-123",
     userId: "user-123",
     signal: new AbortController().signal,
-    log: (msg, p) => console.log(`[Test Log] ${msg}`, p || ""),
+    log: (msg, p) => logger.info(`[Test Log] ${msg}`, p || ""),
   };
 
   beforeEach(() => {

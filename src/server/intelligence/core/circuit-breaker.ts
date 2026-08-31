@@ -17,6 +17,8 @@
  *  HALF   ──[failure]──> OPEN
  */
 
+import { logger } from "@/lib/logger";
+
 export type CircuitState = "CLOSED" | "OPEN" | "HALF_OPEN";
 
 export interface CircuitBreakerStats {
@@ -73,7 +75,7 @@ export class CircuitBreaker {
       const elapsed = Date.now() - (this.openedAt ?? 0);
       if (elapsed >= this.resetTimeoutMs) {
         this.state = "HALF_OPEN";
-        console.log(`[CircuitBreaker:${this.name}] Estado → HALF_OPEN. Intentando recuperación.`);
+        logger.info(`[CircuitBreaker:${this.name}] Estado → HALF_OPEN. Intentando recuperación.`);
       } else {
         this.rejectedRequests++;
         throw new CircuitOpenError(
@@ -106,7 +108,7 @@ export class CircuitBreaker {
         this.state = "CLOSED";
         this.successes = 0;
         this.openedAt = null;
-        console.log(`[CircuitBreaker:${this.name}] Estado → CLOSED. Servicio recuperado.`);
+        logger.info(`[CircuitBreaker:${this.name}] Estado → CLOSED. Servicio recuperado.`);
       }
     }
   }
@@ -119,7 +121,7 @@ export class CircuitBreaker {
     if (this.state === "HALF_OPEN" || this.failures >= this.failureThreshold) {
       this.state = "OPEN";
       this.openedAt = Date.now();
-      console.warn(
+      logger.warn(
         `[CircuitBreaker:${this.name}] Estado → OPEN. ` +
         `${this.failures} fallos consecutivos. ` +
         `Reintento en ${this.resetTimeoutMs / 1000}s.`
@@ -150,7 +152,7 @@ export class CircuitBreaker {
     this.failures = 0;
     this.successes = 0;
     this.openedAt = null;
-    console.log(`[CircuitBreaker:${this.name}] Reset manual → CLOSED.`);
+    logger.info(`[CircuitBreaker:${this.name}] Reset manual → CLOSED.`);
   }
 
   /**

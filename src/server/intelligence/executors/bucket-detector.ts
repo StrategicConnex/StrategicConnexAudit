@@ -1,5 +1,6 @@
 import dns from 'dns/promises';
 import { safeFetch } from '../security/egress-guard';
+import { logger } from "@/lib/logger";
 
 export class BucketDetectorExecutor {
   async execute(domain: string, aggressive: boolean = false) {
@@ -66,7 +67,7 @@ export class BucketDetectorExecutor {
         buckets: findings
       };
     } catch (error) {
-      console.error(`BucketDetector failed for ${domain}:`, error);
+      logger.error(`BucketDetector failed for ${domain}:`, error);
       return { success: false, error: "Failed to detect buckets" };
     }
   }

@@ -20,12 +20,19 @@ function formatTimestamp(): string {
   return new Date().toISOString();
 }
 
-function log(level: LogLevel, message: string, context?: LogContext): void {
+function log(level: LogLevel, message: string, context?: LogContext | unknown): void {
+  // Normalize unknown context to LogContext
+  const normalizedContext: LogContext | undefined =
+    context && typeof context === "object" && !Array.isArray(context)
+      ? context as LogContext
+      : context !== undefined && context !== null
+        ? { value: context }
+        : undefined;
   const entry = {
     timestamp: formatTimestamp(),
     level,
     message,
-    ...(context && Object.keys(context).length > 0 ? { context } : {}),
+    ...(normalizedContext && Object.keys(normalizedContext).length > 0 ? { context: normalizedContext } : {}),
   };
 
   const formatted = JSON.stringify(entry);
@@ -48,10 +55,10 @@ function log(level: LogLevel, message: string, context?: LogContext): void {
 }
 
 export const logger = {
-  debug: (message: string, context?: LogContext) => log("debug", message, context),
-  info: (message: string, context?: LogContext) => log("info", message, context),
-  warn: (message: string, context?: LogContext) => log("warn", message, context),
-  error: (message: string, context?: LogContext) => log("error", message, context),
+  debug: (message: string, context?: LogContext | unknown) => log("debug", message, context),
+  info: (message: string, context?: LogContext | unknown) => log("info", message, context),
+  warn: (message: string, context?: LogContext | unknown) => log("warn", message, context),
+  error: (message: string, context?: LogContext | unknown) => log("error", message, context),
 };
 
 /**

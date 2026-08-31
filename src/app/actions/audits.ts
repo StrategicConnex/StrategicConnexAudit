@@ -80,8 +80,7 @@ async function runLocalAudit(projectId: string, auditId: string, userId: string)
       wordCount: analysis.wordCount,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic issue objects
-    const issuesToInsert: any[] = [];
+    const issuesToInsert: { projectId: string; auditId: string; url: string; severity: "critical" | "warning" | "info"; category: "meta" | "seo" | "performance" | "link" | "accessibility" | "security"; title: string; description: string; recommendation: string }[] = [];
     if (!analysis.title) {
       issuesToInsert.push({ projectId, auditId, url: targetUrl, severity: "critical" as const, category: "meta" as const, title: "Falta Title Tag", description: "No hay <title>.", recommendation: "Agrega un <title> descriptivo." });
     } else if (analysis.title.length > 60) {

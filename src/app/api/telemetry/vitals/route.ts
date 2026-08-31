@@ -3,6 +3,7 @@ import { db } from '@/shared/db';
 import { webVitalsLogs, projects } from '@/shared/db/schemas';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { logger } from "@/lib/logger";
 
 // Tamaño máximo aceptado del cuerpo JSON (los beacons reales son < 8KB).
 // Un solo check mata el vector de DB-bloat independientemente del schema.
@@ -198,7 +199,7 @@ if (!project || project.deletedAt !== null || project.isDeleted || project.isHid
       headers: { 'Access-Control-Allow-Origin': corsOrigin },
     });
   } catch (error) {
-    console.error('Telemetry error:', error);
+    logger.error('Telemetry error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

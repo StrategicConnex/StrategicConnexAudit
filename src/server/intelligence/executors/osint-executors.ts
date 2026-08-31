@@ -6,6 +6,7 @@ import { whoisCircuit, CircuitOpenError } from "../core/circuit-breaker";
 import { geoipCache, IntelligenceCache } from "../core/cache";
 import { persistWhoisSnapshot } from "../history/whois-history";
 import type { WhoisSnapshot } from "../history/types";
+import { logger } from "@/lib/logger";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 
@@ -96,7 +97,7 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
             ctx.log(`[OSINT WHOIS] Cambios detectados en ${domain}: ${result.changes.map(c => `${c.label} (${c.severity})`).join(', ')}`);
           }
         })
-        .catch((err) => console.error(`[OSINT WHOIS] Error history para ${domain}:`, err));
+        .catch((err) => logger.error(`[OSINT WHOIS] Error history para ${domain}:`, err));
 
       return { success: true, output, findings };
     }
@@ -200,7 +201,7 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
           ctx.log(`[OSINT WHOIS] Cambios detectados en ${domain}: ${result.changes.map(c => `${c.label} (${c.severity})`).join(', ')}`);
         }
       })
-      .catch((err) => console.error(`[OSINT WHOIS] Error history para ${domain}:`, err));
+      .catch((err) => logger.error(`[OSINT WHOIS] Error history para ${domain}:`, err));
 
     return { success: true, output, findings };
   },

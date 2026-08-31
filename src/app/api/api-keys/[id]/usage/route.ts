@@ -4,6 +4,7 @@ import { directDb } from '@/shared/db';
 import { securityAuditLogs, developerApiKeys } from '@/shared/db/schemas';
 import { eq, and, sql, gte } from 'drizzle-orm';
 import { withRateLimit } from '@/shared/lib/ratelimit';
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -143,7 +144,7 @@ export const GET = withRateLimit(
         })),
       });
     } catch (error: unknown) {
-      console.error('GET /api/api-keys/[id]/usage failure:', error);
+      logger.error('GET /api/api-keys/[id]/usage failure:', error);
       return NextResponse.json(
         { success: false, error: 'Error interno del servidor' },
         { status: 500 },

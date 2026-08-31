@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
+import { logger } from "@/lib/logger";
 
 /**
  * InstallPwaButton — Botón de instalación PWA nativa.
@@ -54,7 +55,7 @@ export function InstallPwaButton() {
 
     deferredPrompt.prompt();
     const result = await deferredPrompt.userChoice;
-    console.log('[PWA] Install result:', result.outcome);
+    logger.info('[PWA] Install result:', result.outcome);
 
     if (result.outcome === 'accepted') {
       setIsInstalled(true);

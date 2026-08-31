@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { externalApiHealthChecker } from "@/server/intelligence/core/health-checker";
 import { createClient } from "@/shared/lib/supabase/server";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +53,7 @@ export async function GET(req: NextRequest) {
       success: true,
       ...report,
     });    } catch (error: unknown) {
-    console.error("[HealthAPI] Error fetching health report:", error);
+    logger.error("[HealthAPI] Error fetching health report:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       globalStatus: "degraded",

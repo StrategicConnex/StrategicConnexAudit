@@ -5,6 +5,7 @@ import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTarget
 import { eq, desc, isNull, sql, and } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
+import { logger } from "@/lib/logger";
 
 interface ProjectData {
   id: string;
@@ -158,7 +159,7 @@ export async function GET(req: NextRequest) {
       // We do NOT query without RLS — this would expose all projects across tenants.
       // For server-to-server integrations, implement a dedicated /api/service/looker
       // endpoint with a scoped service token and explicit organization filtering.
-      console.warn('[Looker] API Key auth without user session — returning empty dataset. ' +
+      logger.warn('[Looker] API Key auth without user session — returning empty dataset. ' +
         'For service-to-service integration, use a dedicated service endpoint.');
       activeProjects = [];
     }
@@ -326,7 +327,7 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     const err = error as { message?: string };
-    console.error('Error serving Looker Studio connector data:', error);
+    logger.error('Error serving Looker Studio connector data:', error);
     return NextResponse.json({ 
       error: 'Internal Server Error', 
       message: err?.message || 'Unknown error occurred occurred'

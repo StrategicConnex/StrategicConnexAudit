@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
         evaluationId: evaluation!.id,
       });
     } catch (err) {
-      logger.warn("mitre: Trigger.dev no disponible, fallback local", { error: err instanceof Error ? err.message : err });
+      logger.warn("mitre: Trigger.dev no disponible, fallback local", { message: { error: err instanceof Error ? err.message : err } })
       void import("@/server/intelligence/adversary/mitre-eval/mitre-service").then(({ executeMitreEvaluation }) =>
         executeMitreEvaluation(evaluation!.id).catch((e) => logger.error("mitre: fallback error", { error: e }))
       );

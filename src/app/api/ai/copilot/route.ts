@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRateLimit } from '@/shared/lib/ratelimit';
 import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from '@/server/ai/ai-router';
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -70,7 +71,7 @@ export const POST = withRateLimit(
 
     } catch (error) {
       const err = error as { message?: string };
-      console.error('Error in Copilot endpoint:', error);
+      logger.error('Error in Copilot endpoint:', error);
       return NextResponse.json({
         success: true,
         message: getNoApiKeyResponse('general-chat'),

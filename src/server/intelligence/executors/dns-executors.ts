@@ -6,6 +6,7 @@ import {
   DnsLookupOutput, DnsMxOutput, DnsTxtOutput, DnsNsOutput,
 } from "../types/executor.types";
 import { processDnsResults } from "../history/orchestrator";
+import { logger } from "@/lib/logger";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 
@@ -96,7 +97,7 @@ export const dnsLookupExecutor: ToolExecutor<{ domain: string }, DnsLookupOutput
         ctx.log(`[History] ${changes.length} cambio(s) DNS detectados en ${domain}: ${changes.map(c => `${c.recordType} (${c.type})`).join(', ')}`);
       }
     }).catch((err) => {
-      console.error(`[DNS Lookup] Error persistiendo history para ${domain}:`, err);
+      logger.error(`[DNS Lookup] Error persistiendo history para ${domain}:`, err);
     });
 
     return { success: true, output, findings };
@@ -145,7 +146,7 @@ export const dnsMxExecutor: ToolExecutor<{ domain: string }, DnsMxOutput> = {
       results: { mx: output.records },
     }).then(({ changes }) => {
       if (changes.length > 0) ctx.log(`[History] ${changes.length} cambio(s) MX en ${domain}`);
-    }).catch((err) => console.error(`[DNS MX] Error persistiendo history:`, err));
+    }).catch((err) => logger.error(`[DNS MX] Error persistiendo history:`, err));
 
     return { success: true, output, findings };
   },
@@ -197,7 +198,7 @@ export const dnsTxtExecutor: ToolExecutor<{ domain: string }, DnsTxtOutput> = {
       results: { txt: output.records },
     }).then(({ changes }) => {
       if (changes.length > 0) ctx.log(`[History] ${changes.length} cambio(s) TXT en ${domain}`);
-    }).catch((err) => console.error(`[DNS TXT] Error persistiendo history:`, err));
+    }).catch((err) => logger.error(`[DNS TXT] Error persistiendo history:`, err));
 
     return { success: true, output, findings };
   },
@@ -245,7 +246,7 @@ export const dnsNsExecutor: ToolExecutor<{ domain: string }, DnsNsOutput> = {
       results: { ns: output.servers },
     }).then(({ changes }) => {
       if (changes.length > 0) ctx.log(`[History] ${changes.length} cambio(s) NS en ${domain}`);
-    }).catch((err) => console.error(`[DNS NS] Error persistiendo history:`, err));
+    }).catch((err) => logger.error(`[DNS NS] Error persistiendo history:`, err));
 
     return { success: true, output, findings };
   },

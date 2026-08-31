@@ -6,6 +6,7 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
 import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from "@/server/ai/ai-router";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +96,7 @@ export const POST = withRateLimit(
       });
 
     } catch (error: unknown) {
-      console.error("Infrastructure Copilot execution failure:", error);
+      logger.error("Infrastructure Copilot execution failure:", { error: getErrorMessage(error) })
       return NextResponse.json({
         success: true,
         remediationPlan: getNoApiKeyResponse("copilot-remediation"),

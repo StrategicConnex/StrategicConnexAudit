@@ -10,6 +10,7 @@ import { eq, and } from "drizzle-orm";
 import { IntelligenceToolDefinition } from "../registry/tool-registry";
 import { getErrorMessage } from "@/shared/lib/errors";
 import crypto from "crypto";
+import { logger } from "@/lib/logger";
 
 export interface EnforcePolicyResult {
   allowed: boolean;
@@ -94,7 +95,7 @@ export async function enforceToolRunPolicy(
 
     return { allowed, reason, planName };
   } catch (error: unknown) {
-    console.error(`Error in policy enforcer for tool ${tool.id}:`, error);
+    logger.error(`Error in policy enforcer for tool ${tool.id}:`, error);
     // Fallback block/allow gracefully but do not crash the execution flow
     return {
       allowed: false,

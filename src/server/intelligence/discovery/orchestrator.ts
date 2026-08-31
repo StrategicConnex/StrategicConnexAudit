@@ -20,6 +20,7 @@ import { runDnsBruteForce } from "./dns-brute";
 import { runCtMonitor } from "./ct-monitor";
 import { runShadowDetection } from "./shadow-detector";
 import type { DiscoveryConfig, DiscoveryRunResult, AssetChange } from "./types";
+import { logger } from "@/lib/logger";
 
 // ─── Persistencia de asset_changes (tabla separada para tracking) ─────────────
 
@@ -32,7 +33,7 @@ export async function runDiscovery(config: DiscoveryConfig): Promise<DiscoveryRu
   const { domain, projectId, dnsBruteForce = true, ctMonitor = true, shadowDetection = true } = config;
   const startTime = Date.now();
 
-  console.log(`[Discovery] Iniciando descubrimiento para ${domain} (proyecto ${projectId})`);
+  logger.info(`[Discovery] Iniciando descubrimiento para ${domain} (proyecto ${projectId})`);
 
   // 1. Obtener activos ya conocidos
   const knownAssets = await db
@@ -140,7 +141,7 @@ export async function runDiscovery(config: DiscoveryConfig): Promise<DiscoveryRu
         detectedAt: now,
       });
       if (!insertedSet.has(`${asset.assetType}:${asset.value}`)) {
-        console.warn(
+        logger.warn(
           `[Discovery] Conficto inesperado al insertar activo ${asset.value}: no devuelto por RETURNING`
         );
       }
@@ -167,13 +168,13 @@ export async function runDiscovery(config: DiscoveryConfig): Promise<DiscoveryRu
             WHERE (project_id, asset_type, value) IN (${tuples})`
       );
     } catch (updateErr) {
-      console.error("[Discovery] Error actualizando lastSeenAt masivo:", updateErr);
+      logger.error("[Discovery] Error actualizando lastSeenAt masivo:", updateErr);
     }
   }
 
   const totalDuration = Date.now() - startTime;
 
-  console.log(
+  logger.info(
     `[Discovery] Completado para ${domain}. ` +
     `${trulyNewAssets.length} activos nuevos, ` +
     `${allNewAssets.length} totales. ` +

@@ -19,6 +19,7 @@ import { projects } from "@/shared/db/schemas";
 import { and, eq, inArray, lt } from "drizzle-orm";
 import { runRealAssessment } from "./assessment-runner";
 import { analyzeAssessment } from "./ai-analyst";
+import { logger } from "@/lib/logger";
 
 /**
  * Recovery: una fila `pending` sin worker (p.ej. Trigger.dev dev CLI caído)
@@ -57,7 +58,7 @@ export async function failStaleAssessments(): Promise<void> {
         lt(adversaryAssessments.updatedAt, new Date(now.getTime() - ACTIVE_STALE_MS)),
       ));
   } catch (err) {
-    console.error("[assessment] failStaleAssessments falló (no bloqueante):", err instanceof Error ? err.message : err);
+    logger.error("[assessment] failStaleAssessments falló (no bloqueante):", err instanceof Error ? err.message : err);
   }
 }
 
@@ -188,7 +189,7 @@ export async function executeAssessment(assessmentId: string): Promise<void> {
       } catch (findingErr) {
         // No bloqueante: log con causa pg para diagnóstico, sigue con el resto
         const cause = (findingErr as { cause?: { message?: string } })?.cause?.message ?? "";
-        console.error("[assessment] réplica finding falló (no bloqueante):", cause || String(findingErr));
+        logger.error("[assessment] réplica finding falló (no bloqueante):", cause || String(findingErr));
       }
     }
 

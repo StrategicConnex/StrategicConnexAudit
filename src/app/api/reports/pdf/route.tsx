@@ -14,6 +14,7 @@ import {
 } from '@/shared/db/schemas';
 import { withRateLimit } from '@/shared/lib/ratelimit';
 import { PdfReport, type PdfReportData, type PdfFinding, type PdfAsset, type WhiteLabelBranding } from '@/server/reports/pdf-template';
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ function reportProgress(userId: string, genId: string | undefined, percent: numb
   const key = `pdf_progress:${userId}:${genId}`;
   // Pass raw object — Upstash handles serialization internally
   redis.set(key, { percent, step, status: status || 'working' })
-    .catch((e: unknown) => console.warn('[pdf-progress] Redis write failed:', e));
+    .catch((e: unknown) => logger.warn('[pdf-progress] Redis write failed:', e));
 }
 
 export const POST = withRateLimit(
@@ -232,7 +233,7 @@ export const POST = withRateLimit(
 
     } catch (error: unknown) {
       reportProgress(userId, genId, 0, 'Error', 'error');
-      console.error('POST /api/reports/pdf error:', error);
+      logger.error('POST /api/reports/pdf error:', error);
       return NextResponse.json(
         { success: false, error: `Error al generar PDF: ${error instanceof Error ? error.message : 'Error desconocido'}` },
         { status: 500 },

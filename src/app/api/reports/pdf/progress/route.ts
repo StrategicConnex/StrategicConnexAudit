@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { redis } from '@/shared/lib/ratelimit';
 import { createClient } from '@/shared/lib/supabase/server';
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest) {
               controller.enqueue(encoder.encode(`: heartbeat\n\n`));
             }
           } catch (err) {
-            console.error('[progress-sse] Redis error:', err);
+            logger.error('[progress-sse] Redis error:', err);
           }
 
           // Wait before next poll
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
       };
 
       poll().catch((err) => {
-        console.error('[progress-sse] Fatal error:', err);
+        logger.error('[progress-sse] Fatal error:', err);
         if (!closed) {
           try {
             const msg = `event: error\ndata: ${JSON.stringify({ error: 'Internal error' })}\n\n`;

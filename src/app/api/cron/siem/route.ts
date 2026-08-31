@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { runSiemExport } from "@/server/security/siem-exporter";
 import { isCronAuthorized } from "@/server/auth/cron";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const maxDuration = 120; // 2 minutes timeout
 export const dynamic = "force-dynamic";
@@ -34,7 +36,7 @@ export async function GET(request: Request) {
     });
   } catch (error: unknown) {
     const cronErr = error as { message?: string };
-    console.error("GET /api/cron/siem failure:", cronErr);
+    logger.error("GET /api/cron/siem failure:", { error: getErrorMessage(cronErr) })
     return NextResponse.json({
       success: false,
       error: "SIEM cron error",

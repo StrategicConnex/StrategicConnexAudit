@@ -1,5 +1,7 @@
 import { createClient } from '@/shared/lib/supabase/server';
 import { z } from 'zod';
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export type ActionState<T> = {
   success: boolean;
@@ -50,7 +52,7 @@ export async function protectedAction<TInput, TOutput>(
       data,
     };
   } catch (error) {
-    console.error("[Action Error]:", error);
+    logger.error("[Action Error]:", { error: getErrorMessage(error) });
 
     if (error instanceof z.ZodError) {
       return {

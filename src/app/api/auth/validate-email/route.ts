@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateEmail } from "@/lib/email-validation";
 import { checkEmailRateLimit, extractClientIp, buildRateLimitHeaders, isEmailAllowlisted } from "@/shared/lib/ratelimit";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +83,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     return response;
   } catch (error) {
-    console.error("Error validating email:", error);
+    logger.error("Error validating email:", { error: getErrorMessage(error) })
     return NextResponse.json(
       { valid: false, reason: "Error interno al validar el correo." },
       { status: 500 }

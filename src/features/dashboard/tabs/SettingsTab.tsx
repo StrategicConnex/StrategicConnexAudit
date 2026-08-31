@@ -22,6 +22,7 @@ import {
   Clock,
   BarChart3
 } from 'lucide-react';
+import { logger } from "@/lib/logger";
 
 interface Project {
   id: string;
@@ -128,7 +129,7 @@ export function SettingsTab({
           setPrimaryColor(parsed.color || "var(--primary)");
           setLogoUrl(parsed.logoUrl || '');
         } catch (e) {
-          console.error("Failed to parse branding config", e);
+          logger.error("Failed to parse branding config", e);
         }
       }
     }

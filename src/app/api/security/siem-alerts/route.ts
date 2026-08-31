@@ -3,6 +3,8 @@ import { desc, eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
 import { siemAlertLogs } from "@/shared/db/schemas";
 import { directDb } from "@/shared/db";
 import { requireAdmin } from "@/server/auth/admin";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -115,7 +117,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GET /api/security/siem-alerts failure:", error);
+    logger.error("GET /api/security/siem-alerts failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor",

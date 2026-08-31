@@ -11,6 +11,7 @@ import { checkIntelScanRateLimit } from '@/shared/lib/ratelimit';
 import { withPublicApi, apiError, apiSuccess, type AuthenticatedRequest } from '@/server/api/public-router';
 import { API_SCOPES } from '@/shared/lib/api-keys';
 import type { Finding } from '@/server/intelligence/types/executor.types';
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -87,7 +88,7 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
 
     return apiSuccess({ investigations: list });
   } catch (error) {
-    console.error('GET /api/public/v1/intelligence error:', error);
+    logger.error('GET /api/public/v1/intelligence error:', error);
     return apiError('Internal server error', 500);
   }
 }, {
@@ -159,7 +160,7 @@ export const POST = withPublicApi(async (req: AuthenticatedRequest) => {
 
     // Fire-and-forget: trigger async scan in background
     scanInBackground(investigation.id, projectId, normalizedTarget, userId).catch((err) => {
-      console.error(`[public-api] Background scan failed for ${investigation.id}:`, err);
+      logger.error(`[public-api] Background scan failed for ${investigation.id}:`, err);
     });
 
     return apiSuccess({
@@ -174,7 +175,7 @@ export const POST = withPublicApi(async (req: AuthenticatedRequest) => {
       },
       message: 'Scan started. Check status via GET /api/public/v1/intelligence?investigationId=<id>',
     });    } catch (error) {
-    console.error('POST /api/public/v1/intelligence error:', error);
+    logger.error('POST /api/public/v1/intelligence error:', error);
     return apiError('Internal server error', 500);
   }
 }, {
@@ -238,7 +239,7 @@ async function scanInBackground(
     }).where(eq(inv.id, investigationId));
 
   } catch (err) {
-    console.error('[public-api] Background scan error:', err);
+    logger.error('[public-api] Background scan error:', err);
     try {
       const { intelligenceInvestigations: inv } = await import('@/shared/db/schemas');
       await directDb.update(inv).set({

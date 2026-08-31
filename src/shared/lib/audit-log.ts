@@ -11,6 +11,7 @@ import 'server-only';
 
 import { directDb } from "@/shared/db";
 import { securityAuditLogs } from "@/shared/db/schemas";
+import { logger } from "@/lib/logger";
 
 const IP_BLOCKLIST = new Set([
   "127.0.0.1", "::1", "::ffff:127.0.0.1", "0.0.0.0", "::", "localhost",
@@ -65,7 +66,7 @@ export function logSecurityEvent(
       userId: details.userId,
       metadata: details.metadata || {},
     };
-    console.log(JSON.stringify(event));
+    logger.info(JSON.stringify(event));
     persistEvent(event).catch(() => {});
   } catch {
     // Fail-safe
@@ -120,6 +121,6 @@ async function persistEvent(event: SecurityEvent): Promise<void> {
     });
   } catch (err) {
     // Fail-safe: no queremos que un fallo de BD interrumpa la request
-    console.error("[audit-log] persistEvent falló:", err instanceof Error ? err.message : err);
+    logger.error("[audit-log] persistEvent falló:", err instanceof Error ? err.message : err);
   }
 }

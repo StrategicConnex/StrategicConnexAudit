@@ -4,9 +4,10 @@ import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
+import { logger } from "@/lib/logger";
 
-console.log("[Trigger Module] audit.trigger.ts cargado correctamente.");
-console.log("[Trigger Module] DATABASE_URL presente:", !!process.env.DATABASE_URL);
+logger.info("[Trigger Module] audit.trigger.ts cargado correctamente.");
+logger.info("[Trigger Module] DATABASE_URL presente:", !!process.env.DATABASE_URL);
 
 // SECURITY: Do NOT disable TLS validation globally.
 // If a specific upstream requires it (e.g. a self-signed internal endpoint),
@@ -38,7 +39,7 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   });
 
   const response = await crawlerCircuitBreaker.execute(async () => {
-    console.log(`[Crawler] Solicitando URL: ${targetUrl}`);
+    logger.info(`[Crawler] Solicitando URL: ${targetUrl}`);
     return await fetch(targetUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 StrategicAuditBot/1.1",
@@ -49,7 +50,7 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   });
 
   if (!response.ok) {
-    console.warn(`[Crawler] El sitio respondió con error HTTP ${response.status} para ${targetUrl}`);
+    logger.warn(`[Crawler] El sitio respondió con error HTTP ${response.status} para ${targetUrl}`);
     return { 
       statusCode: response.status, 
       contentType: response.headers.get("content-type") || "unknown",
@@ -63,7 +64,7 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
 
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("text/html")) {
-    console.warn(`[Crawler] El contenido no es HTML (${contentType}) para ${targetUrl}`);
+    logger.warn(`[Crawler] El contenido no es HTML (${contentType}) para ${targetUrl}`);
     return { 
       statusCode: response.status, 
       contentType,
@@ -77,15 +78,15 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
 
   const contentLength = response.headers.get("content-length");
   if (contentLength && parseInt(contentLength, 10) > 8 * 1024 * 1024) {
-    console.warn(`[Crawler] Archivo demasiado grande (${contentLength} bytes)`);
+    logger.warn(`[Crawler] Archivo demasiado grande (${contentLength} bytes)`);
     return { statusCode: response.status, contentType, title: null, metaDescription: null, h1Tags: [], h2Tags: [], wordCount: 0, error: "Archivo demasiado grande" };
   }
 
   const statusCode = response.status;
   
-  console.log(`[Crawler] Descargando contenido para ${targetUrl}...`);
+  logger.info(`[Crawler] Descargando contenido para ${targetUrl}...`);
   const html = await response.text();
-  console.log(`[Crawler] Descarga completada (${html.length} caracteres)`);
+  logger.info(`[Crawler] Descarga completada (${html.length} caracteres)`);
 
   // 1. Extracción de etiqueta Title
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -150,7 +151,7 @@ export const runProjectAudit = task({
   run: async (payload: { projectId: string; auditId: string; userId?: string }) => {
       const { auditId, projectId } = payload;
       
-      console.log(`[Worker] Tarea recibida. ID Auditoría: ${auditId}. Procesando...`);
+      logger.info(`[Worker] Tarea recibida. ID Auditoría: ${auditId}. Procesando...`);
       
       try {
         // 1. Marcar como 'running'
@@ -166,7 +167,7 @@ export const runProjectAudit = task({
           throw new Error(`Registro de auditoría ${auditId} no encontrado.`);
         }
         
-        console.log(`[Worker] Estado actualizado. Iniciando análisis...`);
+        logger.info(`[Worker] Estado actualizado. Iniciando análisis...`);
 
         // 2. Datos del proyecto y verificación de ownership
         const [project] = await directDb.select().from(projects).where(eq(projects.id, projectId)).limit(1);
@@ -182,9 +183,9 @@ export const runProjectAudit = task({
       const targetUrl = normalizeUrl(project.domain);
 
       // 3. Ejecutar análisis web
-      console.log(`[Worker] Analizando URL: ${targetUrl}`);
+      logger.info(`[Worker] Analizando URL: ${targetUrl}`);
       const analysis = await analyzeUrl(targetUrl);
-      console.log(`[Worker] Análisis completado. Status: ${analysis.statusCode}, Words: ${analysis.wordCount}`);
+      logger.info(`[Worker] Análisis completado. Status: ${analysis.statusCode}, Words: ${analysis.wordCount}`);
 
       // 4. Guardar resultados
       await directDb.insert(crawlResults).values({
@@ -290,7 +291,7 @@ export const runProjectAudit = task({
       }
 
       if (issuesToInsert.length > 0) {
-        console.log(`[Worker] Guardando ${issuesToInsert.length} problemas de optimización detectados.`);
+        logger.info(`[Worker] Guardando ${issuesToInsert.length} problemas de optimización detectados.`);
         await directDb.insert(issues).values(issuesToInsert);
       }
 
@@ -302,11 +303,11 @@ export const runProjectAudit = task({
         })
         .where(eq(audits.id, auditId));
 
-      console.log(`[Worker] Auditoría ${auditId} finalizada con éxito.`);
+      logger.info(`[Worker] Auditoría ${auditId} finalizada con éxito.`);
 
     } catch (err: unknown) {
       const error = err as Error;
-      console.error(`[Worker] Error fatal en auditoría ${auditId}:`, error);
+      logger.error(`[Worker] Error fatal en auditoría ${auditId}:`, error);
       
       try {
         await directDb.update(audits)
@@ -318,7 +319,7 @@ export const runProjectAudit = task({
 
           .where(eq(audits.id, auditId));
       } catch (updateErr) {
-        console.error("[Worker] Error al intentar marcar como fallido en DB:", updateErr);
+        logger.error("[Worker] Error al intentar marcar como fallido en DB:", updateErr);
       }
       
       throw err;

@@ -1,4 +1,5 @@
 import { redis } from './ratelimit';
+import { logger } from "@/lib/logger";
 
 export enum CircuitState {
   CLOSED = 'CLOSED',
@@ -34,7 +35,7 @@ async function safeRedis<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   } catch (e) {
     // Fail-open: un outage de Redis jamás debe bloquear ni falsear el
     // estado del circuit breaker ni descartar resultados del servicio.
-    console.warn('[CircuitBreaker] Redis op failed (fail-open):', e);
+    logger.warn('[CircuitBreaker] Redis op failed (fail-open):', e);
     return fallback;
   } finally {
     // Evitar timers colgados cuando Redis responde rápido (mantiene la
@@ -120,7 +121,7 @@ export class RedisCircuitBreaker {
       await safeRedis(() => redis.set(`${this.key}:state`, CircuitState.OPEN), null);
       await safeRedis(() => redis.set(`${this.key}:last_failure`, Date.now()), null);
       await safeRedis(() => redis.del(`${this.key}:successes`), null);
-      console.warn(`[CircuitBreaker] Service ${this.key} is now OPEN`);
+      logger.warn(`[CircuitBreaker] Service ${this.key} is now OPEN`);
     }
   }
 
@@ -133,6 +134,6 @@ export class RedisCircuitBreaker {
     await safeRedis(() => redis.del(`${this.key}:failures`), null);
     await safeRedis(() => redis.del(`${this.key}:successes`), null);
     await safeRedis(() => redis.del(`${this.key}:last_failure`), null);
-    console.log(`[CircuitBreaker] Service ${this.key} is now CLOSED`);
+    logger.info(`[CircuitBreaker] Service ${this.key} is now CLOSED`);
   }
 }

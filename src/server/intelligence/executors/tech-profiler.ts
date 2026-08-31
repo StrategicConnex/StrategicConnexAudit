@@ -1,4 +1,5 @@
 import { safeFetch } from "../security/egress-guard";
+import { logger } from "@/lib/logger";
 
 export class TechProfilerExecutor {
   async execute(domain: string) {
@@ -57,7 +58,7 @@ export class TechProfilerExecutor {
         technologies: uniqueTech
       };
     } catch (error) {
-      console.error(`TechProfiler failed for ${domain}:`, error);
+      logger.error(`TechProfiler failed for ${domain}:`, error);
       return { success: false, error: "Failed to profile technologies" };
     }
   }

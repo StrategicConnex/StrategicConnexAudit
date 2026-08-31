@@ -3,6 +3,8 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { withRLS } from "@/shared/db/rls";
 import { uptimeLogs } from "@/shared/db/schemas";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +154,7 @@ export async function GET(req: NextRequest) {
       events,
     });
   } catch (error: unknown) {
-    console.error("[LiveAPI] Error:", error);
+    logger.error("[LiveAPI] Error:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error al obtener métricas en vivo",

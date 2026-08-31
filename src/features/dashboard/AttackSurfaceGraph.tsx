@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 interface AttackSurfaceNode {
   id: string;
@@ -167,7 +169,7 @@ export function AttackSurfaceGraph({ target, metadata, score }: AttackSurfaceGra
         });
       }
     } catch (err) {
-      console.error("Failed to load adjacent nodes", err);
+      logger.error("Failed to load adjacent nodes", { error: getErrorMessage(err) });
     } finally {
       setLoadingNode(null);
     }

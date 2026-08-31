@@ -17,6 +17,7 @@ import { executeTool } from "@/server/intelligence/core/dispatcher";
 import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
 import type { Finding } from "@/server/intelligence/types/executor.types";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +97,7 @@ export async function GET(req: NextRequest) {
       ...result.data
     });    } catch (error: unknown) {
     const msg = getErrorMessage(error);
-    console.error("GET intelligence investigations failure:", error);
+    logger.error("GET intelligence investigations failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: msg === "No autorizado" ? "No autorizado" : "Error interno del servidor"
@@ -400,7 +401,7 @@ export async function POST(req: NextRequest) {
         } catch (dbErr: unknown) {
           const dbMsg = getErrorMessage(dbErr);
           errorLog.push(`db: ${dbMsg}`);
-          console.error("DB persistence failed in background scan:", dbErr);
+          logger.error("DB persistence failed in background scan:", { error: getErrorMessage(dbErr) })
           // Marcar como completado con advertencia (resultados parciales)
           await markInvestigationResult(investigation.id, user.id, {
             status: "failed",
@@ -410,7 +411,7 @@ export async function POST(req: NextRequest) {
         }
 
       } catch (backgroundError: unknown) {
-        console.error(`Background scan failed (phase: ${phase}):`, backgroundError);
+        logger.error(`Background scan failed (phase: ${phase}):`, backgroundError);
         const bgMsg = getErrorMessage(backgroundError);
         errorLog.push(`fase "${phase}": ${bgMsg}`);
         await markInvestigationResult(investigation.id, user.id, {
@@ -433,7 +434,7 @@ export async function POST(req: NextRequest) {
       }
     });    } catch (error: unknown) {
     const msg = getErrorMessage(error);
-    console.error("POST intelligence investigations failure:", error);
+    logger.error("POST intelligence investigations failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: msg === "No autorizado" ? "No autorizado" : "Error interno del servidor"
@@ -470,6 +471,6 @@ async function markInvestigationResult(
       });
     });
   } catch (dbErr) {
-    console.error("CRITICAL: Cannot update investigation status even in fallback:", dbErr);
+    logger.error("CRITICAL: Cannot update investigation status even in fallback:", { error: getErrorMessage(dbErr) })
   }
 }

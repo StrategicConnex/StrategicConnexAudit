@@ -8,6 +8,8 @@ import {
   getPluginPackage,
 } from "@/server/intelligence/plugins/registry";
 import { registerSinglePluginExecutor } from "@/server/intelligence/plugins/plugin-executor";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +38,7 @@ export async function GET(req: NextRequest) {
     const catalog = await listPluginCatalog(user.id);
     return NextResponse.json({ success: true, plugins: catalog });
   } catch (error) {
-    console.error("GET /api/plugins failure:", error);
+    logger.error("GET /api/plugins failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor",
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
         const pkg = await getPluginPackage(packageId);
         if (pkg) {
           await registerSinglePluginExecutor(pkg.name).catch((err) =>
-            console.error(`[Plugin API] Error registrando executor para '${pkg.name}':`, err)
+            logger.error(`[Plugin API] Error registrando executor para '${pkg.name}':`, err)
           );
         }
       }
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
       error: `Acción desconocida: ${action}`,
     }, { status: 400 });
   } catch (error) {
-    console.error("POST /api/plugins failure:", error);
+    logger.error("POST /api/plugins failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: "Error interno del servidor",

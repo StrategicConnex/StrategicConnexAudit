@@ -6,6 +6,8 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { checkIntelScanRateLimit, buildRateLimitHeaders } from "@/shared/lib/ratelimit";
 import { apiKeyHasScope, API_SCOPES } from "@/shared/lib/api-keys";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 const bulkSchema = z.object({
   projectId: z.string().uuid(),
@@ -109,7 +111,7 @@ export async function POST(req: NextRequest) {
     }, { status: 202 });
 
   } catch (error: unknown) {
-    console.error("Bulk API Error:", error);
+    logger.error("Bulk API Error:", { error: getErrorMessage(error) })
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

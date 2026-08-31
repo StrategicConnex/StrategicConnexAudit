@@ -4,6 +4,7 @@ import { projects, uptimeLogs } from '@/shared/db/schemas';
 import { and, eq, isNull } from 'drizzle-orm';
 import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
 import { isCronAuthorized } from "@/server/auth/cron";
+import { logger } from "@/lib/logger";
 
 export const maxDuration = 60; // 1 minute timeout
 export const dynamic = 'force-dynamic';
@@ -96,7 +97,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, results });
   } catch (error) {
     const err = error as { message?: string };
-    console.error('Uptime cron error:', error);
+    logger.error('Uptime cron error:', error);
     return NextResponse.json({ error: err.message || 'Cron error' }, { status: 500 });
   }
 }

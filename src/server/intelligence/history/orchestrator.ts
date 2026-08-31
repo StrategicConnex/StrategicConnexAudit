@@ -8,6 +8,7 @@ import { detectDnsChanges } from "./dns-history";
 import { detectWhoisChanges } from "./whois-history";
 import { sendDnsChangeAlerts } from "@/server/security/dns-change-alert";
 import type { DnsChange, WhoisChange, WhoisSnapshot } from "./types";
+import { logger } from "@/lib/logger";
 
 export async function processDnsResults(params: {
   projectId: string;
@@ -45,7 +46,7 @@ export async function processDnsResults(params: {
   // Fire SIEM alert for DNS changes (fire-and-forget, no await — non-blocking)
   if (changes.length > 0) {
     sendDnsChangeAlerts(domain, changes).catch((err) =>
-      console.error(`[DNS Orchestrator] Error enviando alerta DNS para ${domain}:`, err)
+      logger.error(`[DNS Orchestrator] Error enviando alerta DNS para ${domain}:`, err)
     );
   }
 

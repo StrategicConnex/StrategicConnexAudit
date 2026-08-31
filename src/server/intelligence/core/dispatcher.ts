@@ -7,6 +7,7 @@ import { initializePluginExecutors } from "../plugins/plugin-executor";
 import { getErrorMessage } from "@/shared/lib/errors";
 import net from "node:net";
 import dns from "node:dns/promises";
+import { logger } from "@/lib/logger";
 
 /**
  * Despacha y ejecuta dinámicamente una herramienta de ciberseguridad
@@ -111,7 +112,7 @@ export async function executeTool(
     log(message, payload) {
       const payloadStr = payload ? ` ${JSON.stringify(payload)}` : "";
       logs.push(`[${new Date().toISOString()}] ${message}${payloadStr}`);
-      console.log(`[Tool ${toolId}] ${message}${payloadStr}`);
+      logger.info(`[Tool ${toolId}] ${message}${payloadStr}`);
     },
   };
 

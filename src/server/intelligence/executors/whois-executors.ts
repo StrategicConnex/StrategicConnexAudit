@@ -19,6 +19,7 @@ import { whoisCircuit, CircuitOpenError } from "../core/circuit-breaker";
 import { geoipCache, IntelligenceCache } from "../core/cache";
 import { sendWhoisChangeAlerts } from "@/server/security/whois-change-alert";
 import type { WhoisSnapshot } from "../history/types";
+import { logger } from "@/lib/logger";
 
 const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 
@@ -102,16 +103,16 @@ export const whoisFullExecutor: ToolExecutor<{ domain: string }, WhoisFullOutput
                 ctx.log(`[SIEM] ${alertResult.alertsSent} alertas WHOIS enviadas para ${domain}`);
               }
               if (alertResult.errors.length > 0) {
-                console.warn(`[SIEM] Errores enviando alertas WHOIS para ${domain}:`, alertResult.errors);
+                logger.warn(`[SIEM] Errores enviando alertas WHOIS para ${domain}:`, alertResult.errors);
               }
             })
             .catch((alertErr) => {
-              console.error(`[SIEM] Error en alerta WHOIS para ${domain}:`, alertErr);
+              logger.error(`[SIEM] Error en alerta WHOIS para ${domain}:`, alertErr);
             });
         }
       })
       .catch((err) => {
-        console.error(`[WHOIS Full] Error persistiendo history para ${domain}:`, err);
+        logger.error(`[WHOIS Full] Error persistiendo history para ${domain}:`, err);
       });
 
     // ── 6. Respuesta + findings ──────────────────────────────────────────

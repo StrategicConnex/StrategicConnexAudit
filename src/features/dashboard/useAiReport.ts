@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { parseMarkdownReport, generateHtmlReportDocument } from './report-utils';
+import { logger } from "@/lib/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export function useAiReport(projectId: string) {
       if (!response.ok) {
         const msg = data.error || `El servidor respondió con estado ${response.status}.`;
         setState(s => ({ ...s, progress: 0, status: msg, isFallback: false, isGenerating: false }));
-        console.error('[AiReport] HTTP error:', response.status, msg);
+        logger.error(`[AiReport] HTTP error: ${response.status} - ${msg}`);
         return;
       }
 
@@ -93,17 +94,17 @@ export function useAiReport(projectId: string) {
       } else if (data.success && !data.report) {
         // El backend dice success pero no envió contenido — nunca mostrar 100% vacío.
         setState(s => ({ ...s, progress: 0, status: 'El informe llegó vacío. Reintentá en unos segundos.', isFallback: false, isGenerating: false }));
-        console.error('[AiReport] Empty report:', data);
+        logger.error('[AiReport] Empty report:', data);
       } else {
         setState(s => ({ ...s, progress: 0, status: data.error || 'Error al procesar el informe.', isFallback: false, isGenerating: false }));
-        console.error('[AiReport] API error:', data.error);
+        logger.error('[AiReport] API error:', data.error);
       }
     } catch (error) {
       clearTimeout(timeoutId);
       clearInterval(interval);
       const timedOut = error instanceof DOMException && error.name === 'AbortError';
       setState(s => ({ ...s, progress: 0, status: timedOut ? 'El servidor tardó demasiado. Reintentá en unos segundos.' : 'Error de conexión.', isGenerating: false }));
-      console.error('[AiReport] Network error:', error);
+      logger.error('[AiReport] Network error:', error);
     }
   }, [projectId]);
 

@@ -7,6 +7,7 @@ import { dnsHistory } from "@/shared/db/schemas/history";
 import { and, eq, gte, lte, desc } from "drizzle-orm";
 import crypto from "node:crypto";
 import type { DnsSnapshot, HistoryQueryResult, DnsChange } from "./types";
+import { logger } from "@/lib/logger";
 
 function hashSnapshot(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex").substring(0, 16);
@@ -52,7 +53,7 @@ export async function persistDnsSnapshot(
     firstSeenAt: new Date(),
     metadata: metadata ?? {},
   }).catch((err) => {
-    console.error(`[DNS History] Error persistiendo snapshot ${query}:${recordType}:`, err);
+    logger.error(`[DNS History] Error persistiendo snapshot ${query}:${recordType}:`, err);
   });
 }
 

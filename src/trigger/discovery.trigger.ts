@@ -10,25 +10,26 @@ import { db } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { runDiscovery } from "@/server/intelligence/discovery/orchestrator";
 import { and, eq, isNull } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 
 export const continuousDiscovery = schedules.task({
   id: "continuous-discovery",
   cron: "0 */6 * * *",
   run: async (payload) => {
-    console.log(`[Discovery Trigger] Starting: ${payload.timestamp}`);
+    logger.info(`[Discovery Trigger] Starting: ${payload.timestamp}`);
 
     const activeProjects = await db
       .select()
       .from(projects)
       .where(and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)));
 
-    console.log(`[Discovery Trigger] ${activeProjects.length} active projects.`);
+    logger.info(`[Discovery Trigger] ${activeProjects.length} active projects.`);
 
     const results = [];
 
     for (const project of activeProjects) {
       try {
-        console.log(`[Discovery] Running for ${project.name} (${project.domain})`);
+        logger.info(`[Discovery] Running for ${project.name} (${project.domain})`);
 
         const result = await runDiscovery({
           domain: project.domain,
@@ -52,13 +53,13 @@ export const continuousDiscovery = schedules.task({
           })),
         });
 
-        console.log(
+        logger.info(
           `[Discovery] ${project.domain}: ${result.totalNewAssets} new, ` +
           `${result.totalChanges} changes.`
         );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[Discovery] Error in ${project.name}:`, msg);
+        logger.error(`[Discovery] Error in ${project.name}:`, msg);
         results.push({
           projectId: project.id,
           domain: project.domain,
@@ -74,7 +75,7 @@ export const continuousDiscovery = schedules.task({
     const errors = results.filter((r) => r.error);
     const successCount = results.length - errors.length;
 
-    console.log(
+    logger.info(
       `[Discovery] Done: ${successCount}/${activeProjects.length} OK, ` +
       `${totalNew} new assets, ${errors.length} errors.`
     );

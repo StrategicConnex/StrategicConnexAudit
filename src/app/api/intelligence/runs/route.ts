@@ -13,6 +13,7 @@ import { getToolDefinition } from "@/server/intelligence/core/tool-registry";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
 import { checkIntelScanRateLimit, buildRateLimitHeaders } from "@/shared/lib/ratelimit";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
 
   } catch (error: unknown) {
     const msg = getErrorMessage(error);
-    console.error("GET intelligence runs failure:", error);
+    logger.error("GET intelligence runs failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: msg === "No autorizado" ? "No autorizado" : "Error interno del servidor"
@@ -188,7 +189,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: unknown) {
     const msg = getErrorMessage(error);
-    console.error("POST intelligence run failure:", error);
+    logger.error("POST intelligence run failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,
       error: msg === "No autorizado" ? "No autorizado" : `Error al ejecutar herramienta: ${msg}`

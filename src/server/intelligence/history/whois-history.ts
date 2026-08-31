@@ -7,6 +7,7 @@ import { whoisHistory } from "@/shared/db/schemas/history";
 import { and, eq, desc, gte, lte } from "drizzle-orm";
 import crypto from "node:crypto";
 import type { WhoisSnapshot, HistoryQueryResult, WhoisChange } from "./types";
+import { logger } from "@/lib/logger";
 
 function hashSnapshot(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex").substring(0, 16);
@@ -67,7 +68,7 @@ export async function persistWhoisSnapshot(
       diffSummary, originalSnapshot: snapshot.originalData,
       firstSeenAt: prevFirstSeen ?? new Date(),
     }).catch((err) => {
-      console.error(`[WHOIS History] Error persistiendo snapshot para ${snapshot.domain}:`, err);
+      logger.error(`[WHOIS History] Error persistiendo snapshot para ${snapshot.domain}:`, err);
     });
   }
 

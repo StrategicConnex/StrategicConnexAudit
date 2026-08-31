@@ -7,6 +7,7 @@ import {
   Bell, Key, Link2, Plus, Trash2, Cpu, CheckCircle2, AlertTriangle,
   Sliders, Play, Copy, Check, Sparkles, Send, ShieldCheck, Zap
 } from 'lucide-react';
+import { logger } from "@/lib/logger";
 
 interface MonitoringProject {
   id: string;
@@ -108,7 +109,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         setAlerts(data.alerts || []);
       }
     } catch (err) {
-      console.error('Failed to fetch monitoring details:', err);
+      logger.error('Failed to fetch monitoring details:', err);
     } finally {
       setIsLoadingSchedule(false);
     }
@@ -123,7 +124,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         setWebhooks(data.webhooks || []);
       }
     } catch (err) {
-      console.error('Failed to fetch webhooks:', err);
+      logger.error('Failed to fetch webhooks:', err);
     } finally {
       setIsLoadingWebhooks(false);
     }
@@ -138,7 +139,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         setApiKeys(data.apiKeys || []);
       }
     } catch (err) {
-      console.error('Failed to fetch API keys:', err);
+      logger.error('Failed to fetch API keys:', err);
     } finally {
       setIsLoadingKeys(false);
     }
@@ -193,7 +194,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         setAlerts(prev => [simulatedAlert, ...prev]);
       }
     } catch (err) {
-      console.error('Failed to update schedule:', err);
+      logger.error('Failed to update schedule:', err);
     } finally {
       setIsSavingSchedule(false);
     }
@@ -221,7 +222,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         setNewWebhookUrl('');
       }
     } catch (err) {
-      console.error('Failed to register webhook:', err);
+      logger.error('Failed to register webhook:', err);
     } finally {
       setIsCreatingWebhook(false);
     }
@@ -237,7 +238,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         setWebhooks(prev => prev.filter(w => w.id !== webhookId));
       }
     } catch (err) {
-      console.error('Failed to delete webhook:', err);
+      logger.error('Failed to delete webhook:', err);
     }
   };
 
@@ -263,7 +264,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         setNewKeyName('');
       }
     } catch (err) {
-      console.error('Failed to create developer key:', err);
+      logger.error('Failed to create developer key:', err);
     } finally {
       setIsCreatingKey(false);
     }
@@ -280,7 +281,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
         if (createdClearKey) setCreatedClearKey(null);
       }
     } catch (err) {
-      console.error('Failed to revoke API key:', err);
+      logger.error('Failed to revoke API key:', err);
     }
   };
 

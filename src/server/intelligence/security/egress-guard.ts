@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises";
 import net from "node:net";
+import { logger } from "@/lib/logger";
 
 /* ═══════════════════════════════════════════════════════════════════
    Egress Guard — SSRF & Private Network Protection
@@ -278,7 +279,7 @@ export async function validateSafeUrl(targetUrl: string): Promise<string> {
     if (err?.message?.includes("Acceso denegado")) {
       throw err;
     }
-    console.warn(`[EgressGuard] No se pudo resolver DNS para el host ${hostname}:`, err?.message || err);
+    logger.warn(`[EgressGuard] No se pudo resolver DNS para el host ${hostname}:`, err?.message || err);
   }
 
   return targetUrl;

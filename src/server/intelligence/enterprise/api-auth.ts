@@ -3,6 +3,8 @@ import { db } from "@/shared/db";
 import { developerApiKeys } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
 
 export interface ApiAuthContext {
   userId: string;
@@ -53,7 +55,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiAuthContext |
     db.update(developerApiKeys)
       .set({ lastUsedAt: new Date() })
       .where(eq(developerApiKeys.id, keyRecord.id))
-      .catch(err => console.error("Fallo al actualizar lastUsedAt en ApiKey:", err));
+      .catch(err => logger.error("Fallo al actualizar lastUsedAt en ApiKey:", { error: getErrorMessage(err) }));
 
     return {
       userId: keyRecord.userId,
@@ -61,7 +63,7 @@ export async function validateApiKey(req: NextRequest): Promise<ApiAuthContext |
       scope: keyRecord.scope ?? [],
     };
   } catch (err) {
-    console.error("Error validando API Key:", err);
+    logger.error("Error validando API Key:", { error: getErrorMessage(err) });
     return null;
   }
 }

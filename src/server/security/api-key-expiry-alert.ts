@@ -17,6 +17,7 @@ import { logSecurityEvent } from "@/shared/lib/audit-log";
 import { directDb } from "@/shared/db";
 import { developerApiKeys } from "@/shared/db/schemas";
 import { WEBHOOK_FORMATTERS, persistDelivery, type SiemPattern } from "@/server/security/siem-exporter";
+import { logger } from "@/lib/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -207,7 +208,7 @@ export async function runApiKeyExpiryCheck(): Promise<ApiKeyExpiryResult> {
       };
     }
 
-    console.log(`[ApiKeyExpiry] ${expiringKeys.length} keys expiring within ${EXPIRY_WARNING_DAYS} days.`);
+    logger.info(`[ApiKeyExpiry] ${expiringKeys.length} keys expiring within ${EXPIRY_WARNING_DAYS} days.`);
 
     // Build alert patterns
     const patterns = expiringKeys.map(buildAlertPattern);
@@ -232,7 +233,7 @@ export async function runApiKeyExpiryCheck(): Promise<ApiKeyExpiryResult> {
     const { sent, failed, errors: sendErrors } = await sendExpiryAlerts(patterns);
     errors.push(...sendErrors);
 
-    console.log(`[ApiKeyExpiry] Sent: ${sent}, Failed: ${failed}`);
+    logger.info(`[ApiKeyExpiry] Sent: ${sent}, Failed: ${failed}`);
 
     return {
       expiringKeysFound: expiringKeys.length,
@@ -249,7 +250,7 @@ export async function runApiKeyExpiryCheck(): Promise<ApiKeyExpiryResult> {
   } catch (err: unknown) {
     const expErr = err as { message?: string };
     errors.push(`API Key expiry check error: ${expErr.message || String(err)}`);
-    console.error("[ApiKeyExpiry] Fatal error:", expErr.message || err);
+    logger.error("[ApiKeyExpiry] Fatal error:", expErr.message || err);
     return {
       expiringKeysFound: 0,
       alertsSent: 0,
