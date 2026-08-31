@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const insertMock = vi.hoisted(() => vi.fn());
+const { insertMock, loggerMock } = vi.hoisted(() => ({
+  insertMock: vi.fn(),
+  loggerMock: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+}));
 vi.mock("@/shared/db", () => ({ directDb: { insert: insertMock } }));
 vi.mock("@/shared/db/schemas", () => ({ securityAuditLogs: {} }));
+vi.mock("@/lib/logger", () => ({ logger: loggerMock }));
 
 import { logSecurityEvent, extractIpFromHeaders, eventFromRequest } from "./audit-log";
 
@@ -19,7 +23,6 @@ describe("audit-log — logSecurityEvent (fail-safe)", () => {
   });
 
   it("emite JSON estructurado a consola con los campos del evento", () => {
-    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
     logSecurityEvent("rate_limit_hit", {
       ip: "203.0.113.5",
       userId: "u1",
@@ -28,8 +31,8 @@ describe("audit-log — logSecurityEvent (fail-safe)", () => {
       metadata: { prefix: "email_limit" },
     });
 
-    const line = spy.mock.calls[0]![0];
-    expect(typeof line).toBe("string");
+    expect(loggerMock.info).toHaveBeenCalled();
+    const line = loggerMock.info.mock.calls[0]![0] as string;
     const event = JSON.parse(line);
     expect(event.audit).toBe(true);
     expect(event.eventType).toBe("rate_limit_hit");
@@ -39,18 +42,15 @@ describe("audit-log — logSecurityEvent (fail-safe)", () => {
     expect(event.method).toBe("POST");
     expect(event.metadata.prefix).toBe("email_limit");
     expect(event.timestamp).toBeTruthy();
-    spy.mockRestore();
   });
 
   it("rellena defaults para detalles vacíos", () => {
-    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
     logSecurityEvent("csp_violation", {});
-    const event = JSON.parse(spy.mock.calls[0]![0] as string);
+    const event = JSON.parse(loggerMock.info.mock.calls[0]![0] as string);
     expect(event.ip).toBe("unknown");
     expect(event.path).toBe("/");
     expect(event.method).toBe("UNKNOWN");
     expect(event.metadata).toEqual({});
-    spy.mockRestore();
   });
 
   it("persiste en Supabase vía directDb (fire-and-forget)", async () => {
@@ -73,15 +73,13 @@ describe("audit-log — logSecurityEvent (fail-safe)", () => {
   });
 
   it("nunca lanza aunque la persistencia falle (fail-safe)", async () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     insertMock.mockImplementation(() => ({
       values: vi.fn(async () => { throw new Error("db down"); }),
     }));
 
     expect(() => logSecurityEvent("invalid_input", {})).not.toThrow();
     await new Promise((r) => setTimeout(r, 0));
-    expect(spy).toHaveBeenCalled();
-    spy.mockRestore();
+    expect(loggerMock.info).toHaveBeenCalled();
   });
 });
 
