@@ -6,11 +6,12 @@ import { ThemeSwitcher } from "@/shared/design-system";
 
 interface DashboardHeaderProps {
   activeTab: string;
-  NewProjectModal: React.ComponentType;
+  NewProjectModal: React.ComponentType<{ onCreated?: () => void }>;
   onMenu: () => void;
+  onNavigateProjects: () => void;
 }
 
-export function DashboardHeader({ activeTab, NewProjectModal, onMenu }: DashboardHeaderProps) {
+export function DashboardHeader({ activeTab, NewProjectModal, onMenu, onNavigateProjects }: DashboardHeaderProps) {
   const t = useTranslations('sidebar');
   const getTitle = () => {
     switch (activeTab) {
@@ -63,7 +64,7 @@ export function DashboardHeader({ activeTab, NewProjectModal, onMenu }: Dashboar
       <div className="flex items-center gap-1.5 sm:gap-6">
         <InstallPwaButton />
         <ThemeSwitcher compact />
-        <NewProjectModal />
+        <NewProjectModal onCreated={onNavigateProjects} />
         <div className="hidden sm:flex w-9 h-9 rounded-full bg-muted/20 hover:bg-muted/40 items-center justify-center cursor-pointer transition-colors duration-300 border border-border/40 relative group">
           <span className="text-xs font-bold text-foreground/80 group-hover:text-foreground transition-colors">JU</span>
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-chartreuse border-2 border-background rounded-full" />

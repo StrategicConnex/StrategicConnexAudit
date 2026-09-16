@@ -9,6 +9,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { ProjectCard } from '../ProjectCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { JargonTerm } from '@/components/ui/JargonTerm';
 import { Card } from '@/components/ui/Card';
 import type { ProjectWithNested } from '@/shared/db/types';
 
@@ -270,6 +271,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
                 {t('telemetry')}
               </h3>
               <p className="text-sm font-bold text-foreground tracking-tight font-display">{t('avgLcpVsAudits')}</p>
+              <p className="text-2xs text-muted-fg mt-0.5">Cuánto tarda en verse lo principal de tu página: menos segundos, mejor experiencia.</p>
             </div>
             <div className="flex items-center gap-3">
               <span title={t('previewBadge')} className="text-2xs font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full border border-dashed border-muted-fg/40 text-muted-fg">
@@ -281,7 +283,9 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
               </span>
               <span className="flex items-center gap-1.5 text-2xs font-bold text-muted-fg uppercase tracking-widest">
                 <span className="w-2 h-2 rounded-full bg-chartreuse" />
-                LCP (ms)
+                <JargonTerm term="LCP = lo que tarda en aparecer el contenido principal de tu página. Menos de 2,5 segundos es bueno.">
+                  LCP (ms)
+                </JargonTerm>
               </span>
             </div>
           </div>
@@ -363,7 +367,11 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
               {t('enterprise')}
             </span>
             <span className="w-1 h-1 rounded-full bg-border" />
-            <span className="text-2xs font-bold text-muted-fg tracking-widest uppercase">GSC API Sync Active</span>
+            <span className="text-2xs font-bold text-muted-fg tracking-widest uppercase">
+              <JargonTerm term="GSC = Google Search Console: de dónde vienen tus visitas desde Google. Si está activo, usamos tus datos reales.">
+                {t('gscSync')}
+              </JargonTerm>
+            </span>
           </div>
           <h4 className="font-display text-sm font-bold text-foreground tracking-tight">{t('intelligenceEngine')}</h4>
           <p className="text-xs text-muted-fg leading-relaxed">

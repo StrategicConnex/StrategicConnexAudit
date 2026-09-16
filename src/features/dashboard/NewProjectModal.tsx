@@ -2,14 +2,18 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { createProject } from '@/app/actions/projects';
 import { Plus, X, Loader2 } from 'lucide-react';
 
-export function NewProjectModal() {
+export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [state, setState] = useState<{ success?: boolean; message?: string; errors?: Record<string, string[]> } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const firstInputRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -44,6 +48,21 @@ export function NewProjectModal() {
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
+  // Foco inicial + Escape: diálogo real, no solo un div flotante.
+  useEffect(() => {
+    if (!isOpen) return;
+    firstInputRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        setState(null);
+        setPosition({ x: 0, y: 0 });
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsPending(true);
@@ -69,9 +88,19 @@ export function NewProjectModal() {
         setIsOpen(false);
         setPosition({ x: 0, y: 0 });
         formRef.current?.reset();
+        // El usuario debe ENTERARSE y LLEGAR a su proyecto: refrescar datos,
+        // toast con acción y (si el padre lo pide) navegar a la pestaña.
+        router.refresh();
+        toast.success('Proyecto creado correctamente', {
+          description: 'Ya puedes verlo en tu lista de proyectos.',
+          action: onCreated
+            ? { label: 'Ver proyecto', onClick: () => onCreated() }
+            : undefined,
+        });
+        onCreated?.();
       }
     } catch {
-      setState({ success: false, message: "An unexpected error occurred." });
+      setState({ success: false, message: "Ocurrió un error inesperado. Intenta de nuevo." });
     } finally {
       setIsPending(false);
     }
@@ -89,7 +118,10 @@ export function NewProjectModal() {
 
       {isOpen && mounted && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/75 backdrop-blur-md animate-in fade-in duration-300">
-          <div 
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-project-title"
             className={`glass-card rounded-2xl w-full max-w-md p-8 shadow-2xl relative animate-in zoom-in-95 duration-300 border border-border ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
             onPointerDown={handlePointerDown}
@@ -109,8 +141,8 @@ export function NewProjectModal() {
             </button>
             
             <div className="mb-6 pointer-events-none select-none">
-              <h2 className="text-xl font-bold text-foreground tracking-tight">Agregar Dominio</h2>
-              <p className="text-xs font-semibold text-muted-fg mt-1">Configure un nuevo sitio para monitoreo SEO y Core Web Vitals.</p>
+              <h2 id="new-project-title" className="text-xl font-bold text-foreground tracking-tight">Agregar Dominio</h2>
+              <p className="text-xs font-semibold text-muted-fg mt-1">Agrega tu sitio web y empezaremos a vigilarlo por ti.</p>
             </div>
             
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-5 cursor-auto">
@@ -120,8 +152,9 @@ export function NewProjectModal() {
                   type="text" 
                   id="name" 
                   name="name" 
+                  ref={firstInputRef}
                   className="w-full bg-muted/60 border border-border focus:border-primary/40 rounded-xl px-4 py-3 text-foreground text-xs font-semibold focus:outline-none transition-[color,background-color,border-color,box-shadow] duration-300 shadow-sm"
-                  placeholder="Ej: Mi Startup Ecommerce"
+                  placeholder="Ej: Mi Startup Ecommerce…"
                   required
                 />
                 {state?.errors?.name && (
@@ -136,7 +169,7 @@ export function NewProjectModal() {
                   id="baseUrl" 
                   name="baseUrl" 
                   className="w-full bg-muted/60 border border-border focus:border-primary/40 rounded-xl px-4 py-3 text-foreground text-xs font-semibold focus:outline-none transition-[color,background-color,border-color,box-shadow] duration-300 shadow-sm"
-                  placeholder="https://ejemplo.com"
+                  placeholder="https://ejemplo.com…"
                   required
                 />
                 {state?.errors?.baseUrl && (

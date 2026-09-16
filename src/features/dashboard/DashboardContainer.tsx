@@ -134,6 +134,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
           activeTab={activeTab} 
           NewProjectModal={NewProjectModal} 
           onMenu={() => setMobileNavOpen(true)}
+          onNavigateProjects={() => setActiveTab('projects')}
         />
 
         {/* Dynamic Content Panel */}

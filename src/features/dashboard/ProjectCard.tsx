@@ -31,6 +31,9 @@ function getHealthStyle(score: number) {
 export function ProjectCard({ project }: ProjectCardProps) {
   const healthScore = project.latestAudit ? 85 : 45;
   const healthStyle = getHealthStyle(healthScore);
+  // Dominios .example.com están reservados para documentación (RFC 2606):
+  // si aparecen aquí son fixtures de demo, no sitios reales. Se etiquetan.
+  const isDemo = /\.example\.com$/i.test(project.domain || '');
 
   return (
     <Link href={`/projects/${project.id}`} className="block h-full cursor-pointer">
@@ -51,6 +54,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <h3 className="text-lg font-black tracking-tight text-foreground group-hover:text-primary transition-colors truncate" title={project.name}>
               {project.name}
             </h3>
+            {isDemo && (
+              <span className="inline-flex w-fit mt-1.5 text-2xs font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full border border-dashed border-muted-fg/40 text-muted-fg">
+                Demo
+              </span>
+            )}
             <p className="text-xs font-semibold text-muted-fg tracking-tight truncate mt-0.5" title={project.domain}>
               {project.domain}
             </p>
@@ -90,7 +98,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <div className="pt-4 border-t border-border/50 flex items-center justify-between relative z-10 mt-auto">
           <span className="text-2xs font-bold text-muted-fg/60 uppercase tracking-widest flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-muted-fg/40" />
-            Sync: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Never'}
+            Sync: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Nunca'}
           </span>
           <span className="text-2xs uppercase tracking-widest text-primary font-extrabold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-[color,opacity,transform] transform translate-x-2 group-hover:translate-x-0">
             Analizar <ChevronRight size={14} strokeWidth={2.5} />
