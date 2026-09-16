@@ -1,0 +1,26 @@
+{
+  "skill_name": "end-user-simulation",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic-journey-execution",
+      "prompt": "Ejecuta la simulación de usuario final para el proyecto actual. Corre el journey J1 completo y genera el reporte de baches.",
+      "expected_output": "El skill debe: (1) localizar el dev server en puerto 3000, (2) ejecutar J1 via Playwright con screenshots en C:\\Users\\Juan\\AppData\\Local\\Temp\\opencode\\ux-j1-*.png, (3) clasificar hallazgos como B0-B3, (4) generar el archivo ux-findings.json con al menos un finding por categoría B0-B3, (5) dejar la BD limpia sin datos PRUEBA-E2E-*",
+      "files": ["scripts/run-journeys.ts", "references/gap-checklist.md"]
+    },
+    {
+      "id": 2,
+      "name": "j3-error-handling",
+      "prompt": "Simula como un usuario escéptico que intenta acceder a rutas inexistentes y envía formularios vacíos. Genera el reporte de baches J3.",
+      "expected_output": "El skill debe: (1) probar una ruta 404 y verificar si tiene mensaje comprensible en español, (2) intentar enviar formulario vacío y verificar si hay mensajes de validación en español, (3) verificar que las rutas protegidas redirijan a login sin sesión, (4) todos los hallazgos con evidencia específica (archivo:línea si aplica)",
+      "files": ["scripts/run-journeys.ts", "references/report-template.md"]
+    },
+    {
+      "id": 3,
+      "name": "full-campaign-top3-prioritization",
+      "prompt": "Ejecuta la campaña completa J1-J4, analiza todos los baches y propón el Top 3 de fixes que más reducen el abandono de usuarios.",
+      "expected_output": "El skill debe: (1) ejecutar los 4 journeys completos, (2) generar un reporte con diario por journey, tabla de baches completa, y Top 3 fixes priorizados, (3) cada fix con severidad, evidencia concreta, y esfuerzo S/M/L, (4) verificar cleanup de datos de prueba y puertos, (5) el Top 3 debe estar ordenado por impacto en reducción de abandono",
+      "files": ["scripts/run-journeys.ts", "references/report-template.md", "references/gap-checklist.md"]
+    }
+  ]
+}
