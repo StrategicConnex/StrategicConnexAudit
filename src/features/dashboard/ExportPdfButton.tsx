@@ -49,7 +49,7 @@ export function ExportPdfButton({ targetElementId }: { targetElementId: string }
       ) : (
         <Download className="w-3.5 h-3.5" aria-hidden="true" />
       )}
-      {isExporting ? 'Generating PDF...' : 'Export PDF Report'}
+      {isExporting ? 'Generando PDF…' : 'Exportar informe PDF'}
     </Button>
   );
 }

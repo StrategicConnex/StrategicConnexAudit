@@ -96,7 +96,7 @@ export async function installPlugin(
 ): Promise<PluginInstallResult> {
   const pkg = await getPluginPackage(packageId);
   if (!pkg) {
-    return { success: false, instance: null, error: "Plugin package not found" };
+    return { success: false, instance: null, error: "Paquete de complemento no encontrado" };
   }
 
   const existing = await withRLS(userId, async (tx) => {
@@ -118,7 +118,7 @@ export async function installPlugin(
       });
       return { success: true, instance: updated! };
     }
-    return { success: true, instance: existing, error: "Already installed" };
+    return { success: true, instance: existing, error: "Ya instalado" };
   }
 
   await db.update(pluginPackages)

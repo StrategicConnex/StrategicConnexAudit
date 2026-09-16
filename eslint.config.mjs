@@ -51,7 +51,9 @@ const eslintConfig = defineConfig([
     // localStorage hydration, poll intervals, pulse animations).
     // MitreRealCoverage + RealAssessmentSection: fetch inicial + polling 5s
     // mientras hay evaluaciones activas (mismo patrón que el resto de tabs).
+    // BenchmarkingSection: fetch inicial en montaje.
     files: [
+      "src/features/dashboard/BenchmarkingSection.tsx",
       "src/features/dashboard/tabs/MarketplaceTab.tsx",
       "src/features/dashboard/tabs/MitreRealCoverage.tsx",
       "src/features/dashboard/tabs/RealAssessmentSection.tsx",

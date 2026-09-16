@@ -94,7 +94,9 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
       );
       if (active) {
         if (!pollRef.current) {
-          pollRef.current = setInterval(() => void fetchStateRef.current(true), 5000);
+          pollRef.current = setInterval(() => {
+            if (!document.hidden) void fetchStateRef.current(true);
+          }, 5000);
         }
         return;
       }

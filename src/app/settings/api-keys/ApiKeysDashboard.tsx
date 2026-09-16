@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Key, Plus, Trash2, Copy, Check, Loader2, AlertTriangle,
   ShieldCheck, Search, ArrowUpDown, Clock, ExternalLink,
-  BarChart3, Activity, RefreshCw, TrendingUp,
+  BarChart3, Activity, RefreshCw, TrendingUp, LockKeyhole,
 } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -97,6 +97,7 @@ export default function ApiKeysDashboard() {
   const [usageMap, setUsageMap] = useState<Record<string, KeyUsage>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   // Create form
   const [newKeyName, setNewKeyName] = useState('');
@@ -119,8 +120,14 @@ export default function ApiKeysDashboard() {
   const fetchKeys = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setUnauthorized(false);
     try {
       const res = await fetch('/api/api-keys');
+      // Sin sesión no hay llaves que mostrar: candado honesto, no error crudo.
+      if (res.status === 401) {
+        setUnauthorized(true);
+        return;
+      }
       const data = await res.json();
       if (!data.success) {
         setError(data.error || 'Error al obtener llaves');
@@ -181,6 +188,8 @@ export default function ApiKeysDashboard() {
         setNewKeyName('');
         setExpiresDays(0);
         fetchKeys();
+      } else if (res.status === 401) {
+        setUnauthorized(true);
       } else {
         setError(data.error || 'Error al crear llave');
       }
@@ -198,9 +207,10 @@ export default function ApiKeysDashboard() {
       const res = await fetch(`/api/api-keys?id=${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) fetchKeys();
-      else alert(`Error: ${data.error}`);
+      else if (res.status === 401) setUnauthorized(true);
+      else setError(`Error: ${data.error}`);
     } catch (err: unknown) {
-      alert(`Error de red: ${err instanceof Error ? err.message : String(err)}`);
+      setError(`Error de red: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -254,7 +264,7 @@ export default function ApiKeysDashboard() {
           API Keys
         </h1>
         <p className="text-sm text-muted-fg mt-2">
-          Manage programmatic access keys for the SCAUDIT REST API. Usage data is sourced from <code className="text-chartreuse text-2xs">security_audit_logs</code> — counts reflect real API calls authenticated with each key.
+          Gestiona las claves de acceso programático para la REST API de SCAUDIT. Los datos de uso provienen de <code className="text-chartreuse text-2xs">security_audit_logs</code> — los conteos reflejan llamadas reales autenticadas con cada clave.
         </p>
       </div>
 
@@ -262,26 +272,26 @@ export default function ApiKeysDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           icon={<Key className="w-5 h-5 text-primary" />}
-          label="Active Keys"
+          label="Claves activas"
           value={activeKeys.length}
           accent="bg-primary/10 border-primary/20 text-primary"
         />
         <StatCard
           icon={<Activity className="w-5 h-5 text-chartreuse" />}
-          label="Used This Week"
+          label="Usadas esta semana"
           value={keysUsedThisWeek}
-          sub={`${formatCount(totalThisWeek)} total requests`}
+          sub={`${formatCount(totalThisWeek)} solicitudes totales`}
           accent="bg-chartreuse/10 border-chartreuse/20 text-chartreuse"
         />
         <StatCard
           icon={<BarChart3 className="w-5 h-5 text-sky-400" />}
-          label="Total Requests"
+          label="Solicitudes totales"
           value={formatCount(totalRequests)}
           accent="bg-sky-500/10 border-sky-500/20 text-sky-400"
         />
         <StatCard
           icon={<Clock className="w-5 h-5 text-amber-400" />}
-          label="Expiring Soon"
+          label="Por vencer"
           value={expiringSoonKeys.length}
           accent="bg-amber-500/10 border-amber-500/20 text-amber-400"
         />
@@ -290,45 +300,58 @@ export default function ApiKeysDashboard() {
       {/* Create Form */}
       <form onSubmit={handleCreate} className="bg-muted/5 border border-border rounded-2xl p-8 space-y-6">
         <h3 className="text-xs font-bold text-muted-fg uppercase tracking-widest flex items-center gap-2">
-          <Plus className="w-4 h-4 text-primary" /> Create New API Key
+          <Plus className="w-4 h-4 text-primary" /> Crear nueva API Key
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
           <div className="space-y-2 md:col-span-2">
-            <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Name</label>
+            <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Nombre</label>
             <input
-              type="text" required placeholder="e.g. CI/CD Pipeline"
+              type="text" required placeholder="p. ej. Pipeline CI/CD…"
               value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
               className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm font-bold focus:outline-none transition-all placeholder-zinc-600"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Expiration</label>
+            <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Vencimiento</label>
             <select
               value={expiresDays} onChange={e => setExpiresDays(Number(e.target.value))}
               className="w-full bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm font-bold focus:outline-none"
             >
-              <option value={0}>Never</option>
-              <option value={30}>30 days</option>
-              <option value={90}>90 days</option>
-              <option value={365}>365 days</option>
+              <option value={0}>Nunca</option>
+              <option value={30}>30 días</option>
+              <option value={90}>90 días</option>
+              <option value={365}>365 días</option>
             </select>
           </div>
         </div>
-        {error && (
+        {unauthorized ? (
+          <div className="border border-border text-muted-fg p-6 rounded-xl flex flex-col items-center text-center gap-2">
+            <LockKeyhole aria-hidden="true" className="w-5 h-5" />
+            <p className="text-sm font-bold text-foreground">Tus API keys viven tras tu sesión</p>
+            <p className="text-xs max-w-sm">Inicia sesión para crear, ver y revocar claves de acceso programático.</p>
+            <Link
+              href="/login"
+              className="mt-2 text-2xs font-bold uppercase tracking-widest text-primary transition-colors inline-flex items-center gap-1.5 px-4 py-2 rounded-md border"
+              style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}
+            >
+              Iniciar sesión
+            </Link>
+          </div>
+        ) : error ? (
           <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs p-4 rounded-xl flex items-center gap-3">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
-        )}
+        ) : null}
         <div className="flex justify-end">
           <button
             type="submit" disabled={creating || !newKeyName.trim()}
             className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl text-2xs font-extrabold uppercase tracking-widest shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all flex items-center gap-2 cursor-pointer"
           >
             {creating ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> Generando…</>
             ) : (
-              <><Plus className="w-4 h-4" /> Generate Key</>
+              <><Plus className="w-4 h-4" /> Generar clave</>
             )}
           </button>
         </div>
@@ -345,7 +368,7 @@ export default function ApiKeysDashboard() {
             <div className="relative w-56">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
               <input
-                type="text" placeholder="Search by name…"
+                type="text" placeholder="Buscar por nombre…"
                 value={search} onChange={e => setSearch(e.target.value)}
                 className="w-full bg-card border border-border focus:border-primary rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:outline-none placeholder-zinc-600"
               />
@@ -355,19 +378,19 @@ export default function ApiKeysDashboard() {
                 onChange={e => setExpiringSoon(e.target.checked)}
                 className="rounded border-zinc-700 text-primary focus:ring-primary/20 bg-black" />
               <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">Expiring</span>
+              <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">Por vencer</span>
             </label>
             <button
               onClick={() => setSortNewest(!sortNewest)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-2xs font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
-              {sortNewest ? 'Newest' : 'Oldest'}
+              {sortNewest ? 'Recientes' : 'Antiguas'}
             </button>
             <button onClick={fetchKeys}
               aria-label="Actualizar claves"
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-2xs font-bold uppercase tracking-wider border border-border text-muted-fg hover:text-primary hover:border-primary/30 bg-card transition-all cursor-pointer"
-              title="Refresh"
+              title="Actualizar"
             >
               <RefreshCw aria-hidden="true" className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -382,7 +405,7 @@ export default function ApiKeysDashboard() {
           <div className="text-center py-20 bg-muted/5 border border-dashed border-border rounded-2xl">
             <Key className="w-10 h-10 text-muted-fg mx-auto mb-3" />
             <p className="text-sm text-muted-fg">
-              {search || expiringSoon ? 'No keys match your filters.' : 'No API keys yet. Create one above.'}
+              {search || expiringSoon ? 'Ninguna clave coincide con los filtros.' : 'Aún no hay API Keys. Crea una arriba.'}
             </p>
           </div>
         ) : (
@@ -390,13 +413,13 @@ export default function ApiKeysDashboard() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-border bg-muted/10 text-muted-fg font-bold">
-                  <th className="p-4 uppercase tracking-wider text-2xs">Name</th>
-                  <th className="p-4 uppercase tracking-wider text-2xs">Prefix</th>
-                  <th className="p-4 uppercase tracking-wider text-2xs">Created</th>
-                  <th className="p-4 uppercase tracking-wider text-2xs">Last Used</th>
-                  <th className="p-4 uppercase tracking-wider text-2xs">Requests</th>
-                  <th className="p-4 uppercase tracking-wider text-2xs">Expires</th>
-                  <th className="p-4 text-right uppercase tracking-wider text-2xs">Actions</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Nombre</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Prefijo</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Creada</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Último uso</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Solicitudes</th>
+                  <th className="p-4 uppercase tracking-wider text-2xs">Vence</th>
+                  <th className="p-4 text-right uppercase tracking-wider text-2xs">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
@@ -418,7 +441,7 @@ export default function ApiKeysDashboard() {
                         )}
                         {isExpired && (
                           <span className="text-2xs bg-destructive/10 text-destructive border border-destructive/20 px-1.5 py-0.5 rounded-full font-bold">
-                            Expired
+                            Vencida
                           </span>
                         )}
                       </td>
@@ -428,7 +451,7 @@ export default function ApiKeysDashboard() {
                         {key.lastUsedAt ? (
                           <span className="text-chartreuse text-2xs">{formatDateTime(key.lastUsedAt)}</span>
                         ) : (
-                          <span className="text-muted-fg italic text-2xs">Never used</span>
+                          <span className="text-muted-fg italic text-2xs">Nunca usada</span>
                         )}
                       </td>
                       <td className="p-4">
@@ -451,7 +474,7 @@ export default function ApiKeysDashboard() {
                             {formatDate(key.expiresAt)}
                           </span>
                         ) : (
-                          <span className="text-muted-fg italic">Never</span>
+                          <span className="text-muted-fg italic">Nunca</span>
                         )}
                       </td>
                       <td className="p-4 text-right">
@@ -460,7 +483,7 @@ export default function ApiKeysDashboard() {
                             onClick={() => handleCopy(key.keyPrefix, 'cp-' + key.id)}
                             aria-label="Copiar prefijo de la clave"
                             className="text-muted-fg hover:text-primary bg-muted/10 hover:bg-primary/10 p-2 rounded-lg border border-border hover:border-primary/30 transition-all cursor-pointer"
-                            title="Copy prefix"
+                            title="Copiar prefijo"
                           >
                             {copiedId === 'cp-' + key.id
                               ? <Check aria-hidden="true" className="w-3.5 h-3.5 text-chartreuse" />
@@ -471,7 +494,7 @@ export default function ApiKeysDashboard() {
                             onClick={() => handleRevoke(key.id)}
                             aria-label="Revocar esta API key"
                             className="text-destructive hover:text-red-300 bg-destructive/10 hover:bg-red-500/20 p-2 rounded-lg border border-destructive/20 transition-all cursor-pointer"
-                            title="Revoke this key"
+                            title="Revocar esta clave"
                           >
                             <Trash2 aria-hidden="true" className="w-3.5 h-3.5" />
                           </button>
@@ -494,22 +517,22 @@ export default function ApiKeysDashboard() {
               <div className="w-12 h-12 bg-primary/15 border border-primary/30 rounded-full flex items-center justify-center mx-auto text-primary">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">API Key Created</h3>
+              <h3 className="text-lg font-bold text-white">API Key creada</h3>
               <p className="text-xs text-muted-fg leading-relaxed">
-                This key will <strong>never be shown again</strong>. Save it securely now.
+                Esta clave no se volverá a mostrar. Guárdala en un lugar seguro ahora.
               </p>
             </div>
             <div className="bg-black border border-border rounded-xl p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Secret Key</span>
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-widest">Clave secreta</span>
                 <button
                   onClick={() => handleCopy(revealedKey, 'modal-key')}
                   className="text-primary hover:text-primary/80 text-2xs font-bold uppercase flex items-center gap-1.5 cursor-pointer"
                 >
                   {copiedId === 'modal-key' ? (
-                    <><Check className="w-3.5 h-3.5 text-chartreuse" /> Copied!</>
+                    <><Check className="w-3.5 h-3.5 text-chartreuse" /> ¡Copiada!</>
                   ) : (
-                    <><Copy className="w-3.5 h-3.5" /> Copy</>
+                    <><Copy className="w-3.5 h-3.5" /> Copiar</>
                   )}
                 </button>
               </div>
@@ -522,7 +545,7 @@ export default function ApiKeysDashboard() {
                 onClick={() => { setShowModal(false); setRevealedKey(null); }}
                 className="bg-zinc-100 hover:bg-white text-black font-extrabold text-2xs uppercase tracking-widest px-8 py-3.5 rounded-xl transition-all cursor-pointer"
               >
-                I Saved the Key
+                Ya guardé la clave
               </button>
             </div>
           </div>
@@ -533,7 +556,7 @@ export default function ApiKeysDashboard() {
       <div className="text-center border-t border-border pt-6">
         <Link href="/docs/api" className="inline-flex items-center gap-1.5 text-2xs text-muted-fg hover:text-primary transition-colors">
           <ExternalLink className="w-3.5 h-3.5" />
-          View API documentation for authentication details
+          Ver la documentación de la API para detalles de autenticación
         </Link>
       </div>
     </div>

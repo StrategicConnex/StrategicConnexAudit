@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
@@ -6,6 +6,7 @@ import { ToasterProvider } from "@/features/dashboard/ToasterProvider";
 import { I18nProvider } from "@/features/dashboard/I18nProvider";
 import { RegisterServiceWorker } from "@/features/dashboard/RegisterServiceWorker";
 import { ThemeProvider, themeInitScript } from "@/shared/design-system";
+import { getLocale, getMessages } from "@/i18n/request";
 
 
 const inter = Inter({
@@ -26,6 +27,11 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
   weight: ["300", "400", "500", "600", "700"],
 });
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#0D0F08",
+};
 
 export const metadata: Metadata = {
   title: "SCAUDIT | Enterprise Network Intelligence & Security",
@@ -72,10 +78,12 @@ export default async function RootLayout({
   // (teórico) de que el header HTTP del proxy no llegue a la página.
   const nonce = (await headers()).get("x-csp-nonce") || undefined;
   const isDev = process.env.NODE_ENV === "development";
+  const locale = await getLocale();
+  const messages = await getMessages(locale);
 
   return (
     <html
-      lang="es"
+      lang={locale}
       suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
@@ -121,7 +129,7 @@ export default async function RootLayout({
         </a>
         <RegisterServiceWorker />
         <ThemeProvider>
-          <I18nProvider>
+          <I18nProvider locale={locale} messages={messages}>
             {children}
           </I18nProvider>
         </ThemeProvider>

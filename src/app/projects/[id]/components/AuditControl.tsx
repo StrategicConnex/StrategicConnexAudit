@@ -184,37 +184,37 @@ export default function AuditControl({ projectId }: AuditControlProps) {
           {status === 'pending' && (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Initializing {Math.round(progress)}%</span>
+              <span>Iniciando {Math.round(progress)}%</span>
             </>
           )}
           {status === 'running' && (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Auditing {Math.round(progress)}%</span>
+              <span>Auditando {Math.round(progress)}%</span>
             </>
           )}
           {status === 'completed' && (
             <>
               <CheckCircle2 className="w-3.5 h-3.5 animate-bounce" />
-              <span>Success {Math.round(progress)}%</span>
+              <span>Éxito {Math.round(progress)}%</span>
             </>
           )}
           {status === 'failed' && (
             <>
               <AlertCircle className="w-3.5 h-3.5" />
-              <span>Retry Audit</span>
+              <span>Reintentar auditoría</span>
             </>
           )}
           {status === 'idle' && cooldown > 0 && (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin opacity-50" />
-              <span>Wait {cooldown}s</span>
+              <span>Espera {cooldown}s</span>
             </>
           )}
           {status === 'idle' && cooldown === 0 && (
             <>
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Start Audit</span>
+              <span>Iniciar auditoría</span>
             </>
           )}
         </div>

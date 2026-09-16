@@ -102,7 +102,11 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
         (e) => e.status === 'pending' || e.status === 'running' || e.status === 'analyzing'
       );
       if (active) {
-        if (!pollRef.current) pollRef.current = setInterval(() => void fetchStateRef.current(), 5000);
+        if (!pollRef.current) {
+          pollRef.current = setInterval(() => {
+            if (!document.hidden) void fetchStateRef.current();
+          }, 5000);
+        }
         return;
       }
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }

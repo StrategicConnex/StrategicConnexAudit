@@ -145,7 +145,11 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
       </aside>
 
       {isMobileCatalogOpen && (
-        <div onClick={() => setIsMobileCatalogOpen(false)} className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden" />
+        <button
+          onClick={() => setIsMobileCatalogOpen(false)}
+          aria-label="Cerrar catálogo"
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden cursor-default"
+        />
       )}
 
       {/* 2. CENTER PANEL */}

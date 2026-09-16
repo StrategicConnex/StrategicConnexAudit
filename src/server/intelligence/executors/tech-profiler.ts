@@ -59,7 +59,7 @@ export class TechProfilerExecutor {
       };
     } catch (error) {
       logger.error(`TechProfiler failed for ${domain}:`, error);
-      return { success: false, error: "Failed to profile technologies" };
+      return { success: false, error: "No se pudieron analizar las tecnologías" };
     }
   }
 }

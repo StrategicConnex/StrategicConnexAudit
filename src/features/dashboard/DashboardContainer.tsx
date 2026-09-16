@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { DashboardSidebar, type DashboardTab } from './DashboardSidebar';
+import { MobileNav } from './MobileNav';
 import { DashboardHeader } from './DashboardHeader';
 import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
 import { OverviewTab } from './tabs/OverviewTab';
@@ -75,15 +76,11 @@ interface DashboardContainerProps {
 
 export function DashboardContainer({ initialProjects, dashboardData, defaultTab }: DashboardContainerProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>(defaultTab || 'overview');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'visual' | 'markdown'>('visual');
   const [keywordInput, setKeywordInput] = useState('');
-  const [keywordsList, setKeywordsList] = useState<KeywordItem[]>([
-    { id: '1', keyword: 'auditoria seo tecnica', volume: '1.2K', difficulty: 34, position: 3, change: '+2', trend: 'up', project: 'StrategicAudit Pro' },
-    { id: '2', keyword: 'consultor seo enterprise', volume: '880', difficulty: 48, position: 1, change: '0', trend: 'stable', project: 'StrategicAudit Pro' },
-    { id: '3', keyword: 'agencia de seo organico', volume: '2.4K', difficulty: 62, position: 12, change: '-3', trend: 'down', project: 'Silo SEO' },
-    { id: '4', keyword: 'seo core web vitals', volume: '450', difficulty: 29, position: 5, change: '+8', trend: 'up', project: 'StrategicAudit Pro' },
-    { id: '5', keyword: 'optimizacion pagespeed nextjs', volume: '320', difficulty: 15, position: 2, change: '+1', trend: 'up', project: 'Vercel App' },
-  ]);
+  // Sin fixtures: la lista arranca vacía y KeywordsTab muestra su empty state.
+  const [keywordsList, setKeywordsList] = useState<KeywordItem[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjects[0]?.id || '');
   // El copilot "escucha" mientras genera → la red neuronal acelera su pulso
   const [copilotGenerating, setCopilotGenerating] = useState(false);
@@ -122,16 +119,25 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
         projectCount={initialProjects.length}
       />
 
+      {/* Mobile drawer — el sidebar es hidden en <md */}
+      <MobileNav
+        open={mobileNavOpen}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onClose={() => setMobileNavOpen(false)}
+      />
+
       {/* Main Content Area — bg transparente para dejar ver la red neuronal de fondo */}
       <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header Component */}
         <DashboardHeader 
           activeTab={activeTab} 
           NewProjectModal={NewProjectModal} 
+          onMenu={() => setMobileNavOpen(true)}
         />
 
         {/* Dynamic Content Panel */}
-        <div className="flex-1 overflow-y-auto p-10 bg-muted/30 relative z-10">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-muted/30 relative z-10">
           <div key={activeTab} className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {activeTab === 'overview' && (

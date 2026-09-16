@@ -142,7 +142,6 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<Activity size={18} strokeWidth={2} />}
           label={t('tabs.performance')}
-          badge={<Badge variant="neutral">92%</Badge>}
           onClick={() => onTabChange('performance')}
         />
 
@@ -222,7 +221,9 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
             <div className="text-xs font-bold text-foreground/80 flex items-center gap-1.5">
               <ShieldCheck size={14} className="text-primary" /> {t('continuousAudit')}
             </div>
-            <div className="text-2xs text-muted-fg">{t('securityIndex', { index: '99.98' })}</div>
+            <div className="text-2xs text-muted-fg">
+              {projectCount > 0 ? t('monitoringProjects', { count: projectCount }) : t('noProjectsYet')}
+            </div>
           </div>
         </div>
       )}

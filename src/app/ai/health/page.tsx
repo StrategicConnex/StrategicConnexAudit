@@ -4,6 +4,7 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/server/auth/admin";
 import { AiHealthDashboardClient } from "./health-dashboard.client";
+import { PageShellBar } from "@/components/ui/PageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export default async function AiHealthPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
+      <PageShellBar />
       <Suspense fallback={<LoadingSkeleton />}>
         <AiHealthDashboardClient
           recent={recent}

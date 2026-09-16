@@ -161,7 +161,7 @@ export async function sendPushNotificationToAll(
       }
     }
   } catch (err: unknown) {
-    result.errors.push((err as Error).message || "Unknown error");
+    result.errors.push((err as Error).message || "Error desconocido");
   }
 
   return result;
@@ -204,7 +204,7 @@ export async function sendPushNotificationToUser(
       }
     }
   } catch (err: unknown) {
-    result.errors.push((err as Error).message || "Unknown error");
+    result.errors.push((err as Error).message || "Error desconocido");
   }
 
   return result;

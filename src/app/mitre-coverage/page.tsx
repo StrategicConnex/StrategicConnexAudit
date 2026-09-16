@@ -10,6 +10,8 @@ import { withRLS } from "@/shared/db/rls";
 import { projects as projectsTable } from "@/shared/db/schemas";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { MitreRealSection, type MitreProjectOption } from "@/features/dashboard/MitreRealSection";
+import { PageShellBar } from "@/components/ui/PageShell";
+import { Crosshair, BarChart3, ClipboardList } from "lucide-react";
 
 // NOTE: intentionally NOT force-static — the CSP nonce (src/proxy.ts) requires
 // dynamic rendering so Next.js can apply the per-request nonce to inline scripts.
@@ -70,13 +72,14 @@ function buildCoverageData() {
 
 // ─── SVG Mini Donut ───────────────────────────────────────────────────────────
 
-function MiniDonut({ value, max, color }: { value: number; max: number; color: string }) {
+function MiniDonut({ value, max, color, label }: { value: number; max: number; color: string; label: string }) {
   const r = 28;
   const circumference = 2 * Math.PI * r;
   const pct = Math.min(value / max, 1);
   const offset = circumference * (1 - pct);
+  // Sin número interior: la cifra vive en la tarjeta adyacente (evita duplicarla).
   return (
-    <svg width={72} height={72} viewBox="0 0 72 72" className="shrink-0">
+    <svg width={72} height={72} viewBox="0 0 72 72" className="shrink-0" role="img" aria-label={label}>
       <circle cx={36} cy={36} r={r} fill="none" stroke="var(--chart-grid)" strokeWidth={5} />
       <circle
         cx={36} cy={36} r={r}
@@ -87,12 +90,8 @@ function MiniDonut({ value, max, color }: { value: number; max: number; color: s
         strokeDashoffset={offset}
         strokeLinecap="round"
         transform="rotate(-90, 36, 36)"
-        className="transition-all duration-1000"
+        className="transition-[stroke-dashoffset] duration-1000"
       />
-      <text x={36} y={36} textAnchor="middle" dominantBaseline="central"
-        className="fill-foreground text-sm font-bold font-mono">
-        {value}
-      </text>
     </svg>
   );
 }
@@ -128,11 +127,14 @@ export default async function MitreCoveragePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
+      <PageShellBar maxWidth="max-w-6xl" />
       {/* Header */}
       <header className="border-b border-border bg-surface">
         <div className="max-w-6xl mx-auto px-6 py-6">
           <div className="flex items-center gap-3 mb-1">
-            <span className="text-2xl">🎯</span>
+            <span className="w-9 h-9 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-center shrink-0">
+              <Crosshair aria-hidden="true" className="w-4.5 h-4.5 text-destructive" />
+            </span>
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-foreground">
                 MITRE ATT&CK Coverage
@@ -164,7 +166,7 @@ export default async function MitreCoveragePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Total Techniques */}
             <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5">
-              <MiniDonut value={coverage.totalTechniques} max={coverage.totalTechniques} color="var(--accent-blue)" />
+              <MiniDonut value={coverage.totalTechniques} max={coverage.totalTechniques} color="var(--accent-blue)" label={`${coverage.totalTechniques} técnicas MITRE cubiertas`} />
               <div>
                 <p className="text-2xl font-bold text-accent-blue font-mono">{coverage.totalTechniques}</p>
                 <p className="text-xs text-muted-foreground font-medium mt-0.5">Técnicas MITRE Cubiertas</p>
@@ -176,7 +178,7 @@ export default async function MitreCoveragePage() {
 
             {/* Total Tactics */}
             <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5">
-              <MiniDonut value={coverage.totalTactics} max={14} color="var(--accent-purple)" />
+              <MiniDonut value={coverage.totalTactics} max={14} color="var(--accent-purple)" label={`${coverage.totalTactics} de 14 tácticas alcanzadas`} />
               <div>
                 <p className="text-2xl font-bold text-accent-purple font-mono">{coverage.totalTactics}</p>
                 <p className="text-xs text-muted-foreground font-medium mt-0.5">Tácticas Alcanzadas</p>
@@ -188,7 +190,7 @@ export default async function MitreCoveragePage() {
 
             {/* Total Tools */}
             <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5">
-              <MiniDonut value={coverage.totalTools} max={coverage.totalTools} color="var(--accent-cyan)" />
+              <MiniDonut value={coverage.totalTools} max={coverage.totalTools} color="var(--accent-cyan)" label={`${coverage.totalTools} herramientas de escaneo`} />
               <div>
                 <p className="text-2xl font-bold text-accent-cyan font-mono">{coverage.totalTools}</p>
                 <p className="text-xs text-muted-foreground font-medium mt-0.5">Herramientas de Escaneo</p>
@@ -205,7 +207,9 @@ export default async function MitreCoveragePage() {
            ═══════════════════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <span className="w-6 h-6 rounded-full bg-accent-blue/15 flex items-center justify-center text-2xs">📊</span>
+            <span className="w-6 h-6 rounded-full bg-accent-blue/15 flex items-center justify-center shrink-0">
+              <BarChart3 aria-hidden="true" className="w-3.5 h-3.5 text-accent-blue" />
+            </span>
             <div>
               <h2 className="text-sm font-semibold text-foreground">Cobertura por Táctica</h2>
               <p className="text-2xs text-muted-foreground">Cantidad de herramientas de escaneo que aportan a cada táctica MITRE</p>
@@ -236,7 +240,7 @@ export default async function MitreCoveragePage() {
                     {/* Numbers */}
                     <div className="flex items-center gap-4 shrink-0 text-xs">
                       <span className="font-mono font-bold text-foreground min-w-[3ch] text-right">{toolCount}</span>
-                      <span className="text-muted-foreground">tools</span>
+                      <span className="text-muted-foreground">herramientas</span>
                       <span className="font-mono text-muted-foreground min-w-[3ch] text-right">{techniqueCount}</span>
                       <span className="text-muted-foreground">técnicas</span>
                     </div>
@@ -301,7 +305,9 @@ export default async function MitreCoveragePage() {
            ═══════════════════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <span className="w-6 h-6 rounded-full bg-accent-purple/15 flex items-center justify-center text-2xs">📋</span>
+            <span className="w-6 h-6 rounded-full bg-accent-purple/15 flex items-center justify-center shrink-0">
+              <ClipboardList aria-hidden="true" className="w-3.5 h-3.5 text-accent-purple" />
+            </span>
             <div>
               <h2 className="text-sm font-semibold text-foreground">Catálogo Completo de Técnicas</h2>
               <p className="text-2xs text-muted-foreground">Todas las técnicas MITRE cubiertas con herramientas asociadas</p>

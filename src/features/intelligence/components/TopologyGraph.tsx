@@ -48,7 +48,7 @@ export function TopologyGraph({ projectId }: TopologyGraphProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center w-full h-[500px] bg-gray-900 border border-border rounded text-primary font-mono">
-        <span className="animate-pulse">Loading Topology...</span>
+        <span className="animate-pulse">Cargando topología…</span>
       </div>
     );
   }

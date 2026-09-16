@@ -1,12 +1,33 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Globe, FileSearch, Siren, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { Globe, FileSearch, Siren, ShieldAlert, ShieldCheck, LockKeyhole } from "lucide-react";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageShellBar } from "@/components/ui/PageShell";
 import { logger } from "@/lib/logger";
 import type { AuditLogEntry, ApiResponse, SiemAlertEntry, SiemAlertsApiResponse, Tab } from "./types";
 import { EVENT_LABELS, formatDate, timeAgo, truncate } from "./helpers";
+
+// ─── Unauthorized (sin sesión): candado honesto con acción, nunca "No autorizado" crudo ──
+
+function UnauthorizedPanel() {
+  return (
+    <div className="mb-4 px-5 py-8 border border-border rounded-xl flex flex-col items-center text-center gap-2 bg-card">
+      <LockKeyhole aria-hidden="true" className="w-5 h-5 text-muted-fg" />
+      <p className="text-sm font-bold text-foreground">Esta sección vive tras tu sesión</p>
+      <p className="text-xs text-muted-fg max-w-sm">Inicia sesión para ver eventos de seguridad y alertas SIEM.</p>
+      <Link
+        href="/login"
+        className="mt-2 text-2xs font-bold uppercase tracking-widest text-primary transition-colors inline-flex items-center gap-1.5 px-4 py-2 rounded-md border"
+        style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}
+      >
+        Iniciar sesión
+      </Link>
+    </div>
+  );
+}
 
 
 
@@ -193,43 +214,43 @@ function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
     <div className="flex gap-1 mb-4 border-b border-border">
       <button
         onClick={() => onChange("events")}
-        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
+        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] flex items-center gap-1.5 ${
           active === "events"
             ? "text-chartreuse border-chartreuse"
             : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
         }`}
       >
-        🛡️ Security Events
+        <ShieldCheck aria-hidden="true" className="w-3.5 h-3.5" /> Eventos de Seguridad
       </button>
       <button
         onClick={() => onChange("siem")}
-        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
+        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] flex items-center gap-1.5 ${
           active === "siem"
             ? "text-chartreuse border-chartreuse"
             : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
         }`}
       >
-        📡 SIEM Alerts
+        <Siren aria-hidden="true" className="w-3.5 h-3.5" /> Alertas SIEM
       </button>
       <button
         onClick={() => onChange("whois")}
-        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
+        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] flex items-center gap-1.5 ${
           active === "whois"
             ? "text-chartreuse border-chartreuse"
             : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
         }`}
       >
-        🔍 WHOIS Alerts
+        <FileSearch aria-hidden="true" className="w-3.5 h-3.5" /> Alertas WHOIS
       </button>
       <button
         onClick={() => onChange("dns")}
-        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] ${
+        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] flex items-center gap-1.5 ${
           active === "dns"
             ? "text-chartreuse border-chartreuse"
             : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
         }`}
       >
-        🌐 DNS Alerts
+        <Globe aria-hidden="true" className="w-3.5 h-3.5" /> Alertas DNS
       </button>
     </div>
   );
@@ -461,14 +482,19 @@ const CHANGE_TYPE_COLORS: Record<string, { label: string; color: string }> = {
 // ─── DNS Alerts Section ────────────────────────────────────────────────────
 
 function DnsAlertsSection({
-  alerts, loading, error,
+  alerts, loading, error, unauthorized,
 }: {
   alerts: SiemAlertEntry[];
   loading: boolean;
   error: string | null;
+  unauthorized: boolean;
 }) {
   if (loading) {
     return <SkeletonList count={4} />;
+  }
+
+  if (unauthorized) {
+    return <UnauthorizedPanel />;
   }
 
   if (error) {
@@ -657,14 +683,19 @@ function DiffBadge({ prev, curr }: { prev: string; curr: string }) {
 }
 
 function WhoisAlertsSection({
-  alerts, loading, error,
+  alerts, loading, error, unauthorized,
 }: {
   alerts: SiemAlertEntry[];
   loading: boolean;
   error: string | null;
+  unauthorized: boolean;
 }) {
   if (loading) {
     return <SkeletonList count={4} />;
+  }
+
+  if (unauthorized) {
+    return <UnauthorizedPanel />;
   }
 
   if (error) {
@@ -905,12 +936,13 @@ function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismi
 // ─── SIEM Section ──────────────────────────────────────────────────────────────
 
 function SiemSection({
-  alerts, loading, error, breakdown,
+  alerts, loading, error, breakdown, unauthorized,
 }: {
   alerts: SiemAlertEntry[];
   loading: boolean;
   error: string | null;
   breakdown: { success: number; failed: number };
+  unauthorized: boolean;
 }) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestWebhookResponse | null>(null);
@@ -985,6 +1017,10 @@ function SiemSection({
     );
   }
 
+  if (unauthorized) {
+    return <UnauthorizedPanel />;
+  }
+
   if (error) {
     return (
       <>
@@ -1046,6 +1082,7 @@ export default function SecurityAuditDashboard() {
   const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unauthorized, setUnauthorized] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filters, setFilters] = useState({ eventType: "all", ip: "", from: "", to: "" });
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -1062,6 +1099,7 @@ export default function SecurityAuditDashboard() {
     const t = activeTab ?? tab;
     setLoading(true);
     setError(null);
+    setUnauthorized(false);
     try {
       if (t === "siem") {
         // 🔄 SIEM tab: consulta tabla independiente siem_alert_logs
@@ -1074,7 +1112,8 @@ export default function SecurityAuditDashboard() {
         const res = await fetch(`/api/security/siem-alerts?${params}`);
         const data: SiemAlertsApiResponse = await res.json();
         if (!data.success) {
-          setError(data.error || "Error al cargar");
+          if (res.status === 401) setUnauthorized(true);
+          else setError(data.error || "Error al cargar");
         } else {
           setSiemAlerts(data.alerts);
           setSiemBreakdown(data.breakdown);
@@ -1091,7 +1130,8 @@ export default function SecurityAuditDashboard() {
         const res = await fetch(`/api/security/siem-alerts?${params}`);
         const data: SiemAlertsApiResponse = await res.json();
         if (!data.success) {
-          setError(data.error || "Error al cargar");
+          if (res.status === 401) setUnauthorized(true);
+          else setError(data.error || "Error al cargar");
         } else {
           setWhoisAlerts(data.alerts);
         }
@@ -1107,7 +1147,8 @@ export default function SecurityAuditDashboard() {
         const res = await fetch(`/api/security/siem-alerts?${params}`);
         const data: SiemAlertsApiResponse = await res.json();
         if (!data.success) {
-          setError(data.error || "Error al cargar");
+          if (res.status === 401) setUnauthorized(true);
+          else setError(data.error || "Error al cargar");
         } else {
           setDnsAlerts(data.alerts);
         }
@@ -1123,7 +1164,8 @@ export default function SecurityAuditDashboard() {
         const res = await fetch(`/api/security/audit-logs?${params}`);
         const data: ApiResponse = await res.json();
         if (!data.success) {
-          setError(data.error || "Error al cargar");
+          if (res.status === 401) setUnauthorized(true);
+          else setError(data.error || "Error al cargar");
         } else {
           setLogs(data.logs);
           setTotal(data.total);
@@ -1147,10 +1189,12 @@ export default function SecurityAuditDashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect -- Mount once pattern
   useEffect(() => { fetchLogs(filters, tab); }, []);
 
-  // Auto-refresh
+  // Auto-refresh (pausado con la pestaña oculta)
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(() => fetchLogs(filters, tab), 15000);
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchLogs(filters, tab);
+    }, 15000);
     return () => clearInterval(interval);
   }, [autoRefresh, filters, tab, fetchLogs]);
 
@@ -1172,13 +1216,15 @@ export default function SecurityAuditDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-chartreuse/20">
+      <PageShellBar />
       {/* Header */}
       <header className="border-b border-border bg-surface">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-foreground">
-                🛡️ Security Operations
+              <h1 className="text-lg font-semibold tracking-tight text-foreground flex items-center gap-2">
+                <ShieldCheck aria-hidden="true" className="w-5 h-5 text-primary" />
+                Operaciones de Seguridad
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Monitoreo de seguridad en tiempo real — eventos estructurados y alertas SIEM
@@ -1194,7 +1240,7 @@ export default function SecurityAuditDashboard() {
                              focus:ring-chart-success/30 focus:ring-offset-0
                              accent-chart-success"
                 />
-                Auto-refresh (15s)
+                Auto-actualizar (15s)
               </label>
               <button
                 onClick={() => fetchLogs(filters, tab)}
@@ -1203,7 +1249,7 @@ export default function SecurityAuditDashboard() {
                            rounded-md hover:bg-surface-muted hover:text-foreground disabled:opacity-50 
                            transition-all duration-150 active:scale-[0.97]"
               >
-                {loading ? "Cargando…" : "↻ Refresh"}
+                {loading ? "Cargando…" : "↻ Actualizar"}
               </button>
             </div>
           </div>
@@ -1225,11 +1271,14 @@ export default function SecurityAuditDashboard() {
             )}
 
             {/* Error */}
-            {error && (
+            {error && !unauthorized && (
               <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                 {error}
               </div>
             )}
+
+            {/* Sin sesión */}
+            {unauthorized && !loading && <UnauthorizedPanel />}
 
             {/* Loading */}
             {loading && (
@@ -1241,7 +1290,7 @@ export default function SecurityAuditDashboard() {
             )}
 
             {/* Empty */}
-            {!loading && !error && logs.length === 0 && (
+            {!loading && !error && !unauthorized && logs.length === 0 && (
               <EmptyState
                 icon={<ShieldAlert />}
                 title="No hay eventos de seguridad registrados"
@@ -1287,17 +1336,17 @@ export default function SecurityAuditDashboard() {
 
         {/* SIEM Alerts Tab */}
         {tab === "siem" && (
-          <SiemSection alerts={siemAlerts} loading={loading} error={error} breakdown={siemBreakdown} />
+          <SiemSection alerts={siemAlerts} loading={loading} error={error} breakdown={siemBreakdown} unauthorized={unauthorized} />
         )}
 
         {/* WHOIS Alerts Tab */}
         {tab === "whois" && (
-          <WhoisAlertsSection alerts={whoisAlerts} loading={loading} error={error} />
+          <WhoisAlertsSection alerts={whoisAlerts} loading={loading} error={error} unauthorized={unauthorized} />
         )}
 
         {/* DNS Alerts Tab */}
         {tab === "dns" && (
-          <DnsAlertsSection alerts={dnsAlerts} loading={loading} error={error} />
+          <DnsAlertsSection alerts={dnsAlerts} loading={loading} error={error} unauthorized={unauthorized} />
         )}
       </main>
     </div>

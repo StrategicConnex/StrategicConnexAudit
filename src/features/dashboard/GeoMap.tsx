@@ -73,7 +73,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
               lat: coords.lat,
               lng: coords.lng,
               label: hop.hostname || hop.ip || `Hop ${hop.hop}`,
-              sublabel: `${hop.cityName || 'Unknown'}, ${hop.countryCode} • ${hop.latencyMs}ms`,
+              sublabel: `${hop.cityName || 'Desconocido'}, ${hop.countryCode} • ${hop.latencyMs}ms`,
               type: 'hop',
               countryCode: hop.countryCode ?? undefined,
               cityName: hop.cityName ?? undefined,
@@ -105,7 +105,7 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
             lat: found[1].lat,
             lng: found[1].lng,
             label: provider,
-            sublabel: 'CDN/WAF Edge',
+            sublabel: 'Borde CDN/WAF',
             type: 'cdn',
           });
         }
@@ -165,9 +165,9 @@ export function GeoMap({ metadata, target }: GeoMapProps) {
           <div style="font-size:11px;color:#a1a1aa">${escapeHtml(point.sublabel)}</div>
           <hr style="border:0;border-top:1px solid #2a2a2a;margin:8px 0">
           <div style="font-size:11px;color:#71717a">
-            ${point.type === 'target' ? '📍 Primary Target' : ''}
-            ${point.type === 'hop' ? '🔄 Traceroute Hop' : ''}
-            ${point.type === 'cdn' ? '☁️ CDN/WAF Edge' : ''}
+            ${point.type === 'target' ? 'Objetivo principal' : ''}
+            ${point.type === 'hop' ? 'Salto de traceroute' : ''}
+            ${point.type === 'cdn' ? 'Borde CDN/WAF' : ''}
           </div>
           <div style="font-size:9px;color:#52525b;margin-top:6px">${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}</div>
         </div>

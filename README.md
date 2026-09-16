@@ -983,7 +983,7 @@ SCAUDIT Pro usa un **design system propietario** definido en OKLCH, inspirado en
 
 `scan-pulse`, `pulse-beat`, `fade-in`, `slide-in-right`, `scale-check`, `message-in`, `shimmer`
 
-> **Ver documentación completa:** [`SCAUDIT-THEME.md`](./SCAUDIT-THEME.md)
+> **Ver documentación completa:** [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) (vigente) · históricos en [`docs/archive/`](./docs/archive/)
 
 ---
 

@@ -11,11 +11,11 @@ export interface WidgetConfig {
 }
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
-  { id: "score_gauge", title: "Score Gauge & Drift Detection", enabled: true, order: 1 },
-  { id: "attack_surface", title: "Attack Surface Graph", enabled: true, order: 2 },
-  { id: "geo_map", title: "Interactive GeoIP Map", enabled: true, order: 3 },
-  { id: "mitre_coverage", title: "MITRE ATT&CK Mapping", enabled: true, order: 4 },
-  { id: "web_vitals", title: "Real User Monitoring (RUM)", enabled: true, order: 5 },
+  { id: "score_gauge", title: "Medidor de puntuación y detección de cambios", enabled: true, order: 1 },
+  { id: "attack_surface", title: "Grafo de superficie de ataque", enabled: true, order: 2 },
+  { id: "geo_map", title: "Mapa GeoIP interactivo", enabled: true, order: 3 },
+  { id: "mitre_coverage", title: "Mapeo MITRE ATT&CK", enabled: true, order: 4 },
+  { id: "web_vitals", title: "Monitorización de usuarios reales (RUM)", enabled: true, order: 5 },
 ];
 
 interface CustomDashboardGridProps {
@@ -77,6 +77,7 @@ export function CustomDashboardGrid({ childrenMap }: CustomDashboardGridProps) {
           {isEditing && (
             <button
               onClick={resetLayout}
+              aria-label="Restablecer layout original"
               className="text-xs text-slate-400 hover:text-rose-400 p-1.5 rounded-lg transition-colors"
               title="Restablecer layout original"
             >

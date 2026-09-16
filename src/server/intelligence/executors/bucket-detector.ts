@@ -68,7 +68,7 @@ export class BucketDetectorExecutor {
       };
     } catch (error) {
       logger.error(`BucketDetector failed for ${domain}:`, error);
-      return { success: false, error: "Failed to detect buckets" };
+      return { success: false, error: "No se pudieron detectar depósitos expuestos" };
     }
   }
 }

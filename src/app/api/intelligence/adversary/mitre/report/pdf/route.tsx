@@ -11,6 +11,7 @@ import {
 } from '@/shared/db/schemas';
 import { and, desc, eq } from 'drizzle-orm';
 import { logger } from "@/lib/logger";
+import { getLocale } from '@/i18n/request';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -239,12 +240,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: loaded.error }, { status: loaded.status });
   }
   const { project, evaluation, results } = loaded.data;
+  const dateLocale = (await getLocale()) === 'en' ? 'en-US' : 'es-AR';
 
   const stream = await renderToStream(
     <MitreReportDoc
       projectName={project.name}
       domain={project.domain}
-      generatedAt={new Date().toLocaleString('es-AR')}
+      generatedAt={new Date().toLocaleString(dateLocale)}
       evaluation={{
         target: evaluation.target,
         riskScore: evaluation.riskScore,

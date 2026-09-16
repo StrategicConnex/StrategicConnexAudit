@@ -61,10 +61,14 @@ function initDb(): DbInstance {
     }
   }
 
-  // SSL config: use provided CA if available
+  // SSL config: use provided CA if available.
+  // El flag explícito del operador gana al CA bundled: hay entornos (pooler
+  // con cadena autofirmada) donde el CA no cubre el endpoint y sin esto `db`
+  // queda muerto aunque DIRECT_URL funcione. En producción el warning de
+  // arriba deja constancia cuando se activa.
   const sslConfig = {
     ca: supabaseCa,
-    rejectUnauthorized: supabaseCa ? true : !allowInsecureSsl,
+    rejectUnauthorized: allowInsecureSsl ? false : true,
   };
 
   const conn = globalForDb.conn ?? new Pool({
@@ -116,9 +120,9 @@ function initDirectDb(): DbInstance {
   })();
 
   const directSslConfig = (directUrl ?? '').includes('supabase')
-    ? { 
+    ? {
         ca: supabaseCa,
-        rejectUnauthorized: supabaseCa ? true : !allowInsecureSsl 
+        rejectUnauthorized: allowInsecureSsl ? false : true
       }
     : undefined;
 

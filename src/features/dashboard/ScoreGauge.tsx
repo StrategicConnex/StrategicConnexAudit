@@ -211,7 +211,7 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
         <div className="flex items-center gap-1 mt-1 opacity-70">
           <Activity className={`w-3 h-3 ${pulse ? 'text-blue-400 animate-pulse' : 'text-muted-fg'}`} />
           <span className="text-2xs font-medium text-muted-fg">
-            Live metrics
+            Métricas en vivo
           </span>
         </div>
       )}

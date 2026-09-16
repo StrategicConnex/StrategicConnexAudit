@@ -55,7 +55,7 @@ export async function checkQuota(
   let reason: string | undefined = undefined;
 
   if (!allowed) {
-    reason = `Quota exceeded for plan '${planName}'. Used ${totalUsed}/${maxQuota} units. Required: ${requiredUnits}.`;
+    reason = `Cuota excedida para el plan '${planName}'. Usado ${totalUsed}/${maxQuota} unidades. Requerido: ${requiredUnits}.`;
   }
 
   return { allowed, reason, remainingUnits };

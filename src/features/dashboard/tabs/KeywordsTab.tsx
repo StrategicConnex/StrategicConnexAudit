@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { TrendingUp, Search, Plus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, Search, Plus, ArrowUpRight, ArrowDownRight, SearchX } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export interface KeywordItem {
   id: string | number;
@@ -139,6 +140,13 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
               ))}
             </tbody>
           </table>
+          {keywordsList.length === 0 && (
+            <EmptyState
+              icon={<SearchX aria-hidden="true" className="w-8 h-8" />}
+              title={t('emptyTitle')}
+              description={t('emptyDesc')}
+            />
+          )}
         </div>
       </div>
     </div>

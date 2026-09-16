@@ -39,7 +39,11 @@ const MODELS_TO_TEST = [...new Set(Object.values(TASK_ROUTING).flat())];
 
 const TEST_PROMPT = {
   role: "user",
-  content: "Responde SOLO con la palabra 'OK' y un emoji. No agregues nada más.",
+  // Prompt neutro en inglés: los micro-prompts imperativos en español
+  // ("responde SOLO...") disparaban respuestas 200 vacías en varios
+  // proveedores (verificado 2026-09-16). El criterio sigue siendo
+  // "respondió contenido", no obediencia de formato.
+  content: "Reply with exactly: green orange blue",
 };
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────

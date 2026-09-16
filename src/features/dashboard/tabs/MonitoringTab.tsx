@@ -707,6 +707,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               <button
                 type="submit"
                 disabled={isCreatingWebhook}
+                aria-label={t('addWebhook')}
                 className="bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary p-2 rounded-lg transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />

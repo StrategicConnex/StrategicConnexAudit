@@ -79,7 +79,7 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
       <button
         onClick={() => setIsOpen(true)}
         aria-label="Abrir Strategic Copilot"
-        className="fixed bottom-8 right-8 p-5 rounded-full bg-gradient-to-r from-primary to-primary/80 text-foreground shadow-[0_0_20px_rgba(98,113,196,0.3)] border-2 border-primary/30 hover:scale-105 hover:shadow-[0_0_30px_rgba(98,113,196,0.5)] hover:border-primary/50 transition-[color,background-color,border-color,box-shadow,transform] duration-300 z-50 flex items-center justify-center group cursor-pointer"
+        className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 mb-[env(safe-area-inset-bottom)] p-5 rounded-full bg-gradient-to-r from-primary to-primary/80 text-foreground shadow-[0_0_20px_rgba(98,113,196,0.3)] border-2 border-primary/30 hover:scale-105 hover:shadow-[0_0_30px_rgba(98,113,196,0.5)] hover:border-primary/50 transition-[color,background-color,border-color,box-shadow,transform] duration-300 z-50 flex items-center justify-center group cursor-pointer"
       >
         <Sparkles aria-hidden="true" className="w-5 h-5 animate-pulse text-primary/80" strokeWidth={2.5} />
         <span className="max-w-0 overflow-hidden group-hover:max-w-[140px] transition-[max-width,padding] duration-300 font-extrabold text-2xs uppercase tracking-widest whitespace-nowrap px-0 group-hover:px-2 text-foreground">
@@ -90,7 +90,7 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
   }
 
   return (
-    <div className={`fixed bottom-8 right-8 glass-card border-2 border-primary/25 shadow-[0_8px_40px_-12px_oklch(0%_0_0/0.6),0_0_0_1px_oklch(14%_0.012_100/0.1)] rounded-2xl flex flex-col z-50 transition-[width,height,max-height] duration-500 ease-in-out animate-in slide-in-from-bottom-10 fade-in ${isExpanded ? 'w-[700px] h-[85vh]' : 'w-[400px] h-[600px] max-h-[85vh]'}`}>
+    <div className={`fixed bottom-24 right-4 sm:bottom-8 sm:right-8 mb-[env(safe-area-inset-bottom)] glass-card border-2 border-primary/25 shadow-[0_8px_40px_-12px_oklch(0%_0_0/0.6),0_0_0_1px_oklch(14%_0.012_100/0.1)] rounded-2xl flex flex-col z-50 transition-[width,height,max-height] duration-500 ease-in-out animate-in slide-in-from-bottom-10 fade-in ${isExpanded ? 'w-[700px] max-w-[calc(100vw-2rem)] h-[85vh]' : 'w-[400px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[85vh]'}`}>
       {/* Header */}
       <div className="flex flex-col border-b-2 border-primary/15 bg-card/90 rounded-t-2xl shrink-0 backdrop-blur-xl">
         <div className="flex items-center justify-between p-5 pb-4">
@@ -100,7 +100,7 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
             </div>
             <div>
               <h3 className="font-bold text-sm text-foreground tracking-tight">
-                {mode === 'analyst' ? 'Analyst Mode' : 'Strategic Copilot'}
+                {mode === 'analyst' ? 'Modo Analista' : 'Strategic Copilot'}
               </h3>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${mode === 'analyst' ? 'bg-destructive' : 'bg-primary'}`}></span>

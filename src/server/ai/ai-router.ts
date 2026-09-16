@@ -3,13 +3,12 @@
  *
  * Routes AI requests through OpenRouter's "openrouter/free" meta-model, which
  * automatically selects the best available free model based on capability needs.
- * Falls back to individual :free models (Gemini Flash, DeepSeek V3, Llama 4,
- * Mistral Small, Qwen 2.5) in a chain if the meta-model fails.
+ * Falls back to individual :free models in a chain if the meta-model fails.
  *
  * ✅ NO paid tokens required — just a FREE OpenRouter account
  * ✅ 50 requests/day limit for free accounts (no billing)
  * ✅ 1,000 requests/day after $10 lifetime purchases
- * ✅ 15 free models available as of July 2026
+ * ✅ 20 free models available as of September 2026 (catálogo /models en vivo)
  * ✅ Graceful degradation: returns contextual messages even without API key
  */
 
@@ -112,6 +111,21 @@ const FREE_META_MODEL = "openrouter/free";
  *   - nvidia/nemotron-3-ultra-550b-a55b:free               (480ms, 1M ctx)
  *   - dots-studio/dots-3-note-preview:free                 (1178ms, general)
  *
+ * Re-verificación en vivo 2026-09-16 (barrido de 15 + prompt neutro):
+ *   - openrouter/free → EXISTE y enruta (sirvió cohere/north-mini-code:free),
+ *     pero devuelve 200 vacío con frecuencia → el chain lo absorbe; sigue
+ *     PRIMERO en cadenas de chat (identidad irrelevante) y FUERA de las
+ *     JSON-críticas (router aleatorio inaceptable ahí).
+ *   - nex-agi/nex-n2.5-pro:free      → "OK" estricto + respuesta correcta (633/913ms) ✅ NUEVO
+ *   - cohere/north-mini-code:free    → respuesta correcta, rápido (326/388ms) ✅ NUEVO
+ *   - nvidia/nemotron-3.5-lightning:free → 2× timeout (15s y 20s) hoy ⬇ DEMOTADO
+ *   - nvidia/nemotron-3-ultra-550b-a55b:free → 404 del provider 2× hoy (16-sep)
+ *     ⬇ FUERA del pool hasta que recupere: ninguna cadena lo incluye.
+ *     Retorna si el healthcheck lo marca healthy 2 días seguidos.
+ *   - dots-studio/dots-3-note-preview:free → vacío hoy ⬇ DEMOTADO de cadenas chat.
+ *   - inclusionai/ling-3.0-flash-*:free, liquid/lfm-2.5:free → vacíos hoy; en observación.
+ *   - poolside/laguna-*:free → 429 persistente. nex-mini → timeout.
+ *
  * Retirados del pool (verificados en live test 2026-08-24):
  *   - nvidia/nemotron-3-nano-30b-a3b:free    → 404, ya no disponible como :free
  *   - google/gemma-4-26b-a4b-it:free         → 429 upstream persistente
@@ -169,39 +183,38 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
     FREE_META_MODEL,
     "nvidia/nemotron-3-super-120b-a12b:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "nvidia/nemotron-3.5-lightning:free",
-    "dots-studio/dots-3-note-preview:free",
+    "nex-agi/nex-n2.5-pro:free",
+    "cohere/north-mini-code:free",
   ],
   "incident-brief": [
     FREE_META_MODEL,
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3.5-lightning:free",
+    "nex-agi/nex-n2.5-pro:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "dots-studio/dots-3-note-preview:free",
+    "cohere/north-mini-code:free",
   ],
   "general-chat": [
     FREE_META_MODEL,
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "nex-agi/nex-n2.5-pro:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3.5-lightning:free",
+    "cohere/north-mini-code:free",
   ],
   // Acotada a 2 modelos con timeout largo (ver MODEL_TIMEOUTS): un reporte
   // ejecutivo de 4096 tokens NO termina en 20s en modelos :free (verificado
   // en producción: 3×20s de timeout → fallback resiliente sin mermaid).
   // Peor caso 2×50s = 100s < maxDuration=120s en Vercel.
   // SIN router: el informe se consume como texto estructurado.
+  // Solo modelos verificados en vivo HOY (ultra fuera: 404 persistente).
   "seo-report": [
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   ],
   // JSON-crítico + function calling: SOLO modelos con verificación en vivo
-  // (ver MODEL_CAPABILITIES). Orden según smoke test del día: nano-omni
-  // primero (tools+json OK); ultra también pasó pero Nvidia devolvía 502
-  // intermitente embebido en HTTP 200 ese día; super como fallback de
-  // calidad general (salida JSON validada por prompt, no schema nativo).
+  // (ver MODEL_CAPABILITIES) y sanos HOY: nano (tools+json OK) y super
+  // (tools OK, JSON validado por prompt). Ultra fuera hasta recuperarse.
   "adversary-analysis": [
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
   ],
 };
@@ -353,20 +366,20 @@ async function callModel(
 
     if (response.status === 402) {
       throw new Error(
-        `OpenRouter 402 — insufficient credits for ${modelId}. ` +
-          "Free models should not require credits. Try adding funds or use a different model."
+        `OpenRouter 402 — créditos insuficientes para ${modelId}. ` +
+          "Los modelos gratuitos no deberían requerir créditos. Agrega fondos o usa otro modelo."
       );
     }
 
     if (response.status === 429) {
       throw new Error(
-        `OpenRouter 429 rate limit for ${modelId}: ${text.slice(0, 150)}. ` +
-          "Free tier limit: 50 requests/day. Consider upgrading or waiting."
+        `OpenRouter 429 — límite excedido para ${modelId}: ${text.slice(0, 150)}. ` +
+          "Límite gratuito: 50 solicitudes/día. Mejora tu plan o espera."
       );
     }
 
     throw new Error(
-      `OpenRouter ${response.status} for ${modelId}: ${text.slice(0, 200)}`
+      `OpenRouter ${response.status} para ${modelId}: ${text.slice(0, 200)}`
     );
   }
 
@@ -380,8 +393,8 @@ async function callModel(
     const embedded = data.error?.message ?? data.error?.code;
     throw new Error(
       embedded
-        ? `Upstream ${modelId}: ${String(embedded).slice(0, 120)}`
-        : `Empty response from model ${modelId}`
+        ? `Error del proveedor (${modelId}): ${String(embedded).slice(0, 120)}`
+        : `Respuesta vacía del modelo ${modelId}`
     );
   }
 
@@ -503,7 +516,7 @@ export async function callAIWithFallback(
     content: "",
     modelUsed: modelChain[modelChain.length - 1]!,
     latencyMs: Date.now() - startTime,
-    error: `All ${modelChain.length} AI models failed:\n${errors.join("\n")}`,
+    error: `Todos los modelos de IA fallaron:\n${errors.join("\n")}`,
   };
 }
 

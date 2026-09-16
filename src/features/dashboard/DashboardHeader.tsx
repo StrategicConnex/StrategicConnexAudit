@@ -1,24 +1,28 @@
 import React from 'react';
+import { Menu } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { InstallPwaButton } from './InstallPwaButton';
 import { ThemeSwitcher } from "@/shared/design-system";
 
 interface DashboardHeaderProps {
   activeTab: string;
   NewProjectModal: React.ComponentType;
+  onMenu: () => void;
 }
 
-export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderProps) {
+export function DashboardHeader({ activeTab, NewProjectModal, onMenu }: DashboardHeaderProps) {
+  const t = useTranslations('sidebar');
   const getTitle = () => {
     switch (activeTab) {
-      case 'overview': return 'Dashboard';
+      case 'overview': return 'Panel';
       case 'projects': return 'Proyectos';
       case 'performance': return 'Rendimiento';
-      case 'keywords': return 'Keywords';
+      case 'keywords': return 'Palabras clave';
       case 'reports': return 'Reportes AI';
       case 'intelligence': return 'Inteligencia';
       case 'monitoring': return 'Controles Activos';
       case 'settings': return 'Ajustes';
-      default: return 'Dashboard';
+      default: return 'Panel';
     }
   };
 
@@ -38,13 +42,22 @@ export function DashboardHeader({ activeTab, NewProjectModal }: DashboardHeaderP
 
   return (
     <header className="h-14 bg-background/60 backdrop-blur-xl border-b border-border/50 flex items-center justify-between px-3 sm:px-10 sticky top-0 z-20 shrink-0">
-      <div key={activeTab} className="flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-300">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onMenu}
+          aria-label={t('menu')}
+          className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-muted-fg hover:text-foreground hover:bg-muted/40 transition-colors"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div key={activeTab} className="flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-300">
         <h1 className="text-lg font-bold tracking-tight text-foreground">
           {getTitle()}
         </h1>
         <p className="hidden sm:block text-2xs font-extrabold text-primary uppercase tracking-widest mt-0.5">
           {getSubtitle()}
         </p>
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-6">

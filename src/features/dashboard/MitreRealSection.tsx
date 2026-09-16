@@ -34,7 +34,7 @@ export function MitreRealSection({ projects }: { projects: MitreProjectOption[] 
         <select
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
-          className="bg-muted border border-border hover:border-primary/20 text-foreground text-xs font-bold rounded-xl py-2 px-3 outline-none cursor-pointer appearance-none"
+          className="bg-muted border border-border hover:border-primary/20 text-foreground text-xs font-bold rounded-xl py-2 px-3 outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/30 cursor-pointer appearance-none"
         >
           {projects.map((p) => (
             <option key={p.id} value={p.id}>

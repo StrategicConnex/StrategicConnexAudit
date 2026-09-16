@@ -50,7 +50,7 @@ export function ExportCsvButton({ projectId }: ExportCsvButtonProps) {
       ) : (
         <FileSpreadsheet className="w-3.5 h-3.5" aria-hidden="true" />
       )}
-      {isExporting ? 'Exporting...' : 'Export Keywords CSV'}
+      {isExporting ? 'Exportando…' : 'Exportar palabras clave CSV'}
     </Button>
   );
 }

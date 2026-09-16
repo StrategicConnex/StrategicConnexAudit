@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Activity, Wifi, WifiOff, Clock, AlertTriangle, TrendingUp } from "lucide-react";
 export type LiveMetrics = {
   connected: boolean;
@@ -16,6 +17,7 @@ interface LiveMetricsBarProps {
   investigationId?: string;
 }
 export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarProps) {
+  const t = useTranslations("live");
   const [metrics, setMetrics] = useState<LiveMetrics>({
     connected: false, uptimePercent: null, avgLatencyMs: null,
     lastCheckTimestamp: null, criticalFindingsCount: 0,
@@ -25,6 +27,8 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
   const poll = useCallback(async () => {
+    // Pestaña oculta: no quemar batería/red; al volver, el intervalo retoma.
+    if (typeof document !== "undefined" && document.hidden) return;
     try {
       const params = new URLSearchParams();
       if (projectId) params.set("projectId", projectId);
@@ -51,15 +55,15 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
   }, [poll]);
   const pClass = metrics.connected ? "bg-emerald-400 animate-pulse" : "bg-red-400";
   return (
-    <div className={"fixed bottom-4 right-4 z-[60] transition-[width] duration-300 " + (expanded ? "w-72" : "w-auto")}
+    <div className={"fixed bottom-4 right-4 mb-[env(safe-area-inset-bottom)] z-[60] transition-[width] duration-300 " + (expanded ? "w-72" : "w-auto")}
       onMouseEnter={() => setExpanded(true)} onMouseLeave={() => setExpanded(false)}>
       <div className="bg-card/90 backdrop-blur-md border border-border rounded-xl shadow-2xl overflow-hidden">
         {!expanded && (
           <button onClick={() => setExpanded(true)}
-            aria-label="Expandir métricas en vivo"
+            aria-label={t("title")}
             className="flex items-center space-x-2 px-3 py-2 text-2xs font-mono text-muted-fg hover:text-foreground transition-colors">
             <span className={"w-2 h-2 rounded-full " + pClass} aria-hidden="true" />
-            <Activity aria-hidden="true" className="w-3 h-3 text-primary" /> <span>Live</span>
+            <Activity aria-hidden="true" className="w-3 h-3 text-primary" /> <span>{t("badge")}</span>
           </button>
         )}
         {expanded && (
@@ -67,38 +71,38 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className={"w-2 h-2 rounded-full " + pClass} />
-                <span className="text-xs font-semibold text-foreground font-mono">Live Metrics</span>
+                <span className="text-xs font-semibold text-foreground font-mono">{t("title")}</span>
               </div>
               <div className="flex items-center space-x-1">
                 {metrics.connected ? <Wifi className="w-3 h-3 text-chartreuse" /> : <WifiOff className="w-3 h-3 text-red-400" />}
                 <span className={"text-2xs font-mono " + (metrics.connected ? "text-chartreuse" : "text-red-400")}>
-                  {metrics.connected ? "ONLINE" : "OFFLINE"}</span>
+                  {metrics.connected ? t("online") : t("offline")}</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-background/60 rounded-lg p-2 border border-border/50">
-                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Uptime</span>
+                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">{t("uptime")}</span>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <TrendingUp className="w-3 h-3 text-primary" />
                   <span className="text-xs font-bold text-foreground">{metrics.uptimePercent !== null ? Math.round(metrics.uptimePercent * 100) + "%" : "—"}</span>
                 </div>
               </div>
               <div className="bg-background/60 rounded-lg p-2 border border-border/50">
-                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Latency</span>
+                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">{t("latency")}</span>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <Clock className="w-3 h-3 text-chartreuse" />
                   <span className="text-xs font-bold text-foreground">{metrics.avgLatencyMs !== null ? metrics.avgLatencyMs + "ms" : "—"}</span>
                 </div>
               </div>
               <div className="bg-background/60 rounded-lg p-2 border border-border/50">
-                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Critical</span>
+                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">{t("critical")}</span>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <AlertTriangle className="w-3 h-3 text-destructive" />
                   <span className="text-xs font-bold text-foreground">{metrics.criticalFindingsCount}</span>
                 </div>
               </div>
               <div className="bg-background/60 rounded-lg p-2 border border-border/50">
-                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">Events</span>
+                <span className="text-2xs font-mono text-muted-fg uppercase tracking-wider">{t("events")}</span>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <Activity className="w-3 h-3 text-blue-400" />
                   <span className="text-xs font-bold text-foreground">{metrics.eventsCount}</span>
@@ -106,7 +110,7 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
               </div>
             </div>
             <div className="text-2xs font-mono text-muted-fg text-center pt-1 border-t border-border/30">
-              {metrics.lastCheckTimestamp ? "Updated: " + new Date(metrics.lastCheckTimestamp).toLocaleTimeString() : "Waiting..."}
+              {metrics.lastCheckTimestamp ? t("updated") + new Date(metrics.lastCheckTimestamp).toLocaleTimeString() : t("waiting")}
             </div>
           </div>
         )}

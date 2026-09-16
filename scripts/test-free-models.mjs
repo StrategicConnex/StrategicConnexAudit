@@ -12,6 +12,7 @@ for (const l of readFileSync('.env.local', 'utf-8').split('\n')) {
 const KEY = process.env.OPENROUTER_API_KEY;
 
 const MODELS = [
+  'openrouter/free',
   'dots-studio/dots-3-note-preview:free',
   'liquid/lfm-2.5-2.6b:free',
   'nvidia/nemotron-3.5-lightning:free',
@@ -27,6 +28,12 @@ const MODELS = [
   'google/gemma-4-26b-a4b-it:free',
   'google/gemma-4-31b-it:free',
   'nvidia/nemotron-3-super-120b-a12b:free',
+  // Alta 2026-09-16 (barrido en vivo del catálogo, 20 :free publicados):
+  'inclusionai/ling-3.0-flash-fin:free',
+  'inclusionai/ling-3.0-flash-sante:free',
+  'inclusionai/ling-3.0-flash-vl:free',
+  'nex-agi/nex-n2.5-mini:free',
+  'nex-agi/nex-n2.5-pro:free',
 ];
 
 async function test(modelId) {

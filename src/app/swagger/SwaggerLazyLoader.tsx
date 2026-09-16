@@ -17,7 +17,7 @@ const SwaggerClient = dynamic(() => import('./SwaggerClient'), {
     <div className="flex items-center justify-center py-32">
       <div className="flex flex-col items-center gap-4">
         <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-        <p className="text-sm text-muted-fg">Loading API documentation…</p>
+        <p className="text-sm text-muted-fg">Cargando documentación de API…</p>
       </div>
     </div>
   ),

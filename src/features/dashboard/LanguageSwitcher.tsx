@@ -34,7 +34,7 @@ export function LanguageSwitcher({ mini = false }: { mini?: boolean }) {
         onClick={handleSwitch}
         disabled={isPending}
         className="flex items-center gap-1.5 text-2xs font-medium text-muted-fg/60 hover:text-foreground transition-[color,opacity] cursor-pointer disabled:opacity-50"
-        title="Switch language"
+        title="Cambiar idioma"
       >
         {isPending ? (
           <Loader2 size={12} className="animate-spin shrink-0" />

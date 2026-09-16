@@ -41,7 +41,7 @@ export default function DeactivateButton({ projectId }: { projectId: string }) {
       ) : (
         <AlertTriangle className="w-3 h-3 transition-transform group-hover:scale-110" />
       )}
-      {isPending ? 'Deactivating...' : 'Deactivate Project'}
+      {isPending ? 'Desactivando…' : 'Desactivar proyecto'}
     </button>
   );
 }

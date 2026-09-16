@@ -185,7 +185,7 @@ export async function tcpProbe(
 
     socket.setTimeout(timeoutMs);
     socket.once("connect", () => done({ open: true }));
-    socket.once("timeout", () => done({ open: false, error: "timeout" }));
+    socket.once("timeout", () => done({ open: false, error: "tiempo de espera agotado" }));
     socket.once("error", (err: Error) => done({ open: false, error: err.message }));
     socket.connect(port, host);
   });

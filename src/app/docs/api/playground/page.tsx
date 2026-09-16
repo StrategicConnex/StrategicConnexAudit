@@ -236,7 +236,7 @@ function ApiKeyInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="sa_live_..."
-          className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder-muted-fg/50 outline-none"
+          className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder-muted-fg/50 outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-md"
         />
         <button
           onClick={() => setShow(!show)}

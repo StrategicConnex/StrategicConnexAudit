@@ -99,7 +99,7 @@ export async function enforceToolRunPolicy(
     // Fallback block/allow gracefully but do not crash the execution flow
     return {
       allowed: false,
-      reason: `Operational error checking subscription policy: ${getErrorMessage(error)}`,
+      reason: `Error operativo al verificar la política de suscripción: ${getErrorMessage(error)}`,
       planName: "free",
     };
   }

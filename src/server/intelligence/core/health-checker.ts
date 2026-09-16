@@ -78,7 +78,7 @@ class ExternalApiHealthChecker {
         consecutiveFailures: 0, successRate: 1.0,
         circuitState: "CLOSED",
         endpoint: c.endpoints[0] || "n/a",
-        message: "Awaiting first health check..."
+        message: "Esperando la primera comprobación de salud..."
       });
     }
   }

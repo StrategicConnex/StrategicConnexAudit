@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import {
-  RefreshCw, ChevronRight, Info, Settings, MoreVertical,
+  RefreshCw, ChevronRight, Info,
   Globe, Terminal
 } from 'lucide-react';
 import Link from 'next/link';
@@ -105,15 +105,6 @@ export function PerformanceTab({ dashboardData }: PerformanceTabProps) {
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-primary' : ''}`} />
               {syncing ? t('syncingButton') : t('syncButton')}
             </button>
-
-            <div className="flex items-center gap-1.5 border border-border rounded-xl bg-muted/10 p-1">
-              <button className="p-1.5 rounded-lg text-muted-fg hover:text-foreground hover:bg-muted/20 transition-colors cursor-pointer">
-                <Settings size={14} />
-              </button>
-              <button className="p-1.5 rounded-lg text-muted-fg hover:text-foreground hover:bg-muted/20 transition-colors cursor-pointer">
-                <MoreVertical size={14} />
-              </button>
-            </div>
           </div>
         </div>
       </div>

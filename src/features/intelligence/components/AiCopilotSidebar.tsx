@@ -47,6 +47,7 @@ export function AiCopilotSidebar({
         </div>
         <button
           onClick={onToggle}
+          aria-label="Ocultar asistente"
           className="p-1 rounded hover:bg-muted text-muted-fg hover:text-foreground transition-colors"
         >
           <ChevronRight className="w-4 h-4" />
@@ -102,12 +103,14 @@ export function AiCopilotSidebar({
             type="text"
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
-            placeholder="Pregunta sobre puertos, SPF..."
+            aria-label="Pregunta al copiloto"
+            placeholder="Pregunta sobre puertos, SPF…"
             className="flex-1 bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-lg text-xs text-foreground placeholder:text-muted-fg py-2.5 px-3"
           />
           <button
             type="submit"
             disabled={!inputValue.trim()}
+            aria-label="Enviar mensaje"
             className="flex items-center justify-center w-8 h-8 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 active:scale-95 disabled:opacity-30 disabled:scale-100 transition-[color,background-color,opacity,transform]"
           >
             <ArrowRight className="w-3.5 h-3.5" />
