@@ -160,13 +160,18 @@ export async function detectErrorRateAnomalies(
 ): Promise<AnomalyDetectionSummary> {
   const windowHours = opts?.windowHours ?? 24;
 
+  // intelligence_run_events NO tiene project_id: se atribuye por
+  // investigation_id (→ investigations.project_id) o por tool_run_id
+  // (→ tool_runs.project_id). Sin este JOIN la query muere con 42703.
   const rows = await db.execute(
     sql`
-      SELECT date_trunc('hour', created_at) as bucket, count(*) as cnt
-      FROM intelligence_run_events
-      WHERE project_id = ${projectId}
-        AND event_type = 'error'
-        AND created_at >= now() - interval '${sql.raw(String(windowHours))} hours'
+      SELECT date_trunc('hour', e.created_at) as bucket, count(*) as cnt
+      FROM intelligence_run_events e
+      LEFT JOIN intelligence_investigations i ON i.id = e.investigation_id
+      LEFT JOIN intelligence_tool_runs t ON t.id = e.tool_run_id
+      WHERE (i.project_id = ${projectId} OR t.project_id = ${projectId})
+        AND e.event_type = 'error'
+        AND e.created_at >= now() - interval '${sql.raw(String(windowHours))} hours'
       GROUP BY bucket
       ORDER BY bucket DESC
     `

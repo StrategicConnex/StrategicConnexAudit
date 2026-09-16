@@ -154,7 +154,7 @@ describe("MonitoringTab — schedule, webhooks, API keys, bulk scan y planes", (
 
     fireEvent.change(screen.getByPlaceholderText("webhookNamePlaceholder"), { target: { value: "Mi Hook" } });
     fireEvent.change(screen.getByPlaceholderText("webhookUrlPlaceholder"), { target: { value: "https://hook.example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: "" })); // botón + (sin texto)
+    fireEvent.click(screen.getByRole("button", { name: "addWebhook" })); // botón + (aria-label i18n; en tests t() devuelve la key)
 
     await waitFor(() => {
       expect(screen.getByText("Test Webhook")).toBeTruthy();
@@ -174,7 +174,7 @@ describe("MonitoringTab — schedule, webhooks, API keys, bulk scan y planes", (
     await waitFor(() => {
       expect(screen.getByText("sa_live_clear_key_xyz")).toBeTruthy();
     });
-    // Botón de copiar (Copy) → clipboard (el último botón sin nombre; el + del webhook está antes)
+    // Botón de copiar (Copy) → clipboard (botón sin nombre accesible)
     const emptyButtons = screen.getAllByRole("button", { name: "" });
     fireEvent.click(emptyButtons[emptyButtons.length - 1]!);
     expect(clipboardMock.writeText).toHaveBeenCalledWith("sa_live_clear_key_xyz");

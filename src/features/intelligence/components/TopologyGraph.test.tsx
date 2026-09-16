@@ -72,6 +72,6 @@ describe("TopologyGraph (sink <style> y datos del grafo)", () => {
   it("muestra el estado de loading antes de que llegue el fetch", () => {
     fetchMock.mockReturnValue(new Promise(() => {}));
     render(<TopologyGraph projectId="p1" />);
-    expect(screen.getAllByText(/Loading Topology/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Cargando topolog/i).length).toBeGreaterThan(0);
   });
 });

@@ -13,8 +13,8 @@
 
 <p align="center">
   <a href="https://scaudit.vercel.app"><img src="https://img.shields.io/badge/scaudit.vercel.app-Live-6366f1?style=flat-square&logo=vercel" alt="Live"></a>
-  <a href="https://github.com/StrategicConnex/StrategicConnexAudit/actions"><img src="https://github.com/strategicconnex/strategicaudit-pro/actions/workflows/ci.yml/badge.svg?style=flat-square" alt="CI"></a>
-  <a href="https://codecov.io/gh/strategicconnex/strategicaudit-pro"><img src="https://codecov.io/gh/strategicconnex/strategicaudit-pro/branch/main/graph/badge.svg?style=flat-square" alt="Coverage"></a>
+  <a href="https://github.com/StrategicConnex/StrategicConnexAudit/actions"><img src="https://github.com/StrategicConnex/StrategicConnexAudit/actions/workflows/ci.yml/badge.svg?style=flat-square" alt="CI"></a>
+  <a href="https://codecov.io/gh/StrategicConnex/StrategicConnexAudit"><img src="https://codecov.io/gh/StrategicConnex/StrategicConnexAudit/branch/main/graph/badge.svg?style=flat-square" alt="Coverage"></a>
   <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js" alt="Next.js 16">
   <img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
@@ -86,7 +86,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **OSINT**: shodan queries, email breach detection, reverse DNS
 - **Análisis de drift**: detección de cambios en la postura de seguridad a lo largo del tiempo
 - **Risk Engine**: scoring de vulnerabilidades con severidad y confianza
-- **Tool Registry**: 34+ herramientas de inteligencia disponibles con rate limiting y caching
+- **Tool Registry**: 42 herramientas de inteligencia disponibles con rate limiting y caching
 - **Protección SSRF**: `egress-guard` con validación CIDR matemática IPv4/IPv6
 - **Mapa Geo interactivo**: visualización GeoIP de activos con Leaflet.js
 
@@ -98,7 +98,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Persistencia**: assets en `intelligence_assets`, cambios en `asset_changes`, hallazgos de seguridad
 
 ### 🎯 MITRE ATT&CK Mapping (NUEVO)
-- **25+ técnicas** MITRE mapeadas por toolId exacto
+- **16 técnicas** MITRE mapeadas por toolId exacto (computado en vivo)
 - **Badges visuales** en cada hallazgo con tooltip de técnica
 - **Dashboard de cobertura** en `/mitre-coverage` con gráficos
 - **Cobertura**: Reconnaissance, Resource Development, Initial Access, Discovery, C2, Defense Evasion
@@ -107,7 +107,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Copilot de Infraestructura**: asistente IA para planes de remediación técnica
 - **Incident Brief**: generación automática de resúmenes ejecutivos de seguridad
 - **Reportes SEO**: análisis generativo con datos de GSC/GA4
-- **Modelos gratuitos**: OpenRouter free pool (Gemini Flash, DeepSeek, Llama 4, Mistral, Qwen)
+- **Modelos gratuitos**: OpenRouter free pool (`openrouter/free` + Nemotron · Nex · Cohere, verificado en vivo)
 - **Fallback automático**: encadenamiento de 5 modelos con circuit breaker
 - **Health Check**: monitoreo periódico de disponibilidad de modelos + dashboard
 
@@ -146,7 +146,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 ### 📱 PWA & Multi-language (NUEVO)
 - **PWA instalable**: manifest.json, service worker con estrategias de caché, offline page, push notifications
 - **Botón de instalación nativa**: `beforeinstallprompt` + `appinstalled` en el dashboard header
-- **i18n completo**: `next-intl` con `es`/`en`, 650+ keys, 11/11 tabs migrados + prompts de IA bilingües
+- **i18n completo**: `next-intl` con `es`/`en`, 518 keys, 11/11 tabs migrados + prompts de IA bilingües
 - **LanguageSwitcher**: toggle es/en con detección por cookie → Accept-Language → default `es`
 
 ### 🛡️ Adversary Simulation (NUEVO)
@@ -208,7 +208,7 @@ Documentación completa en formato **HTML** con diagramas Mermaid, skeletons de 
 
 ## 🏗️ Arquitectura
 
-Diagrama C4 de containers (nivel L2) del estado actual — verificado contra el código (commit `2ccda08`):
+Diagrama C4 de containers (nivel L2) del estado actual — verificado contra el código (sep-2026):
 
 ```mermaid
 flowchart TB
@@ -226,7 +226,7 @@ flowchart TB
             ACT["⚡ Server Actions<br/>audits.ts · projects.ts · reports.ts"]
         end
 
-        subgraph API["API Route Handlers (42)"]
+        subgraph API["API Route Handlers (46)"]
             API_IT["intelligence/* · ai/* · benchmarking<br/>monitoring · plugins · reports/pdf"]
             API_PUB["public/v1/* (Bearer API key)"]
             API_WEB["webhooks/* · cicd (HMAC)"]
@@ -241,18 +241,18 @@ flowchart TB
         end
 
         subgraph JOBS["Background Jobs"]
-            VC["☑️ Vercel Cron (garantizado)<br/>siem */5 · uptime */15"]
-            TD["Trigger.dev (opcional)<br/>11 tasks + 1 template · deploy no verificado"]
+            VC["☑️ Vercel Cron (garantizado)<br/>2 crons diarios (plan Hobby)"]
+            TD["Trigger.dev (opcional)<br/>13 tasks + 1 template · deploy no verificado"]
         end
 
         subgraph DATA["Data"]
-            DB["🗄️ Supabase Postgres<br/>58 tablas · 22 migraciones · RLS"]
+            DB["🗄️ Supabase Postgres<br/>63 tablas · 30 migraciones SQL · RLS"]
             REDIS["⚡ Upstash Redis<br/>rate limit + cache (fail-open)"]
         end
     end
 
     subgraph EXT["Servicios externos"]
-        AI["🤖 OpenRouter AI (free pool)<br/>Gemini Flash · DeepSeek · Llama 4<br/>Mistral · Qwen · Nemotron"]
+        AI["🤖 OpenRouter AI (free pool)<br/>openrouter/free + Nemotron<br/>Nex · Cohere"]
         SIEM["📡 SIEM<br/>Slack · PagerDuty · Splunk · Email"]
         OSINT["🌐 APIs OSINT / DNS / CVE"]
     end
@@ -284,12 +284,12 @@ flowchart TB
 ```
 src/server/
 ├── ai/                           # AI Router (model pool + fallback)
-│   └── ai-router.ts              #   callAIWithFallback con 5 modelos
+│   └── ai-router.ts              #   callAIWithFallback: openrouter/free + 4 modelos :free por cadena
 ├── api/
 │   └── public-router.ts          #   withPublicApi middleware (API Key auth)
 ├── intelligence/
 │   ├── core/                     #   Dispatcher, cache, circuit-breaker, rate-limiter
-│   ├── discovery/                #   🆕 DNS brute force, CT monitor, shadow detection│   ├── executors/                 #   DNS, network, email, OSINT, website (34+ tools)
+│   ├── discovery/                #   🆕 DNS brute force, CT monitor, shadow detection│   ├── executors/                 #   DNS, network, email, OSINT, website (42 tools)
 │   ├── mitre/                    #   🆕 MITRE ATT&CK mapping + coverage
 │   ├── registry/                 #   Tool registry + policies
 │   └── security/                 #   Egress guard (SSRF protection)
@@ -299,27 +299,34 @@ src/server/
 
 ### Background jobs
 
-**Mecanismo garantizado: Vercel Cron** (`vercel.json`, protegido con `CRON_SECRET`). **Trigger.dev es opcional** (deploy no verificado según `docs/guides/deployment.md`) — 11 functional tasks + 1 template en `src/trigger/*.trigger.ts`.
+**Mecanismo garantizado: Vercel Cron** (`vercel.json`, protegido con `CRON_SECRET`, 2 crons diarios en plan Hobby). **Alta frecuencia vía Trigger.dev (opcional)** (deploy no verificado según `docs/guides/deployment.md`) — 13 functional tasks + 1 template en `src/trigger/*.trigger.ts`.
 
 | Fuente | Schedule | Descripción |
 |--------|----------|-------------|
-| Vercel Cron `/api/cron/siem` | Cada 5 min | SIEM exporter + heartbeat |
-| Vercel Cron `/api/cron/uptime` | Cada 15 min | Verificación de uptime |
-| Trigger.dev `discovery.trigger.ts` | 🆕 Cada 6h | Descubrimiento continuo de activos |
-| Trigger.dev `api-key-expiry.trigger.ts` | 🆕 Diario 09:00 UTC | Alertas de expiración de API Keys |
+| Vercel Cron `/api/cron/siem` | Diario `0 3 * * *` | SIEM exporter + heartbeat |
+| Vercel Cron `/api/cron/uptime` | Diario `30 3 * * *` | Verificación de uptime |
+| Trigger.dev `siem.trigger.ts` | Cada 5 min | SIEM exporter + heartbeat |
+| Trigger.dev `uptime.trigger.ts` | Cada 15 min | Verificación de uptime |
+| Trigger.dev `anomaly.trigger.ts` | Cada 15 min | Detección de anomalías (Z-score) |
 | Trigger.dev `scheduled-scan.trigger.ts` | Cada hora | Escaneo agendado (`monitoring_schedules` → auditoría) |
+| Trigger.dev `discovery.trigger.ts` | 🆕 Cada 6h | Descubrimiento continuo de activos |
+| Trigger.dev `adversary.trigger.ts` | Cada 6h | Simulación de adversarios |
+| Trigger.dev `api-key-expiry.trigger.ts` | 🆕 Diario 09:00 UTC | Alertas de expiración de API Keys |
+| Trigger.dev `cleanup.trigger.ts` | Diario 00:00 UTC | Limpieza de logs antiguos |
 | Trigger.dev `audit.trigger.ts` | Bajo demanda | Auditorías programadas |
-| Trigger.dev `monitoring.trigger.ts` | Bajo demanda | Monitoreo de infraestructura |
+| Trigger.dev `monitoring.trigger.ts` | Bajo demanda + diario | Monitoreo de infraestructura |
+| Trigger.dev `mitre/adversary-assessment/webhook` | Bajo demanda / asíncrono | Evaluaciones MITRE/adversario y dispatch de webhooks |
+| `/api/ai/healthcheck` | Manual / bajo demanda | Health check de modelos AI (sin cron dedicado) |
 
 ---
 
 ## 🛠️ Stack tecnológico
 
 ### Frontend
-- **Framework**: Next.js 16.2.4 (App Router, Turbopack)
+- **Framework**: Next.js 16.3.3 (App Router, Turbopack)
 - **Lenguaje**: TypeScript 5
 - **UI**: Tailwind CSS v4 + OKLCH tokens
-- **Fonts**: DM Sans (display), Inter (body), JetBrains Mono (code)
+- **Fonts**: Space Grotesk (display), Inter (body), JetBrains Mono (code)
 - **Gráficos**: Recharts, React Flow, Leaflet.js 🆕
 - **PDF**: @react-pdf/renderer 🆕
 - **Documentación API**: swagger-ui-react 🆕
@@ -336,7 +343,7 @@ src/server/
 - **AI**: OpenRouter API (free models)
 
 ### Infraestructura
-- **Hosting**: Vercel (Standalone output)
+- **Hosting**: Vercel (builder nativo Next.js)
 - **CI/CD**: GitHub Actions + Playwright + Vitest
 - **Coverage**: Codecov
 - **Push Notifications**: Web Push API (VAPID)
@@ -354,7 +361,7 @@ src/
 │   │   └── reports.ts            #   Generar reportes
 │   ├── ai/                       # AI Health Dashboard 🆕
 │   │   └── health/               #   Dashboard de salud de modelos
-│   ├── api/                      # API Routes (42 endpoints)
+│   ├── api/                      # API Routes (46 endpoints)
 │   │   ├── ai/                   #   Copilot, reportes, healthcheck
 │   │   ├── api-keys/             #   🆕 CRUD + usage tracking + expiry
 │   │   ├── auth/                 #   Validate email, callback
@@ -395,7 +402,7 @@ src/
 │   ├── intelligence/
 │   │   ├── core/                 #     Dispatcher, cache, circuit-breaker
 │   │   ├── discovery/            #     🆕 DNS brute, CT monitor, shadow detector
-│   │   ├── executors/            #     34+ intelligence tools
+│   │   ├── executors/            #     42 intelligence tools
 │   │   ├── mitre/                #     🆕 MITRE ATT&CK mapping
 │   │   └── security/             #     Egress guard
 │   └── security/                 #     SIEM exporter, API key expiry alerts 🆕
@@ -403,7 +410,7 @@ src/
 ├── shared/                       # Shared across app
 │   ├── config/                   #   Env validation
 │   ├── data/                     #   🆕 MITRE mapping data (shared)
-│   ├── db/                       #   Drizzle schemas (58 tablas)
+│   ├── db/                       #   Drizzle schemas (63 tablas)
 │   │   └── schemas/              #     health, intelligence, monitoring,
 │   │                             #     security-audit, api-keys, push-subscriptions
 │   ├── lib/                      #   Auth, ratelimit, audit-log, withPublicApi
@@ -417,6 +424,10 @@ src/
     ├── audit.trigger.ts          #   Auditorías programadas
     ├── monitoring.trigger.ts     #   Monitoreo de infraestructura
     ├── uptime.trigger.ts         #   Uptime checks
+    ├── anomaly.trigger.ts        #   Detección de anomalías (cada 15 min)
+    ├── cleanup.trigger.ts        #   Limpieza de logs (diario)
+    ├── mitre-evaluation.trigger.ts       #   Evaluaciones MITRE (bajo demanda)
+    ├── adversary-assessment.trigger.ts   #   Evaluaciones adversario (bajo demanda)
     └── webhook.trigger.ts        #   Webhook delivery
 ```
 
@@ -446,7 +457,7 @@ Módulo de descubrimiento automático que ejecuta cada 6 horas:
 - **CT Log Monitor**: consulta logs de Certificate Transparency para nuevos certificados
 - **Shadow Detector**: compara activos descubiertos vs conocidos, detecta shadow IT
 
-**Archivos:** `src/server/intelligence/discovery/` (5 archivos) · `src/trigger/discovery.trigger.ts`
+**Archivos:** `src/server/intelligence/discovery/` (6 archivos) · `src/trigger/discovery.trigger.ts`
 
 ---
 
@@ -472,12 +483,12 @@ flowchart LR
 ```
 
 Cada hallazgo de inteligencia se mapea automáticamente a técnicas MITRE ATT&CK:
-- **25+ técnicas** cubriendo 6 tácticas
+- **16 técnicas** cubriendo 5 tácticas (computado en vivo en `/mitre-coverage`)
 - **Badge visual** con tooltip: `T1583.001 · DNS Zone Transfer`
 - **Dashboard** en `/mitre-coverage` con gráficos de cobertura por táctica
 - **Tooltip expandible** con técnica ID, nombre, táctica, descripción y link a MITRE
 
-**Archivos:** `src/server/intelligence/mitre/mapping.ts` · `src/app/components/MitreBadge.tsx` · `src/app/mitre-coverage/`
+**Archivos:** `src/server/intelligence/mitre/mapping.ts` · `src/features/dashboard/MitreBadge.tsx` · `src/app/mitre-coverage/`
 
 ---
 
@@ -530,7 +541,7 @@ Reportes PDF profesionales con:
 - **Progress bar** durante la generación
 - **Notificaciones toast** de éxito/error
 
-**Archivos:** `src/app/api/reports/pdf/route.ts` · `src/app/components/DownloadPdfButton.tsx`
+**Archivos:** `src/app/api/reports/pdf/route.ts` · `src/features/dashboard/DownloadPdfButton.tsx`
 
 ---
 
@@ -668,7 +679,15 @@ Dashboard en `/ai/health` que monitorea los modelos de IA:
 - **Timeline de fallos** con eventos de error
 - **Uptime** por modelo en porcentaje
 
-**Backend:** `GET /api/ai/healthcheck` ejecutado cada 6h via Vercel Cron
+**Backend:** `GET /api/ai/healthcheck` (manual y bajo demanda — lo consulta el hero del dashboard; sin cron dedicado). Pool verificado en vivo (sep-2026):
+
+| Modelo | Rol |
+|--------|-----|
+| `openrouter/free` | Meta-router, primero en cadenas de chat |
+| `nvidia/nemotron-3-super-120b-a12b:free` | Calidad general |
+| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | General + tools/JSON |
+| `nex-agi/nex-n2.5-pro:free` | Fallback verificado |
+| `cohere/north-mini-code:free` | Fallback verificado |
 
 ---
 
@@ -680,7 +699,7 @@ Sistema de notificaciones push al navegador:
 - **Alertas SIEM** enviadas como push
 - **Suscripción persistida** en `push_subscriptions` table
 
-**Archivos:** `src/server/notifications/push.ts` · `src/app/components/PushSubscribeButton.tsx`
+**Archivos:** `src/server/notifications/push.ts` · `src/components/PushSubscribeButton.tsx`
 
 ---
 
@@ -795,7 +814,7 @@ flowchart LR
 ```
 
 Internacionalización completa con `next-intl` v4 (cookie-based, sin restructuring de URLs):
-- **es + en**, 650+ keys en `messages/`
+- **es + en**, 518 keys en `messages/` (+ namespaces `benchmarking`, `live`)
 - **11/11 tabs migrados**: login, sidebar, IntelligenceTab, OverviewTab, ProjectsTab, ReportsTab, SettingsTab, PerformanceTab, MonitoringTab, KeywordsTab, AdversaryTab
 - **Prompts de IA bilingües** en `ai-router.ts` (4 task types)
 - **LanguageSwitcher** en el header del dashboard
@@ -829,7 +848,7 @@ Comparación de tu proyecto vs la industria:
 ### 🛠️ Calidad & Arquitectura
 
 Refactorizaciones de la fase de consolidación (C-series + best practices):
-- **Tool registry consolidado** (C05): `registerTool()` como entry point único, 34 natives + 9 orphans + plugins dinámicos con guard de colisión
+- **Tool registry consolidado** (C05): `registerTool()` como entry point único, 42 tools registradas (nativas + huérfanas) + plugins dinámicos con guard de colisión
 - **Tipado fuerte de executors** (C06/C07): `ToolExecutor<TInput, TOutput>` con interfaces concretas (`DnsLookupOutput`, `TlsScanOutput`, etc.), sin `ToolExecutor<any>` en DNS/TLS/red
 - **scan-response.ts tipado**: lecturas con accessors tipados — corrigió el bug de keys DNS mayúsculas/minúsculas
 - **Error handling centralizado**: `AppError`, `NotFoundError`, `ValidationError`, `AuthError`, `RateLimitError` + `withErrorHandler` en las rutas
@@ -879,9 +898,14 @@ pnpm dev
 ```env
 # ─── Supabase (obligatorio) ─────────────────────────────────────
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx  # alias legacy: NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY=eyJ...    # Para bypass de RLS en server
-DIRECT_URL=postgresql://...         # URL directa para migraciones
+DATABASE_URL=postgresql://...       # Pooler :6543 (lecturas app)
+DIRECT_URL=postgresql://...         # Directa :5432 (workers/migraciones)
+
+# ⚠️ Si tu password contiene `$` seguido de letra/dígito (ej. `$1ab`),
+# Next.js lo expande como variable vacía y rompe la auth (28P01).
+# Escápalo como `\$` o, mejor, rota el password a uno sin `$`.
 
 # ─── Upstash Redis (obligatorio para rate limiting) ─────────────
 UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
@@ -925,7 +949,7 @@ pnpm db:generate   # Generar migración desde schemas
 pnpm db:push       # Aplicar migraciones a Supabase
 ```
 
-Las migraciones se almacenan en `drizzle/` (11 migrations hasta la fecha, incluyendo tablas `developer_api_keys`, `security_audit_logs`, `siem_alert_logs`, `ai_health_logs`, `push_subscriptions`).
+Las migraciones se almacenan en `drizzle/` (30 ficheros SQL: 26 en el journal de `drizzle-kit` + 4 manuales, incluyendo tablas `developer_api_keys`, `security_audit_logs`, `siem_alert_logs`, `ai_health_logs`, `push_subscriptions`).
 
 ---
 
@@ -952,24 +976,25 @@ Las migraciones se almacenan en `drizzle/` (11 migrations hasta la fecha, incluy
 
 SCAUDIT Pro usa un **design system propietario** definido en OKLCH, inspirado en instrumentos de precisión forense y consolas de monitoreo SOC.
 
-### Paleta de color
+### Paleta de color (dark por defecto; light completo)
 
-| Token | OKLCH | Uso |
-|-------|-------|-----|
-| `bg-background` | `oklch(1.8% 0.003 265)` | Fondo near-black |
-| `text-foreground` | `oklch(93% 0.008 265)` | Texto principal |
-| `bg-card` | `oklch(3% 0.006 265)` | Cards |
-| `text-primary` | `oklch(68% 0.14 230)` | Índigo — acciones, links |
-| `text-chartreuse` | `oklch(78% 0.18 140)` | Señal viva, indicadores OK |
-| `text-destructive` | `oklch(55% 0.22 25)` | Errores, severidad crítica |
-| `border-border` | `oklch(15% 0.008 265)` | Bordes de cards |
-| `text-muted-fg` | `oklch(35% 0.02 260)` | Texto secundario |
+| Token | OKLCH (dark) | Uso |
+|-------|--------------|-----|
+| `--bg` | `oklch(4% 0.015 100)` | Fondo near-black oliva |
+| `--fg` | `oklch(92% 0.008 100)` | Texto principal |
+| `--card` | `oklch(6% 0.018 100)` | Cards |
+| `--primary` | `oklch(72% 0.14 85)` | Oro — acciones, links, foco |
+| `--secondary` | `oklch(55% 0.08 185)` | Teal — secundario |
+| `--chartreuse` | `oklch(72% 0.14 85)` | Señal viva, indicadores OK |
+| `--destructive` | `oklch(55% 0.22 25)` | Errores, severidad crítica |
+| `--border` | `oklch(14% 0.012 100)` | Bordes de cards |
+| `--muted-fg` | `oklch(58% 0.02 100)` | Texto secundario (AA en ambos temas) |
 
 ### Tipografía
 
 | Rol | Fuente | Pesos |
 |-----|--------|-------|
-| Display | DM Sans | 400–1000 |
+| Display | Space Grotesk | 300–700 |
 | Body | Inter | 400–800 |
 | Mono | JetBrains Mono | 400–600 |
 
@@ -1011,7 +1036,7 @@ SCAUDIT Pro usa un **design system propietario** definido en OKLCH, inspirado en
 - `safeFetch()`: wrapper de fetch con timeout, redirect manual y validación de destino
 
 ### SIEM (Security Information & Event Management)
-- **Exportador** que corre cada 5 min via Vercel Cron
+- **Exportador** con doble cadencia: Trigger.dev cada 5 min + Vercel Cron diario (respaldo)
 - **7 reglas de detección**: open redirect attacks, rate limit bypass, AI model failure, CSP spikes, auth failure bursts, API key expiry, heartbeat
 - **4 canales de alerta**: Slack, PagerDuty, Splunk, Email (Resend)
 - **2 alertas adicionales**: Push notifications + heartbeat cada 30 min
@@ -1087,7 +1112,7 @@ El pipeline de GitHub Actions ejecuta:
 |----------|--------|-------------|
 | `/api/ai/copilot` | POST | Chat con AI Copilot de infraestructura |
 | `/api/ai/report` | POST | Generar reporte SEO ejecutivo |
-| `/api/ai/healthcheck` | GET | Health check de modelos AI (cron cada 6h) |
+| `/api/ai/healthcheck` | GET | Health check de modelos AI (manual / bajo demanda) |
 
 ### Inteligencia
 
@@ -1177,9 +1202,9 @@ El pipeline de GitHub Actions ejecuta:
 
 | Task | Schedule | Descripción |
 |------|----------|-------------|
-| `api/cron/uptime` | `*/15 * * * *` (cada 15 min) | Verificación de uptime |
-| `api/cron/siem` | `*/5 * * * *` (cada 5 min) | SIEM exporter |
-| `api/ai/healthcheck` | `0 */6 * * *` (cada 6h) | Health check de modelos AI |
+| `api/cron/uptime` | Diario `0 3 * * *` (Vercel, plan Hobby) | Verificación de uptime |
+| `api/cron/siem` | Diario `30 3 * * *` (Vercel, plan Hobby) | SIEM exporter |
+| `api/ai/healthcheck` | Manual / bajo demanda | Health check de modelos AI |
 | `trigger/discovery.trigger` | 🆕 Cada 6h | Descubrimiento continuo de activos |
 | `trigger/api-key-expiry.trigger` | 🆕 Diario 09:00 UTC | Alertas de expiración API Keys |
 
@@ -1189,7 +1214,7 @@ El pipeline de GitHub Actions ejecuta:
 
 ### Vercel (recomendado)
 
-El proyecto está preconfigurado para Vercel con output standalone:
+El proyecto está preconfigurado para Vercel con el builder nativo de Next.js (sin `output: standalone`, que interfiere con las lambdas de Vercel):
 
 ```bash
 # 1. Conectar repo a Vercel
@@ -1203,8 +1228,8 @@ vercel --prod
 ```
 
 El archivo `vercel.json` ya incluye:
-- Framework `nextjs` con standalone output
-- Cron jobs para uptime, SIEM y health check
+- Framework `nextjs` (sin standalone output)
+- 2 cron jobs diarios (uptime 03:00, SIEM 03:30 — la alta frecuencia vive en Trigger.dev)
 - Configuración de imágenes y headers de seguridad
 
 **Importante:** NO configurar `NEXT_PUBLIC_DEV_BYPASS_AUTH=true` en producción — el guard `NODE_ENV === 'development'` lo desactiva automáticamente.
