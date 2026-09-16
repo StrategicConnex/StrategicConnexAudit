@@ -23,6 +23,13 @@ function timeAgo(iso: string): string {
   return `hace ${Math.floor(hours / 24)} d`;
 }
 
+const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+
+/** Helper de módulo (como timeAgo): evita llamadas impuras directas durante el render. */
+function isStaleEvent(iso: string): boolean {
+  return Date.now() - new Date(iso).getTime() > STALE_THRESHOLD_MS;
+}
+
 export function RumIntegrationCard({
   projectId,
   appUrl,
@@ -62,9 +69,7 @@ export function RumIntegrationCard({
 
   // Estado de instalación derivado de la telemetría real recibida
   const isActive = stats.lastEventAt !== null;
-  const isStale = isActive
-    ? Date.now() - new Date(stats.lastEventAt!).getTime() > 24 * 60 * 60 * 1000
-    : false;
+  const isStale = isActive ? isStaleEvent(stats.lastEventAt!) : false;
 
   const status = !isActive
     ? { icon: <CircleAlert className="w-3.5 h-3.5 text-amber-400" />, label: 'Sin datos todavía', hint: 'Instala el snippet y visita tu sitio — la primera señal aparece en segundos.', cls: 'border-amber-400/20 bg-amber-400/5 text-amber-400' }

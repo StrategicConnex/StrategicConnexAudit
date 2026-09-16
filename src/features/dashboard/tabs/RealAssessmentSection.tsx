@@ -58,7 +58,23 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
   const [savingConsent, setSavingConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedVuln, setExpandedVuln] = useState<string | null>(null);
+  const [prevProjectId, setPrevProjectId] = useState(projectId);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Ref al fetcher vigente: evita que el intervalo capture una clausura
+  // obsoleta y que fetchState se auto-referencie antes de declararse.
+  const fetchStateRef = useRef<(selectLatest?: boolean) => Promise<void>>(async () => {});
+
+  const loadAssessment = useCallback(async (assessmentId: string) => {
+    try {
+      const res = await fetch(`/api/intelligence/adversary/assessment?projectId=${projectId}&assessmentId=${assessmentId}`);
+      const data = await res.json();
+      if (data.success) {
+        setSelected({ assessment: data.assessment, vulnerabilities: data.vulnerabilities });
+      }
+    } catch {
+      /* noop */
+    }
+  }, [projectId]);
 
   const fetchState = useCallback(async (selectLatest = false) => {
     try {
@@ -78,7 +94,7 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
       );
       if (active) {
         if (!pollRef.current) {
-          pollRef.current = setInterval(() => void fetchState(true), 5000);
+          pollRef.current = setInterval(() => void fetchStateRef.current(true), 5000);
         }
         return;
       }
@@ -94,23 +110,21 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
-
-  const loadAssessment = useCallback(async (assessmentId: string) => {
-    try {
-      const res = await fetch(`/api/intelligence/adversary/assessment?projectId=${projectId}&assessmentId=${assessmentId}`);
-      const data = await res.json();
-      if (data.success) {
-        setSelected({ assessment: data.assessment, vulnerabilities: data.vulnerabilities });
-      }
-    } catch {
-      /* noop */
-    }
-  }, [projectId]);
+  }, [projectId, loadAssessment, t]);
 
   useEffect(() => {
-    setLoading(true);
+    fetchStateRef.current = fetchState;
+  }, [fetchState]);
+
+  // Reset derivado del proyecto durante el render (patrón documentado de
+  // React): evita setState sincrónico dentro del efecto.
+  if (prevProjectId !== projectId) {
+    setPrevProjectId(projectId);
     setSelected(null);
+    setLoading(true);
+  }
+
+  useEffect(() => {
     void fetchState(false);
     return () => {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }

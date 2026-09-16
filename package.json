@@ -80,7 +80,7 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.3.3",
     "jsdom": "^29.1.1",
     "playwright": "^1.59.1",
     "shadcn": "^4.7.0",
@@ -101,7 +101,6 @@
       "protobufjs",
       "core-js",
       "@biomejs/biome",
-      "es5-ext",
       "es5-ext",
       "msw"
     ]

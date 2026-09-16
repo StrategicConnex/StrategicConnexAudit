@@ -165,7 +165,58 @@ const s = StyleSheet.create({
 });
 
 
+type MitreReportData = {
+  project: { id: string; name: string; domain: string };
+  evaluation: typeof mitreEvaluations.$inferSelect;
+  results: (typeof mitreTechniqueResults.$inferSelect)[];
+};
+
+/**
+ * Carga los datos del informe fuera del handler: el documento JSX debe
+ * construirse fuera de cualquier try/catch (los errores de render no son
+ * capturables ahí; van al error boundary de Next).
+ */
+async function loadMitreReportData(
+  userId: string,
+  projectId: string,
+  evaluationId: string | null,
+): Promise<
+  | { ok: true; data: MitreReportData }
+  | { ok: false; status: 404; error: string }
+> {
+  const [project] = await directDb
+    .select({ id: projects.id, name: projects.name, domain: projects.domain })
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.ownerId, userId)))
+    .limit(1);
+  if (!project) return { ok: false, status: 404, error: 'Proyecto no encontrado' };
+
+  const [evaluation] = await directDb
+    .select()
+    .from(mitreEvaluations)
+    .where(
+      evaluationId
+        ? and(eq(mitreEvaluations.id, evaluationId), eq(mitreEvaluations.projectId, projectId))
+        : and(eq(mitreEvaluations.projectId, projectId), eq(mitreEvaluations.status, 'completed'))
+    )
+    .orderBy(desc(mitreEvaluations.createdAt))
+    .limit(1);
+
+  if (!evaluation || evaluation.status !== 'completed') {
+    return { ok: false, status: 404, error: 'Sin evaluaciones MITRE completadas' };
+  }
+
+  const results = await directDb
+    .select()
+    .from(mitreTechniqueResults)
+    .where(eq(mitreTechniqueResults.evaluationId, evaluation.id));
+
+  return { ok: true, data: { project, evaluation, results } };
+}
+
+
 export async function GET(req: NextRequest) {
+  let loaded: Awaited<ReturnType<typeof loadMitreReportData>>;
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -179,69 +230,48 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'projectId requerido' }, { status: 400 });
     }
 
-    const [project] = await directDb
-      .select({ id: projects.id, name: projects.name, domain: projects.domain })
-      .from(projects)
-      .where(and(eq(projects.id, projectId), eq(projects.ownerId, user.id)))
-      .limit(1);
-    if (!project) return NextResponse.json({ success: false, error: 'Proyecto no encontrado' }, { status: 404 });
-
-    const [evaluation] = await directDb
-      .select()
-      .from(mitreEvaluations)
-      .where(
-        evaluationId
-          ? and(eq(mitreEvaluations.id, evaluationId), eq(mitreEvaluations.projectId, projectId))
-          : and(eq(mitreEvaluations.projectId, projectId), eq(mitreEvaluations.status, 'completed'))
-      )
-      .orderBy(desc(mitreEvaluations.createdAt))
-      .limit(1);
-
-    if (!evaluation || evaluation.status !== 'completed') {
-      return NextResponse.json({ success: false, error: 'Sin evaluaciones MITRE completadas' }, { status: 404 });
-    }
-
-    const results = await directDb
-      .select()
-      .from(mitreTechniqueResults)
-      .where(eq(mitreTechniqueResults.evaluationId, evaluation.id));
-
-    const stream = await renderToStream(
-      <MitreReportDoc
-        projectName={project.name}
-        domain={project.domain}
-        generatedAt={new Date().toLocaleString('es-AR')}
-        evaluation={{
-          target: evaluation.target,
-          riskScore: evaluation.riskScore,
-          summary: evaluation.summary,
-          modelUsed: evaluation.modelUsed,
-          exposedCount: evaluation.exposedCount,
-          protectedCount: evaluation.protectedCount,
-          manualOnlyCount: evaluation.manualOnlyCount,
-        }}
-        results={results.map((r) => ({
-          mitreId: r.mitreId,
-          tactic: r.tactic,
-          techniqueName: r.techniqueName,
-          verdict: r.verdict,
-          summary: r.summary,
-          remediation: r.remediation,
-          playbook: r.playbook,
-          confidence: String(r.confidence),
-        }))}
-      />
-    );
-
-    return new Response(stream as unknown as ReadableStream, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="mitre-real-${project.domain}-${new Date().toISOString().slice(0, 10)}.pdf"`,
-        'Cache-Control': 'no-store',
-      },
-    });
+    loaded = await loadMitreReportData(user.id, projectId, evaluationId);
   } catch (error: unknown) {
     logger.error('Error generando PDF MITRE:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
+  if (!loaded.ok) {
+    return NextResponse.json({ success: false, error: loaded.error }, { status: loaded.status });
+  }
+  const { project, evaluation, results } = loaded.data;
+
+  const stream = await renderToStream(
+    <MitreReportDoc
+      projectName={project.name}
+      domain={project.domain}
+      generatedAt={new Date().toLocaleString('es-AR')}
+      evaluation={{
+        target: evaluation.target,
+        riskScore: evaluation.riskScore,
+        summary: evaluation.summary,
+        modelUsed: evaluation.modelUsed,
+        exposedCount: evaluation.exposedCount,
+        protectedCount: evaluation.protectedCount,
+        manualOnlyCount: evaluation.manualOnlyCount,
+      }}
+      results={results.map((r) => ({
+        mitreId: r.mitreId,
+        tactic: r.tactic,
+        techniqueName: r.techniqueName,
+        verdict: r.verdict,
+        summary: r.summary,
+        remediation: r.remediation,
+        playbook: r.playbook,
+        confidence: String(r.confidence),
+      }))}
+    />
+  );
+
+  return new Response(stream as unknown as ReadableStream, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="mitre-real-${project.domain}-${new Date().toISOString().slice(0, 10)}.pdf"`,
+      'Cache-Control': 'no-store',
+    },
+  });
 }

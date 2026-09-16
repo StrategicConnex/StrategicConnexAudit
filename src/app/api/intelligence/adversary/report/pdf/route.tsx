@@ -158,7 +158,57 @@ function AdversaryReportDoc(props: {
   );
 }
 
+type AdversaryReportData = {
+  project: { id: string; name: string; domain: string };
+  assessment: typeof adversaryAssessments.$inferSelect;
+  vulnerabilities: (typeof adversaryVulnerabilities.$inferSelect)[];
+};
+
+/**
+ * Carga los datos del informe fuera del handler: el documento JSX debe
+ * construirse fuera de cualquier try/catch (los errores de render no son
+ * capturables ahí; van al error boundary de Next).
+ */
+async function loadAdversaryReportData(
+  userId: string,
+  projectId: string,
+): Promise<
+  | { ok: true; data: AdversaryReportData }
+  | { ok: false; status: 404; error: string }
+> {
+  const [project] = await directDb
+    .select({ id: projects.id, name: projects.name, domain: projects.domain })
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.ownerId, userId)))
+    .limit(1);
+
+  if (!project) {
+    return { ok: false, status: 404, error: 'Proyecto no encontrado' };
+  }
+
+  const where = and(eq(adversaryAssessments.projectId, projectId), eq(adversaryAssessments.status, 'completed'));
+
+  const [assessment] = await directDb
+    .select()
+    .from(adversaryAssessments)
+    .where(where)
+    .orderBy(desc(adversaryAssessments.createdAt))
+    .limit(1);
+
+  if (!assessment) {
+    return { ok: false, status: 404, error: 'Sin evaluaciones completadas para este proyecto' };
+  }
+
+  const vulnerabilities = await directDb
+    .select()
+    .from(adversaryVulnerabilities)
+    .where(eq(adversaryVulnerabilities.assessmentId, assessment.id));
+
+  return { ok: true, data: { project, assessment, vulnerabilities } };
+}
+
 export async function GET(req: NextRequest) {
+  let loaded: Awaited<ReturnType<typeof loadAdversaryReportData>>;
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -168,83 +218,55 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get('projectId');
-    const assessmentId = searchParams.get('assessmentId');
 
     if (!projectId) {
       return NextResponse.json({ success: false, error: 'projectId requerido' }, { status: 400 });
     }
 
-    const [project] = await directDb
-      .select({ id: projects.id, name: projects.name, domain: projects.domain })
-      .from(projects)
-      .where(and(eq(projects.id, projectId), eq(projects.ownerId, user.id)))
-      .limit(1);
-
-    if (!project) {
-      return NextResponse.json({ success: false, error: 'Proyecto no encontrado' }, { status: 404 });
-    }
-
-    const where = assessmentId
-      ? and(eq(adversaryAssessments.projectId, projectId), eq(adversaryAssessments.status, 'completed'))
-      : and(eq(adversaryAssessments.projectId, projectId), eq(adversaryAssessments.status, 'completed'));
-
-    const [assessment] = await directDb
-      .select()
-      .from(adversaryAssessments)
-      .where(where)
-      .orderBy(desc(adversaryAssessments.createdAt))
-      .limit(1);
-
-    if (!assessment) {
-      return NextResponse.json(
-        { success: false, error: 'Sin evaluaciones completadas para este proyecto' },
-        { status: 404 }
-      );
-    }
-
-    const vulns = await directDb
-      .select()
-      .from(adversaryVulnerabilities)
-      .where(eq(adversaryVulnerabilities.assessmentId, assessment.id));
-
-    const stream = await renderToStream(
-      <AdversaryReportDoc
-        projectName={project.name}
-        domain={project.domain}
-        generatedAt={new Date().toLocaleString('es-AR')}
-        assessment={{
-          target: assessment.target,
-          riskScore: assessment.riskScore,
-          summary: assessment.summary,
-          modelUsed: assessment.modelUsed,
-          checksTotal: assessment.checksTotal,
-          checksPassed: assessment.checksPassed,
-          analysisFailed: assessment.analysisFailed,
-        }}
-        vulnerabilities={vulns.map((v) => ({
-          title: v.title,
-          severity: v.severity,
-          cvssScore: v.cvssScore,
-          cweId: v.cweId,
-          owaspCategory: v.owaspCategory,
-          description: v.description,
-          evidence: v.evidence,
-          remediation: v.remediation,
-          references: v.references,
-          confidence: String(v.confidence),
-        }))}
-      />
-    );
-
-    return new Response(stream as unknown as ReadableStream, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="adversary-real-${project.domain}-${new Date().toISOString().slice(0, 10)}.pdf"`,
-        'Cache-Control': 'no-store',
-      },
-    });
+    loaded = await loadAdversaryReportData(user.id, projectId);
   } catch (error: unknown) {
     logger.error('Error generando PDF de adversario:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
+  if (!loaded.ok) {
+    return NextResponse.json({ success: false, error: loaded.error }, { status: loaded.status });
+  }
+  const { project, assessment, vulnerabilities: vulns } = loaded.data;
+
+  const stream = await renderToStream(
+    <AdversaryReportDoc
+      projectName={project.name}
+      domain={project.domain}
+      generatedAt={new Date().toLocaleString('es-AR')}
+      assessment={{
+        target: assessment.target,
+        riskScore: assessment.riskScore,
+        summary: assessment.summary,
+        modelUsed: assessment.modelUsed,
+        checksTotal: assessment.checksTotal,
+        checksPassed: assessment.checksPassed,
+        analysisFailed: assessment.analysisFailed,
+      }}
+      vulnerabilities={vulns.map((v) => ({
+        title: v.title,
+        severity: v.severity,
+        cvssScore: v.cvssScore,
+        cweId: v.cweId,
+        owaspCategory: v.owaspCategory,
+        description: v.description,
+        evidence: v.evidence,
+        remediation: v.remediation,
+        references: v.references,
+        confidence: String(v.confidence),
+      }))}
+    />
+  );
+
+  return new Response(stream as unknown as ReadableStream, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="adversary-real-${project.domain}-${new Date().toISOString().slice(0, 10)}.pdf"`,
+      'Cache-Control': 'no-store',
+    },
+  });
 }

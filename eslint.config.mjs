@@ -49,8 +49,12 @@ const eslintConfig = defineConfig([
   {
     // UI components with intentional mount-time state patterns (fetch,
     // localStorage hydration, poll intervals, pulse animations).
+    // MitreRealCoverage + RealAssessmentSection: fetch inicial + polling 5s
+    // mientras hay evaluaciones activas (mismo patrón que el resto de tabs).
     files: [
       "src/features/dashboard/tabs/MarketplaceTab.tsx",
+      "src/features/dashboard/tabs/MitreRealCoverage.tsx",
+      "src/features/dashboard/tabs/RealAssessmentSection.tsx",
       "src/features/dashboard/tabs/OverviewTab.tsx",
       "src/features/dashboard/CustomDashboardGrid.tsx",
       "src/features/dashboard/HistoryPanel.tsx",
@@ -83,6 +87,9 @@ const eslintConfig = defineConfig([
     // Vendored minified third-party bundles (mermaid, web-vitals):
     "docs/vendor/**",
     "public/vendor/**",
+    // Vendored agent skills (third-party reference material + helper
+    // scripts installed via skills-lock.json; not app source):
+    ".agents/**",
     // Development directories and scratch files
     "scratch/**",
     "backups/**",

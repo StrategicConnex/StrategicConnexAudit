@@ -68,6 +68,23 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Ref al fetcher vigente: evita que el intervalo capture una clausura
+  // obsoleta y que fetchState se auto-referencie antes de declararse.
+  const fetchStateRef = useRef<() => Promise<void>>(async () => {});
+
+  const loadEvaluation = useCallback(async (evaluationId: string) => {
+    try {
+      const res = await fetch(`/api/intelligence/adversary/mitre?projectId=${projectId}&evaluationId=${evaluationId}`);
+      const data = await res.json();
+      if (!data.success) return;
+      setSelected({ evaluation: data.evaluation, results: data.results });
+      const map: Record<string, MitreVerdict> = {};
+      for (const r of data.results as MitreResultRow[]) map[r.mitreId] = r.verdict;
+      onVerdicts?.(map);
+    } catch {
+      /* silencioso */
+    }
+  }, [projectId, onVerdicts]);
 
   const fetchState = useCallback(async () => {
     try {
@@ -85,7 +102,7 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
         (e) => e.status === 'pending' || e.status === 'running' || e.status === 'analyzing'
       );
       if (active) {
-        if (!pollRef.current) pollRef.current = setInterval(() => void fetchState(), 5000);
+        if (!pollRef.current) pollRef.current = setInterval(() => void fetchStateRef.current(), 5000);
         return;
       }
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -96,22 +113,11 @@ export function MitreRealCoverage({ projectId, onVerdicts }: Props) {
     } catch {
       /* silencioso */
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, loadEvaluation]);
 
-  const loadEvaluation = useCallback(async (evaluationId: string) => {
-    try {
-      const res = await fetch(`/api/intelligence/adversary/mitre?projectId=${projectId}&evaluationId=${evaluationId}`);
-      const data = await res.json();
-      if (!data.success) return;
-      setSelected({ evaluation: data.evaluation, results: data.results });
-      const map: Record<string, MitreVerdict> = {};
-      for (const r of data.results as MitreResultRow[]) map[r.mitreId] = r.verdict;
-      onVerdicts?.(map);
-    } catch {
-      /* silencioso */
-    }
-  }, [projectId, onVerdicts]);
+  useEffect(() => {
+    fetchStateRef.current = fetchState;
+  }, [fetchState]);
 
   useEffect(() => {
     void fetchState();
