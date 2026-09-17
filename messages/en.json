@@ -58,6 +58,24 @@
       "adversary": "Adversary: we simulate controlled attacks to test your defenses.",
       "marketplace": "Marketplace: integrations and extensions to connect your tools."
     },
+    "header": {
+      "overviewTitle": "Dashboard",
+      "overviewSubtitle": "System overview",
+      "projectsSubtitle": "Domain administration",
+      "performanceSubtitle": "Core Web Vitals and Auditing",
+      "keywordsSubtitle": "SERP positioning",
+      "reportsSubtitle": "Technical documentation and Insights",
+      "intelligenceSubtitle": "Network and Infrastructure analysis",
+      "monitoringSubtitle": "Security and API monitoring",
+      "adversarySubtitle": "Controlled attack simulation",
+      "marketplaceSubtitle": "Integrations and extensions",
+      "settingsSubtitle": "Account and preferences"
+    },
+    "pwa": {
+      "install": "Install",
+      "installTitle": "Install SCAUDIT as an app",
+      "dismiss": "Dismiss"
+    },
     "new": "New",
     "live": "Live",
     "audit": "Audit",
@@ -235,7 +253,10 @@
   "projects": {
     "title": "Complete Domain List",
     "description": "Manage and audit the infrastructure of websites assigned to your corporate account.",
-    "createProject": "New Project"
+    "createProject": "New Project",
+    "createdOk": "Project created successfully",
+    "createdDesc": "You can now see it in your project list.",
+    "viewProject": "View project"
   },
   "reports": {
     "pageTitle": "Export & AI Intelligence",
@@ -283,7 +304,18 @@
     "visualExecSummary": "Executive Summary",
     "visualPerformance": "Performance Diagnostics & Breakdown",
     "visualChartTitle": "Performance Chart",
-    "visualDiagrams": "AI Diagrams"
+    "visualDiagrams": "AI Diagrams",
+    "pdfNoProject": "Select a project first",
+    "pdfNoProjectDesc": "No active project to generate the report.",
+    "pdfGenerating": "Generating PDF",
+    "pdfError": "Error generating PDF",
+    "pdfErrorUnknown": "Unknown error. Try again.",
+    "pdfDownloaded": "PDF downloaded successfully",
+    "csvExportError": "Error exporting CSV. Make sure keywords are configured.",
+    "pdfExportError": "There was an error generating the PDF. Please try again.",
+    "pdfExportShort": "Export error.",
+    "historyEmptyTitle": "No reports yet",
+    "historyEmptyDesc": "Generate your first report above: it will appear here to download."
   },
   "settings": {
     "pageTitle": "System Settings",

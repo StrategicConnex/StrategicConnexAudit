@@ -58,6 +58,24 @@
       "adversary": "Adversario: simulamos ataques controlados para probar tus defensas.",
       "marketplace": "Marketplace: integraciones y extensiones para conectar tus herramientas."
     },
+    "header": {
+      "overviewTitle": "Panel",
+      "overviewSubtitle": "Vista general del sistema",
+      "projectsSubtitle": "Administración de dominios",
+      "performanceSubtitle": "Core Web Vitals y Auditoría",
+      "keywordsSubtitle": "Posicionamiento SERP",
+      "reportsSubtitle": "Documentación técnica e Insights",
+      "intelligenceSubtitle": "Análisis de Red e Infraestructura",
+      "monitoringSubtitle": "Monitoreo de Seguridad y APIs",
+      "adversarySubtitle": "Simulación de ataques controlados",
+      "marketplaceSubtitle": "Integraciones y extensiones",
+      "settingsSubtitle": "Cuenta y preferencias"
+    },
+    "pwa": {
+      "install": "Instalar",
+      "installTitle": "Instalar SCAUDIT como aplicación",
+      "dismiss": "Descartar"
+    },
     "new": "Nuevo",
     "live": "Live",
     "audit": "Audit",
@@ -235,7 +253,10 @@
   "projects": {
     "title": "Listado Completo de Dominios",
     "description": "Administre y audite la infraestructura de los sitios web asignados a su cuenta corporativa.",
-    "createProject": "Nuevo Proyecto"
+    "createProject": "Nuevo Proyecto",
+    "createdOk": "Proyecto creado correctamente",
+    "createdDesc": "Ya puedes verlo en tu lista de proyectos.",
+    "viewProject": "Ver proyecto"
   },
   "reports": {
     "pageTitle": "Exportación e Inteligencia IA",
@@ -283,7 +304,18 @@
     "visualExecSummary": "Resumen Ejecutivo",
     "visualPerformance": "Diagnóstico y Desglose de Rendimiento",
     "visualChartTitle": "Gráfico de Rendimiento",
-    "visualDiagrams": "Diagramas IA"
+    "visualDiagrams": "Diagramas IA",
+    "pdfNoProject": "Selecciona un proyecto primero",
+    "pdfNoProjectDesc": "No hay proyecto activo para generar el reporte.",
+    "pdfGenerating": "Generando PDF",
+    "pdfError": "Error al generar PDF",
+    "pdfErrorUnknown": "Error desconocido. Intenta de nuevo.",
+    "pdfDownloaded": "PDF descargado correctamente",
+    "csvExportError": "Error al exportar CSV. Asegúrate de tener palabras clave configuradas.",
+    "pdfExportError": "Hubo un error al generar el PDF. Por favor intenta de nuevo.",
+    "pdfExportShort": "Error al exportar.",
+    "historyEmptyTitle": "Aún no generaste reportes",
+    "historyEmptyDesc": "Genera tu primer informe arriba: aparecerá aquí para descargar."
   },
   "settings": {
     "pageTitle": "Configuración del Sistema",

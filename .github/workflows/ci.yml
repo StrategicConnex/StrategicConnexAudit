@@ -37,6 +37,10 @@ jobs:
       - name: Guard VULN-010 (bundle sin CDNs de terceros)
         run: pnpm guard:cdn
 
+      # P1-4: paridad i18n — falla si es/en divergen (claves huérfanas).
+      - name: Guard i18n parity (es/en)
+        run: node scripts/i18n-parity.mjs --max-divergence 0.02
+
   secret-scan:
     name: Secret Scan (gitleaks)
     runs-on: ubuntu-latest

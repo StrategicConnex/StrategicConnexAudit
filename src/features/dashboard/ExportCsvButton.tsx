@@ -2,6 +2,8 @@
 
 import { FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { logger } from "@/lib/logger";
 
@@ -10,6 +12,7 @@ interface ExportCsvButtonProps {
 }
 
 export function ExportCsvButton({ projectId }: ExportCsvButtonProps) {
+  const t = useTranslations('reports');
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
@@ -29,7 +32,7 @@ export function ExportCsvButton({ projectId }: ExportCsvButtonProps) {
       document.body.removeChild(a);
     } catch (e) {
       logger.error("Error al exportar CSV", { error: e instanceof Error ? e.message : String(e) });
-      alert('Error al exportar CSV. Asegúrate de tener palabras clave configuradas.');
+      toast.error(t('csvExportError'));
     } finally {
       setIsExporting(false);
     }

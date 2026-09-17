@@ -2,8 +2,10 @@
 
 import React from "react";
 import { WifiOff, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function OfflinePage() {
+  const t = useTranslations('common');
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center">
@@ -18,14 +20,12 @@ export default function OfflinePage() {
 
         {/* Título */}
         <h1 className="text-3xl font-bold text-foreground mb-3 tracking-tight">
-          Sin Conexión
+          {t('offline')}
         </h1>
 
         {/* Descripción */}
         <p className="text-muted-fg text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-          No pudimos conectar con nuestros servidores.
-          <br />
-          Verificá tu conexión a internet y volvé a intentarlo.
+          {t('offlineDescription')}
         </p>
 
         {/* Botón Reintentar */}
@@ -39,7 +39,7 @@ export default function OfflinePage() {
                      active:scale-95"
         >
           <RefreshCw size={16} className="animate-spin" style={{ animationDuration: "2s" }} />
-          Reintentar
+          {t('retry')}
         </button>
 
         {/* Footer */}

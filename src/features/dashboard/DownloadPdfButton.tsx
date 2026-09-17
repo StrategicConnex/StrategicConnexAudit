@@ -5,6 +5,7 @@ import {
   FileText, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { PdfProgressBar } from './PdfProgressBar';
 
 interface DownloadPdfButtonProps {
@@ -38,11 +39,12 @@ export function DownloadPdfButton({
   const toastIdRef = useRef<string | number | null>(null);
   const genIdRef = useRef<string | null>(null);
   const abortedRef = useRef(false);
+  const t = useTranslations('reports');
 
   const handleDownload = useCallback(async () => {
     if (!projectId) {
-      toast.warning('Selecciona un proyecto primero', {
-        description: 'No hay proyecto activo para generar el reporte.',
+      toast.warning(t('pdfNoProject'), {
+        description: t('pdfNoProjectDesc'),
       });
       return;
     }
@@ -62,7 +64,7 @@ export function DownloadPdfButton({
           <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2.5">
             <path d="M21 12a9 9 0 11-6.219-8.56" />
           </svg>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#F1F5F9' }}>Generando PDF</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#F1F5F9' }}>{t('pdfGenerating')}</span>
         </div>
         <PdfProgressBar
           genId={genId}
@@ -132,7 +134,7 @@ export function DownloadPdfButton({
 
       // Update the loading toast to success
       if (toastIdRef.current) {
-        toast.success('PDF descargado correctamente', {
+        toast.success(t('pdfDownloaded'), {
           id: toastIdRef.current,
           description: `${filename} — ${(blob.size / 1024).toFixed(0)} KB`,
           duration: 5000,
@@ -140,9 +142,9 @@ export function DownloadPdfButton({
       }
     } catch (err: unknown) {
       if (!abortedRef.current && toastIdRef.current) {
-        toast.error('Error al generar PDF', {
+        toast.error(t('pdfError'), {
           id: toastIdRef.current,
-          description: err instanceof Error ? err.message : 'Error desconocido. Intenta de nuevo.',
+          description: err instanceof Error ? err.message : t('pdfErrorUnknown'),
           duration: 8000,
         });
       }
@@ -151,7 +153,7 @@ export function DownloadPdfButton({
       toastIdRef.current = null;
       genIdRef.current = null;
     }
-  }, [projectId, investigationId]);
+  }, [projectId, investigationId, t]);
 
   const sizeClasses = size === 'sm' ? 'text-2xs px-3 py-2 rounded-lg' : 'text-xs px-5 py-3 rounded-xl';
   const variantClasses = variant === 'ghost'

@@ -2,10 +2,13 @@
 
 import { Download, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { logger } from "@/lib/logger";
 
 export function ExportPdfButton({ targetElementId }: { targetElementId: string }) {
+  const t = useTranslations('reports');
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
@@ -24,11 +27,11 @@ export function ExportPdfButton({ targetElementId }: { targetElementId: string }
       );
       
       if (!success) {
-        alert('Hubo un error al generar el PDF. Por favor intenta de nuevo.');
+        toast.error(t('pdfExportError'));
       }
     } catch (e) {
       logger.error("Error al exportar PDF", { error: e instanceof Error ? e.message : String(e) });
-      alert('Error al exportar.');
+      toast.error(t('pdfExportShort'));
     } finally {
       setIsExporting(false);
     }

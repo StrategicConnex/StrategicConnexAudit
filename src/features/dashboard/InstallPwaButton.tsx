@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { logger } from "@/lib/logger";
 
 /**
@@ -21,6 +22,7 @@ interface BeforeInstallPromptEventLike extends Event {
 }
 
 export function InstallPwaButton() {
+  const t = useTranslations('sidebar');
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEventLike | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -71,16 +73,17 @@ export function InstallPwaButton() {
     <div className="flex items-center gap-2">
       <button
         onClick={handleInstall}
-        title="Instalar SCAUDIT como aplicación"
+        title={t('pwa.installTitle')}
         className="relative flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-widest px-2.5 py-1.5 rounded-lg border transition-[color,background-color,border-color,transform] duration-300 hover:scale-[1.03] text-chartreuse bg-chartreuse/10 border-chartreuse/20 hover:bg-chartreuse/20"
       >
         <Download className="w-3 h-3" />
-        <span className="hidden sm:inline">Instalar</span>
+        <span className="hidden sm:inline">{t('pwa.install')}</span>
       </button>
       <button
         onClick={() => setDismissed(true)}
         className="text-muted-fg/50 hover:text-muted-fg transition-colors p-1"
-        title="Descartar"
+        title={t('pwa.dismiss')}
+        aria-label={t('pwa.dismiss')}
       >
         <X className="w-3 h-3" />
       </button>

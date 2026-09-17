@@ -11,35 +11,37 @@ interface DashboardHeaderProps {
   onNavigateProjects: () => void;
 }
 
+const SUBTITLE_KEYS: Record<string, string> = {
+  overview: 'header.overviewSubtitle',
+  projects: 'header.projectsSubtitle',
+  performance: 'header.performanceSubtitle',
+  keywords: 'header.keywordsSubtitle',
+  reports: 'header.reportsSubtitle',
+  intelligence: 'header.intelligenceSubtitle',
+  monitoring: 'header.monitoringSubtitle',
+  adversary: 'header.adversarySubtitle',
+  plugins: 'header.marketplaceSubtitle',
+  settings: 'header.settingsSubtitle',
+};
+
+const TITLE_KEYS: Record<string, string> = {
+  overview: 'header.overviewTitle',
+  projects: 'tabs.projects',
+  performance: 'tabs.performance',
+  keywords: 'tabs.keywords',
+  reports: 'tabs.reports',
+  intelligence: 'tabs.intelligence',
+  monitoring: 'tabs.monitoring',
+  adversary: 'tabs.adversary',
+  plugins: 'tabs.marketplace',
+  settings: 'tabs.settings',
+};
+
 export function DashboardHeader({ activeTab, NewProjectModal, onMenu, onNavigateProjects }: DashboardHeaderProps) {
   const t = useTranslations('sidebar');
-  const getTitle = () => {
-    switch (activeTab) {
-      case 'overview': return 'Panel';
-      case 'projects': return 'Proyectos';
-      case 'performance': return 'Rendimiento';
-      case 'keywords': return 'Palabras clave';
-      case 'reports': return 'Reportes AI';
-      case 'intelligence': return 'Inteligencia';
-      case 'monitoring': return 'Controles Activos';
-      case 'settings': return 'Ajustes';
-      default: return 'Panel';
-    }
-  };
+  const getTitle = () => t(TITLE_KEYS[activeTab] ?? 'header.overviewTitle');
 
-  const getSubtitle = () => {
-    switch (activeTab) {
-      case 'overview': return 'Vista general del sistema';
-      case 'projects': return 'Administración de dominios';
-      case 'performance': return 'Core Web Vitals & Auditoría';
-      case 'keywords': return 'Posicionamiento SERP';
-      case 'reports': return 'Documentación técnica e Insights';
-      case 'intelligence': return 'Análisis de Red e Infraestructura';
-      case 'monitoring': return 'Monitoreo de Seguridad & APIs';
-      case 'settings': return 'Cuenta y preferencias';
-      default: return 'Vista general del sistema';
-    }
-  };
+  const getSubtitle = () => t(SUBTITLE_KEYS[activeTab] ?? 'header.overviewSubtitle');
 
   return (
     <header className="h-14 bg-background/60 backdrop-blur-xl border-b border-border/50 flex items-center justify-between px-3 sm:px-10 sticky top-0 z-20 shrink-0">

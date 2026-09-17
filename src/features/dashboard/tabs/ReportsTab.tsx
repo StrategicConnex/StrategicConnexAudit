@@ -11,6 +11,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import type { ProjectRow } from '@/shared/db/types';
 import { logger } from "@/lib/logger";
 import { JargonTerm } from '@/components/ui/JargonTerm';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { FileClock } from 'lucide-react';
 
 interface AIReportState {
   isGenerating: boolean;
@@ -257,31 +259,15 @@ export function ReportsTab({
         )}
       </div>
 
-      {/* Historial */}
+      {/* Historial — honesto: sin filas de ejemplo; lo real aparece aquí */}
       <div className="glass-card overflow-hidden ">
         <div className="p-8 border-b border-border bg-muted/1 font-extrabold text-white text-base">{t('historyTitle')}</div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-border text-2xs font-bold uppercase text-muted-fg tracking-wider">
-                <th className="px-8 py-5">{t('historyColName')}</th>
-                <th className="px-8 py-5">{t('historyColFormat')}</th>
-                <th className="px-8 py-5 text-center">{t('historyColStatus')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.04]">
-              {[
-                { name: t('historyRow1Name'), type: t('historyRow1Format'), status: t('historyRow1Status') },
-                { name: t('historyRow2Name'), type: t('historyRow2Format'), status: t('historyRow2Status') },
-              ].map((log, i) => (
-                <tr key={i} className="text-sm hover:bg-muted/5 transition-colors">
-                  <td className="px-8 py-5 font-bold text-foreground/80">{log.name}</td>
-                  <td className="px-8 py-5"><span className="text-2xs bg-muted/20 border border-border text-muted-fg px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">{log.type}</span></td>
-                  <td className="px-8 py-5 text-center text-chartreuse font-extrabold">{log.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="p-8">
+          <EmptyState
+            icon={<FileClock aria-hidden="true" className="w-8 h-8" />}
+            title={t('historyEmptyTitle')}
+            description={t('historyEmptyDesc')}
+          />
         </div>
       </div>
     </div>

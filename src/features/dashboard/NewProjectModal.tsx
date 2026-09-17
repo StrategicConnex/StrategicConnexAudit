@@ -3,11 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { createProject } from '@/app/actions/projects';
 import { Plus, X, Loader2 } from 'lucide-react';
 
 export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
+  const t = useTranslations('projects');
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
@@ -91,10 +93,10 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
         // El usuario debe ENTERARSE y LLEGAR a su proyecto: refrescar datos,
         // toast con acción y (si el padre lo pide) navegar a la pestaña.
         router.refresh();
-        toast.success('Proyecto creado correctamente', {
-          description: 'Ya puedes verlo en tu lista de proyectos.',
+        toast.success(t('createdOk'), {
+          description: t('createdDesc'),
           action: onCreated
-            ? { label: 'Ver proyecto', onClick: () => onCreated() }
+            ? { label: t('viewProject'), onClick: () => onCreated() }
             : undefined,
         });
         onCreated?.();
