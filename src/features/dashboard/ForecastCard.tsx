@@ -32,13 +32,11 @@ const METRIC_UNIT: Record<string, string> = {
  */
 export function ForecastCard({ projectId }: { projectId?: string }) {
   const t = useTranslations('overview');
-  const [rows, setRows] = useState<ForecastRow[] | null>(null);
+  // undefined = cargando, null = sin datos (el job semanal aún no corrió).
+  const [rows, setRows] = useState<ForecastRow[] | null | undefined>(undefined);
 
   useEffect(() => {
-    if (!projectId) {
-      setRows(null);
-      return;
-    }
+    if (!projectId) return;
     let cancelled = false;
     fetch(`/api/forecast?projectId=${projectId}`)
       .then(async (res) => {

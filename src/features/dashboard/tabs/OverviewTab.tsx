@@ -364,7 +364,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
       <LazyBenchmarkingSection projectId={projectId} />
 
       {/* ═══ 3b. FORECAST 14 DÍAS (C-1; se oculta solo sin datos) ═══ */}
-      <ForecastCard projectId={projectId} />
+      <ForecastCard key={projectId ?? 'none'} projectId={projectId} />
 
       {/* ═══ 4. COMPLIANCE & TRUST BANNER ═══ */}
       <Card
