@@ -435,6 +435,30 @@ export async function checkAiRateLimit(userId: string) {
   return checkRateLimitInternal(userId, { limit: 5, window: 60, prefix: "ai_limit" });
 }
 
+// ─── Cuotas diarias IA por task (P0-1 anti-ruina) ─────────────────────
+// Frecuencia ≠ volumen: los sliding-window por minuto no impiden que un
+// loop agote el free-tier del proveedor para toda la plataforma. Estas
+// cuotas diarias por usuario acotan el gasto total. Ventana 86400 s; el
+// fallback en memoria aplica cuando Redis no está disponible.
+
+export const AI_DAILY_QUOTAS = {
+  "seo-report": 20,
+  "general-chat": 100,
+  "copilot-remediation": 100,
+  "incident-brief": 50,
+  "adversary-analysis": 10,
+} as const;
+
+export type AiQuotaTask = keyof typeof AI_DAILY_QUOTAS;
+
+export async function checkAiDailyQuota(userId: string, task: AiQuotaTask) {
+  return checkRateLimitInternal(userId, {
+    limit: AI_DAILY_QUOTAS[task],
+    window: 86400,
+    prefix: `ai_quota_${task}`,
+  });
+}
+
 // ─── Email Validation (40 req / 60s por IP) ─────────────────────────
 // Límite alto porque el login valida en tiempo real (debounce 400ms) al tipear.
 

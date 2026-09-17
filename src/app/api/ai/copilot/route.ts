@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRateLimit } from '@/shared/lib/ratelimit';
 import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from '@/server/ai/ai-router';
+import { assertAiQuota } from '@/server/ai/ai-usage';
 import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
@@ -22,8 +23,12 @@ export const POST = withRateLimit(
       return user ? { id: user.id } : null;
     }
   },
-  async (req: NextRequest, _userId: string) => {
+  async (req: NextRequest, userId: string) => {
     try {
+      // Cuota diaria P0-1: antes de cualquier trabajo costoso
+      const quota = await assertAiQuota(userId, "general-chat");
+      if (quota) return quota;
+
       const { messages, context, mode = 'copilot' } = await req.json();
 
       if (!messages || !Array.isArray(messages)) {
@@ -49,6 +54,7 @@ export const POST = withRateLimit(
       // Call AI with model pool and automatic fallback
       const aiResult = await callAIWithFallback({
         taskType: 'general-chat',
+        userId,
         messages: aiMessages,
         temperature: 0.4,
         maxTokens: 4096,

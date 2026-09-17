@@ -6,6 +6,7 @@ import { createClient } from '@/shared/lib/supabase/server';
 import { withRateLimit } from '@/shared/lib/ratelimit';
 import { withRLS } from '@/shared/db/rls';
 import { callAIWithFallback, AIMessage } from '@/server/ai/ai-router';
+import { assertAiQuota } from '@/server/ai/ai-usage';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,10 @@ export const POST = withRateLimit(
   },
   async (req: NextRequest, userId: string) => {
     try {
+      // Cuota diaria P0-1: antes de cualquier trabajo costoso
+      const quota = await assertAiQuota(userId, "seo-report");
+      if (quota) return quota;
+
       const body = await req.json();
       const { projectId } = body;
 
@@ -143,6 +148,7 @@ export const POST = withRateLimit(
 
       const aiResult = await callAIWithFallback({
         taskType: "seo-report",
+        userId,
         messages: [systemMsg, userMsg],
         temperature: 0.3,
         // 3000 tokens (no 4096): el reporte (resumen + tabla KPIs + mermaid)

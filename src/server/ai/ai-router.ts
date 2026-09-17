@@ -14,6 +14,7 @@
 
 import { envSecrets } from "@/shared/config/env-secrets";
 import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
+import { recordAiUsage } from "./ai-usage";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -74,6 +75,11 @@ export interface AIRequestOptions {
   toolChoice?: "auto" | "none";
   /** Forzar salida JSON estructurada (solo modelos con soporte verificado). */
   responseFormat?: AIResponseFormat;
+  /**
+   * Usuario que origina la llamada (para telemetría ai_usage y cuotas).
+   * Opcional: callers sin usuario (crons) omiten el registro atribuido.
+   */
+  userId?: string | null;
 }
 
 export interface AIResponse {
@@ -427,32 +433,54 @@ export async function callAIWithFallback(
   const startTime = Date.now();
   const useTools = !!options.tools && options.tools.length > 0;
 
+  // Telemetría P0-1: una fila en ai_usage por llamada, fire-and-forget.
+  const track = (partial: {
+    modelUsed: string;
+    success: boolean;
+    fromCache?: boolean;
+    error?: string;
+  }): AIResponse & { error?: string } => {
+    const latencyMs = Date.now() - startTime;
+    if (options.userId) {
+      void recordAiUsage({
+        userId: options.userId,
+        taskType,
+        modelUsed: partial.modelUsed,
+        latencyMs,
+        success: partial.success,
+        fromCache: partial.fromCache,
+      });
+    }
+    return {
+      success: partial.success,
+      content: "",
+      modelUsed: partial.modelUsed,
+      latencyMs,
+      ...(partial.fromCache ? { fromCache: true as const } : {}),
+      ...(partial.error ? { error: partial.error } : {}),
+    };
+  };
+
   // 1. Check cache (solo sin tools: los handlers devuelven estado mutable)
   if (!useTools) {
     const cacheKey = buildCacheKey(taskType, messages);
     const cached = getCached(cacheKey);
     if (cached) {
-      return {
-        success: true,
-        content: cached.content,
-        modelUsed: cached.modelId,
-        latencyMs: 0,
-        fromCache: true,
-      };
+      const res = track({ modelUsed: cached.modelId, success: true, fromCache: true });
+      res.content = cached.content;
+      return res;
     }
   }
 
   // 2. Check if API key is configured
   if (!envSecrets.openRouterApiKey) {
-    return {
-      success: false,
-      content: "",
+    return track({
       modelUsed: "none",
-      latencyMs: Date.now() - startTime,
+      success: false,
       error:
         "OPENROUTER_API_KEY is not configured. " +
         "Get a FREE key at https://openrouter.ai/keys — no credit card needed.",
-    };
+    });
   }
 
   // 3. Get model chain for this task type
@@ -494,6 +522,16 @@ export async function callAIWithFallback(
           `[attempt ${i + 1}/${modelChain.length}]`
       );
 
+      if (options.userId) {
+        void recordAiUsage({
+          userId: options.userId,
+          taskType,
+          modelUsed: modelId!,
+          latencyMs,
+          success: true,
+        });
+      }
+
       return {
         success: true,
         content: message.content ?? "",
@@ -511,13 +549,11 @@ export async function callAIWithFallback(
   }
 
   // 5. All models failed
-  return {
-    success: false,
-    content: "",
+  return track({
     modelUsed: modelChain[modelChain.length - 1]!,
-    latencyMs: Date.now() - startTime,
+    success: false,
     error: `Todos los modelos de IA fallaron:\n${errors.join("\n")}`,
-  };
+  });
 }
 
 // ─── Bucle agéntico (function calling con handlers reales) ──────────────────

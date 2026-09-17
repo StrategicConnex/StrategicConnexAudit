@@ -183,6 +183,13 @@
       "when": 1787481600000,
       "tag": "0025_rls_core_defense_in_depth",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1788720000000,
+      "tag": "0026_ai_usage",
+      "breakpoints": true
     }
   ]
 }

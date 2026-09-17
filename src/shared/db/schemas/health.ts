@@ -13,7 +13,7 @@
  */
 
 import {
-  pgTable, uuid, text, timestamp, integer,
+  pgTable, uuid, text, timestamp, integer, boolean,
   jsonb, index
 } from "drizzle-orm/pg-core";
 
@@ -65,4 +65,40 @@ export const aiHealthLogs = pgTable("ai_health_logs", {
   index("idx_ai_health_checked_at").on(t.checkedAt),
   index("idx_ai_health_overall_status").on(t.overallStatus),
   index("idx_ai_health_task_type_checked").on(t.taskType, t.checkedAt),
+]);
+
+/**
+ * Uso de IA por usuario y task (presupuesto anti-ruina P0-1).
+ * Una fila por llamada a callAIWithFallback (éxito o fallo). Escritura
+ * fire-and-forget: jamás bloquea ni rompe la respuesta al usuario.
+ */
+export const aiUsage = pgTable("ai_usage", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  /** Usuario que originó la llamada (null = sistema/cron sin usuario) */
+  userId: uuid("user_id"),
+
+  /** AITaskType: copilot-remediation | incident-brief | general-chat | seo-report | adversary-analysis */
+  taskType: text("task_type").notNull(),
+
+  /** Modelo que respondió (o último intentado si falló) */
+  modelUsed: text("model_used").notNull().default("none"),
+
+  /** Tokens estimados (los :free no siempre reportan uso: nullable) */
+  tokensIn: integer("tokens_in"),
+  tokensOut: integer("tokens_out"),
+
+  /** Latencia total de la llamada con fallbacks (ms) */
+  latencyMs: integer("latency_ms"),
+
+  /** true = algún modelo respondió; incluye fromCache */
+  success: boolean("success").notNull().default(false),
+
+  /** true = servido desde caché (no consumió cuota del proveedor) */
+  fromCache: boolean("from_cache").notNull().default(false),
+
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("idx_ai_usage_user_created").on(t.userId, t.createdAt),
+  index("idx_ai_usage_task_created").on(t.taskType, t.createdAt),
 ]);

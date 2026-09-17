@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
 import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from "@/server/ai/ai-router";
+import { assertAiQuota } from "@/server/ai/ai-usage";
 import { NotFoundError, ValidationError } from "@/server/lib/app-error";
 import { withErrorHandler } from "@/server/lib/error-handler";
 
@@ -15,6 +16,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 const handler = withErrorHandler(async (req: NextRequest, _userId: string) => {
+  // Cuota diaria P0-1: antes de cualquier trabajo costoso
+  const quota = await assertAiQuota(_userId, "incident-brief");
+  if (quota) return quota;
+
   const { investigationId } = await req.json();
   if (!investigationId) throw new ValidationError("Falta ID de investigación");
 
@@ -69,6 +74,7 @@ const handler = withErrorHandler(async (req: NextRequest, _userId: string) => {
   // Call AI with free model pool
   const aiResult = await callAIWithFallback({
     taskType: "incident-brief",
+    userId: _userId,
     messages: [systemMsg, userMsg],
     temperature: 0.2,
     maxTokens: 1800,

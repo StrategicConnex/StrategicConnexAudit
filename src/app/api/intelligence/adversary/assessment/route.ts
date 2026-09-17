@@ -9,6 +9,7 @@ import {
 } from "@/shared/db/schemas";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { withRateLimit } from "@/shared/lib/ratelimit";
 import { tasks } from "@trigger.dev/sdk";
 import { runAdversaryAssessment } from "@/trigger/adversary-assessment.trigger";
 import { extractTargetHost } from "@/server/intelligence/adversary/sandbox-executor";
@@ -43,8 +44,22 @@ const postSchema = z.object({
 /**
  * POST /api/intelligence/adversary/assessment
  * Crea la evaluación y la dispara en Trigger.dev (fallback: proceso local).
+ *
+ * P0-1: throttle dedicado — es el endpoint más caro (dispara jobs con
+ * decenas de llamadas IA). 5/hora por usuario autenticado.
  */
-export async function POST(req: NextRequest) {
+export const POST = withRateLimit(
+  {
+    limit: 5,
+    window: 3600,
+    prefix: "adversary_assessment",
+    authenticate: async () => {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      return user ? { id: user.id } : null;
+    },
+  },
+  async (req: NextRequest) => {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -113,7 +128,8 @@ export async function POST(req: NextRequest) {
     logger.error("Error en POST assessment", { error });
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
-}
+  }
+);
 
 /**
  * GET /api/intelligence/adversary/assessment?projectId=&assessmentId?
