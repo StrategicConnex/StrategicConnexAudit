@@ -55,7 +55,7 @@ describe("field-crypto — cifrado en reposo (P1-5)", () => {
 
   it("maskSecret enmascara sin exponer", async () => {
     const { encryptField, maskSecret } = await import("./field-crypto");
-    expect(maskSecret(encryptField("whsec_largo_secreto"))).toBe("••••••••.…");
+    expect(maskSecret(encryptField("whsec_largo_secreto"))).toBe("••••••••…");
     expect(maskSecret(null)).toBeNull();
   });
 });
