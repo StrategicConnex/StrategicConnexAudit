@@ -29,7 +29,8 @@ export type AITaskType =
   | "incident-brief"
   | "general-chat"
   | "seo-report"
-  | "adversary-analysis";
+  | "adversary-analysis"
+  | "anomaly-narrative";
 
 // ─── Tools / Structured Outputs (OpenRouter, estándar OpenAI) ────────────────
 
@@ -229,6 +230,13 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
   ],
+  // Texto libre corto (2-3 líneas): identidad irrelevante, con router.
+  "anomaly-narrative": [
+    FREE_META_MODEL,
+    "cohere/north-mini-code:free",
+    "nex-agi/nex-n2.5-pro:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  ],
 };
 
 /**
@@ -253,6 +261,8 @@ export const MODEL_TIMEOUTS: Record<AITaskType, number> = {
   // Corre dentro de Trigger.dev (sin presupuesto Vercel): los JSON de
   // vulnerabilidades con remediación son generaciones largas.
   "adversary-analysis": 60_000,
+  // Texto libre corto (2-3 líneas): presupuesto de chat estándar.
+  "anomaly-narrative": 20_000,
 };
 
 // ─── Caché semántica (P1-3) ─────────────────────────────────────────────────
@@ -735,6 +745,14 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
       "automática de vulnerabilidades no está disponible hasta configurarla.\n\n" +
       "**Para activarla:** Configura `OPENROUTER_API_KEY` en tu servidor.\n" +
       "Regístrate gratis en https://openrouter.ai/keys — sin tarjeta de crédito.",
+  },
+  "anomaly-narrative": {
+    en:
+      "Anomaly detected, but the AI narrative is disabled " +
+      "(`OPENROUTER_API_KEY` not configured). Check the metric details above.",
+    es:
+      "Anomalía detectada, pero la narrativa IA está deshabilitada " +
+      "(`OPENROUTER_API_KEY` no configurada). Revisa el detalle de la métrica.",
   },
 };
 

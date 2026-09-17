@@ -19,6 +19,7 @@ const TTL_BY_TASK: Record<AITaskType, number> = {
   "copilot-remediation": 3600,
   "general-chat": 3600,
   "adversary-analysis": 3600,
+  "anomaly-narrative": 3600,
 };
 
 export interface CacheHit {

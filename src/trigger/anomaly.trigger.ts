@@ -12,6 +12,7 @@ import { projects } from "@/shared/db/schemas";
 import { runAllDetections } from "@/server/intelligence/anomaly/detector";
 import { and, eq, isNull } from "drizzle-orm";
 import { logger } from "@/lib/logger";
+import { callAIWithFallback } from "@/server/ai/ai-router";
 
 export const periodicAnomalyDetection = schedules.task({
   id: "periodic-anomaly-detection",
@@ -35,11 +36,45 @@ export const periodicAnomalyDetection = schedules.task({
 
         const totalAnomalies = results.reduce((sum, r) => sum + r.anomalies, 0);
 
+        // P2-2 narrativa IA: solo cuando hay algo que contar (volumen acotado:
+        // 1 llamada corta por proyecto con anomalías, sin usuario atribuido).
+        let narrative: string | null = null;
+        if (totalAnomalies > 0) {
+          try {
+            const digest = results
+              .filter((r) => r.anomalies > 0)
+              .slice(0, 8)
+              .map((r) => `- ${r.metricType}: ${r.anomalies} anomalía(s)${r.severity ? `, severidad ${r.severity}` : ""}`)
+              .join("\n");
+            const ai = await callAIWithFallback({
+              taskType: "anomaly-narrative",
+              messages: [
+                {
+                  role: "system",
+                  content: "Eres un analista de monitoreo. Con la síntesis estadística dada, redacta en español 2-3 líneas: causa probable y primera acción. Sin jerga innecesaria, sin inventar datos.",
+                },
+                {
+                  role: "user",
+                  content: `Dominio: ${project.domain}\nAnomalías (24h):\n${digest}`,
+                },
+              ],
+              temperature: 0.2,
+              maxTokens: 300,
+            });
+            if (ai.success && ai.content) narrative = ai.content.slice(0, 600);
+          } catch (narrErr) {
+            logger.warn(`[AnomalyDetector] narrativa IA falló para ${project.domain}`, {
+              error: narrErr instanceof Error ? narrErr.message : String(narrErr),
+            });
+          }
+        }
+
         summaries.push({
           projectId: project.id,
           domain: project.domain,
           metricCount: results.length,
           totalAnomalies,
+          narrative,
           results,
         });
 

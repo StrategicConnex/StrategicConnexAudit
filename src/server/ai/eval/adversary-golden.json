@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "notes": "Casos dorados del triage (P2-2). Evidencia compacta + expectativas mínimas. El runner manual src/scripts/ai-eval-triage.ts los ejecuta contra modelos en vivo; el CI valida el scorer con salidas fijas.",
+  "cases": [
+    {
+      "id": "sql-injection-login",
+      "evidence": {
+        "target": "tienda.example.com",
+        "checks": [
+          { "id": "http-fuzz-login", "status": "vulnerable", "severity": "critical", "summary": "El parámetro 'email' refleja comilla simple sin escapar", "evidence": "payload `' OR '1'='1` devolvió 200 con 1420 filas en vez de error; tiempo de respuesta 4800ms con SLEEP(5)" }
+        ]
+      },
+      "expect": { "minFindings": 1, "maxFindings": 4, "mustContain": ["SQL", "inyecci"], "mustIncludeSeverity": ["critical", "high"] }
+    },
+    {
+      "id": "xss-reflejado-busqueda",
+      "evidence": {
+        "target": "blog.example.com",
+        "checks": [
+          { "id": "xss-scan", "status": "vulnerable", "severity": "medium", "summary": "El término de búsqueda se refleja sin encode en HTML", "evidence": "payload `<script>alert(1)</script>` aparece literal en la respuesta, content-type text/html" }
+        ]
+      },
+      "expect": { "minFindings": 1, "maxFindings": 4, "mustContain": ["XSS", "script"], "mustIncludeSeverity": ["medium", "high"] }
+    },
+    {
+      "id": "tls-obsoleto",
+      "evidence": {
+        "target": "api.example.com",
+        "checks": [
+          { "id": "tls-scan", "status": "vulnerable", "severity": "medium", "summary": "Servidor acepta TLS 1.0 y 1.1", "evidence": "handshake OK con tls1.0 y tls1.1; certificado válido hasta 2027" }
+        ]
+      },
+      "expect": { "minFindings": 1, "maxFindings": 3, "mustContain": ["TLS"], "mustIncludeSeverity": ["medium", "low"] }
+    },
+    {
+      "id": "cabeceras-seguridad",
+      "evidence": {
+        "target": "corp.example.com",
+        "checks": [
+          { "id": "headers-scan", "status": "vulnerable", "severity": "low", "summary": "Faltan cabeceras de seguridad", "evidence": "ausentes: content-security-policy, x-frame-options, strict-transport-security; presente: x-powered-by Express" }
+        ]
+      },
+      "expect": { "minFindings": 1, "maxFindings": 3, "mustContain": ["cabecera", "clickjacking"], "mustIncludeSeverity": ["low", "info"] }
+    },
+    {
+      "id": "admin-expuesto",
+      "evidence": {
+        "target": "app.example.com",
+        "checks": [
+          { "id": "admin-panel", "status": "vulnerable", "severity": "high", "summary": "Panel /admin accesible sin autenticación", "evidence": "GET /admin devuelve 200 con formulario de login interno y versión del panel visible" }
+        ]
+      },
+      "expect": { "minFindings": 1, "maxFindings": 3, "mustContain": ["admin", "autenticaci"], "mustIncludeSeverity": ["high", "critical"] }
+    },
+    {
+      "id": "backup-publico",
+      "evidence": {
+        "target": "site.example.com",
+        "checks": [
+          { "id": "backup-scan", "status": "vulnerable", "severity": "high", "summary": "Archivo de respaldo descargable", "evidence": "GET /.git/HEAD devuelve 200 con 'ref: refs/heads/main'; .env devuelve 200 con 2KB" }
+        ]
+      },
+      "expect": { "minFindings": 1, "maxFindings": 3, "mustContain": [".git", "respaldo"], "mustIncludeSeverity": ["high", "critical"] }
+    },
+    {
+      "id": "rate-limit-login",
+      "evidence": {
+        "target": "auth.example.com",
+        "checks": [
+          { "id": "ratelimit-test", "status": "vulnerable", "severity": "medium", "summary": "Login sin límite de intentos", "evidence": "100 POST /login en 30s sin 429 ni captcha; respuestas 401/200 normales" }
+        ]
+      },
+      "expect": { "minFindings": 1, "maxFindings": 3, "mustContain": ["fuerza bruta", "rate"], "mustIncludeSeverity": ["medium", "high"] }
+    },
+    {
+      "id": "cookies-inseguras",
+      "evidence": {
+        "target": "shop.example.com",
+        "checks": [
+          { "id": "cookie-scan", "status": "vulnerable", "severity": "low", "summary": "Cookie de sesión sin flags", "evidence": "set-cookie: session=abc123; Path=/ sin Secure, sin HttpOnly, sin SameSite" }
+        ]
+      },
+      "expect": { "minFindings": 1, "maxFindings": 3, "mustContain": ["cookie", "HttpOnly"], "mustIncludeSeverity": ["low", "info"] }
+    },
+    {
+      "id": "todo-sano",
+      "evidence": {
+        "target": "ok.example.com",
+        "checks": [
+          { "id": "tls-scan", "status": "ok", "summary": "TLS 1.3 únicamente, HSTS presente", "evidence": "solo handshake tls1.3; strict-transport-security max-age=63072000" },
+          { "id": "headers-scan", "status": "ok", "summary": "Cabeceras completas", "evidence": "csp, x-frame-options DENY, x-content-type-options nosniff presentes" }
+        ]
+      },
+      "expect": { "minFindings": 0, "maxFindings": 1, "mustContain": [] }
+    },
+    {
+      "id": "subdominio-takeover",
+      "evidence": {
+        "target": "old.example.com",
+        "checks": [
+          { "id": "takeover-scan", "status": "vulnerable", "severity": "high", "summary": "CNAME apunta a servicio eliminado", "evidence": "CNAME old.example.com -> old-app.herokuapp.com; HTTP 404 'No such app' de Heroku" }
+        ]
+      },
+      "expect": { "minFindings": 1, "maxFindings": 3, "mustContain": ["takeover", "subdominio"], "mustIncludeSeverity": ["high", "critical"] }
+    }
+  ]
+}

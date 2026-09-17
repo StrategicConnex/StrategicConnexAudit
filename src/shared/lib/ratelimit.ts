@@ -447,6 +447,7 @@ export const AI_DAILY_QUOTAS = {
   "copilot-remediation": 100,
   "incident-brief": 50,
   "adversary-analysis": 10,
+  "anomaly-narrative": 50,
 } as const;
 
 export type AiQuotaTask = keyof typeof AI_DAILY_QUOTAS;
