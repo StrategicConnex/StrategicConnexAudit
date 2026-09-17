@@ -109,6 +109,68 @@ const DeactivateSchema = z.object({
   projectId: z.string().uuid(),
 });
 
+const BrandingSchema = z.object({
+  projectId: z.string().uuid(),
+  brandName: z.string().trim().min(1).max(60).optional(),
+  logoUrl: z.string().trim().url().max(2048).optional().or(z.literal("")),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color hex inválido (ej: #D4A843)")
+    .optional()
+    .or(z.literal("")),
+});
+
+/**
+ * B-4: marca blanca por proyecto (nombre, logo, color). Se guarda en
+ * projects.settings.branding y la consume el portal cliente /p/[token].
+ */
+export const updateProjectBranding = authenticatedAction(
+  BrandingSchema,
+  async ({ projectId, brandName, logoUrl, primaryColor }, { user, tx }) => {
+    const denied = await requireProjectPermission(user.id, projectId, "project:update");
+    if (denied) return { error: denied };
+
+    const [project] = await tx
+      .select({ settings: projects.settings })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+    if (!project) return { error: "Proyecto no encontrado" };
+
+    const current = (project.settings ?? {}) as Record<string, unknown>;
+    const branding = {
+      ...((current.branding ?? {}) as Record<string, unknown>),
+      ...(brandName !== undefined ? { brandName } : {}),
+      ...(logoUrl !== undefined ? { logoUrl: logoUrl || null } : {}),
+      ...(primaryColor !== undefined ? { primaryColor: primaryColor || null } : {}),
+    };
+
+    await tx
+      .update(projects)
+      .set({ settings: { ...current, branding }, updatedAt: new Date() })
+      .where(eq(projects.id, projectId));
+
+    revalidatePath(`/projects/${projectId}`);
+    return { success: true as const, branding };
+  }
+);
+
+/**
+ * B-4: genera un link firmado de portal cliente (90 días). Solo admin+.
+ */
+export const createPortalLink = authenticatedAction(
+  DeactivateSchema,
+  async ({ projectId }, { user }) => {
+    const denied = await requireProjectPermission(user.id, projectId, "project:update");
+    if (denied) return { error: denied };
+    const { signPortalToken } = await import("@/server/lib/portal-tokens");
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    return { success: true as const, url: `${appUrl}/p/${signPortalToken(projectId)}` };
+  }
+);
+
 /**
  * Rota el secreto del beacon RUM (P0-3). Solo el owner. Retorna el nuevo
  * secreto para mostrarlo UNA vez en la tarjeta de integración.
