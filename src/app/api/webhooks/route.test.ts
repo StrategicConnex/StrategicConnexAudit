@@ -11,6 +11,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
+// P1-5: el cifrado en reposo exige clave; en tests se usa una fija (nunca prod).
+if (!process.env.DATA_ENCRYPTION_KEY) {
+  process.env.DATA_ENCRYPTION_KEY = "ab".repeat(32);
+}
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockGetUser = vi.fn();

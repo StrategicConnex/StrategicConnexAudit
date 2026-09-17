@@ -1,24 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const state = vi.hoisted(() => ({
-  projectRows: [] as Array<{ id: string; ownerId: string }>,
-  memberRows: [] as Array<{ role: string }>,
-  calls: 0,
+  projectRow: null as null | { id: string; ownerId: string },
+  memberRow: null as null | { role: string },
 }));
 
 vi.mock("@/shared/db", () => ({
   directDb: {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          limit: async () => {
-            state.calls += 1;
-            // 1º select del helper = projects, 2º = project_members.
-            return state.calls % 2 === 1 ? state.projectRows : state.memberRows;
-          },
-        }),
-      }),
-    }),
+    query: {
+      projects: {
+        findFirst: async () => state.projectRow,
+      },
+      projectMembers: {
+        findFirst: async () => state.memberRow,
+      },
+    },
   },
 }));
 
@@ -26,19 +22,18 @@ import { assertProjectAccess } from "./project-access";
 
 describe("project-access — multi-tenant (P1-6)", () => {
   beforeEach(() => {
-    state.calls = 0;
-    state.projectRows.length = 0;
-    state.memberRows.length = 0;
+    state.projectRow = null;
+    state.memberRow = null;
   });
 
   it("owner pasa con rol owner", async () => {
-    state.projectRows.push({ id: "p1", ownerId: "u1" });
+    state.projectRow = { id: "p1", ownerId: "u1" };
     expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: true, role: "owner" });
   });
 
   it("miembro pasa con rol member", async () => {
-    state.projectRows.push({ id: "p1", ownerId: "u9" });
-    state.memberRows.push({ role: "viewer" });
+    state.projectRow = { id: "p1", ownerId: "u9" };
+    state.memberRow = { role: "viewer" };
     expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: true, role: "member" });
   });
 
@@ -47,7 +42,7 @@ describe("project-access — multi-tenant (P1-6)", () => {
   });
 
   it("proyecto ajeno sin membresía → 404", async () => {
-    state.projectRows.push({ id: "p1", ownerId: "u9" });
+    state.projectRow = { id: "p1", ownerId: "u9" };
     expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: false, role: null });
   });
 });

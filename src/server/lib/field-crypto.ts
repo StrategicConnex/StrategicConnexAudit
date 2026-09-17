@@ -64,5 +64,5 @@ export function fieldEquals(stored: string, candidate: string): boolean {
 export function maskSecret(stored: string | null | undefined): string | null {
   if (!stored) return null;
   const plain = stored.startsWith(PREFIX) ? "••••••••" : stored.slice(0, 8);
-  return `${plain}.…`;
+  return `${plain}…`;
 }

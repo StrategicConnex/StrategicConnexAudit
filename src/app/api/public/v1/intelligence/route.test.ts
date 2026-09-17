@@ -21,6 +21,7 @@ const mockInvFindMany = vi.fn();
 const mockFindingsFindMany = vi.fn();
 const mockAssetsFindMany = vi.fn();
 const mockProjectFindFirst = vi.fn();
+const mockMemberFindFirst = vi.fn(async (): Promise<{ role: string } | null> => null);
 const mockReturning = vi.fn();
 const mockUpdateWhere = vi.fn(async () => {});
 const mockExecuteTool = vi.fn();
@@ -46,6 +47,7 @@ vi.mock("@/shared/db", () => ({
       intelligenceFindings: { findMany: mockFindingsFindMany },
       intelligenceAssets: { findMany: mockAssetsFindMany },
       projects: { findFirst: mockProjectFindFirst },
+      projectMembers: { findFirst: mockMemberFindFirst },
     },
     insert: vi.fn(() => ({
       values: vi.fn(() => ({
@@ -59,6 +61,7 @@ vi.mock("@/shared/db", () => ({
 
 vi.mock("@/shared/db/schemas", () => ({
   projects: { id: "id", ownerId: "ownerId" },
+  projectMembers: { projectId: "projectId", userId: "userId" },
   intelligenceInvestigations: {
     id: "id",
     projectId: "projectId",
@@ -139,6 +142,7 @@ describe("Public API v1: Intelligence — GET", () => {
   it("detalle por investigationId → 200 con counts de findings y assets", async () => {
     mockAuthenticateApiKey.mockResolvedValue(authenticatedAuth);
     mockInvFindFirst.mockResolvedValue({ id: "inv-1", projectId: "p1", ownerId: "user-1", status: "completed", score: 42 });
+    mockProjectFindFirst.mockResolvedValue({ id: "p1", ownerId: "user-1" });
     mockFindingsFindMany.mockResolvedValue([{ id: "f1" }, { id: "f2" }]);
     mockAssetsFindMany.mockResolvedValue([{ id: "a1" }]);
 
@@ -206,6 +210,20 @@ describe("Public API v1: Intelligence — GET", () => {
     );
     expect(res.status).toBe(404);
     expect(mockInvFindMany).not.toHaveBeenCalled();
+  });
+
+  it("miembro viewer del proyecto → 200 (P1-6 multi-tenant)", async () => {
+    mockAuthenticateApiKey.mockResolvedValue(authenticatedAuth);
+    mockProjectFindFirst.mockResolvedValue({ id: "p1", ownerId: "otro-user" });
+    mockMemberFindFirst.mockResolvedValue({ role: "viewer" });
+    mockInvFindMany.mockResolvedValue([{ id: "inv-1" }]);
+
+    const res = await GET(
+      createRequest("GET", "http://localhost:3000/api/public/v1/intelligence?projectId=p1")
+    );
+    expect(res.status).toBe(200);
+    mockMemberFindFirst.mockReset();
+    mockMemberFindFirst.mockResolvedValue(null);
   });
 });
 

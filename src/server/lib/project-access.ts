@@ -21,25 +21,20 @@ export async function assertProjectAccess(
   userId: string,
   projectId: string
 ): Promise<ProjectAccess> {
-  const [project] = await directDb
-    .select({ id: projects.id, ownerId: projects.ownerId })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
+  const project = await directDb.query.projects.findFirst({
+    where: eq(projects.id, projectId),
+    columns: { id: true, ownerId: true },
+  });
 
   if (!project) return { ok: false, role: null };
   if (project.ownerId === userId) return { ok: true, role: "owner" };
 
-  const [member] = await directDb
-    .select({ role: projectMembers.role })
-    .from(projectMembers)
-    .where(
-      and(
-        eq(projectMembers.projectId, projectId),
-        eq(projectMembers.userId, userId)
-      )
-    )
-    .limit(1);
+  const member = await directDb.query.projectMembers.findFirst({
+    where: and(
+      eq(projectMembers.projectId, projectId),
+      eq(projectMembers.userId, userId)
+    ),
+  });
 
   if (!member) return { ok: false, role: null };
   return { ok: true, role: "member" };

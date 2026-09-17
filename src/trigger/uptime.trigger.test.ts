@@ -34,6 +34,7 @@ const mockSelect = vi.fn(() => ({ from: mockFrom }));
 const mockInsertValues = vi.fn<(values: UptimeLogValues) => Promise<void>>();
 const mockInsert = vi.fn(() => ({ values: mockInsertValues }));
 const mockFetch = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
+const mockSafeFetchFollow = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
 
 vi.mock("@/shared/db", () => ({
   db: { select: mockSelect, insert: mockInsert },
@@ -47,6 +48,7 @@ vi.mock("@/shared/db/schemas", () => ({
 vi.mock("@/server/intelligence/security/egress-guard", () => ({
   validateSafeUrl: vi.fn(async (url: string) => url),
   normalizeUrl: vi.fn((url: string) => `https://${url}`),
+  safeFetchFollow: (...args: [string, (RequestInit | undefined)?]) => mockSafeFetchFollow(...args),
 }));
 
 vi.mock("@trigger.dev/sdk", () => ({
@@ -91,16 +93,16 @@ describe("Trigger: Uptime Monitor", () => {
 
   it("proyecto UP (HTTP 200) → log con isUp true y statusCode", async () => {
     mockWhere.mockResolvedValue([{ id: "p1", name: "Acme", domain: "acme.com", deletedAt: null }]);
-    mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
+    mockSafeFetchFollow.mockResolvedValue(new Response(null, { status: 200 }));
 
     const { uptimeMonitor } = await import("./uptime.trigger");
     const task = uptimeMonitor as unknown as UptimeTaskConfig;
     const result = await task.run(payload);
 
     expect(result.processed).toBe(1);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    // HEAD + egress-guard (normalizeUrl aplicado)
-    const [url, init] = mockFetch.mock.calls[0]!;
+    expect(mockSafeFetchFollow).toHaveBeenCalledTimes(1);
+    // HEAD + egress-guard (normalizeUrl aplicado + redirects revalidados)
+    const [url, init] = mockSafeFetchFollow.mock.calls[0]!;
     expect(url).toBe("https://acme.com");
     expect(init?.method).toBe("HEAD");
 
@@ -115,7 +117,7 @@ describe("Trigger: Uptime Monitor", () => {
 
   it("proyecto DOWN (fetch lanza error) → log con isUp false y errorMessage", async () => {
     mockWhere.mockResolvedValue([{ id: "p1", name: "Acme", domain: "acme.com", deletedAt: null }]);
-    mockFetch.mockRejectedValue(new Error("ECONNREFUSED"));
+    mockSafeFetchFollow.mockRejectedValue(new Error("ECONNREFUSED"));
 
     const { uptimeMonitor } = await import("./uptime.trigger");
     const task = uptimeMonitor as unknown as UptimeTaskConfig;
@@ -130,7 +132,7 @@ describe("Trigger: Uptime Monitor", () => {
 
   it("proyecto con respuesta HTTP 500 → isUp false, statusCode 500, sin errorMessage", async () => {
     mockWhere.mockResolvedValue([{ id: "p1", name: "Acme", domain: "acme.com", deletedAt: null }]);
-    mockFetch.mockResolvedValue(new Response(null, { status: 500 }));
+    mockSafeFetchFollow.mockResolvedValue(new Response(null, { status: 500 }));
 
     const { uptimeMonitor } = await import("./uptime.trigger");
     const task = uptimeMonitor as unknown as UptimeTaskConfig;

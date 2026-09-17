@@ -46,7 +46,7 @@ describe("providers — failover Anthropic (P2-1)", () => {
     });
     expect(res.content).toBe("hola");
     expect(res.modelUsed).toBe("anthropic/m");
-    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
     expect(body.system).toBe("sys");
     expect(body.messages).toEqual([{ role: "user", content: "a\n\nb" }]);
   });
