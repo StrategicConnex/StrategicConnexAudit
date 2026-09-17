@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
     "/docs/[...slug]": ["./docs/**/*"],
   },
   experimental: {
-    optimizePackageImports: ["lucide-react"],
+    optimizePackageImports: ["lucide-react", "recharts", "mermaid", "three", "leaflet", "@react-pdf/renderer"],
   },
   async headers() {
     return [

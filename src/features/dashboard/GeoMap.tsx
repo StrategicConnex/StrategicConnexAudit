@@ -5,6 +5,7 @@ import { MapPin } from 'lucide-react';
 import type { Map as LeafletMap } from 'leaflet';
 import type { Investigation } from './tabs/intelligence/types';
 import { logger } from "@/lib/logger";
+import { escapeHtml } from '@/shared/utils/html';
 
 interface GeoLocation {
   lat: number;
@@ -424,13 +425,4 @@ function countryToLatLng(countryCode: string, cityName?: string): { lat: number;
   const country = COUNTRY_COORDS[countryCode.toUpperCase()];
   if (country) return country;
   return { lat: 30, lng: -30 };
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }

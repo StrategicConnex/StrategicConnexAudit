@@ -95,12 +95,9 @@ const eslintConfig = defineConfig([
     // Development directories and scratch files
     "scratch/**",
     "backups/**",
-    "configure-upstash-alerts.ts",
-    "db-security-scan.ts",
-    "rls-fire-test.ts",
-    "test-rls-root.ts",
-    "backup-manager.ts",
-    "hello.ts",
+    // Manual scripts (no forman parte del build; se auditan a mano)
+    "scripts/manual/**",
+    "docs/archive/**",
   ]),
 ]);
 

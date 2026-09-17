@@ -55,4 +55,39 @@ if [ "$fail" -ne 0 ]; then
 fi
 
 echo "✅ [docs-quality-gate] Todos los TDDs de docs/architecture/ cumplen el umbral 80."
+
+# --- Gate 2: paridad i18n (P1-4) ---
+# Si cambian messages/*.json, exigir divergencia es/en <= 2%.
+if git diff --cached --name-only | grep -qE '^messages/.*\.json$'; then
+  if node scripts/i18n-parity.mjs --max-divergence 0.02 >/dev/null 2>&1; then
+    echo "OK [i18n-parity] es/en en paridad."
+  else
+    echo "FAIL [i18n-parity] Commit bloqueado: es/en divergen. Corre: node scripts/i18n-parity.mjs"
+    exit 1
+  fi
+fi
+
+# --- Gate 3: eslint en archivos staged (P2-6) ---
+# Solo .ts/.tsx del commit (sin vendored); si eslint no resuelve, CI lo cubre.
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' | grep -vE '^(.agents|scripts/manual|scratch)/' || true)
+if [ -n "$STAGED_TS" ] && command -v npx >/dev/null 2>&1; then
+  # shellcheck disable=SC2086
+  if npx --no-install eslint $STAGED_TS --quiet >/dev/null 2>&1; then
+    echo "OK [eslint] staged limpio."
+  else
+    echo "FAIL [eslint] Commit bloqueado: errores en archivos staged."
+    exit 1
+  fi
+fi
+
+# --- Gate 4: gitleaks si esta instalado (P2-6) ---
+if command -v gitleaks >/dev/null 2>&1; then
+  if gitleaks protect --staged >/dev/null 2>&1; then
+    echo "OK [gitleaks] sin secretos en staged."
+  else
+    echo "FAIL [gitleaks] Commit bloqueado: posible secreto en staged."
+    exit 1
+  fi
+fi
+
 exit 0

@@ -58,25 +58,17 @@ async function getFindingsSnapshot(userId: string, investigationId?: string | nu
   if (!investigationId) return { total: 0, critical: 0, high: 0, latest: [] };
 
   return withRLS(userId, async (tx) => {
-    const [criticalCount, highCount, latest] = await Promise.all([
-      tx
-        .select({ count: sql<number>`count(*)` })
-        .from(sql`intelligence_findings`)
-        .where(
-          and(
-            sql`investigation_id = ${investigationId}`,
-            sql`severity = 'critical'`
-          )
-        ),
-      tx
-        .select({ count: sql<number>`count(*)` })
-        .from(sql`intelligence_findings`)
-        .where(
-          and(
-            sql`investigation_id = ${investigationId}`,
-            sql`severity = 'high'`
-          )
-        ),
+    // P2-6: conteos por severidad en UN solo GROUP BY (antes: 2 round trips).
+    const [counts, latest] = await Promise.all([
+      tx.execute(
+        sql`
+          SELECT severity, count(*) as cnt
+          FROM intelligence_findings
+          WHERE investigation_id = ${investigationId}
+            AND severity IN ('critical', 'high')
+          GROUP BY severity
+        `
+      ),
       tx.execute(
         sql`
           SELECT id, severity, title, created_at
@@ -89,10 +81,14 @@ async function getFindingsSnapshot(userId: string, investigationId?: string | nu
       ),
     ]);
 
+    const bySeverity = new Map(
+      ((counts.rows ?? []) as Array<{ severity: string; cnt: string }>).map((r) => [r.severity, Number(r.cnt)])
+    );
+
     return {
-      total: (criticalCount[0]?.count ?? 0) + (highCount[0]?.count ?? 0),
-      critical: criticalCount[0]?.count ?? 0,
-      high: highCount[0]?.count ?? 0,
+      total: (bySeverity.get("critical") ?? 0) + (bySeverity.get("high") ?? 0),
+      critical: bySeverity.get("critical") ?? 0,
+      high: bySeverity.get("high") ?? 0,
       latest: latest.rows ?? [],
     };
   });

@@ -69,19 +69,19 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 | ID | Debt | Category | Impact | Risk | Effort | Priority | Resolution |
 |----|------|----------|--------|------|--------|----------|------------|
 | TD-01 | Cobertura global bajo umbrales CI (Stmts 13.72% < 25%) | TESTING | Bloquea habilitar umbrales duros en CI | RSK-02 | L | P0 | route.test P0/P1 + trigger tests hasta ≥25% |
-| TD-02 | 12 triggers sin tests (0%) | TESTING | Trabajo asíncrono en prod sin verificación | RSK-02/07 | M | P0 | `*.test.ts` por trigger (siem/uptime/adversary primero, TSK-022) |
+| TD-02 | 12 triggers sin tests (0%) | TESTING | Trabajo asíncrono en prod sin verificación | RSK-02/07 | M | P0 | RESUELTO 2026-09-17: 9 trigger tests en verde (siem/uptime/adversary/anomaly/discovery/monitoring/scheduled-scan/audit/webhook) |
 | TD-03 | 36/42 rutas sin route.test | TESTING | Regresión silenciosa en endpoints | RSK-02 | L | P0 | route.test básico (401/404/200) + security/siem/run y public/v1 (P0) |
 | TD-04 | `src/modules/*` vacíos (9 dirs clean-arch, 0 archivos) | ARCHITECTURE | Doble arquitectura: legacy vs target | RSK-02 | L | P1 | TSK-014: iniciar módulos con unit tests |
 | TD-05 | `src/shared/db/run-migration.ts` legacy hardcodeado a 0001 | LEGACY | Riesgo de promoción incorrecta | RSK-05 | S | P1 | Deprecar — usar `drizzle-kit push` (documentado §7) |
-| TD-06 | `scheduled-scan.trigger.ts` stub no registrado | LEGACY | Feature no operativa silenciosa | RSK-07 | S | P1 | Implementar o eliminar (TSK-022) |
+| TD-06 | `scheduled-scan.trigger.ts` stub no registrado | LEGACY | Feature no operativa silenciosa | RSK-07 | S | P1 | RESUELTO 2026-09-17: scheduled-scan-runner implementado + retry maxAttempts 3 |
 | TD-07 | PerformanceTab con datos estáticos (L28-39) | LEGACY | Dashboard no refleja datos reales | RSK-02 | M | P1 | TSK-015: consumir `performance_results` |
 | TD-08 | 12 snapshots Drizzle intermedios faltantes | INFRASTRUCTURE | Regeneración limitada de migraciones | — | M | P2 | Documentado; regenerables solo con BD de referencia |
 | TD-09 | i18n sin check automático de paridad de keys | GOVERNANCE | Keys huérfanas en en/es | — | S | P2 | I18N-AUDIT + script de paridad (TSK-019/B09) |
 | TD-10 | `integrations`/`integration_sync_logs` sin escritor | ARCHITECTURE | Datos fantasma sin flujo | — | M | P2 | TSK-016: escritor de integraciones |
 | TD-11 | 2 tool-registries duplicados (`core/` y `registry/`) | DUPLICATION | Divergencia vs ADR-001 (Single Source of Truth) | RSK-09 | M | P1 | Consolidar en `core/tool-registry.ts` + test único |
-| TD-12 | `src/server/db/supabase-live-test.mjs` suelto | INFRASTRUCTURE | Script manual fuera del runner | — | S | P2 | Migrar a vitest o eliminar |
+| TD-12 | `src/server/db/supabase-live-test.mjs` suelto | INFRASTRUCTURE | Script manual fuera del runner | — | S | P2 | RESUELTO 2026-09-17: scripts movidos a scripts/manual/ (ignores de eslint actualizados) |
 
-> **12 deudas registradas** (≥8 requeridas por T10-02). 12 OPEN · 0 RESUELTO. [VERIFIED]
+> **12 deudas registradas** (9 OPEN, 3 RESUELTO 2026-09-17: TD-02, TD-06, TD-12) (≥8 requeridas por T10-02). 12 OPEN · 0 RESUELTO. [VERIFIED]
 
 ---
 
