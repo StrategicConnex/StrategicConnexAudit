@@ -1,7 +1,7 @@
 import { schedules, wait } from "@trigger.dev/sdk";
 import { db } from "@/shared/db";
 import { projects, uptimeLogs } from "@/shared/db/schemas";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { validateSafeUrl, normalizeUrl, safeFetchFollow } from "@/server/intelligence/security/egress-guard";
 
 export const uptimeMonitor = schedules.task({
@@ -60,6 +60,31 @@ export const uptimeMonitor = schedules.task({
         responseTimeMs: responseTime,
         errorMessage,
       });
+
+      // B-3: evento uptime.down SOLO en transición (up→down), no en cada ciclo caído.
+      // [0] es el check recién insertado; [1] el anterior.
+      if (!isUp) {
+        try {
+          const recent = await db
+            .select({ isUp: uptimeLogs.isUp })
+            .from(uptimeLogs)
+            .where(eq(uptimeLogs.projectId, project.id))
+            .orderBy(desc(uptimeLogs.checkedAt))
+            .limit(2);
+          const wasUp = recent.length > 1 ? (recent[1]?.isUp ?? true) : true;
+          if (wasUp) {
+            const { emitProjectEvent } = await import("@/server/lib/project-events");
+            await emitProjectEvent(project.id, "uptime.down", {
+              domain: project.domain,
+              statusCode,
+              responseTimeMs: responseTime,
+              errorMessage,
+            });
+          }
+        } catch {
+          // La notificación nunca rompe el monitoreo.
+        }
+      }
 
       // Breve espera para no saturar
       await wait.for({ seconds: 1 });

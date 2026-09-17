@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "SCAUDIT — StrategicAudit Pro REST API",
-    "description": "API pública de inteligencia de infraestructura cibernética. Automatiza escaneos de subdominios, TLS, DNS, emails y más.\n\n## Autenticación\n- **API Key** (para endpoints públicos): `Authorization: Bearer sa_live_xxx`\n- **Session Cookie** (para endpoints del dashboard): autenticación vía Supabase\n\n## Rate Limiting\nTodas las respuestas incluyen headers de rate limiting estándar (IETF) que indican el estado actual de tu cuota:\n| Header | Descripción |\n|--------|-------------|\n| `RateLimit-Limit` | Máximo de requests permitidos en la ventana de tiempo |\n| `RateLimit-Remaining` | Requests restantes en la ventana actual |\n| `RateLimit-Reset` | Timestamp Unix (ms) del momento en que se reestablece la cuota |\n| `Retry-After` | (Solo 429) Segundos hasta reintentar |\n\nLímites vigentes:\n- Endpoints públicos: 60 requests/min por API Key\n- Endpoints de dashboard: 30 requests/min por sesión\n- Reportes PDF: 5 requests/min\n- Escaneos de inteligencia: 30 requests/min por usuario",
+    "description": "API pública de inteligencia de infraestructura cibernética. Automatiza escaneos de subdominios, TLS, DNS, emails y más.\n\n## Autenticación\n- **API Key** (para endpoints públicos): `Authorization: Bearer sa_live_xxx`\n- **Session Cookie** (para endpoints del dashboard): autenticación vía Supabase\n\n## Rate Limiting\nTodas las respuestas incluyen headers de rate limiting estándar (IETF) que indican el estado actual de tu cuota:\n| Header | Descripción |\n|--------|-------------|\n| `RateLimit-Limit` | Máximo de requests permitidos en la ventana de tiempo |\n| `RateLimit-Remaining` | Requests restantes en la ventana actual |\n| `RateLimit-Reset` | Timestamp Unix (ms) del momento en que se reestablece la cuota |\n| `Retry-After` | (Solo 429) Segundos hasta reintentar |\n\nLímites vigentes:\n- Endpoints públicos: 60 requests/min por API Key\n- Endpoints de dashboard: 30 requests/min por sesión\n- Reportes PDF: 5 requests/min\n- Escaneos de inteligencia: 30 requests/min por usuario Outbound events (project webhooks): finding.critical, anomaly.detected, uptime.down.",
     "version": "1.0.0",
     "contact": {
       "name": "Strategic Connex",
@@ -715,6 +715,405 @@
           },
           "500": {
             "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/public/v1/audits": {
+      "get": {
+        "summary": "List audits",
+        "description": "Recent audits of a project (owner or member). For Zapier/Make polling.",
+        "tags": [
+          "Public v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": [
+              "intelligence:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "audits": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "projectId is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Project not found, access denied or scope missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests — rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/uptime": {
+      "get": {
+        "summary": "Uptime summary",
+        "description": "Aggregated uptime plus recent checks (owner or member).",
+        "tags": [
+          "Public v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": [
+              "intelligence:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "uptimePct": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "projectId is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Project not found, access denied or scope missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests — rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/reports": {
+      "get": {
+        "summary": "Completed SEO reports",
+        "description": "Latest completed executive reports including content (owner or member). Needs reports:read scope.",
+        "tags": [
+          "Public v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": [
+              "reports:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "reports": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "report": {
+                            "type": "string"
+                          },
+                          "isFallback": {
+                            "type": "boolean"
+                          },
+                          "modelUsed": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "projectId is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Project not found, access denied or scope missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests — rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

@@ -191,6 +191,22 @@ export async function executeAssessment(assessmentId: string): Promise<void> {
         const cause = (findingErr as { cause?: { message?: string } })?.cause?.message ?? "";
         logger.error("[assessment] réplica finding falló (no bloqueante):", cause || String(findingErr));
       }
+
+      // B-3: evento saliente por vulnerabilidad crítica (Zapier/Make).
+      if (vuln.severity === "critical") {
+        try {
+          const { emitProjectEvent } = await import("@/server/lib/project-events");
+          await emitProjectEvent(assessment.projectId, "finding.critical", {
+            title: vuln.title,
+            cweId: vuln.cweId ?? null,
+            cvssScore: vuln.cvssScore,
+            target: assessment.target,
+            assessmentId,
+          });
+        } catch {
+          // La notificación nunca rompe el assessment.
+        }
+      }
     }
 
     // 4. Cerrar con resumen ejecutivo

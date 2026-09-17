@@ -18,6 +18,7 @@ const KEY_TOTAL_LEN = KEY_PREFIX_LEN + KEY_BYTES * 2;
 export const API_SCOPES = {
   intelligenceRead: 'intelligence:read',
   intelligenceWrite: 'intelligence:write',
+  reportsRead: 'reports:read',
 } as const;
 export type ApiScope = (typeof API_SCOPES)[keyof typeof API_SCOPES];
 

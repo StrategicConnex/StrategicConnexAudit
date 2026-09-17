@@ -82,6 +82,17 @@ export const periodicAnomalyDetection = schedules.task({
           logger.info(
             `[AnomalyDetector] ${project.domain}: ${totalAnomalies} anomalías detectadas.`
           );
+          // B-3: evento saliente para Zapier/Make/webhooks suscritos.
+          try {
+            const { emitProjectEvent } = await import("@/server/lib/project-events");
+            await emitProjectEvent(project.id, "anomaly.detected", {
+              domain: project.domain,
+              totalAnomalies,
+              narrative,
+            });
+          } catch {
+            // La notificación nunca rompe la detección.
+          }
         }
 
         return {
