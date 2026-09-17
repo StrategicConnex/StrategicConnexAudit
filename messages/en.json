@@ -212,7 +212,12 @@
       "step3": "See your first report",
       "step3Hint": "Download or generate the summary to share.",
       "step3Cta": "View reports"
-    }
+    },
+    "forecastTitle": "14-day trend",
+    "forecastDesc": "Projection from your own history. Not a guarantee: check confidence.",
+    "forecastInDays": "in {days}d",
+    "forecastNow": "now",
+    "forecastConfidence": "confidence"
   },
   "benchmarking": {
     "title": "Your projects compared",

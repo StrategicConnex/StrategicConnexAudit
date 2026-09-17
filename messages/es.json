@@ -212,7 +212,12 @@
       "step3": "Mira tu primer informe",
       "step3Hint": "Descarga o genera el resumen para compartir.",
       "step3Cta": "Ver informes"
-    }
+    },
+    "forecastTitle": "Tendencia a 14 días",
+    "forecastDesc": "Proyección del histórico propio. No es garantía: revisa la confianza.",
+    "forecastInDays": "en {days}d",
+    "forecastNow": "hoy",
+    "forecastConfidence": "confianza"
   },
   "benchmarking": {
     "title": "Comparativa entre tus proyectos",

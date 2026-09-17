@@ -11,6 +11,7 @@ import { ProjectCard } from '../ProjectCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { JargonTerm } from '@/components/ui/JargonTerm';
 import { OnboardingChecklist } from '../OnboardingChecklist';
+import { ForecastCard } from '../ForecastCard';
 import { Card } from '@/components/ui/Card';
 import type { ProjectWithNested } from '@/shared/db/types';
 
@@ -361,6 +362,9 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
 
       {/* ═══ 3. BENCHMARKING (lazy — recharts loads on scroll into view) ═══ */}
       <LazyBenchmarkingSection projectId={projectId} />
+
+      {/* ═══ 3b. FORECAST 14 DÍAS (C-1; se oculta solo sin datos) ═══ */}
+      <ForecastCard projectId={projectId} />
 
       {/* ═══ 4. COMPLIANCE & TRUST BANNER ═══ */}
       <Card

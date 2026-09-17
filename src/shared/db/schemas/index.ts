@@ -509,6 +509,7 @@ export * from "./technologies";
 
 // ─── 40. Anomaly Detections (P3.2)
 export * from "./anomaly";
+export * from "./forecast";
 
 // ─── 41. Adversary Simulation (P3.3)
 export * from "./adversary";
