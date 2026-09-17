@@ -11,6 +11,7 @@ import { projects } from "@/shared/db/schemas";
 import { runDiscovery } from "@/server/intelligence/discovery/orchestrator";
 import { and, eq, isNull } from "drizzle-orm";
 import { logger } from "@/lib/logger";
+import { mapLimit } from "@/shared/lib/map-limit";
 
 export const continuousDiscovery = schedules.task({
   id: "continuous-discovery",
@@ -26,9 +27,22 @@ export const continuousDiscovery = schedules.task({
 
     logger.info(`[Discovery Trigger] ${activeProjects.length} active projects.`);
 
-    const results = [];
-
-    for (const project of activeProjects) {
+    // P2-3: concurrencia acotada (5) en vez de secuencial puro — cada
+    // proyecto ya aísla sus errores en try/catch, el orden se preserva.
+    interface DiscoverySummary {
+      projectId: string;
+      domain: string;
+      error?: string;
+      newAssets: number;
+      totalChanges: number;
+      modules: Array<{
+        moduleId: string;
+        success: boolean;
+        assetCount: number;
+        durationMs: number;
+      }>;
+    }
+    const results = await mapLimit(activeProjects, 5, async (project): Promise<DiscoverySummary> => {
       try {
         logger.info(`[Discovery] Running for ${project.name} (${project.domain})`);
 
@@ -41,7 +55,12 @@ export const continuousDiscovery = schedules.task({
           shadowDetection: true,
         });
 
-        results.push({
+        logger.info(
+          `[Discovery] ${project.domain}: ${result.totalNewAssets} new, ` +
+          `${result.totalChanges} changes.`
+        );
+
+        return {
           projectId: project.id,
           domain: project.domain,
           newAssets: result.totalNewAssets,
@@ -52,25 +71,20 @@ export const continuousDiscovery = schedules.task({
             assetCount: m.assets.length,
             durationMs: m.durationMs,
           })),
-        });
-
-        logger.info(
-          `[Discovery] ${project.domain}: ${result.totalNewAssets} new, ` +
-          `${result.totalChanges} changes.`
-        );
+        };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         logger.error(`[Discovery] Error in ${project.name}:`, msg);
-        results.push({
+        return {
           projectId: project.id,
           domain: project.domain,
           error: msg,
           newAssets: 0,
           totalChanges: 0,
           modules: [],
-        });
+        };
       }
-    }
+    });
 
     const totalNew = results.reduce((sum, r) => sum + (r.newAssets || 0), 0);
     const errors = results.filter((r) => r.error);

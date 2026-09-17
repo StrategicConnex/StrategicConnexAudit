@@ -13,6 +13,7 @@ import { ADVERSARY_CATALOG } from "@/server/intelligence/adversary/catalog";
 import { runScenario } from "@/server/intelligence/adversary/scenario-runner";
 import { and, eq, isNull } from "drizzle-orm";
 import { logger } from "@/lib/logger";
+import { mapLimit } from "@/shared/lib/map-limit";
 
 const SCHEDULED_SCENARIOS = [
   "T1078.001",
@@ -45,9 +46,7 @@ export const periodicAdversarySimulation = schedules.task({
       error?: string;
     };
 
-    const summaries: Summary[] = [];
-
-    for (const project of activeProjects) {
+    const summaries = await mapLimit(activeProjects, 5, async (project): Promise<Summary> => {
       try {
         let scenariosRun = 0;
         let scenariosPassed = 0;
@@ -79,18 +78,18 @@ export const periodicAdversarySimulation = schedules.task({
           }
         }
 
-        summaries.push({
+        return {
           projectId: project.id,
           domain: project.domain,
           scenariosRun,
           scenariosPassed,
           scenariosFailed,
           scoreImpacts,
-        });
+        };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         logger.error(`[AdversaryTrigger] Error in ${project.name}: ${msg}`);
-        summaries.push({
+        return {
           projectId: project.id,
           domain: project.domain,
           error: msg,
@@ -98,9 +97,9 @@ export const periodicAdversarySimulation = schedules.task({
           scenariosPassed: 0,
           scenariosFailed: 0,
           scoreImpacts: [],
-        });
+        };
       }
-    }
+    });
 
     const totalRun = summaries.reduce((s, r) => s + r.scenariosRun, 0);
     const totalPassed = summaries.reduce((s, r) => s + r.scenariosPassed, 0);

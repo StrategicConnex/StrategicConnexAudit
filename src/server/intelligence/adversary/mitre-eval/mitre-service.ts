@@ -8,6 +8,7 @@ import { directDb } from "@/shared/db";
 import { mitreEvaluations, mitreTechniqueResults } from "@/shared/db/schemas/adversary";
 import { projects } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
+import { mapLimit } from "@/shared/lib/map-limit";
 import { runMitreEvaluation, type MitreVerdict } from "./mitre-runner";
 import {
   analyzeTestableTechnique,
@@ -52,22 +53,39 @@ export async function executeMitreEvaluation(evaluationId: string): Promise<void
       .where(eq(mitreEvaluations.id, evaluationId));
 
     // ── 2. Fase AI por técnica ──
-    let modelUsed: string | null = null;
-    let exposed = 0;
-    let protectedCount = 0;
-    let manualOnly = 0;
-    const verdictDigest: Array<{ mitreId: string; techniqueName: string; verdict: MitreVerdict }> = [];
 
-    for (const technique of run.evidence.techniques) {
-      // Stack detectado en los checks del batch (para adaptar playbooks)
-      const stack = run.evidence.techniques
+    // P2-3: stack hoisted (era O(n^2): se recalculaba por tecnica)
+    // + veredictos en concurrencia acotada (2) en vez de secuencial puro.
+    const detectedStack = (
+      run.evidence.techniques
         .flatMap((t) => t.checkResults)
         .find((c) => c.id === "tech-fingerprint" && c.status !== "error")
-        ?.evidence as { detected?: Array<{ product: string; version?: string }> } | undefined;
-      const detectedStackLocal = (stack?.detected ?? []).map(
-        (d) => `${d.product}${d.version ? ` ${d.version}` : ""}`
-      );
+        ?.evidence as { detected?: Array<{ product: string; version?: string }> } | undefined
+    )?.detected ?? [];
+    const detectedStackLocal = detectedStack.map(
+      (d) => `${d.product}${d.version ? ` ${d.version}` : ""}`
+    );
 
+    type Technique = (typeof run.evidence.techniques)[number];
+    interface TechniqueOutcome {
+      digest: { mitreId: string; techniqueName: string; verdict: MitreVerdict };
+      exposed: number;
+      protected: number;
+      manual: number;
+      modelUsed: string | null;
+    }
+    const tally = (verdict: MitreVerdict): Omit<TechniqueOutcome, "digest" | "modelUsed"> => ({
+      exposed: verdict === "exposed" ? 1 : 0,
+      protected: verdict === "not_exposed" ? 1 : 0,
+      manual: verdict !== "exposed" && verdict !== "not_exposed" && verdict !== "error" ? 1 : 0,
+    });
+
+    const outcomes = await mapLimit(run.evidence.techniques, 2, async (technique: Technique): Promise<TechniqueOutcome> => {
+      const digest = {
+        mitreId: technique.mitreId,
+        techniqueName: technique.techniqueName,
+        verdict: "error" as MitreVerdict,
+      };
       if (technique.notExternallyTestable) {
         let playbookResult;
         try {
@@ -77,7 +95,6 @@ export async function executeMitreEvaluation(evaluationId: string): Promise<void
             detectedStackLocal,
             evaluation.target
           );
-          modelUsed ??= playbookResult.modelUsed;
         } catch {
           playbookResult = {
             verdict: "not_externally_testable" as const,
@@ -88,8 +105,6 @@ export async function executeMitreEvaluation(evaluationId: string): Promise<void
             modelUsed: null,
           };
         }
-        manualOnly++;
-        verdictDigest.push({ ...technique, verdict: "not_externally_testable" });
         await directDb.insert(mitreTechniqueResults).values({
           evaluationId,
           mitreId: technique.mitreId,
@@ -101,7 +116,8 @@ export async function executeMitreEvaluation(evaluationId: string): Promise<void
           playbook: playbookResult.playbook,
           aiModel: playbookResult.modelUsed,
         });
-        continue;
+        digest.verdict = "not_externally_testable";
+        return { digest, ...tally(digest.verdict), modelUsed: playbookResult.modelUsed };
       }
 
       // Técnica testable → veredicto AI sobre evidencia real
@@ -114,7 +130,6 @@ export async function executeMitreEvaluation(evaluationId: string): Promise<void
       };
       try {
         ai = await analyzeTestableTechnique(technique, evaluation.target);
-        modelUsed ??= ai.modelUsed;
       } catch {
         ai = {
           verdict: "error",
@@ -125,11 +140,7 @@ export async function executeMitreEvaluation(evaluationId: string): Promise<void
         };
       }
 
-      if (ai.verdict === "exposed") exposed++;
-      else if (ai.verdict === "not_exposed") protectedCount++;
-      else if (ai.verdict !== "error") manualOnly++;
-
-      verdictDigest.push({ mitreId: technique.mitreId, techniqueName: technique.techniqueName, verdict: ai.verdict });
+      digest.verdict = ai.verdict;
 
       await directDb.insert(mitreTechniqueResults).values({
         evaluationId,
@@ -146,6 +157,20 @@ export async function executeMitreEvaluation(evaluationId: string): Promise<void
         remediation: ai.remediation,
         aiModel: ai.modelUsed,
       });
+      return { digest, ...tally(digest.verdict), modelUsed: ai.modelUsed };
+    });
+
+    let modelUsed: string | null = null;
+    let exposed = 0;
+    let protectedCount = 0;
+    let manualOnly = 0;
+    const verdictDigest: Array<{ mitreId: string; techniqueName: string; verdict: MitreVerdict }> = [];
+    for (const o of outcomes) {
+      verdictDigest.push(o.digest);
+      exposed += o.exposed;
+      protectedCount += o.protected;
+      manualOnly += o.manual;
+      modelUsed ??= o.modelUsed;
     }
 
     // ── 3. Síntesis ejecutiva ──

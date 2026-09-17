@@ -13,6 +13,7 @@ import { runAllDetections } from "@/server/intelligence/anomaly/detector";
 import { and, eq, isNull } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { callAIWithFallback } from "@/server/ai/ai-router";
+import { mapLimit } from "@/shared/lib/map-limit";
 
 export const periodicAnomalyDetection = schedules.task({
   id: "periodic-anomaly-detection",
@@ -28,9 +29,17 @@ export const periodicAnomalyDetection = schedules.task({
 
     logger.info(`[AnomalyDetector] ${activeProjects.length} active projects.`);
 
-    const summaries = [];
-
-    for (const project of activeProjects) {
+    // P2-3: concurrencia acotada (5); cada proyecto aísla sus errores.
+    interface AnomalySummary {
+      projectId: string;
+      domain: string;
+      error?: string;
+      metricCount: number;
+      totalAnomalies: number;
+      narrative: string | null;
+      results: unknown[];
+    }
+    const summaries = await mapLimit(activeProjects, 5, async (project): Promise<AnomalySummary> => {
       try {
         const results = await runAllDetections(project.id, { windowHours: 24 });
 
@@ -69,33 +78,34 @@ export const periodicAnomalyDetection = schedules.task({
           }
         }
 
-        summaries.push({
+        if (totalAnomalies > 0) {
+          logger.info(
+            `[AnomalyDetector] ${project.domain}: ${totalAnomalies} anomalías detectadas.`
+          );
+        }
+
+        return {
           projectId: project.id,
           domain: project.domain,
           metricCount: results.length,
           totalAnomalies,
           narrative,
           results,
-        });
-
-        if (totalAnomalies > 0) {
-          logger.info(
-            `[AnomalyDetector] ${project.domain}: ${totalAnomalies} anomalías detectadas.`
-          );
-        }
+        };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         logger.error(`[AnomalyDetector] Error in ${project.name}:`, msg);
-        summaries.push({
+        return {
           projectId: project.id,
           domain: project.domain,
           error: msg,
           metricCount: 0,
           totalAnomalies: 0,
+          narrative: null as string | null,
           results: [],
-        });
+        };
       }
-    }
+    });
 
     const totalAnomaliesAll = summaries.reduce((sum, r) => sum + r.totalAnomalies, 0);
     const errors = summaries.filter((r) => r.error);
