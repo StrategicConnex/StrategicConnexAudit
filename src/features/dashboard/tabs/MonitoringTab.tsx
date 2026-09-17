@@ -8,6 +8,7 @@ import {
   Sliders, Play, Copy, Check, Sparkles, Send, ShieldCheck, Zap
 } from 'lucide-react';
 import { logger } from "@/lib/logger";
+import { TelegramDigestCard } from '../TelegramDigestCard';
 
 interface MonitoringProject {
   id: string;
@@ -633,6 +634,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
           </button>
         </div>
 
+        <TelegramDigestCard projectId={selectedProjectId} />
       </div>
 
       {/* ────────────────── Bento Grid Row 2: Drift Alerts Log (Left) & Webhooks Config (Right) ────────────────── */}

@@ -155,6 +155,41 @@ export const updateProjectBranding = authenticatedAction(
   }
 );
 
+const NotificationsSchema = z.object({
+  projectId: z.string().uuid(),
+  telegramChatId: z.string().trim().max(64).optional().or(z.literal("")),
+});
+
+/**
+ * B-5: chat de Telegram para el digest semanal (projects.settings).
+ */
+export const updateProjectNotifications = authenticatedAction(
+  NotificationsSchema,
+  async ({ projectId, telegramChatId }, { user, tx }) => {
+    const denied = await requireProjectPermission(user.id, projectId, "project:update");
+    if (denied) return { error: denied };
+
+    const [project] = await tx
+      .select({ settings: projects.settings })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+    if (!project) return { error: "Proyecto no encontrado" };
+
+    const current = (project.settings ?? {}) as Record<string, unknown>;
+    await tx
+      .update(projects)
+      .set({
+        settings: { ...current, telegramChatId: telegramChatId || null },
+        updatedAt: new Date(),
+      })
+      .where(eq(projects.id, projectId));
+
+    revalidatePath(`/projects/${projectId}`);
+    return { success: true as const };
+  }
+);
+
 /**
  * B-4: genera un link firmado de portal cliente (90 días). Solo admin+.
  */

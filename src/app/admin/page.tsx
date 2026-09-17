@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/shared/lib/supabase/server";
 import { requireAdmin } from "@/server/auth/admin";
 import { directDb } from "@/shared/db";
-import { users, userLogs, projects } from "@/shared/db/schemas";
+import { users, userLogs, projects, audits, aiReportJobs } from "@/shared/db/schemas";
 import { desc, eq } from "drizzle-orm";
 import { AdminDashboardClient, type AdminUserRow, type AdminProjectRow } from "./admin-dashboard.client";
 
@@ -75,8 +75,40 @@ export default async function AdminPage() {
     isHidden: r.isHidden,
   }));
 
+  // B-5: funnel de activación del producto (proyecto → auditoría → informe).
+  const [projectsWithAudit, projectsWithReport] = await Promise.all([
+    directDb
+      .select({ projectId: audits.projectId })
+      .from(audits)
+      .groupBy(audits.projectId),
+    directDb
+      .select({ projectId: aiReportJobs.projectId })
+      .from(aiReportJobs)
+      .where(eq(aiReportJobs.status, "completed"))
+      .groupBy(aiReportJobs.projectId),
+  ]);
+  const funnel = {
+    users: userRows.length,
+    projects: projectRows.filter((p) => !p.isDeleted && !p.isHidden && p.deletedAt === null).length,
+    withAudit: new Set(projectsWithAudit.map((r) => r.projectId)).size,
+    withReport: new Set(projectsWithReport.map((r) => r.projectId)).size,
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Usuarios", value: funnel.users },
+          { label: "Proyectos activos", value: funnel.projects },
+          { label: "Con auditoría", value: funnel.withAudit },
+          { label: "Con informe", value: funnel.withReport },
+        ].map((s) => (
+          <div key={s.label} className="glass-card p-5 text-center">
+            <p className="text-3xl font-black">{s.value}</p>
+            <p className="text-2xs text-muted-fg uppercase tracking-widest mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
       <Suspense fallback={<div className="p-8 text-muted-fg">Cargando panel…</div>}>
         <AdminDashboardClient users={usersData} projects={projectsData} adminEmail={user.email ?? "—"} />
       </Suspense>

@@ -31,9 +31,13 @@ export async function GET(
         .from(projects)
         .where(eq(projects.id, projectId))
         .limit(1);
-      return ((row?.settings ?? {}) as { branding?: Record<string, unknown> }).branding ?? {};
+      const settings = (row?.settings ?? {}) as {
+        branding?: Record<string, unknown>;
+        telegramChatId?: string | null;
+      };
+      return { branding: settings.branding ?? {}, telegramChatId: settings.telegramChatId ?? null };
     });
-    return NextResponse.json({ success: true, branding, myRole: role });
+    return NextResponse.json({ success: true, ...branding, myRole: role });
   } catch (error) {
     logger.error("GET branding failure:", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });

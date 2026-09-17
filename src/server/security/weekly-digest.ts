@@ -9,7 +9,7 @@
 
 import { and, count, eq, gte, isNull } from "drizzle-orm";
 import { directDb } from "@/shared/db";
-import { projects, uptimeLogs, issues, anomalyDetections } from "@/shared/db/schemas";
+import { projects, uptimeLogs, issues, anomalyDetections, users } from "@/shared/db/schemas";
 import {
   WEBHOOK_FORMATTERS,
   persistDelivery,
@@ -24,6 +24,64 @@ export interface DigestProjectResult {
   criticalIssues: number;
   anomalies7d: number;
   sent: boolean;
+  emailSent: boolean;
+  telegramSent: boolean;
+}
+
+/**
+ * B-5: entrega directa al dueño por email (Resend) + Telegram del proyecto.
+ * Independientes de los canales SIEM: aunque no haya ninguno configurado,
+ * el dueño con email recibe su resumen.
+ */
+async function deliverDirect(
+  ownerEmail: string | null,
+  telegramChatId: string | null,
+  domain: string,
+  uptimePct: number | null,
+  criticalIssues: number,
+  anomalies: number
+): Promise<{ emailSent: boolean; telegramSent: boolean }> {
+  let emailSent = false;
+  let telegramSent = false;
+
+  const resendKey = process.env.RESEND_API_KEY;
+  const from = process.env.SIEM_EMAIL_FROM;
+  if (ownerEmail && resendKey && from) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from,
+          to: [ownerEmail],
+          subject: `Resumen semanal: ${domain} — uptime ${uptimePct ?? "—"}, ${criticalIssues} críticas`,
+          html: `<h2>Resumen semanal: ${domain}</h2><ul><li>Uptime 7d: ${uptimePct ?? "sin datos"}</li><li>Issues críticas: ${criticalIssues}</li><li>Anomalías 7d: ${anomalies}</li></ul>`,
+        }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      emailSent = res.ok;
+    } catch {
+      emailSent = false;
+    }
+  }
+
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (telegramChatId && botToken) {
+    try {
+      const text = `Resumen semanal ${domain}\nUptime 7d: ${uptimePct ?? "sin datos"}\nCríticas: ${criticalIssues}\nAnomalías: ${anomalies}`;
+      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: telegramChatId, text }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      telegramSent = res.ok;
+    } catch {
+      telegramSent = false;
+    }
+  }
+
+  return { emailSent, telegramSent };
 }
 
 /** Severidad del digest: crítica si uptime <95% o hay issues críticas. Pura → testeable. */
@@ -110,12 +168,18 @@ export async function runWeeklyDigest(): Promise<{
 
   const targets = WEBHOOK_FORMATTERS.filter((w) => process.env[w.envVar]);
   if (targets.length === 0) {
-    return { projects: 0, sent: 0, failed: 0, errors: ["Sin canales SIEM configurados"], results };
+    logger.info("[WeeklyDigest] Sin canales SIEM: solo entrega directa (email/Telegram).");
   }
 
   const activeProjects = await directDb
-    .select({ id: projects.id, domain: projects.domain })
+    .select({
+      id: projects.id,
+      domain: projects.domain,
+      ownerEmail: users.email,
+      settings: projects.settings,
+    })
     .from(projects)
+    .leftJoin(users, eq(users.id, projects.ownerId))
     .where(and(isNull(projects.deletedAt), eq(projects.isDeleted, false), eq(projects.isHidden, false)));
 
   for (const project of activeProjects) {
@@ -155,7 +219,26 @@ export async function runWeeklyDigest(): Promise<{
       }
       if (ok) sent++;
       else failed++;
-      results.push({ projectId: project.id, domain: project.domain, uptimePct, criticalIssues, anomalies7d: anomalies, sent: ok });
+      // B-5: entrega directa aunque no haya canales SIEM.
+      const settings = (project.settings ?? {}) as { telegramChatId?: string };
+      const direct = await deliverDirect(
+        project.ownerEmail ?? null,
+        settings.telegramChatId ?? null,
+        project.domain,
+        uptimePct,
+        criticalIssues,
+        anomalies
+      );
+      results.push({
+        projectId: project.id,
+        domain: project.domain,
+        uptimePct,
+        criticalIssues,
+        anomalies7d: anomalies,
+        sent: ok,
+        emailSent: direct.emailSent,
+        telegramSent: direct.telegramSent,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error(`[WeeklyDigest] Error en ${project.domain}:`, msg);

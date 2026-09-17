@@ -529,7 +529,12 @@
     "quotaPlanInfo": "{plan} plan",
     "quotaLoading": "Loading plan…",
     "planViewAll": "View all plans",
-    "planContact": "Contact"
+    "planContact": "Contact",
+    "tgTitle": "Weekly Telegram",
+    "tgDesc": "Get your project summary every Monday on Telegram. Create the bot with @BotFather and paste the chat ID here.",
+    "tgPlaceholder": "Chat ID (e.g. 123456789)",
+    "tgSave": "Save",
+    "tgSaved": "Saved."
   },
   "keywords": {
     "pageTitle": "Keyword Positioning",
