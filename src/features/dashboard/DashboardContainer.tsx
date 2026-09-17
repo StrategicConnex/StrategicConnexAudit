@@ -138,7 +138,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
         />
 
         {/* Dynamic Content Panel */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-muted/30 relative z-10">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-10 pb-28 sm:pb-32 bg-muted/30 relative z-10">
           <div key={activeTab} className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {activeTab === 'overview' && (

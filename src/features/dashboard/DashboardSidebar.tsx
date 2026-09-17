@@ -32,19 +32,20 @@ interface NavButtonProps {
   activeTab: DashboardTab;
   icon: React.ReactNode;
   label: string;
+  hint?: string;
   badge?: React.ReactNode;
   onClick: () => void;
   onHover?: () => void;
   collapsed?: boolean;
 }
 
-function NavButton({ tab, activeTab, icon, label, badge, onClick, onHover, collapsed }: NavButtonProps) {
+function NavButton({ tab, activeTab, icon, label, hint, badge, onClick, onHover, collapsed }: NavButtonProps) {
   const isActive = activeTab === tab;
   return (
     <button
       onClick={onClick}
       onMouseEnter={onHover}
-      title={collapsed ? label : undefined}
+      title={hint ?? (collapsed ? label : undefined)}
       className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 rounded-lg text-sm font-medium transition-colors duration-300 group border cursor-pointer ${
         isActive
           ? 'bg-primary/8 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
@@ -170,6 +171,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<ShieldCheck size={18} strokeWidth={2} />}
           label={t('tabs.intelligence')}
+          hint={t('hints.intelligence')}
           badge={<Badge variant="neutral">{t('beta')}</Badge>}
           onClick={() => onTabChange('intelligence')}
           onHover={() => { void loadIntelligenceTab(); }}
@@ -181,6 +183,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<Sliders size={18} strokeWidth={2} />}
           label={t('tabs.monitoring')}
+          hint={t('hints.monitoring')}
           badge={<Badge variant="neutral">{t('apis')}</Badge>}
           onClick={() => onTabChange('monitoring')}
         />
@@ -191,6 +194,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<Skull size={18} strokeWidth={2} />}
           label={t('tabs.adversary')}
+          hint={t('hints.adversary')}
           badge={<Badge variant="alert">BAS</Badge>}
           onClick={() => onTabChange('adversary')}
         />
@@ -201,6 +205,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           activeTab={activeTab}
           icon={<Package size={18} strokeWidth={2} />}
           label={t('tabs.marketplace')}
+          hint={t('hints.marketplace')}
           badge={<Badge variant="neutral">{t('new')}</Badge>}
           onClick={() => onTabChange('plugins')}
         />

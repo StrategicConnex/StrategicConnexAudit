@@ -10,6 +10,7 @@ import { MermaidBlock } from '@/features/dashboard/MermaidBlock';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { ProjectRow } from '@/shared/db/types';
 import { logger } from "@/lib/logger";
+import { JargonTerm } from '@/components/ui/JargonTerm';
 
 interface AIReportState {
   isGenerating: boolean;
@@ -76,7 +77,11 @@ export function ReportsTab({
               <BarChart3 className="w-7 h-7" />
             </div>
             <div className="space-y-2">
-              <h4 className="font-extrabold text-white text-lg tracking-tight">{t('csvCardTitle')}</h4>
+              <h4 className="font-extrabold text-white text-lg tracking-tight">
+                <JargonTerm term="Keywords = las palabras que la gente escribe en Google para encontrar tu sitio. Rankings = en qué posición apareces para cada una.">
+                  {t('csvCardTitle')}
+                </JargonTerm>
+              </h4>
               <p className="text-sm leading-relaxed text-muted-fg">{t('csvCardDesc')}</p>
             </div>
           </div>
@@ -123,7 +128,11 @@ export function ReportsTab({
               <Sparkles className="w-3 h-3 text-primary" /> {t('aiBadge')}
             </div>
             <h4 className="font-extrabold text-white text-lg tracking-tight">{t('aiCardTitle')}</h4>
-            <p className="text-sm leading-relaxed text-muted-fg">{t('aiCardDesc')}</p>
+            <p className="text-sm leading-relaxed text-muted-fg">
+              <JargonTerm term="Gemini LLM = la inteligencia artificial de Google que redacta el análisis por ti.">
+                {t('aiCardDesc')}
+              </JargonTerm>
+            </p>
           </div>
         </div>
       </div>
@@ -135,7 +144,9 @@ export function ReportsTab({
           <div className="space-y-3">
             <h3 className="font-extrabold text-white text-2xl tracking-tight">{t('aiSectionTitle')}</h3>
             <p className="text-sm text-muted-fg leading-relaxed max-w-xl">
-              {t('aiSectionDesc')}
+              <JargonTerm term="Lighthouse Core Web Vitals = la prueba de velocidad de Google: mide si tu página carga rápido y se siente fluida.">
+                {t('aiSectionDesc')}
+              </JargonTerm>
             </p>
           </div>
 

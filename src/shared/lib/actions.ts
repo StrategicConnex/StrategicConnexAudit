@@ -25,6 +25,10 @@ export type DbTransaction = PgTransaction<NodePgQueryResultHKT, typeof schema, E
 
 // ── Dev bypass helper ────────────────────────────────────────────────────
 // Usa un usuario sintético + directDb (sin RLS) para desarrollo local
+// El id DEBE ser un UUID válido: las columnas uuid de Postgres (users.id,
+// projects.owner_id…) rechazan cadenas como 'dev-bypass-user' y el flujo
+// principal (crear proyecto) falla en demo.
+export const DEV_BYPASS_USER_ID = '00000000-0000-0000-0000-000000000001';
 async function handleDevBypass<Schema extends z.ZodTypeAny, T>(
   zodSchema: Schema,
   formData: z.infer<Schema> | FormData,
@@ -50,7 +54,7 @@ async function handleDevBypass<Schema extends z.ZodTypeAny, T>(
 
     // Usuario sintético para desarrollo
     const devUser = {
-      id: 'dev-bypass-user',
+      id: DEV_BYPASS_USER_ID,
       email: 'dev@localhost.dev',
       user_metadata: { full_name: 'Dev Bypass User' },
       app_metadata: {},

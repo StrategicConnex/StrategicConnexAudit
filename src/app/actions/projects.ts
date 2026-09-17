@@ -57,8 +57,20 @@ export const createProject = authenticatedAction(
           });
       } catch (userSyncError) {
         // Fallo en sincronizacin de usuario (ej: tabla subscriptionPlans no existe en dev)
-        // No bloquea la creacin del proyecto
-        logger.warn("User sync fall (no bloquea)", { error: userSyncError });
+        // Plan B: inserción mínima para que el FK owner_id -> users.id se cumpla
+        // y crear proyecto no falle en demo/desarrollo.
+        logger.warn("User sync fall (aplico plan B mínimo)", { error: userSyncError });
+        try {
+          await tx.insert(users)
+            .values({
+              id: user.id,
+              email: user.email || '',
+              fullName: user.user_metadata?.full_name || 'Usuario Nuevo',
+            })
+            .onConflictDoNothing({ target: users.id });
+        } catch (bareSyncError) {
+          logger.warn("User sync mnimo fall (no bloquea)", { error: bareSyncError });
+        }
       }
 
       // 2. Creacin del proyecto (Dispara el TRIGGER de cuotas en Postgres)
@@ -75,14 +87,16 @@ export const createProject = authenticatedAction(
       // Capturamos el error personalizado de Postgres (LIMIT_EXCEEDED)
       if (err.message?.includes('LIMIT_EXCEEDED')) {
         // Extraemos el mensaje amigable que pusimos en el RAISE EXCEPTION
-        const cleanMessage = err.message.split('LIMIT_EXCEEDED: ')[1] || "Lmite de proyectos alcanzado.";
+        const cleanMessage = err.message.split('LIMIT_EXCEEDED: ')[1] || "Límite de proyectos alcanzado.";
         return { 
           error: cleanMessage + " 🚀 Mejora tu plan para seguir creciendo." 
         };
       }
 
       logger.error("Error al crear proyecto", { error });
-      throw error; // Dejamos que el logger de authenticatedAction capture el resto
+      // Nunca exponer el error crudo (SQL, esquema, params) al usuario final:
+      // el modal muestra este mensaje tal cual.
+      return { error: "No se pudo crear el proyecto. Intenta de nuevo en unos segundos." };
     }
   }
 );

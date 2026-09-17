@@ -17,7 +17,7 @@ vi.mock("@/shared/lib/logger", () => ({
   logger: { security: securityLogMock, info: infoLogMock, error: errorLogMock },
 }));
 
-import { authenticatedAction } from "./actions";
+import { authenticatedAction, DEV_BYPASS_USER_ID } from "./actions";
 
 const schema = z.object({ projectId: z.string().min(1) });
 
@@ -34,7 +34,7 @@ describe("authenticatedAction — wrapper de Server Actions (auth + zod + RLS)",
     const action = vi.fn(async (data: { projectId: string }, ctx: { user: { id: string } }) => ({ done: data.projectId, user: ctx.user.id }));
     const result = await authenticatedAction(schema, action)({ projectId: "p1" });
 
-    expect(result.data).toEqual({ done: "p1", user: "dev-bypass-user" });
+    expect(result.data).toEqual({ done: "p1", user: DEV_BYPASS_USER_ID });
     expect(getUserMock).not.toHaveBeenCalled();
   });
 

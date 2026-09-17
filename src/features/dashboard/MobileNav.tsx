@@ -15,16 +15,16 @@ interface MobileNavProps {
   onClose: () => void;
 }
 
-const TABS: { tab: DashboardTab; icon: React.ReactNode; labelKey: string }[] = [
+const TABS: { tab: DashboardTab; icon: React.ReactNode; labelKey: string; hintKey?: string }[] = [
   { tab: 'overview', icon: <LayoutDashboard size={18} strokeWidth={2} />, labelKey: 'tabs.overview' },
   { tab: 'projects', icon: <Globe size={18} strokeWidth={2} />, labelKey: 'tabs.projects' },
   { tab: 'performance', icon: <Activity size={18} strokeWidth={2} />, labelKey: 'tabs.performance' },
   { tab: 'keywords', icon: <Search size={18} strokeWidth={2} />, labelKey: 'tabs.keywords' },
   { tab: 'reports', icon: <BarChart3 size={18} strokeWidth={2} />, labelKey: 'tabs.reports' },
-  { tab: 'intelligence', icon: <ShieldCheck size={18} strokeWidth={2} />, labelKey: 'tabs.intelligence' },
-  { tab: 'monitoring', icon: <Sliders size={18} strokeWidth={2} />, labelKey: 'tabs.monitoring' },
-  { tab: 'adversary', icon: <Skull size={18} strokeWidth={2} />, labelKey: 'tabs.adversary' },
-  { tab: 'plugins', icon: <Package size={18} strokeWidth={2} />, labelKey: 'tabs.marketplace' },
+  { tab: 'intelligence', icon: <ShieldCheck size={18} strokeWidth={2} />, labelKey: 'tabs.intelligence', hintKey: 'hints.intelligence' },
+  { tab: 'monitoring', icon: <Sliders size={18} strokeWidth={2} />, labelKey: 'tabs.monitoring', hintKey: 'hints.monitoring' },
+  { tab: 'adversary', icon: <Skull size={18} strokeWidth={2} />, labelKey: 'tabs.adversary', hintKey: 'hints.adversary' },
+  { tab: 'plugins', icon: <Package size={18} strokeWidth={2} />, labelKey: 'tabs.marketplace', hintKey: 'hints.marketplace' },
   { tab: 'settings', icon: <Settings size={18} strokeWidth={2} />, labelKey: 'tabs.settings' },
 ];
 
@@ -75,7 +75,7 @@ export function MobileNav({ open, activeTab, onTabChange, onClose }: MobileNavPr
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
-          {TABS.map(({ tab, icon, labelKey }) => {
+          {TABS.map(({ tab, icon, labelKey, hintKey }) => {
             const isActive = activeTab === tab;
             return (
               <button
@@ -85,6 +85,7 @@ export function MobileNav({ open, activeTab, onTabChange, onClose }: MobileNavPr
                   onClose();
                 }}
                 aria-current={isActive ? 'page' : undefined}
+                title={hintKey ? t(hintKey) : undefined}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors border cursor-pointer ${
                   isActive
                     ? 'bg-primary/10 text-foreground border-primary/20'

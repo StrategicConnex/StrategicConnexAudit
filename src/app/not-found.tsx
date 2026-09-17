@@ -49,7 +49,7 @@ export default function NotFoundPage() {
           {/* Actions */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href="/login"
+              href="/"
               className="group relative inline-flex items-center justify-center gap-2 py-3 sm:py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all duration-300 active:scale-[0.97] overflow-hidden hover:bg-primary/90 shadow-lg shadow-primary/20"
             >
               <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />

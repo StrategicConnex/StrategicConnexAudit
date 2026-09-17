@@ -28,8 +28,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
 
   if (DEV_BYPASS) {
-    // Sin sesión real — no se puede cargar proyecto específico
-    redirect('/');
+    // Sin sesión real no se puede cargar un proyecto específico ni verificar
+    // propiedad: 404 honesto en vez de mostrar el dashboard en silencio.
+    notFound();
   }
 
   // 0. Autenticar usuario

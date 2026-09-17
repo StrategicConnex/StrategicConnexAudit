@@ -52,6 +52,12 @@
       "marketplace": "Marketplace",
       "settings": "Configuración"
     },
+    "hints": {
+      "intelligence": "Inteligencia: amenazas y hallazgos de seguridad explicados en simple.",
+      "monitoring": "Controles Activos: vigilancias automáticas que revisan tu sitio sin parar.",
+      "adversary": "Adversario: simulamos ataques controlados para probar tus defensas.",
+      "marketplace": "Marketplace: integraciones y extensiones para conectar tus herramientas."
+    },
     "new": "Nuevo",
     "live": "Live",
     "audit": "Audit",
@@ -171,7 +177,7 @@
     "heroNoDataDesc": "Conecta tu primer proyecto y ejecuta una auditoría para ver actividad real aquí.",
     "heroNoDataCta": "Explorar proyectos",
     "terminalEmpty": "Sin chequeos registrados todavía.",
-    "previewBadge": "Vista previa",
+    "previewBadge": "Datos de ejemplo",
     "projectsEmptyTitle": "Todavía no hay proyectos",
     "projectsEmptyDesc": "Crea tu primer proyecto para empezar a monitorear su salud técnica y superficie de ataque.",
     "projectsEmptyCta": "Ver proyectos"
