@@ -13,6 +13,11 @@ interface Branding {
   primaryColor?: string | null;
 }
 
+/** Ventana de 30 días calculada fuera del render (regla no-impure-render). */
+function thirtyDaysAgo(): Date {
+  return new Date(Date.now() - 30 * 86400000);
+}
+
 /**
  * GET /p/[token] — Portal cliente read-only con marca blanca (B-4).
  *
@@ -51,7 +56,7 @@ export default async function ClientPortalPage({
   const brandName = branding.brandName || project.name;
   const accent = branding.primaryColor || "#D4A843";
 
-  const since = new Date(Date.now() - 30 * 86400000);
+  const since = thirtyDaysAgo();
   const [up] = await directDb
     .select({ total: count(), ups: sql<number>`count(*) filter (where ${uptimeLogs.isUp})` })
     .from(uptimeLogs)
