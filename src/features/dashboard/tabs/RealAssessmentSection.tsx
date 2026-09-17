@@ -381,7 +381,7 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
 
               {/* C-2: motor de remediación (proponer → aprobar → ejecutar) */}
               <RemediationPanel
-                key={selected.assessment.id}
+                key={`${selected.assessment.id}:${remediationPrefill?.title ?? ''}`}
                 projectId={projectId}
                 prefill={remediationPrefill}
               />

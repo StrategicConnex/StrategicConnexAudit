@@ -43,36 +43,46 @@ export function RemediationPanel({
   const [actions, setActions] = useState<RemediationAction[]>([]);
   const [connectors, setConnectors] = useState<ConnectorDef[]>([]);
   const [connector, setConnector] = useState('');
-  const [title, setTitle] = useState('');
+  // El padre re-monta con key al elegir otro hallazgo: el inicial basta.
+  const [title, setTitle] = useState(prefill?.title ?? '');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!prefill);
 
-  const load = useCallback(() => {
+  const refresh = useCallback(() => {
     return fetch(`/api/remediation?projectId=${projectId}`)
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (data.success) {
-          setActions(data.actions ?? []);
-          setConnectors(data.connectors ?? []);
-          if (!connector && data.connectors?.[0]) setConnector(data.connectors[0].id);
-        }
-      })
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      .then(async (res) => res.json().catch(() => ({})));
   }, [projectId]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const applyState = useCallback((data: {
+    success?: boolean;
+    actions?: RemediationAction[];
+    connectors?: ConnectorDef[];
+  }) => {
+    if (!data.success) return;
+    setActions(data.actions ?? []);
+    if (Array.isArray(data.connectors) && data.connectors.length > 0) {
+      setConnectors(data.connectors);
+      setConnector((prev) => prev || data.connectors![0]!.id);
+    }
+  }, []);
 
   useEffect(() => {
-    if (prefill) {
-      setTitle(prefill.title);
-      setOpen(true);
-    }
-  }, [prefill]);
+    let cancelled = false;
+    refresh()
+      .then((data) => {
+        if (!cancelled) applyState(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [refresh, applyState]);
+
+  const reload = () => {
+    refresh().then(applyState).catch(() => {});
+  };
 
   const propose = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +105,7 @@ export function RemediationPanel({
       if (data.success) {
         setTitle('');
         setFields({});
-        load();
+        reload();
       } else {
         setError(data.error || 'No se pudo proponer');
       }
@@ -116,7 +126,7 @@ export function RemediationPanel({
         body: JSON.stringify({ id, op, projectId }),
       });
       const data = await res.json().catch(() => ({}));
-      if (data.success) load();
+      if (data.success) reload();
       else setError(data.error || 'La operación falló');
     } catch {
       setError('La operación falló');
