@@ -215,7 +215,7 @@
     }
   },
   "benchmarking": {
-    "title": "Comparativa del sector",
+    "title": "Comparativa entre tus proyectos",
     "yourVs": "Tu desempeño vs {count} proyecto{plural} activo{plural}",
     "yourProject": "Tu proyecto",
     "industryMedian": "Mediana industria",

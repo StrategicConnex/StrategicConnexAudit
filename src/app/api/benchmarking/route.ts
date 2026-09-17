@@ -177,7 +177,9 @@ async function computeAggregates(userId: string, projectId?: string | null) {
     }
   }
 
-  return { benchmarks, yourMetrics, yourPercentile, projectMetrics };
+  // A-1 honestidad: esto compara TUS proyectos entre sí, no la industria.
+  // (pool anónimo opt-in: idea C-2/B-4 futura). El campo scope lo declara.
+  return { benchmarks, yourMetrics, yourPercentile, projectMetrics, scope: 'own-projects' as const };
 }
 
 // ─── GET handler ──────────────────────────────────────────────────────────────

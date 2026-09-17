@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { db } from '@/shared/db';
-import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets } from '@/shared/db/schemas';
-import { eq, desc, isNull, sql, and } from 'drizzle-orm';
+import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets, issues, crawlResults } from '@/shared/db/schemas';
+import { eq, desc, isNull, sql, and, count } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
 import { logger } from "@/lib/logger";
@@ -18,8 +18,9 @@ interface EnrichedProject {
   project: ProjectData;
   gscRecords: { date: string; clicks: number | null; impressions: number | null; ctr: string | null; position: string | null }[];
   ga4Records: { date: string; activeUsers: number | null; conversions: number | null; engagementRate: string | null }[];
-  score: number;
-  crawledCount: number;
+  // A-1 honestidad: null = desconocido. Nunca 85/45 ni 142 inventados.
+  score: number | null;
+  crawledCount: number | null;
   keywordsCount: number;
 }
 
@@ -195,8 +196,28 @@ export async function GET(req: NextRequest) {
             .where(eq(keywordTargets.projectId, project.id))
         ]);
 
-        const score = latestAudits[0]?.status === 'completed' ? 85 : 45;
-        const crawledCount = latestAudits[0]?.status === 'completed' ? 142 : 0;
+        // A-1: score real = 100 - 15*críticas - 5*warnings (misma fórmula que
+        // la página de proyecto); null si no hay auditoría completada.
+        // crawled = páginas rastreadas reales; null si no hay auditoría.
+        const latestCompleted = latestAudits.find((a) => a.status === 'completed');
+        let score: number | null = null;
+        let crawledCount: number | null = null;
+        if (latestCompleted) {
+          const [crawlsCount] = await tx.select({ value: count() })
+            .from(crawlResults)
+            .where(eq(crawlResults.auditId, latestCompleted.id));
+          crawledCount = Number(crawlsCount?.value || 0);
+          const [issueStats] = await tx.select({
+            criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
+            warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`)
+          })
+            .from(issues)
+            .where(eq(issues.auditId, latestCompleted.id));
+          score = Math.max(
+            0,
+            100 - (Number(issueStats?.criticalCount || 0) * 15) - (Number(issueStats?.warningCount || 0) * 5)
+          );
+        }
         const keywordsCount = Number(keywordsCountResult[0]?.count || 0);
 
         return {
@@ -236,8 +257,26 @@ export async function GET(req: NextRequest) {
           .where(eq(keywordTargets.projectId, project.id))
       ]);
 
-      const score = latestAudits[0]?.status === 'completed' ? 85 : 45;
-      const crawledCount = latestAudits[0]?.status === 'completed' ? 142 : 0;
+      // A-1: misma fórmula real en la rama pública.
+      const latestCompleted = latestAudits.find((a) => a.status === 'completed');
+      let score: number | null = null;
+      let crawledCount: number | null = null;
+      if (latestCompleted) {
+        const [crawlsCount] = await db.select({ value: count() })
+          .from(crawlResults)
+          .where(eq(crawlResults.auditId, latestCompleted.id));
+        crawledCount = Number(crawlsCount?.value || 0);
+        const [issueStats] = await db.select({
+          criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
+          warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`)
+        })
+          .from(issues)
+          .where(eq(issues.auditId, latestCompleted.id));
+        score = Math.max(
+          0,
+          100 - (Number(issueStats?.criticalCount || 0) * 15) - (Number(issueStats?.warningCount || 0) * 5)
+        );
+      }
       const keywordsCount = Number(keywordsCountResult[0]?.count || 0);
 
       return {
