@@ -16,6 +16,7 @@ import {
   pgTable, uuid, text, timestamp, integer, boolean,
   jsonb, index
 } from "drizzle-orm/pg-core";
+import { projects } from "./index";
 
 /**
  * Resultado agregado de una ejecucin de health check.
@@ -101,4 +102,28 @@ export const aiUsage = pgTable("ai_usage", {
 }, (t) => [
   index("idx_ai_usage_user_created").on(t.userId, t.createdAt),
   index("idx_ai_usage_task_created").on(t.taskType, t.createdAt),
+]);
+
+/**
+ * Trabajos diferidos de informe SEO (P2-1).
+ *
+ * La ruta POST crea la fila en `pending` y dispara el task; el cliente hace
+ * polling al endpoint de estado hasta `completed`/`failed`. Sin Trigger.dev
+ * disponible la ruta genera en línea (mismo servicio) y marca completed.
+ */
+export const aiReportJobs = pgTable("ai_report_jobs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id")
+    .references(() => projects.id, { onDelete: "cascade" })
+    .notNull(),
+  userId: uuid("user_id"),
+  status: text("status").notNull().default("pending"),
+  report: text("report"),
+  isFallback: boolean("is_fallback").notNull().default(false),
+  modelUsed: text("model_used"),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("idx_ai_report_jobs_project_created").on(t.projectId, t.createdAt),
 ]);

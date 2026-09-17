@@ -16,6 +16,7 @@ import { envSecrets } from "@/shared/config/env-secrets";
 import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 import { recordAiUsage } from "./ai-usage";
 import { buildSemanticKey, getSemanticCache, setSemanticCache } from "./ai-cache";
+import { callAnthropicText, anthropicDefaultModel, isAnthropicConfigured } from "./providers";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -537,7 +538,44 @@ export async function callAIWithFallback(
     }
   }
 
-  // 5. All models failed
+  // 5. Cadena OpenRouter agotada → failover inter-proveedor (P2-1).
+  // Solo texto libre: tools y response_format son dialecto OpenAI y no se
+  // traducen 1:1. Sin ANTHROPIC_API_KEY el comportamiento no cambia.
+  if (!useTools && !options.responseFormat && isAnthropicConfigured()) {
+    try {
+      const model = anthropicDefaultModel();
+      const alt = await callAnthropicText({
+        model,
+        messages,
+        temperature,
+        maxTokens,
+        timeoutMs: 30_000,
+      });
+      const latencyMs = Date.now() - startTime;
+      if (options.userId) {
+        void recordAiUsage({
+          userId: options.userId,
+          taskType,
+          modelUsed: alt.modelUsed,
+          latencyMs,
+          success: true,
+        });
+      }
+      void setSemanticCache(cacheKey, alt.content ?? "", alt.modelUsed, taskType);
+      console.log(`[AI Router] ${taskType} → ${alt.modelUsed} (${latencyMs}ms) [failover inter-proveedor]`);
+      return {
+        success: true,
+        content: alt.content ?? "",
+        modelUsed: alt.modelUsed,
+        latencyMs,
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`[anthropic-failover] ${msg}`);
+    }
+  }
+
+  // 6. All models failed
   return track({
     modelUsed: modelChain[modelChain.length - 1]!,
     success: false,

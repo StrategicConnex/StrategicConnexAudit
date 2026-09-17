@@ -21,6 +21,8 @@ export const envSecrets = {
   get aiBaseUrl() { return process.env.XIAOMI_BASE_URL || ""; },
   get openRouterApiKey() { return process.env.OPENROUTER_API_KEY || ""; },
   get openRouterBaseUrl() { return process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1"; },
+  // P2-1: failover inter-proveedor (opcional; sin key todo sigue en OpenRouter).
+  get anthropicApiKey() { return process.env.ANTHROPIC_API_KEY || ""; },
   // P1-5: clave de cifrado de secretos en reposo (32 bytes hex).
   get dataEncryptionKey() { return process.env.DATA_ENCRYPTION_KEY || ""; },
 };

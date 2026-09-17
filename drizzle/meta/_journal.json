@@ -204,6 +204,13 @@
       "when": 1788720000002,
       "tag": "0028_beacon_secret",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788720000003,
+      "tag": "0029_ai_report_jobs",
+      "breakpoints": true
     }
   ]
 }

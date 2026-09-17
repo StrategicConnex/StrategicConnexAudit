@@ -27,12 +27,13 @@ const PROGRESS_STEPS = [
   { progress: 90, text: 'Redactando el informe ejecutivo con el motor de IA...' },
 ] as const;
 
-// Timeout global del fetch: alineado con maxDuration=120s del route. El router
-// IA prueba hasta 3 modelos de 20s (cadena acotada en ai-router) + queries DB,
-// así que 110s da margen para recibir el reporte resiliente sin cortar antes.
-// 125s > maxDuration=120s del route: el cliente debe aguantar hasta que el
-// servidor responda (éxito o fallback resiliente) sin cortar antes.
-const FETCH_TIMEOUT_MS = 125_000;
+// Timeout global del fetch de encolado: la ruta solo crea el job (<2s).
+const FETCH_TIMEOUT_MS = 20_000;
+
+// Polling del trabajo diferido: cada 3s hasta 5 min (el task tiene hasta
+// 10 min con reintentos; 5 min cubre el caso típico sin colgar la UI).
+const POLL_INTERVAL_MS = 3_000;
+const POLL_MAX_ATTEMPTS = 100;
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,57 @@ export function useAiReport(projectId: string) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
+    const stopFx = () => {
+      clearTimeout(timeoutId);
+      clearInterval(interval);
+    };
+
+    const finishWithReport = (report: string, isFallback: boolean, status: string) => {
+      stopFx();
+      setState(s => ({
+        ...s,
+        progress: 100,
+        status,
+        text: report,
+        isFallback,
+        isGenerating: false,
+      }));
+    };
+
+    const failWith = (status: string) => {
+      stopFx();
+      setState(s => ({ ...s, progress: 0, status, isFallback: false, isGenerating: false }));
+    };
+
+    // P2-1: polling del trabajo diferido (el POST solo encola).
+    const pollJob = async (jobId: string) => {
+      for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+        try {
+          const res = await fetch(`/api/ai/report/status?jobId=${encodeURIComponent(jobId)}`);
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            failWith(data.error || 'No se pudo consultar el estado del informe.');
+            logger.error('[AiReport] Status error:', data);
+            return;
+          }
+          if (data.status === 'completed' && data.report) {
+            finishWithReport(data.report, !!data.isFallback, '¡Informe ejecutivo generado con éxito!');
+            return;
+          }
+          if (data.status === 'failed') {
+            failWith(data.error || 'La generación falló. Reintentá en unos segundos.');
+            logger.error('[AiReport] Job failed:', data);
+            return;
+          }
+          // pending/running → seguir esperando (la animación de progreso sigue).
+        } catch (error) {
+          logger.error('[AiReport] Poll error:', error);
+        }
+      }
+      failWith('El informe está tardando demasiado. Reintentá en unos minutos.');
+    };
+
     try {
       const response = await fetch('/api/ai/report', {
         method: 'POST',
@@ -72,38 +124,31 @@ export function useAiReport(projectId: string) {
       });
 
       const data = await response.json().catch(() => ({}));
-      clearTimeout(timeoutId);
-      clearInterval(interval);
 
       if (!response.ok) {
         const msg = data.error || `El servidor respondió con estado ${response.status}.`;
-        setState(s => ({ ...s, progress: 0, status: msg, isFallback: false, isGenerating: false }));
+        failWith(msg);
         logger.error(`[AiReport] HTTP error: ${response.status} - ${msg}`);
         return;
       }
 
       if (data.success && data.report) {
-        setState(s => ({
-          ...s,
-          progress: 100,
-          status: '¡Informe ejecutivo generado con éxito!',
-          text: data.report,
-          isFallback: !!data.isFallback,
-          isGenerating: false,
-        }));
+        // Camino síncrono (fallback local cuando Trigger.dev no está).
+        finishWithReport(data.report, !!data.isFallback, '¡Informe ejecutivo generado con éxito!');
+      } else if (data.success && data.pending && data.jobId) {
+        // Camino diferido — polling hasta completed/failed.
+        await pollJob(data.jobId);
       } else if (data.success && !data.report) {
         // El backend dice success pero no envió contenido — nunca mostrar 100% vacío.
-        setState(s => ({ ...s, progress: 0, status: 'El informe llegó vacío. Reintentá en unos segundos.', isFallback: false, isGenerating: false }));
+        failWith('El informe llegó vacío. Reintentá en unos segundos.');
         logger.error('[AiReport] Empty report:', data);
       } else {
-        setState(s => ({ ...s, progress: 0, status: data.error || 'Error al procesar el informe.', isFallback: false, isGenerating: false }));
+        failWith(data.error || 'Error al procesar el informe.');
         logger.error('[AiReport] API error:', data.error);
       }
     } catch (error) {
-      clearTimeout(timeoutId);
-      clearInterval(interval);
       const timedOut = error instanceof DOMException && error.name === 'AbortError';
-      setState(s => ({ ...s, progress: 0, status: timedOut ? 'El servidor tardó demasiado. Reintentá en unos segundos.' : 'Error de conexión.', isGenerating: false }));
+      failWith(timedOut ? 'El servidor tardó demasiado. Reintentá en unos segundos.' : 'Error de conexión.');
       logger.error('[AiReport] Network error:', error);
     }
   }, [projectId]);
