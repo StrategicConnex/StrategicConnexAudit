@@ -11,6 +11,7 @@ import { IntelligenceToolDefinition } from "../registry/tool-registry";
 import { getErrorMessage } from "@/shared/lib/errors";
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
+import { checkQuota } from "@/server/intelligence/enterprise/usage-metering";
 
 export interface EnforcePolicyResult {
   allowed: boolean;
@@ -71,11 +72,12 @@ export async function enforceToolRunPolicy(
       planName = resolvedPlan.name.toLowerCase();
     }
 
-    // 3. Forzar acceso total para la auditoría
-    const allowed = true;
-    const reason: string | undefined = undefined;
-
-    // Se omiten los chequeos de cuota localmente para asegurar el 100% de herramientas activas
+    // A-4: cuota real (antes: allowed=true forzado). Cada herramienta
+    // descuenta sus costUnits del plan mensual; al agotarse se bloquea con
+    // motivo accionable (upgrade). El evento se registra igual (allowed=false).
+    const quota = await checkQuota(projectId, planName, tool.costUnits || 1);
+    const allowed = quota.allowed;
+    const reason: string | undefined = quota.reason;
 
     // 4. Log the usage event in the database
     const targetHash = crypto

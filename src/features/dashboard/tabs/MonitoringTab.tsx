@@ -48,6 +48,15 @@ interface MonitoringTabProps {
   setSelectedProjectId: (id: string) => void;
 }
 
+interface BillingPlanRow {
+  id: string;
+  name: string;
+  maxProjects: number;
+  maxKeywords: number;
+  features?: { seats?: number };
+  priceMonthly: string | null;
+}
+
 export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedProjectId }: MonitoringTabProps) {
   const t = useTranslations('monitoring');
   // State for Monitoring Schedule
@@ -89,8 +98,58 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   // State for Plan Selection (Visual Demonstration)
-  const [currentPlan, setCurrentPlan] = useState<'starter' | 'business' | 'enterprise'>('business');
   const [showPlanModal, setShowPlanModal] = useState(false);
+  // A-4: plan y uso reales (antes: tiers fake en estado local).
+  const [entitlements, setEntitlements] = useState<{
+    planName: string;
+    maxProjects: number;
+    maxKeywords: number;
+    seats: number;
+    projectsUsed: number;
+    keywordsUsed: number;
+    seatsUsed: number;
+  } | null>(null);
+  const [plans, setPlans] = useState<Array<{
+    id: string;
+    name: string;
+    maxProjects: number;
+    maxKeywords: number;
+    seats?: number;
+    priceMonthly: string | null;
+  }>>([]);
+
+  const fetchEntitlements = useCallback(() => {
+    return fetch("/api/billing/entitlements")
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (data.success && data.entitlements) setEntitlements(data.entitlements);
+      })
+      .catch(() => {});
+  }, []);
+
+  const fetchPlans = useCallback(() => {
+    return fetch("/api/billing/plans")
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (data.success && Array.isArray(data.plans)) {
+          setPlans(
+            (data.plans as BillingPlanRow[]).map((p) => ({
+              id: p.id,
+              name: p.name,
+              maxProjects: p.maxProjects,
+              maxKeywords: p.maxKeywords,
+              seats: p.features?.seats,
+              priceMonthly: p.priceMonthly,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchEntitlements();
+  }, [fetchEntitlements]);
 
   const fetchMonitoringData = useCallback(async () => {
     try {
@@ -361,24 +420,17 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
     setTimeout(() => setCopiedKeyId(null), 2000);
   };
 
-  // Quota computations
-  const getQuotaLimits = () => {
-    switch (currentPlan) {
-      case 'starter':
-        return { projects: 10, scans: 100, price: '$49/mes' };
-      case 'business':
-        return { projects: 50, scans: 1000, price: '$149/mes' };
-      case 'enterprise':
-        return { projects: 999, scans: 9999, price: '$499/mes' };
-    }
-  };
+  // Quota computations — A-4: reales desde entitlements (antes: simulados).
+  const planProjects = entitlements?.maxProjects ?? 0;
+  const planKeywords = entitlements?.maxKeywords ?? 0;
+  const projectsPercentage = planProjects > 0
+    ? Math.min(100, Math.round((initialProjects.length / planProjects) * 100))
+    : 0;
 
-  const planInfo = getQuotaLimits();
-  const projectsPercentage = Math.min(100, Math.round((initialProjects.length / planInfo.projects) * 100));
-  
-  // Scans simulated count: Starter matches 45/100, Business matches 182/1000, Enterprise matches 456/Unlimited
-  const activeScansSimulated = currentPlan === 'starter' ? 45 : currentPlan === 'business' ? 182 : 456;
-  const scansPercentage = planInfo.scans === 9999 ? 5 : Math.min(100, Math.round((activeScansSimulated / planInfo.scans) * 100));
+  const keywordsUsed = entitlements?.keywordsUsed ?? 0;
+  const keywordsPercentage = planKeywords > 0
+    ? Math.min(100, Math.round((keywordsUsed / planKeywords) * 100))
+    : 0;
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -491,7 +543,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/80">{t('quotaTitle')}</h3>
               </div>
               <span className="text-2xs font-black uppercase text-primary bg-cyan-400/10 border border-cyan-400/20 px-2 py-0.5 rounded">
-                Plan {currentPlan}
+                Plan {entitlements?.planName ?? '…'}
               </span>
             </div>
 
@@ -504,31 +556,36 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     <path className="text-white/[0.03]" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                     <path className="text-primary transition-[color,stroke-dasharray] duration-1000" strokeDasharray={`${projectsPercentage}, 100`} strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                   </svg>
-                  <span className="absolute text-xs font-bold text-white">{initialProjects.length} / {planInfo.projects === 999 ? '∞' : planInfo.projects}</span>
+                  <span className="absolute text-xs font-bold text-white">{initialProjects.length} / {planProjects >= 999 ? '∞' : planProjects}</span>
                 </div>
                 <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider mt-2">{t('quotaResourcesLabel')}</span>
               </div>
 
-              {/* Dial 2: Scans */}
+              {/* Dial 2: Keywords */}
               <div className="flex flex-col items-center p-3 rounded-lg bg-muted/1 border border-border/30 text-center">
                 <div className="relative w-16 h-16 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <path className="text-white/[0.03]" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path className="text-indigo-400 transition-[color,stroke-dasharray] duration-1000" strokeDasharray={`${scansPercentage}, 100`} strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path className="text-indigo-400 transition-[color,stroke-dasharray] duration-1000" strokeDasharray={`${keywordsPercentage}, 100`} strokeWidth="3" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                   </svg>
-                  <span className="absolute text-xs font-bold text-white">{activeScansSimulated} / {planInfo.scans === 9999 ? '∞' : planInfo.scans}</span>
+                  <span className="absolute text-xs font-bold text-white">{keywordsUsed} / {planKeywords >= 999999 ? '∞' : planKeywords}</span>
                 </div>
-                <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider mt-2">{t('quotaScansLabel')}</span>
+                <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider mt-2">{t('quotaKeywordsLabel')}</span>
               </div>
             </div>
             
             <p className="text-2xs text-muted-fg mb-3 text-center">
-              {t('quotaBillingInfo', { price: planInfo.price })}
+              {entitlements
+                ? t('quotaPlanInfo', { plan: entitlements.planName })
+                : t('quotaLoading')}
             </p>
           </div>
 
           <button
-            onClick={() => setShowPlanModal(true)}
+            onClick={() => {
+              setShowPlanModal(true);
+              void fetchPlans();
+            }}
             className="w-full bg-[var(--primary)]/10 hover:bg-[var(--primary)]/20 border border-[var(--primary)]/20 text-primary text-xs font-bold px-4 py-2.5 rounded-lg transition-colors duration-300 cursor-pointer"
           >
             {t('quotaUpgradeButton')}
@@ -879,102 +936,54 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               </p>
             </div>
 
-            {/* Price Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-              
-              {/* Starter Tier */}
-              <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 ${
-                currentPlan === 'starter'
-                  ? 'border-[var(--primary)] bg-[var(--primary)]/[0.02]'
-                  : 'border-border/50 bg-muted/1 hover:border-border'
-              }`}>
-                <div className="space-y-3">
-                  <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">{t('planStarter')}</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white">$49</span>
-                    <span className="text-2xs font-bold text-muted-fg">{t('planPerMonth')}</span>
+            {/* Price Grid — A-4: planes reales de /api/billing/plans */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
+              {plans.length === 0 && (
+                <p className="text-sm text-muted-fg col-span-full text-center">{t('quotaLoading')}</p>
+              )}
+              {plans.map((plan) => {
+                const isCurrent = entitlements?.planName === plan.name;
+                return (
+                  <div
+                    key={plan.id}
+                    className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 ${
+                      isCurrent
+                        ? 'border-[var(--primary)] bg-[var(--primary)]/[0.03]'
+                        : 'border-border/50 bg-muted/1 hover:border-border'
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      <p className="text-xs font-bold text-muted-fg uppercase tracking-widest capitalize">
+                        {plan.name} {isCurrent && `· ${t('planActive')}`}
+                      </p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-white">
+                          {plan.priceMonthly === null
+                            ? t('planContact')
+                            : `$${Number(plan.priceMonthly) === 0 ? '0' : Number(plan.priceMonthly)}`}
+                        </span>
+                        {plan.priceMonthly !== null && (
+                          <span className="text-2xs font-bold text-muted-fg">{t('planPerMonth')}</span>
+                        )}
+                      </div>
+                      <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
+                        <li className="flex items-center gap-2">✓ {plan.maxProjects} proyectos</li>
+                        <li className="flex items-center gap-2">✓ {plan.maxKeywords.toLocaleString()} keywords</li>
+                        {plan.seats !== undefined && (
+                          <li className="flex items-center gap-2">✓ {plan.seats} asientos</li>
+                        )}
+                      </ul>
+                    </div>
+                    <a
+                      href="/pricing"
+                      onClick={() => setShowPlanModal(false)}
+                      className="text-center w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-colors cursor-pointer"
+                    >
+                      {t('planViewAll')}
+                    </a>
                   </div>
-                  <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
-                    <li className="flex items-center gap-2">✓ 10 Recursos Activos</li>
-                    <li className="flex items-center gap-2">✓ 100 scans mensuales</li>
-                    <li className="flex items-center gap-2">✓ Alertas básicas</li>
-                    <li className="text-muted-fg flex items-center gap-2">✗ Integración Slack</li>
-                  </ul>
-                </div>
-                <button
-                  onClick={() => {
-                    setCurrentPlan('starter');
-                    setShowPlanModal(false);
-                  }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-colors cursor-pointer"
-                >
-                  {currentPlan === 'starter' ? t('planActive') : t('planSelect', { plan: t('planStarter') })}
-                </button>
-              </div>
-
-              {/* Business Tier */}
-              <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 relative ${
-                currentPlan === 'business'
-                  ? 'border-[var(--primary)] bg-[var(--primary)]/[0.03] shadow-[0_4px_30px_rgba(6,182,212,0.15)]'
-                  : 'border-border/50 bg-muted/1 hover:border-border'
-              }`}>
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xs font-black tracking-widest text-[var(--primary)] bg-cyan-400/10 border border-cyan-400/20 px-2.5 py-1 rounded-full uppercase">
-                  {t('planRecommended')}
-                </span>
-                <div className="space-y-3">
-                  <p className="text-xs font-bold text-[var(--primary)] uppercase tracking-widest">{t('planBusiness')}</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white">$149</span>
-                    <span className="text-2xs font-bold text-muted-fg">{t('planPerMonth')}</span>
-                  </div>
-                  <ul className="text-xs text-foreground/80 space-y-2.5 pt-2">
-                    <li className="flex items-center gap-2">✓ 50 Recursos Activos</li>
-                    <li className="flex items-center gap-2">✓ 1,000 scans mensuales</li>
-                    <li className="flex items-center gap-2 text-primary">✓ Webhook Alertas Slack</li>
-                    <li className="flex items-center gap-2 text-primary">✓ Developer API Keys</li>
-                  </ul>
-                </div>
-                <button
-                  onClick={() => {
-                    setCurrentPlan('business');
-                    setShowPlanModal(false);
-                  }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary)]/80 text-black transition-colors cursor-pointer"
-                >
-                  {currentPlan === 'business' ? t('planActive') : t('planSelect', { plan: t('planBusiness') })}
-                </button>
-              </div>
-
-              {/* Enterprise Tier */}
-              <div className={`p-6 rounded-xl border flex flex-col justify-between space-y-6 transition-colors duration-300 ${
-                currentPlan === 'enterprise'
-                  ? 'border-[var(--primary)] bg-[var(--primary)]/[0.02]'
-                  : 'border-border/50 bg-muted/1 hover:border-border'
-              }`}>
-                <div className="space-y-3">
-                  <p className="text-xs font-bold text-muted-fg uppercase tracking-widest">{t('planEnterprise')}</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white">$499</span>
-                    <span className="text-2xs font-bold text-muted-fg">{t('planPerMonth')}</span>
-                  </div>
-                  <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
-                    <li className="flex items-center gap-2">✓ Recursos Ilimitados</li>
-                    <li className="flex items-center gap-2">✓ Escaneos Ilimitados</li>
-                    <li className="flex items-center gap-2 text-primary">✓ Soporte VIP Prioritario</li>
-                    <li className="flex items-center gap-2 text-primary">✓ SLA de Uptime 99.9%</li>
-                  </ul>
-                </div>
-                <button
-                  onClick={() => {
-                    setCurrentPlan('enterprise');
-                    setShowPlanModal(false);
-                  }}
-                  className="w-full text-xs font-bold py-2.5 rounded-lg border border-border text-foreground hover:bg-muted/30 transition-colors cursor-pointer"
-                >
-                  {currentPlan === 'enterprise' ? t('planActive') : t('planSelect', { plan: t('planEnterprise') })}
-                </button>
-              </div>
-
+                );
+              })}
             </div>
           </div>
         </div>

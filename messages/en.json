@@ -508,7 +508,12 @@
     "planPerMonth": "/ month",
     "planActive": "Active Plan",
     "planSelect": "Select {plan}",
-    "planRecommended": "Recommended"
+    "planRecommended": "Recommended",
+    "quotaKeywordsLabel": "Keywords",
+    "quotaPlanInfo": "{plan} plan",
+    "quotaLoading": "Loading plan…",
+    "planViewAll": "View all plans",
+    "planContact": "Contact"
   },
   "keywords": {
     "pageTitle": "Keyword Positioning",
