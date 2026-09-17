@@ -1,6 +1,6 @@
 import { schedules } from "@trigger.dev/sdk";
 import { db } from "@/shared/db";
-import { uptimeLogs, webVitalsLogs } from "@/shared/db/schemas";
+import { uptimeLogs, webVitalsLogs, heatmapSessions, securityAuditLogs } from "@/shared/db/schemas";
 import { lt } from "drizzle-orm";
 
 export const cleanupOldLogs = schedules.task({
@@ -12,6 +12,11 @@ export const cleanupOldLogs = schedules.task({
     
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // P1-5: PII de sesiones (heatmap) 90d; logs de seguridad 365d.
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const yearAgo = new Date();
+    yearAgo.setDate(yearAgo.getDate() - 365);
 
     try {
       const deletedUptime = await db.delete(uptimeLogs)
@@ -20,12 +25,20 @@ export const cleanupOldLogs = schedules.task({
       const deletedVitals = await db.delete(webVitalsLogs)
         .where(lt(webVitalsLogs.recordedAt, thirtyDaysAgo));
 
-      console.log(`[Cleanup] Purga completada. Uptime: ${deletedUptime.rowCount} filas, Vitals: ${deletedVitals.rowCount} filas.`);
+      const deletedHeatmap = await db.delete(heatmapSessions)
+        .where(lt(heatmapSessions.recordedAt, ninetyDaysAgo));
+
+      const deletedSecAudit = await db.delete(securityAuditLogs)
+        .where(lt(securityAuditLogs.createdAt, yearAgo));
+
+      console.log(`[Cleanup] Purga completada. Uptime: ${deletedUptime.rowCount} filas, Vitals: ${deletedVitals.rowCount} filas, Heatmap: ${deletedHeatmap.rowCount} filas, SecAudit: ${deletedSecAudit.rowCount} filas.`);
       
       return {
         success: true,
         uptimeDeleted: deletedUptime.rowCount,
         vitalsDeleted: deletedVitals.rowCount,
+        heatmapDeleted: deletedHeatmap.rowCount,
+        secAuditDeleted: deletedSecAudit.rowCount,
         timestamp: new Date().toISOString()
       };
     } catch (error) {

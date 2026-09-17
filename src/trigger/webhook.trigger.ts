@@ -4,6 +4,7 @@ import { webhookConfigs } from "@/shared/db/schemas";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
+import { decryptField } from "@/server/lib/field-crypto";
 
 export interface WebhookPayload {
   projectId: string;
@@ -48,9 +49,9 @@ export const dispatchWebhookTask = task({
           data: payload.data
         });
 
-        // Firmar el payload con el secret
+        // Firmar el payload con el secret (descifrado; legacy en claro ok)
         const signature = crypto
-          .createHmac("sha256", config.secretToken)
+          .createHmac("sha256", decryptField(config.secretToken))
           .update(body)
           .digest("hex");
 

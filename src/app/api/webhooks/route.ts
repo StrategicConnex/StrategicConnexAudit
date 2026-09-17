@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import crypto from "crypto";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
+import { encryptField, maskSecret } from "@/server/lib/field-crypto";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 
@@ -60,9 +61,7 @@ export async function GET(req: NextRequest) {
         active: wh.active,
         createdAt: wh.createdAt,
         updatedAt: wh.updatedAt,
-        secretTokenPreview: wh.secretToken
-          ? `${wh.secretToken.slice(0, 8)}…`
-          : null,
+        secretTokenPreview: maskSecret(wh.secretToken),
       }));
 
       // Defense-in-depth (VULN-002): even if a future field (name, url, …)
@@ -141,22 +140,25 @@ export async function POST(req: NextRequest) {
         return { success: false, status: 404, error: "Proyecto no encontrado" };
       }
 
-      // Generate secure random signing secret token
+      // Generate secure random signing secret token — cifrado en reposo (P1-5)
       const secretToken = "whsec_" + crypto.randomBytes(24).toString("hex");
 
       const [webhook] = await tx.insert(webhookConfigs).values({
         projectId,
         name,
         url,
-        secretToken,
+        secretToken: encryptField(secretToken),
         events,
         active
       }).returning();
 
+      // El secreto en claro se devuelve UNA sola vez (para configurarlo en
+      // el receptor); en BD queda cifrado. Nunca más vuelve a exponerse.
+      const { secretToken: _stored, ...publicWebhook } = webhook!;
       return {
         success: true,
         status: 200,
-        data: { webhook }
+        data: { webhook: { ...publicWebhook, secretToken }, oneTimeSecret: true }
       };
     });
 
