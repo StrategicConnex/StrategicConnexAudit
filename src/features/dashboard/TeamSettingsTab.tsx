@@ -1,14 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
-import { UserPlus, Shield, Trash2, Mail, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { UserPlus, Shield, Trash2, Mail, CheckCircle2, Clock } from "lucide-react";
 
 interface Member {
   id: string;
+  userId?: string;
   email: string;
   fullName?: string;
   role: "owner" | "admin" | "editor" | "viewer" | "guest";
-  createdAt: string;
+  createdAt: string | null;
+}
+
+interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: string;
 }
 
 interface TeamSettingsTabProps {
@@ -16,27 +24,47 @@ interface TeamSettingsTabProps {
 }
 
 export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
-  const [members, setMembers] = useState<Member[]>([
-    {
-      id: "mem_1",
-      email: "owner@company.com",
-      fullName: "Lead Architect",
-      role: "owner",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "mem_2",
-      email: "secops@company.com",
-      fullName: "Security Ops",
-      role: "editor",
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Member["role"]>("viewer");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+
+  // A-2: datos reales (miembros + invitaciones pendientes), sin fixtures.
+  // Carga inicial inline en el efecto (fetch → setState en callback, como
+  // OverviewTab); `refresh` reutiliza la misma cadena para los handlers.
+  const fetchTeam = useCallback(() => {
+    return fetch(`/api/projects/${projectId}/members`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (data.success) {
+          setMembers(data.members ?? []);
+          setInvitations(data.invitations ?? []);
+        } else {
+          setLoadError(data.error || "No se pudo cargar el equipo.");
+        }
+      })
+      .catch(() => setLoadError("No se pudo cargar el equipo."));
+  }, [projectId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchTeam().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchTeam]);
+
+  const refresh = () => {
+    setLoading(true);
+    fetchTeam().finally(() => setLoading(false));
+  };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,20 +82,45 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
       const data = await res.json();
 
       if (data.success) {
-        setSuccessMsg(`Invitación enviada a ${inviteEmail}`);
+        setSuccessMsg(data.message || `Invitación enviada a ${inviteEmail}`);
         setInviteEmail("");
+        refresh();
+      } else {
+        setSuccessMsg("");
+        setLoadError(data.error || "No se pudo invitar.");
       }
     } catch {
-      // Fallback local update for preview
-      setSuccessMsg(`Invitación simulada enviada a ${inviteEmail}`);
-      setInviteEmail("");
+      setLoadError("No se pudo invitar.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleRemove = (id: string) => {
-    setMembers((prev) => prev.filter((m) => m.id !== id));
+  const handleRemove = async (userId?: string) => {
+    if (!userId || !window.confirm("¿Quitar a este miembro del proyecto?")) return;
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members?memberUserId=${encodeURIComponent(userId)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) refresh();
+      else setLoadError(data.error || "No se pudo quitar al miembro.");
+    } catch {
+      setLoadError("No se pudo quitar al miembro.");
+    }
+  };
+
+  const handleRescind = async (invitationId: string) => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members?invitationId=${encodeURIComponent(invitationId)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) refresh();
+      else setLoadError(data.error || "No se pudo anular la invitación.");
+    } catch {
+      setLoadError("No se pudo anular la invitación.");
+    }
   };
 
   return (
@@ -135,6 +188,12 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
         </div>
 
         <div className="divide-y divide-slate-800">
+          {loading && members.length === 0 && !loadError && (
+            <p className="py-3 text-sm text-slate-400">Cargando equipo…</p>
+          )}
+          {loadError && members.length === 0 && (
+            <p className="py-3 text-sm text-destructive">{loadError}</p>
+          )}
           {members.map((member) => (
             <div key={member.id} className="py-3 flex items-center justify-between">
               <div>
@@ -149,20 +208,50 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
                   {member.role}
                 </span>
 
-                {member.role !== "owner" && (
+                {member.role !== "owner" && member.userId && (
                   <button
-                    onClick={() => handleRemove(member.id)}
+                    onClick={() => handleRemove(member.userId)}
                     className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
                     title="Remover miembro"
+                    aria-label={`Remover a ${member.email}`}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 )}
               </div>
             </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+
+      {invitations.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+          <h3 className="text-lg font-semibold text-slate-100 flex items-center gap-2 mb-4">
+            <Clock className="w-5 h-5 text-indigo-400" />
+            Invitaciones pendientes ({invitations.length})
+          </h3>
+          <div className="divide-y divide-slate-800">
+            {invitations.map((inv) => (
+              <div key={inv.id} className="py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-200">{inv.email}</p>
+                  <p className="text-xs text-slate-400">
+                    Rol {inv.role} · vence {new Date(inv.expiresAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleRescind(inv.id)}
+                  className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                  title="Anular invitación"
+                  aria-label={`Anular invitación a ${inv.email}`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

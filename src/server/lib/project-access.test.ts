@@ -31,10 +31,10 @@ describe("project-access — multi-tenant (P1-6)", () => {
     expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: true, role: "owner" });
   });
 
-  it("miembro pasa con rol member", async () => {
+  it("miembro pasa con su rol real", async () => {
     state.projectRow = { id: "p1", ownerId: "u9" };
     state.memberRow = { role: "viewer" };
-    expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: true, role: "member" });
+    expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: true, role: "viewer" });
   });
 
   it("sin proyecto → 404", async () => {

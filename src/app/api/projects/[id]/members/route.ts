@@ -1,73 +1,114 @@
 import { NextResponse } from "next/server";
-import { ProjectRole } from "@/server/auth/rbac";
+import { z } from "zod";
+import { canPerformAction } from "@/server/auth/rbac";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRLS } from "@/shared/db/rls";
-import { projects } from "@/shared/db/schemas";
+import { projects, users, projectMembers, projectInvitations } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
+import { getProjectRole, type ProjectAccessRole } from "@/server/lib/project-access";
+import {
+  createInvitation,
+  rescindInvitation,
+  removeMember,
+} from "@/server/lib/invitations";
+import { logger } from "@/lib/logger";
 
-/**
- * VULN-008 fix: el endpoint exige sesión y verifica que el proyecto pertenezca
- * al usuario (owner-check bajo RLS) ANTES de responder. El payload sigue siendo
- * mock hasta conectar datos reales, pero la superficie ya no es pública.
- */
-async function authorizeProject(projectId: string): Promise<
-  | { user: { id: string } }
-  | { error: NextResponse }
-> {
+async function authorizeProject(
+  projectId: string,
+  action: "members:view" | "members:manage"
+): Promise<{ userId: string; role: ProjectAccessRole } | { error: NextResponse }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return { error: NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 }) };
   }
-
-  const owned = await withRLS(user.id, async (tx) =>
-    tx.query.projects.findFirst({ where: eq(projects.id, projectId) })
-  );
-  if (!owned) {
+  const role = await getProjectRole(user.id, projectId);
+  if (!role || !canPerformAction(role, action)) {
     return { error: NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 }) };
   }
-
-  return { user: { id: user.id } };
+  return { userId: user.id, role };
 }
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: projectId } = await params;
 
-  const auth = await authorizeProject(projectId);
+  const auth = await authorizeProject(projectId, "members:view");
   if ("error" in auth) return auth.error;
 
-  // Mock response until DB connection / Auth Context is wired in
-  const members = [
-    {
-      id: "mem_1",
-      projectId,
-      userId: "usr_owner",
-      email: "owner@company.com",
-      fullName: "Lead Architect",
-      role: "owner" as ProjectRole,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "mem_2",
-      projectId,
-      userId: "usr_editor",
-      email: "security-engineer@company.com",
-      fullName: "Security Ops",
-      role: "editor" as ProjectRole,
-      createdAt: new Date().toISOString(),
-    }
-  ];
+  const data = await withRLS(auth.userId, async (tx) => {
+    const project = await tx.query.projects.findFirst({
+      where: eq(projects.id, projectId),
+      columns: { id: true, ownerId: true },
+    });
+    if (!project) return null;
 
-  return NextResponse.json({
-    success: true,
-    projectId,
-    members,
-    invitations: [],
+    const [owner, members, invitations] = await Promise.all([
+      tx.query.users.findFirst({
+        where: eq(users.id, project.ownerId),
+        columns: { id: true, email: true, fullName: true },
+      }),
+      tx
+        .select({
+          id: projectMembers.id,
+          userId: projectMembers.userId,
+          role: projectMembers.role,
+          email: users.email,
+          fullName: users.fullName,
+          createdAt: projectMembers.createdAt,
+        })
+        .from(projectMembers)
+        .leftJoin(users, eq(users.id, projectMembers.userId))
+        .where(eq(projectMembers.projectId, projectId)),
+      tx.query.projectInvitations.findMany({
+        where: eq(projectInvitations.projectId, projectId),
+        columns: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
+      }),
+    ]);
+
+    return {
+      members: [
+        ...(owner
+          ? [{
+            id: `owner-${owner.id}`,
+            userId: owner.id,
+            email: owner.email,
+            fullName: owner.fullName ?? undefined,
+            role: "owner" as const,
+            createdAt: null as string | null,
+          }]
+          : []),
+        ...members.map((m) => ({
+          id: m.id,
+          userId: m.userId,
+          email: m.email ?? "—",
+          fullName: m.fullName ?? undefined,
+          role: m.role,
+          createdAt: m.createdAt?.toISOString() ?? null,
+        })),
+      ],
+      invitations: invitations.map((i) => ({
+        id: i.id,
+        email: i.email,
+        role: i.role,
+        expiresAt: i.expiresAt.toISOString(),
+        createdAt: i.createdAt?.toISOString() ?? null,
+      })),
+    };
   });
+
+  if (!data) {
+    return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
+  }
+  return NextResponse.json({ success: true, projectId, ...data });
 }
+
+const inviteSchema = z.object({
+  email: z.string().email().max(320),
+  role: z.enum(["admin", "editor", "viewer", "guest"]),
+});
 
 export async function POST(
   request: Request,
@@ -75,40 +116,66 @@ export async function POST(
 ) {
   const { id: projectId } = await params;
 
-  const auth = await authorizeProject(projectId);
+  const auth = await authorizeProject(projectId, "members:manage");
   if ("error" in auth) return auth.error;
 
   try {
-    const body = await request.json();
-    const { email, role } = body as { email: string; role: ProjectRole };
-
-    if (!email || !role) {
-      return NextResponse.json(
-        { success: false, error: "Email y rol son requeridos" },
-        { status: 400 }
-      );
+    const parsed = inviteSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Email y rol válidos son requeridos" }, { status: 400 });
     }
 
-    // Mock response for invitation creation
-    const invitation = {
-      id: `inv_${Date.now()}`,
+    const project = await withRLS(auth.userId, async (tx) =>
+      tx.query.projects.findFirst({
+        where: eq(projects.id, projectId),
+        columns: { id: true, name: true },
+      })
+    );
+    if (!project) {
+      return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
+    }
+
+    const invitation = await createInvitation(
       projectId,
-      email,
-      role,
-      token: `tok_${Math.random().toString(36).substring(2)}`,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      createdAt: new Date().toISOString(),
-    };
+      project.name,
+      parsed.data.email,
+      parsed.data.role,
+      auth.userId
+    );
 
     return NextResponse.json({
       success: true,
-      message: `Invitación enviada exitosamente a ${email}`,
+      message: invitation.emailSent
+        ? `Invitación enviada a ${invitation.email}`
+        : `Invitación creada. Sin email configurado: comparte este link: ${invitation.inviteUrl}`,
       invitation,
     });
-  } catch {
-    return NextResponse.json(
-      { success: false, error: "Error al procesar la solicitud" },
-      { status: 500 }
-    );
+  } catch (error) {
+    logger.error("POST members failure:", { error: error instanceof Error ? error.message : String(error) });
+    return NextResponse.json({ success: false, error: "Error al procesar la solicitud" }, { status: 500 });
   }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: projectId } = await params;
+
+  const auth = await authorizeProject(projectId, "members:manage");
+  if ("error" in auth) return auth.error;
+
+  const { searchParams } = new URL(request.url);
+  const memberUserId = searchParams.get("memberUserId");
+  const invitationId = searchParams.get("invitationId");
+
+  if (memberUserId) {
+    const ok = await removeMember(projectId, memberUserId);
+    return NextResponse.json({ success: ok });
+  }
+  if (invitationId) {
+    const ok = await rescindInvitation(invitationId);
+    return NextResponse.json({ success: ok });
+  }
+  return NextResponse.json({ success: false, error: "Falta memberUserId o invitationId" }, { status: 400 });
 }
