@@ -118,25 +118,29 @@ async function main() {
       { projectId: insertedProjects[0]!.id, domain: 'https://competitor1.com', name: 'Competitor 1', daScore: 45 },
     ]).returning();
 
-    logger.info('Seeding Backlinks...');
-    const insertedBacklinks = await db.insert(schema.backlinks).values([
-      { projectId: insertedProjects[0]!.id, sourceUrl: 'https://blog.example.com/shoes', targetUrl: 'https://ecommerce.example.com/', firstDetectedAt: new Date().toISOString(), lastSeenAt: new Date().toISOString(), domainAuthority: 60 },
-    ]).returning();
-
-    logger.info('Seeding A/B Tests...');
-    const insertedAbTests = await db.insert(schema.abTests).values([
-      { projectId: insertedProjects[0]!.id, name: 'Hero CTA Color', url: 'https://ecommerce.example.com/', variants: { A: 'Red', B: 'Blue' }, goalMetric: 'clicks', status: 'running' },
-    ]).returning();
-
-    logger.info('Seeding Heatmap Sessions...');
-    await db.insert(schema.heatmapSessions).values([
-      { projectId: insertedProjects[0]!.id, url: 'https://ecommerce.example.com/', sessionData: { clicks: [{ x: 100, y: 200 }] } },
-    ]);
-
-    logger.info('Seeding Schema Validations...');
-    await db.insert(schema.schemaValidations).values([
-      { projectId: insertedProjects[0]!.id, url: 'https://ecommerce.example.com/product/1', isValid: true, jsonLd: { "@context": "https://schema.org", "@type": "Product" } },
-    ]);
+    // C-5: tablas fantasma (backlinks, ab_tests, heatmap, schema) sin UI/API
+    // se dejan vacías en seed para no generar ruido. Habilitar con
+    // SEED_PHANTOM=true si se necesita para demos.
+    let insertedBacklinks: Array<{ id: string }> = [];
+    let insertedAbTests: Array<{ id: string }> = [];
+    if (process.env.SEED_PHANTOM === 'true') {
+      logger.info('Seeding Backlinks (phantom demo)...');
+      insertedBacklinks = await db.insert(schema.backlinks).values([
+        { projectId: insertedProjects[0]!.id, sourceUrl: 'https://blog.example.com/shoes', targetUrl: 'https://ecommerce.example.com/', firstDetectedAt: new Date().toISOString(), lastSeenAt: new Date().toISOString(), domainAuthority: 60 },
+      ]).returning();
+      logger.info('Seeding A/B Tests (phantom demo)...');
+      insertedAbTests = await db.insert(schema.abTests).values([
+        { projectId: insertedProjects[0]!.id, name: 'Hero CTA Color', url: 'https://ecommerce.example.com/', variants: { A: 'Red', B: 'Blue' }, goalMetric: 'clicks', status: 'running' },
+      ]).returning();
+      logger.info('Seeding Heatmap Sessions (phantom demo)...');
+      await db.insert(schema.heatmapSessions).values([
+        { projectId: insertedProjects[0]!.id, url: 'https://ecommerce.example.com/', sessionData: { clicks: [{ x: 100, y: 200 }] } },
+      ]);
+      logger.info('Seeding Schema Validations (phantom demo)...');
+      await db.insert(schema.schemaValidations).values([
+        { projectId: insertedProjects[0]!.id, url: 'https://ecommerce.example.com/product/1', isValid: true, jsonLd: { "@context": "https://schema.org", "@type": "Product" } },
+      ]);
+    }
 
     logger.info('Seeding Reports...');
     const insertedReports = await db.insert(schema.reports).values([
@@ -175,15 +179,18 @@ async function main() {
       { competitorId: insertedCompetitors[0]!.id, keyword: 'buy shoes online', position: 3, checkedAt: new Date().toISOString() },
     ]);
 
-    logger.info('Seeding Backlink History...');
-    await db.insert(schema.backlinkHistory).values([
-      { backlinkId: insertedBacklinks[0]!.id, domainAuthority: 60, checkedAt: new Date().toISOString() },
-    ]);
-
-    logger.info('Seeding A/B Test Results...');
-    await db.insert(schema.abTestResults).values([
-      { testId: insertedAbTests[0]!.id, variantName: 'A', visitors: 1000, conversions: 50, date: new Date().toISOString() },
-    ]);
+    if (insertedBacklinks.length > 0) {
+      logger.info('Seeding Backlink History (phantom demo)...');
+      await db.insert(schema.backlinkHistory).values([
+        { backlinkId: insertedBacklinks[0]!.id, domainAuthority: 60, checkedAt: new Date().toISOString() },
+      ]);
+    }
+    if (insertedAbTests.length > 0) {
+      logger.info('Seeding A/B Test Results (phantom demo)...');
+      await db.insert(schema.abTestResults).values([
+        { testId: insertedAbTests[0]!.id, variantName: 'A', visitors: 1000, conversions: 50, date: new Date().toISOString() },
+      ]);
+    }
 
     logger.info('Seeding Report Exports...');
     await db.insert(schema.reportExports).values([
