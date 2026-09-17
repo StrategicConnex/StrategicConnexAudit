@@ -225,6 +225,13 @@
       "when": 1788720000005,
       "tag": "0031_forecasts",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788720000006,
+      "tag": "0032_remediation_actions",
+      "breakpoints": true
     }
   ]
 }

@@ -5,8 +5,9 @@ import { useTranslations } from 'next-intl';
 import { AssessmentProgressBar } from './AssessmentProgressBar';
 import {
   Radar, Loader2, AlertTriangle, ChevronDown, ShieldAlert,
-  FileDown, CheckCircle2, XCircle, Clock, Zap
+  FileDown, CheckCircle2, XCircle, Clock, Zap, Wrench
 } from 'lucide-react';
+import { RemediationPanel } from '../RemediationPanel';
 
 interface AssessmentRow {
   id: string;
@@ -58,6 +59,8 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
   const [savingConsent, setSavingConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedVuln, setExpandedVuln] = useState<string | null>(null);
+  // C-2: prefill del panel de remediación desde un hallazgo.
+  const [remediationPrefill, setRemediationPrefill] = useState<{ title: string; steps: string[] } | null>(null);
   const [prevProjectId, setPrevProjectId] = useState(projectId);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Ref al fetcher vigente: evita que el intervalo capture una clausura
@@ -333,13 +336,19 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
                               )}
                               <div>
                                 <span className="text-2xs font-bold text-chartreuse uppercase tracking-widest block mb-1.5">Remediación</span>
-                                <ol className="space-y-1">
+                                <ol className="space-y-1 mb-3">
                                   {v.remediation.map((step, i) => (
                                     <li key={i} className="text-2xs text-foreground/75 flex gap-2">
                                       <span className="text-chartreuse font-bold">{i + 1}.</span>{step}
                                     </li>
                                   ))}
                                 </ol>
+                                <button
+                                  onClick={() => setRemediationPrefill({ title: v.title, steps: v.remediation })}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 text-primary text-2xs font-extrabold uppercase tracking-widest hover:bg-primary/10 transition-colors cursor-pointer"
+                                >
+                                  <Wrench aria-hidden="true" className="w-3 h-3" /> Crear acción
+                                </button>
                               </div>
                               {v.references.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
@@ -369,6 +378,13 @@ export function RealAssessmentSection({ projectId }: { projectId: string }) {
                   {t('analysisFailed')}
                 </div>
               )}
+
+              {/* C-2: motor de remediación (proponer → aprobar → ejecutar) */}
+              <RemediationPanel
+                key={selected.assessment.id}
+                projectId={projectId}
+                prefill={remediationPrefill}
+              />
             </div>
           )}
         </div>
