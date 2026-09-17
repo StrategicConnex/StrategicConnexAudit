@@ -180,7 +180,20 @@
     "previewBadge": "Sample data",
     "projectsEmptyTitle": "No projects yet",
     "projectsEmptyDesc": "Create your first project to start monitoring its technical health and attack surface.",
-    "projectsEmptyCta": "View projects"
+    "projectsEmptyCta": "View projects",
+    "onboarding": {
+      "title": "First steps",
+      "dismiss": "Hide guide",
+      "step1": "Create your first project",
+      "step1Hint": "Add the website you want to watch.",
+      "step1Cta": "Create project",
+      "step2": "Run your first scan",
+      "step2Hint": "We check your site and tell you what we find.",
+      "step2Cta": "Scan",
+      "step3": "See your first report",
+      "step3Hint": "Download or generate the summary to share.",
+      "step3Cta": "View reports"
+    }
   },
   "benchmarking": {
     "title": "Industry Benchmarking",

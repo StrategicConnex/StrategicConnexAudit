@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl';
 import { ProjectCard } from '../ProjectCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { JargonTerm } from '@/components/ui/JargonTerm';
+import { OnboardingChecklist } from '../OnboardingChecklist';
 import { Card } from '@/components/ui/Card';
 import type { ProjectWithNested } from '@/shared/db/types';
 
@@ -132,6 +133,13 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId }: Overview
         </h2>
         <p className="text-sm text-muted-fg mt-0.5">{t('pageSubtitle')}</p>
       </div>
+
+      {/* P1-1 Onboarding: solo visible hasta completar u ocultar */}
+      <OnboardingChecklist
+        projectCount={dashboardData.length}
+        hasAudit={dashboardData.some((p) => !!p.latestAudit)}
+        setActiveTab={setActiveTab}
+      />
 
       {/* ═══ 1. HERO CARD — telemetría real (últimos chequeos 24h) ═══ */}
       <Card variant="hero" className="p-6 sm:p-8 overflow-hidden">

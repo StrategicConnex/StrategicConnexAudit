@@ -180,7 +180,20 @@
     "previewBadge": "Datos de ejemplo",
     "projectsEmptyTitle": "Todavía no hay proyectos",
     "projectsEmptyDesc": "Crea tu primer proyecto para empezar a monitorear su salud técnica y superficie de ataque.",
-    "projectsEmptyCta": "Ver proyectos"
+    "projectsEmptyCta": "Ver proyectos",
+    "onboarding": {
+      "title": "Primeros pasos",
+      "dismiss": "Ocultar guía",
+      "step1": "Crea tu primer proyecto",
+      "step1Hint": "Agrega el sitio web que quieres vigilar.",
+      "step1Cta": "Crear proyecto",
+      "step2": "Ejecuta tu primer escaneo",
+      "step2Hint": "Revisamos tu sitio y te contamos qué encontramos.",
+      "step2Cta": "Escanear",
+      "step3": "Mira tu primer informe",
+      "step3Hint": "Descarga o genera el resumen para compartir.",
+      "step3Cta": "Ver informes"
+    }
   },
   "benchmarking": {
     "title": "Comparativa del sector",
