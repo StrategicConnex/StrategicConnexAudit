@@ -1,15 +1,18 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { TrendingUp, Search, Plus, ArrowUpRight, ArrowDownRight, SearchX } from 'lucide-react';
+import { TrendingUp, Search, Plus, ArrowUpRight, ArrowDownRight, SearchX, X, Globe } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import type { GscTotals, CompetitorRow } from '@/app/actions/keywords';
 
 export interface KeywordItem {
   id: string | number;
   keyword: string;
   project: string;
   volume: string | number;
-  difficulty: number;
-  position: number;
+  /** null = sin fuente de datos (no inventar KD) */
+  difficulty: number | null;
+  /** null = sin rank registrado todavía */
+  position: number | null;
   trend: 'up' | 'down' | 'stable';
   change: string;
 }
@@ -19,9 +22,20 @@ interface KeywordsTabProps {
   keywordInput: string;
   setKeywordInput: (val: string) => void;
   handleAddKeyword: (e: React.FormEvent) => void;
+  onDeleteKeyword: (id: string) => void;
+  gsc: GscTotals;
+  competitors: CompetitorRow[];
+  competitorInput: string;
+  setCompetitorInput: (val: string) => void;
+  onAddCompetitor: (e: React.FormEvent) => void;
+  onDeleteCompetitor: (id: string) => void;
 }
 
-export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handleAddKeyword }: KeywordsTabProps) {
+export function KeywordsTab({
+  keywordsList, keywordInput, setKeywordInput, handleAddKeyword,
+  onDeleteKeyword, gsc, competitors, competitorInput, setCompetitorInput,
+  onAddCompetitor, onDeleteCompetitor,
+}: KeywordsTabProps) {
   const t = useTranslations('keywords');
   return (
     <div className="space-y-12 relative z-10 font-sans text-foreground">
@@ -31,14 +45,14 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
         <p className="text-xs text-muted-fg mt-1">{t('pageSubtitle')}</p>
       </div>
 
-      {/* GSC Integrations Metrics */}
+      {/* GSC Integrations Metrics — reales o "—" honesto, nunca fixtures */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        {[
-          { label: t('metricImpressions'), value: '124.8K', change: '+14.2%', trend: 'up' },
-          { label: t('metricClicks'), value: '8,420', change: '+8.6%', trend: 'up' },
-          { label: t('metricCtr'), value: '6.74%', change: t('metricStable'), trend: 'stable' },
-          { label: t('metricPosition'), value: '4.2', change: '+0.4', trend: 'up' },
-        ].map((metric, i) => (
+        {([
+          { label: t('metricImpressions'), value: gsc.hasData ? gsc.impressions.toLocaleString() : '—', change: gsc.hasData ? '' : t('metricNoData'), trend: 'stable' },
+          { label: t('metricClicks'), value: gsc.hasData ? gsc.clicks.toLocaleString() : '—', change: gsc.hasData ? '' : t('metricNoData'), trend: 'stable' },
+          { label: t('metricCtr'), value: gsc.ctr !== null ? `${gsc.ctr.toFixed(2)}%` : '—', change: gsc.ctr !== null ? t('metricStable') : t('metricNoData'), trend: 'stable' },
+          { label: t('metricPosition'), value: gsc.position !== null ? gsc.position.toFixed(1) : '—', change: gsc.position !== null ? '' : t('metricNoData'), trend: 'stable' },
+        ] as { label: string; value: string; change: string; trend: 'up' | 'stable' }[]).map((metric, i) => (
           <div key={i} className="glass-card p-8 flex flex-col gap-4 ">
             <div className="flex items-center justify-between">
               <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest">{metric.label}</h3>
@@ -101,6 +115,7 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
                 <th className="px-8 py-5 text-center">{t('colDifficulty')}</th>
                 <th className="px-8 py-5 text-center">{t('colPosition')}</th>
                 <th className="px-8 py-5 text-center">{t('colChange')}</th>
+                <th className="px-8 py-5"><span className="sr-only">{t('deleteKeyword')}</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04] text-sm">
@@ -112,16 +127,24 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
                   <td className="px-8 py-6 text-2xs font-bold text-muted-fg uppercase tracking-wider">{kw.project}</td>
                   <td className="px-8 py-6 text-center font-bold text-foreground/80">{kw.volume}</td>
                   <td className="px-8 py-6 text-center">
-                    <span className={`px-2.5 py-1 rounded-full text-2xs font-bold border ${
-                      kw.difficulty > 50 ? 'bg-destructive/10 text-destructive border-destructive/20' :
-                      kw.difficulty > 30 ? 'bg-[oklch(75% 0.13 80)]/10 text-[oklch(75% 0.13 80)] border-[oklch(75% 0.13 80)]/20' :
-                      'bg-chartreuse/10 text-chartreuse border-chartreuse/20'
-                    }`}>
-                      {kw.difficulty}%
-                    </span>
+                    {kw.difficulty === null ? (
+                      <span className="text-muted-fg text-2xs font-bold">—</span>
+                    ) : (
+                      <span className={`px-2.5 py-1 rounded-full text-2xs font-bold border ${
+                        kw.difficulty > 50 ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                        kw.difficulty > 30 ? 'bg-[oklch(75% 0.13 80)]/10 text-[oklch(75% 0.13 80)] border-[oklch(75% 0.13 80)]/20' :
+                        'bg-chartreuse/10 text-chartreuse border-chartreuse/20'
+                      }`}>
+                        {kw.difficulty}%
+                      </span>
+                    )}
                   </td>
                   <td className="px-8 py-6 text-center">
-                    <span className="font-extrabold text-primary text-lg tracking-tighter">#{kw.position}</span>
+                    {kw.position === null ? (
+                      <span className="text-muted-fg text-2xs font-bold">—</span>
+                    ) : (
+                      <span className="font-extrabold text-primary text-lg tracking-tighter">#{kw.position}</span>
+                    )}
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center justify-center gap-1.5">
@@ -136,6 +159,16 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
                       )}
                     </div>
                   </td>
+                  <td className="px-8 py-6 text-center">
+                    <button
+                      onClick={() => onDeleteKeyword(String(kw.id))}
+                      aria-label={`${t('deleteKeyword')}: ${kw.keyword}`}
+                      title={t('deleteKeyword')}
+                      className="p-1.5 rounded-lg text-muted-fg hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                    >
+                      <X aria-hidden="true" className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -148,6 +181,53 @@ export function KeywordsTab({ keywordsList, keywordInput, setKeywordInput, handl
             />
           )}
         </div>
+      </div>
+
+      {/* Competidores: dominios rivales + aviso honesto de rankings futuros */}
+      <div className="glass-card p-10 relative overflow-hidden">
+        <div className="mb-8">
+          <h3 className="font-extrabold text-white text-lg tracking-tight">{t('compTitle')}</h3>
+          <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-1">{t('compDesc')}</p>
+        </div>
+        <form onSubmit={onAddCompetitor} className="flex gap-4 flex-col sm:flex-row relative z-10 mb-6">
+          <div className="relative flex-1">
+            <Globe aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
+            <input
+              type="text"
+              value={competitorInput}
+              onChange={(e) => setCompetitorInput(e.target.value)}
+              placeholder={t('compPlaceholder')}
+              className="w-full bg-card border border-border focus:border-primary rounded-xl pl-12 pr-4 py-3.5 text-foreground/80 text-sm focus:outline-none transition-[color,background-color,border-color,box-shadow] placeholder-zinc-600"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-8 py-3.5 bg-primary text-primary-foreground text-2xs font-extrabold uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> {t('compAdd')}
+          </button>
+        </form>
+        {competitors.length === 0 ? (
+          <p className="text-sm text-muted-fg">{t('compEmpty')}</p>
+        ) : (
+          <ul className="space-y-2">
+            {competitors.map((c) => (
+              <li key={c.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-muted/10">
+                <Globe aria-hidden="true" className="w-4 h-4 text-muted-fg shrink-0" />
+                <span className="font-bold text-white text-sm truncate flex-1">{c.domain}</span>
+                <span className="text-2xs text-muted-fg">{t('compFuture')}</span>
+                <button
+                  onClick={() => onDeleteCompetitor(c.id)}
+                  aria-label={`${t('deleteKeyword')}: ${c.domain}`}
+                  title={t('deleteKeyword')}
+                  className="p-1.5 rounded-lg text-muted-fg hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                >
+                  <X aria-hidden="true" className="w-4 h-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

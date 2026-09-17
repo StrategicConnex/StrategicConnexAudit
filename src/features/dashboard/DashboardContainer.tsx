@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { DashboardSidebar, type DashboardTab } from './DashboardSidebar';
 import { MobileNav } from './MobileNav';
@@ -59,6 +59,11 @@ const MarketplaceTab = dynamic(() => import('./tabs/MarketplaceTab').then(mod =>
 import { IntelligenceTabSkeleton } from './IntelligenceTabSkeleton';
 
 import { useAiReport } from './useAiReport';
+import {
+  listKeywordData, addKeywordTarget, removeKeywordTarget,
+  addCompetitor, removeCompetitor,
+  type GscTotals, type CompetitorRow,
+} from '@/app/actions/keywords';
 
 const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mod.NewProjectModal), {
   loading: () => <div className="w-9 h-9 bg-muted/30 rounded-lg animate-pulse" />,
@@ -82,28 +87,91 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
   // Sin fixtures: la lista arranca vacía y KeywordsTab muestra su empty state.
   const [keywordsList, setKeywordsList] = useState<KeywordItem[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjects[0]?.id || '');
+  const activeTabRef = useRef<DashboardTab>(activeTab);
+  const projectRef = useRef<string>(selectedProjectId);
   // El copilot "escucha" mientras genera → la red neuronal acelera su pulso
   const [copilotGenerating, setCopilotGenerating] = useState(false);
 
   // AI Report state and actions live in the hook
   const aiReport = useAiReport(selectedProjectId);
 
-  // Keyword management
-  const handleAddKeyword = (e: React.FormEvent) => {
+  // Keyword management — P1-2: persiste en BD (keyword_targets) + GSC real
+  const [gscTotals, setGscTotals] = useState<GscTotals>({ impressions: 0, clicks: 0, ctr: null, position: null, hasData: false });
+  const [competitorsList, setCompetitorsList] = useState<CompetitorRow[]>([]);
+  const [competitorInput, setCompetitorInput] = useState('');
+  const [keywordsLoading, setKeywordsLoading] = useState(false);
+
+  const loadKeywords = useCallback(async (projectId: string) => {
+    if (!projectId) {
+      setKeywordsList([]);
+      setCompetitorsList([]);
+      setGscTotals({ impressions: 0, clicks: 0, ctr: null, position: null, hasData: false });
+      return;
+    }
+    setKeywordsLoading(true);
+    try {
+      const result = await listKeywordData({ projectId });
+      if (result.data?.keywords) {
+        setKeywordsList(result.data.keywords.map((k) => ({
+          id: k.id,
+          keyword: k.keyword,
+          project: k.projectName,
+          volume: k.volume ?? '—',
+          difficulty: k.difficulty,
+          position: k.position,
+          trend: 'stable' as const,
+          change: '—',
+        })));
+        setGscTotals(result.data.gsc);
+        setCompetitorsList(result.data.competitors);
+      }
+    } finally {
+      setKeywordsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+    projectRef.current = selectedProjectId;
+  });
+
+  // Carga perezosa de keywords: solo al abrir la pestaña o cambiar de
+  // proyecto estando en ella (P1-2). Sin useEffect con setState: eventos.
+  const openTab = useCallback((tab: DashboardTab) => {
+    setActiveTab(tab);
+    if (tab === 'keywords') void loadKeywords(projectRef.current);
+  }, [loadKeywords]);
+
+  const pickProject = useCallback((id: string) => {
+    setSelectedProjectId(id);
+    projectRef.current = id;
+    if (activeTabRef.current === 'keywords') void loadKeywords(id);
+  }, [loadKeywords]);
+
+  const handleAddKeyword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!keywordInput.trim()) return;
-    const newKw: KeywordItem = {
-      id: Date.now().toString(),
-      keyword: keywordInput.toLowerCase().trim(),
-      volume: 'N/A',
-      difficulty: 0,
-      position: 0,
-      change: 'New',
-      trend: 'stable',
-      project: dashboardData[0]?.name || 'Proyectos Generales',
-    };
-    setKeywordsList([newKw, ...keywordsList]);
+    if (!keywordInput.trim() || !selectedProjectId) return;
+    const result = await addKeywordTarget({ projectId: selectedProjectId, keyword: keywordInput.trim() });
+    if (result.data?.success) await loadKeywords(selectedProjectId);
     setKeywordInput('');
+  };
+
+  const handleDeleteKeyword = async (id: string) => {
+    const result = await removeKeywordTarget({ id });
+    if (result.data?.success && selectedProjectId) await loadKeywords(selectedProjectId);
+  };
+
+  const handleAddCompetitor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!competitorInput.trim() || !selectedProjectId) return;
+    const result = await addCompetitor({ projectId: selectedProjectId, domain: competitorInput.trim() });
+    if (result.data?.success && selectedProjectId) await loadKeywords(selectedProjectId);
+    setCompetitorInput('');
+  };
+
+  const handleDeleteCompetitor = async (id: string) => {
+    const result = await removeCompetitor({ id });
+    if (result.data?.success && selectedProjectId) await loadKeywords(selectedProjectId);
   };
 
   return (
@@ -115,7 +183,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
       {/* Sidebar Component */}
       <DashboardSidebar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={openTab}
         projectCount={initialProjects.length}
       />
 
@@ -123,7 +191,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
       <MobileNav
         open={mobileNavOpen}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={openTab}
         onClose={() => setMobileNavOpen(false)}
       />
 
@@ -134,7 +202,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
           activeTab={activeTab} 
           NewProjectModal={NewProjectModal} 
           onMenu={() => setMobileNavOpen(true)}
-          onNavigateProjects={() => setActiveTab('projects')}
+          onNavigateProjects={() => openTab('projects')}
         />
 
         {/* Dynamic Content Panel */}
@@ -145,7 +213,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
               <OverviewTab 
                 initialProjects={initialProjects} 
                 dashboardData={dashboardData} 
-                setActiveTab={(tab) => setActiveTab(tab as DashboardTab)}
+                setActiveTab={(tab) => openTab(tab as DashboardTab)}
                 projectId={selectedProjectId}
               />
             )}
@@ -169,6 +237,13 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
                 keywordInput={keywordInput}
                 setKeywordInput={setKeywordInput}
                 handleAddKeyword={handleAddKeyword}
+                onDeleteKeyword={handleDeleteKeyword}
+                gsc={gscTotals}
+                competitors={competitorsList}
+                competitorInput={competitorInput}
+                setCompetitorInput={setCompetitorInput}
+                onAddCompetitor={handleAddCompetitor}
+                onDeleteCompetitor={handleDeleteCompetitor}
               />
             )}
 
@@ -176,11 +251,11 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
               <ReportsTab 
                 initialProjects={initialProjects}
                 selectedProjectId={selectedProjectId}
-                setSelectedProjectId={setSelectedProjectId}
+                setSelectedProjectId={pickProject}
                 aiReport={aiReport}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
-                setActiveTab={(tab) => setActiveTab(tab as DashboardTab)}
+                setActiveTab={(tab) => openTab(tab as DashboardTab)}
               />
             )}
 
@@ -188,7 +263,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
               <SettingsTab 
                 initialProjects={initialProjects}
                 selectedProjectId={selectedProjectId}
-                setSelectedProjectId={setSelectedProjectId}
+                setSelectedProjectId={pickProject}
               />
             )}
 
@@ -196,7 +271,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
               <IntelligenceTab 
                 initialProjects={initialProjects}
                 selectedProjectId={selectedProjectId}
-                setSelectedProjectId={setSelectedProjectId}
+                setSelectedProjectId={pickProject}
               />
             )}
 
@@ -204,7 +279,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
               <MonitoringTab 
                 initialProjects={initialProjects}
                 selectedProjectId={selectedProjectId}
-                setSelectedProjectId={setSelectedProjectId}
+                setSelectedProjectId={pickProject}
               />
             )}
 
@@ -212,7 +287,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
               <AdversaryTab
                 projectId={selectedProjectId}
                 initialProjects={initialProjects}
-                setSelectedProjectId={setSelectedProjectId}
+                setSelectedProjectId={pickProject}
               />
             )}
 

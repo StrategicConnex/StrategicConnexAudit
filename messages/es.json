@@ -498,7 +498,15 @@
     "colVolume": "Volumen",
     "colDifficulty": "KD%",
     "colPosition": "Posición",
-    "colChange": "Cambio"
+    "colChange": "Cambio",
+    "metricNoData": "Sin datos",
+    "deleteKeyword": "Dejar de rastrear",
+    "compTitle": "Competidores",
+    "compDesc": "Dominios rivales para comparar cuando haya datos",
+    "compPlaceholder": "rival.com…",
+    "compAdd": "Agregar rival",
+    "compEmpty": "Todavía no sigues a ningún rival. Agrega su dominio arriba.",
+    "compFuture": "Rankings próximamente"
   },
   "adversary": {
     "pageTitle": "Simulación de Adversarios",
