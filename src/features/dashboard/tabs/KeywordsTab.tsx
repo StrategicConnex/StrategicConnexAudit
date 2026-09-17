@@ -31,12 +31,32 @@ interface KeywordsTabProps {
   onDeleteCompetitor: (id: string) => void;
   /** A-3: viewer/guest ven datos pero no agregan ni borran. */
   canEdit: boolean;
+  onImportCsv: (rows: Array<{ keyword: string; position?: number; date?: string }>) => void;
+}
+
+function parseKeywordCsv(text: string): Array<{ keyword: string; position?: number; date?: string }> {
+  const rows: Array<{ keyword: string; position?: number; date?: string }> = [];
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const [keyword = "", positionRaw = "", dateRaw = ""] = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    if (!keyword || /^keyword$/i.test(keyword)) continue; // encabezado opcional
+    const row: { keyword: string; position?: number; date?: string } = { keyword };
+    const position = Number(positionRaw);
+    if (positionRaw !== "" && Number.isInteger(position) && position >= 1 && position <= 1000) {
+      row.position = position;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) row.date = dateRaw;
+    rows.push(row);
+    if (rows.length >= 500) break;
+  }
+  return rows;
 }
 
 export function KeywordsTab({
   keywordsList, keywordInput, setKeywordInput, handleAddKeyword,
   onDeleteKeyword, gsc, competitors, competitorInput, setCompetitorInput,
-  onAddCompetitor, onDeleteCompetitor, canEdit,
+  onAddCompetitor, onDeleteCompetitor, canEdit, onImportCsv,
 }: KeywordsTabProps) {
   const t = useTranslations('keywords');
   return (
@@ -105,9 +125,30 @@ export function KeywordsTab({
 
       {/* Tracked keywords list */}
       <div className="glass-card overflow-hidden ">
-        <div className="p-8 border-b border-border bg-muted/1">
-          <h3 className="font-extrabold text-white text-base tracking-tight">{t('tableTitle')}</h3>
-          <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">{t('tableDesc')}</p>
+        <div className="p-8 border-b border-border bg-muted/1 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <h3 className="font-extrabold text-white text-base tracking-tight">{t('tableTitle')}</h3>
+            <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">{t('tableDesc')}</p>
+          </div>
+          {canEdit && (
+            <label title={t('importCsvHint')} className="shrink-0 px-5 py-2.5 rounded-xl border border-border text-2xs font-extrabold uppercase tracking-widest text-muted-fg hover:text-foreground hover:border-primary/40 transition-colors cursor-pointer">
+              {t('importCsv')}
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  file.text().then((text) => {
+                    const rows = parseKeywordCsv(text);
+                    if (rows.length > 0) onImportCsv(rows);
+                  }).catch(() => {});
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">

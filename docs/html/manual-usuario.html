@@ -83,7 +83,7 @@
 flowchart LR
     A["Abrir scaudit.vercel.app"] --> B["Login con Magic Link"]
     B --> C["Crear proyecto"]
-    C --> D["Conectar GSC / GA4 (opcional)"]
+    C --> D["RUM + CSV de posiciones (opcional)"]
     D --> E["Ejecutar escaneo de inteligencia"]
     E --> F["Revisar hallazgos + score"]
     F --> G["Generar reporte IA / PDF"]
@@ -147,7 +147,7 @@ flowchart TB
     <ol>
       <li>Haz clic en <span class="ui">Nuevo Proyecto</span> (esquina superior derecha).</li>
       <li>Completa: nombre del proyecto, dominio (ej. <code>tuempresa.com</code>).</li>
-      <li>Opcional: conecta Google Search Console y Google Analytics 4.</li>
+      <li>Opcional: instala el snippet RUM (tarjeta RUM del proyecto) y sube tus posiciones con <span class="ui">Importar CSV</span> en Palabras Clave (formato <code>keyword,position,date</code>). La conexi&oacute;n directa con Google Search Console a&uacute;n no est&aacute; disponible.</li>
       <li>Presiona <span class="ui">Crear</span>.</li>
     </ol>
     <h3>4.2 Acciones sobre un proyecto</h3>

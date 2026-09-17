@@ -545,7 +545,9 @@
     "compPlaceholder": "rival.com…",
     "compAdd": "Add rival",
     "compEmpty": "You're not following any rival yet. Add their domain above.",
-    "compFuture": "Rankings coming soon"
+    "compFuture": "Rankings coming soon",
+    "importCsv": "Import CSV",
+    "importCsvHint": "File keyword,position,date — e.g. my store,4,2026-09-01. Max 500 rows."
   },
   "adversary": {
     "pageTitle": "Adversary Simulation",

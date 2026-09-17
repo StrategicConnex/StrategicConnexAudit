@@ -158,6 +158,69 @@ export const removeKeywordTarget = authenticatedAction(
   }
 );
 
+const ImportCsvSchema = z.object({
+  projectId: z.string().uuid(),
+  rows: z
+    .array(
+      z.object({
+        keyword: z.string().trim().min(1).max(120),
+        position: z.number().int().min(1).max(1000).optional(),
+        date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+      })
+    )
+    .min(1)
+    .max(500),
+});
+
+/**
+ * B-2: importa posiciones desde CSV (formato: keyword,position,date?).
+ * Camino honesto hasta OAuth de GSC: el usuario exporta de Search Console
+ * y lo sube aquí. Crea targets y registra el rank del día.
+ */
+export const importKeywordCsv = authenticatedAction(
+  ImportCsvSchema,
+  async ({ projectId, rows }, { user, tx }) => {
+    const denied = await requireProjectPermission(user.id, projectId, "scan:execute");
+    if (denied) return { error: denied };
+
+    const today = new Date().toISOString().slice(0, 10);
+    let imported = 0;
+    let targets = 0;
+    for (const row of rows) {
+      const keyword = row.keyword.toLowerCase();
+      const [inserted] = await tx
+        .insert(keywordTargets)
+        .values({ projectId, keyword })
+        .onConflictDoNothing()
+        .returning({ id: keywordTargets.id });
+      let targetId = inserted?.id;
+      if (!targetId) {
+        const existing = await tx.query.keywordTargets.findFirst({
+          where: and(eq(keywordTargets.projectId, projectId), eq(keywordTargets.keyword, keyword)),
+        });
+        targetId = existing?.id;
+      }
+      if (!targetId) continue;
+      targets++;
+      if (row.position !== undefined) {
+        await tx
+          .insert(rankHistory)
+          .values({ keywordId: targetId, position: row.position, checkedAt: row.date ?? today })
+          .onConflictDoUpdate({
+            target: [rankHistory.keywordId, rankHistory.checkedAt],
+            set: { position: row.position },
+          });
+        imported++;
+      }
+    }
+    revalidatePath('/');
+    return { success: true as const, targets, imported };
+  }
+);
+
 export function normalizeDomain(input: string): string {
   return input
     .trim()

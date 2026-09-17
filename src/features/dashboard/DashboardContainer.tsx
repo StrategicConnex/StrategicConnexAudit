@@ -61,7 +61,7 @@ import { IntelligenceTabSkeleton } from './IntelligenceTabSkeleton';
 import { useAiReport } from './useAiReport';
 import {
   listKeywordData, addKeywordTarget, removeKeywordTarget,
-  addCompetitor, removeCompetitor,
+  addCompetitor, removeCompetitor, importKeywordCsv,
   type GscTotals, type CompetitorRow,
 } from '@/app/actions/keywords';
 
@@ -167,6 +167,12 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
     if (result.data?.success && selectedProjectId) await loadKeywords(selectedProjectId);
   };
 
+  const handleImportCsv = async (rows: Array<{ keyword: string; position?: number; date?: string }>) => {
+    if (!selectedProjectId || rows.length === 0) return;
+    const result = await importKeywordCsv({ projectId: selectedProjectId, rows });
+    if (result.data?.success) await loadKeywords(selectedProjectId);
+  };
+
   const handleAddCompetitor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!competitorInput.trim() || !selectedProjectId) return;
@@ -252,6 +258,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
                 onAddCompetitor={handleAddCompetitor}
                 onDeleteCompetitor={handleDeleteCompetitor}
                 canEdit={canEditKeywords}
+                onImportCsv={handleImportCsv}
               />
             )}
 
