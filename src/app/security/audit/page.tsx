@@ -338,7 +338,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
 
             {/* Error message */}
             {isFailed && entry.errorMessage && (
-              <p className="text-xs text-destructive/80 font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
+              <p className="text-xs text-destructive font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
                 {entry.errorMessage}
               </p>
             )}
@@ -413,7 +413,7 @@ function SiemCard({ entry }: { entry: SiemAlertEntry }) {
 
           {/* Error message */}
           {isFailed && entry.errorMessage && (
-            <p className="text-xs text-destructive/80 font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
+            <p className="text-xs text-destructive font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
               {entry.errorMessage}
             </p>
           )}
@@ -646,7 +646,7 @@ function DnsAlertsSection({
 
             {/* Error message */}
             {isFailed && entry.errorMessage && (
-              <p className="text-xs text-destructive/80 font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
+              <p className="text-xs text-destructive font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
                 {entry.errorMessage}
               </p>
             )}
@@ -837,7 +837,7 @@ function WhoisAlertsSection({
 
             {/* Error message */}
             {isFailed && entry.errorMessage && (
-              <p className="text-xs text-destructive/80 font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
+              <p className="text-xs text-destructive font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
                 {entry.errorMessage}
               </p>
             )}

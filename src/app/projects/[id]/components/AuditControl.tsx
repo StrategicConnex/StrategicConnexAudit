@@ -231,7 +231,7 @@ export default function AuditControl({ projectId }: AuditControlProps) {
 
       {showWorkerWarning && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-apple-sm bg-apple-gray/50 border border-apple-ink/5 max-w-xs animate-pulse">
-          <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <div className="w-1.5 h-1.5 rounded-full bg-chart-warning" />
           <span className="text-2xs text-apple-ink/60 font-medium text-right leading-tight">
             Server response delayed. Waiting for analyzer...
           </span>

@@ -57,7 +57,7 @@ function methodColor(method: string): string {
 
 function statusColor(status: number): string {
   if (status >= 200 && status < 300) return 'text-chartreuse';
-  if (status === 429) return 'text-amber-400';
+  if (status === 429) return 'text-chart-warning';
   if (status >= 400) return 'text-destructive';
   return 'text-muted-fg';
 }
@@ -612,7 +612,7 @@ export default function ApiPlaygroundPage() {
               </h3>
               <ApiKeyInput value={apiKey} onChange={setApiKey} />
               {!apiKey && endpoint.auth === 'api-key' && (
-                <p className="text-2xs text-amber-400/70 flex items-center gap-1">
+                <p className="text-2xs text-chart-warning flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> This endpoint requires an API Key
                 </p>
               )}
@@ -789,7 +789,7 @@ export default function ApiPlaygroundPage() {
                         <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs font-bold text-destructive">Error</p>
-                          <p className="text-2xs text-destructive/80">{errorMsg}</p>
+                          <p className="text-2xs text-destructive">{errorMsg}</p>
                         </div>
                       </div>
                     )}
@@ -888,7 +888,7 @@ export default function ApiPlaygroundPage() {
                   <span>Session-only endpoints require a dashboard login — use the <code className="text-primary font-mono">/docs/api</code> reference with your browser cookies.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                  <div className="w-1 h-1 rounded-full bg-chart-warning mt-1.5 shrink-0" />
                   <span>Rate limit: 60 requests/min per API key. HTTP 429 means slow down.</span>
                 </li>
               </ul>

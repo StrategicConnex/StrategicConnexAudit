@@ -39,7 +39,7 @@ interface AdversaryTabProps {
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: 'text-destructive bg-destructive/10 border-destructive/20',
-  high: 'text-destructive/80 bg-destructive/10 border-destructive/20',
+  high: 'text-destructive bg-destructive/10 border-destructive/20',
   medium: 'text-[oklch(75%_0.13_80)] bg-[oklch(75%_0.13_80)]/10 border-[oklch(75%_0.13_80)]/20',
   low: 'text-primary bg-primary/10 border-primary/20',
   info: 'text-muted-fg bg-muted/10 border-border/50',

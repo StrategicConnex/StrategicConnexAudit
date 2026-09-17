@@ -721,7 +721,7 @@ export function IntelligenceTab({
                 <div className="grid grid-cols-4 gap-4 pt-4 border-t border-border/50">
                   {[
                     { label: 'Críticos', count: selectedDetails.findings.filter(f => f.severity === 'critical').length, color: 'text-destructive' },
-                    { label: 'Altos', count: selectedDetails.findings.filter(f => f.severity === 'high').length, color: 'text-destructive/80' },
+                    { label: 'Altos', count: selectedDetails.findings.filter(f => f.severity === 'high').length, color: 'text-destructive' },
                     { label: 'Medios', count: selectedDetails.findings.filter(f => f.severity === 'medium').length, color: 'text-[oklch(75% 0.13 80)]' },
                     { label: 'Bajos', count: selectedDetails.findings.filter(f => f.severity === 'low').length, color: 'text-primary' },
                   ].map((group, idx) => (
@@ -851,7 +851,7 @@ export function IntelligenceTab({
                   {selectedDetails.findings.map((finding) => {
                     const severityConfig: Record<string, { glow: string; bg: string; border: string; icon: string }> = {
                       critical: { glow: 'shadow-[0_0_15px_rgba(190,18,60,0.15)]', bg: 'bg-destructive/5', border: 'border-destructive/20', icon: 'text-destructive' },
-                      high: { glow: 'shadow-[0_0_15px_rgba(190,18,60,0.1)]', bg: 'bg-destructive/5', border: 'border-destructive/20', icon: 'text-destructive/80' },
+                      high: { glow: 'shadow-[0_0_15px_rgba(190,18,60,0.1)]', bg: 'bg-destructive/5', border: 'border-destructive/20', icon: 'text-destructive' },
                       medium: { glow: '', bg: 'bg-[oklch(75% 0.13 80)]/5', border: 'border-[oklch(75% 0.13 80)]/10', icon: 'text-[oklch(75% 0.13 80)]' },
                       low: { glow: '', bg: 'bg-primary/5', border: 'border-primary/10', icon: 'text-primary' },
                       info: { glow: '', bg: 'bg-primary/5', border: 'border-primary/10', icon: 'text-primary' },

@@ -25,7 +25,7 @@ export function escapeHtml(unsafe: string): string {
  * escaped text, so they can never re-introduce executable HTML.
  *
  * Single-pass tokenizer: one global regex + one callback decides the span
- * class per token, so the class names we inject (e.g. `text-amber-400`) are
+  * class per token, so the class names we inject (e.g. `text-chart-warning`) are
  * never re-scanned by a later replace — that would double-highlight the
  * digits/words inside the markup itself.
  */
@@ -41,7 +41,7 @@ export function syntaxHighlightJson(escapedJson: string): string {
     const [, key, str, bool, nil, num] = args as unknown as [string, string | undefined, string | undefined, string | undefined, string | undefined, string | undefined];
     if (key !== undefined) return `<span class="text-primary">&quot;${key}&quot;</span>`;
     if (str !== undefined) return `<span class="text-chartreuse">&quot;${str}&quot;</span>`;
-    if (bool !== undefined) return `<span class="text-amber-400">${bool}</span>`;
+    if (bool !== undefined) return `<span class="text-chart-warning">${bool}</span>`;
     if (nil !== undefined) return `<span class="text-muted-fg/50">${nil}</span>`;
     if (num !== undefined) return `<span class="text-purple-400">${num}</span>`;
     return args[0];

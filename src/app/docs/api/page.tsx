@@ -580,13 +580,13 @@ export default function DocsApiPage() {
               </p>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-amber-400">
+              <div className="flex items-center gap-2 text-chart-warning">
                 <AlertCircle className="w-4 h-4" />
                 <span className="font-bold">Rate Limits</span>
               </div>
               <p className="text-muted-fg text-xs leading-relaxed">
                 Public API: 30 scans/min per user. PDF reports: 5 req/60s.
-                Rate limit responses return <code className="text-amber-400 font-mono">HTTP 429</code>.
+                Rate limit responses return <code className="text-chart-warning font-mono">HTTP 429</code>.
               </p>
             </div>
           </div>

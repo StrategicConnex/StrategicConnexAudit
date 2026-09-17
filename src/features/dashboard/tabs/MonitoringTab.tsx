@@ -556,7 +556,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 <span className="font-mono text-foreground/80 text-2xs">#security-incidents</span>
               </div>
               <div className="flex items-center justify-between text-xs p-2 rounded bg-[oklch(75% 0.13 80)]/5 border border-[oklch(75% 0.13 80)]/10">                  <span className="text-muted-fg flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> {t('severityWarning')}
+                    <span className="w-1.5 h-1.5 rounded-full bg-chart-warning" /> {t('severityWarning')}
                   </span>
                 <span className="font-mono text-foreground/80 text-2xs">#seo-drift</span>
               </div>
@@ -606,7 +606,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                 const borderColors = alert.severity === 'critical' 
                   ? 'border-l-red-500/80 bg-red-500/[0.01]' 
                   : alert.severity === 'warning' 
-                  ? 'border-l-amber-500/80 bg-amber-500/[0.01]' 
+                  ? 'border-l-chart-warning/80 bg-chart-warning/[0.01]' 
                   : 'border-l-cyan-500/80 bg-cyan-500/[0.01]';
                 
                 const badgeStyle = alert.severity === 'critical'

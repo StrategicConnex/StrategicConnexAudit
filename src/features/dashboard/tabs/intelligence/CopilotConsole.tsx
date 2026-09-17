@@ -77,7 +77,7 @@ export function CopilotConsole({
           <button
             onClick={onGenerate}
             disabled={isGenerating}
-            className="bg-gradient-to-r from-primary to-primary/80 text-foreground font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-primary/20 cursor-pointer hover:shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:brightness-110 active:scale-95 transition-[color,background-color,border-color,opacity,box-shadow,transform,filter] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed text-center shrink-0 shadow-lg"
+            className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-primary/20 cursor-pointer hover:shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:brightness-110 active:scale-95 transition-[color,background-color,border-color,opacity,box-shadow,transform,filter] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed text-center shrink-0 shadow-lg"
           >
             Generar Plan IA <Sparkles className="w-3.5 h-3.5" />
           </button>

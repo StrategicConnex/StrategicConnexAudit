@@ -60,7 +60,7 @@ const targetTypeStyles: Record<TargetType, { bg: string; text: string; icon: Luc
   domain: { bg: "bg-blue-500/10 border-blue-500/20", text: "text-blue-400", icon: Globe, label: "Dominio" },
   url: { bg: "bg-teal-500/10 border-teal-500/20", text: "text-teal-400", icon: Globe, label: "Enlace Web" },
   ip: { bg: "bg-chartreuse/10 border-chartreuse/20", text: "text-chartreuse", icon: Binary, label: "Dirección IP" },
-  email: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-400", icon: Mail, label: "Correo Electrónico" },
+  email: { bg: "bg-chart-warning/10 border-chart-warning/20", text: "text-chart-warning", icon: Mail, label: "Correo Electrónico" },
   asn: { bg: "bg-purple-500/10 border-purple-500/20", text: "text-purple-400", icon: Cpu, label: "Sistema Autónomo (ASN)" },
   cidr: { bg: "bg-indigo-500/10 border-indigo-500/20", text: "text-indigo-400", icon: Binary, label: "Rango CIDR" },
   unknown: { bg: "bg-[#27272a]/40 border-border", text: "text-muted-fg", icon: Terminal, label: "Desconocido" }

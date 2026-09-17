@@ -112,7 +112,7 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/80 text-foreground rounded-full transition-[color,background-color,border-color,box-shadow] shadow-[0_4px_12px_rgba(98,113,196,0.2)] hover:shadow-[0_4px_16px_rgba(98,113,196,0.3)] border border-primary/20 font-bold text-2xs uppercase tracking-widest"
+        className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/80 text-primary-foreground rounded-full transition-[color,background-color,border-color,box-shadow] shadow-[0_4px_12px_rgba(98,113,196,0.2)] hover:shadow-[0_4px_16px_rgba(98,113,196,0.3)] border border-primary/20 font-bold text-2xs uppercase tracking-widest"
       >
         <Plus size={14} strokeWidth={3} />
         <span>Nuevo Proyecto</span>

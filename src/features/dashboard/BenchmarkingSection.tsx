@@ -49,7 +49,7 @@ function getRank(t: TFn, value: number | null, pct: number | null) {
   if (value === null || pct === null) return { label: t("rankNA"), rank: "below", color: "text-muted-fg" };
   if (pct <= 25) return { label: t("rankTop", { pct }), rank: "top", color: "text-chartreuse" };
   if (pct <= 50) return { label: t("rankAbove"), rank: "above", color: "text-primary" };
-  if (pct <= 75) return { label: t("rankBelow"), rank: "below", color: "text-amber-400" };
+  if (pct <= 75) return { label: t("rankBelow"), rank: "below", color: "text-chart-warning" };
   return { label: t("rankBottom", { pct: 100 - pct }), rank: "bottom", color: "text-destructive" };
 }
 
@@ -200,7 +200,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
               <Activity className="w-3 h-3 text-primary" /> {t("uptime")}
             </span>
             {yourMetrics && (
-              <span className={"text-2xs font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (uptimeRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : uptimeRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : uptimeRank.rank === "below" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
+              <span className={"text-2xs font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (uptimeRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : uptimeRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : uptimeRank.rank === "below" ? "text-chart-warning bg-chart-warning/10 border-chart-warning/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
                 {uptimeRank.rank === "top" || uptimeRank.rank === "above" ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                 {uptimeRank.label}
               </span>
@@ -225,7 +225,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
               <Zap className="w-3 h-3 text-primary" /> {t("latency")}
             </span>
             {yourMetrics && (
-              <span className={"text-2xs font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (latencyRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : latencyRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : latencyRank.rank === "below" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
+              <span className={"text-2xs font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (latencyRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : latencyRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : latencyRank.rank === "below" ? "text-chart-warning bg-chart-warning/10 border-chart-warning/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
                 {latencyRank.rank === "top" || latencyRank.rank === "above" ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                 {latencyRank.label}
               </span>
@@ -250,7 +250,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
               <ShieldCheck className="w-3 h-3 text-primary" /> {t("healthScore")}
             </span>
             {yourMetrics && (
-              <span className={"text-2xs font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (scoreRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : scoreRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : scoreRank.rank === "below" ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
+              <span className={"text-2xs font-extrabold px-2 py-0.5 rounded-full border flex items-center gap-1 " + (scoreRank.rank === "top" ? "text-chartreuse bg-chartreuse/10 border-chartreuse/20" : scoreRank.rank === "above" ? "text-primary bg-primary/10 border-primary/20" : scoreRank.rank === "below" ? "text-chart-warning bg-chart-warning/10 border-chart-warning/20" : "text-destructive bg-destructive/10 border-destructive/20")}>
                 {scoreRank.rank === "top" || scoreRank.rank === "above" ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                 {scoreRank.label}
               </span>

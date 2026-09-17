@@ -25,7 +25,7 @@ interface EvidencesListProps {
 const SEVERITY_CLASSES: Record<string, string> = {
   critical: "bg-red-500/10 text-red-400 border border-red-500/20",
   high: "bg-red-500/10 text-red-400 border border-red-500/20",
-  medium: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  medium: "bg-chart-warning/10 text-chart-warning border border-chart-warning/20",
   low: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
   info: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
 };

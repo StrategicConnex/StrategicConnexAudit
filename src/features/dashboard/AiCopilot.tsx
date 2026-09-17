@@ -79,10 +79,10 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
       <button
         onClick={() => setIsOpen(true)}
         aria-label="Abrir Strategic Copilot"
-        className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 mb-[env(safe-area-inset-bottom)] p-5 rounded-full bg-gradient-to-r from-primary to-primary/80 text-foreground shadow-[0_0_20px_rgba(98,113,196,0.3)] border-2 border-primary/30 hover:scale-105 hover:shadow-[0_0_30px_rgba(98,113,196,0.5)] hover:border-primary/50 transition-[color,background-color,border-color,box-shadow,transform] duration-300 z-50 flex items-center justify-center group cursor-pointer"
+        className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 mb-[env(safe-area-inset-bottom)] p-5 rounded-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-[0_0_20px_rgba(98,113,196,0.3)] border-2 border-primary/30 hover:scale-105 hover:shadow-[0_0_30px_rgba(98,113,196,0.5)] hover:border-primary/50 transition-[color,background-color,border-color,box-shadow,transform] duration-300 z-50 flex items-center justify-center group cursor-pointer"
       >
-        <Sparkles aria-hidden="true" className="w-5 h-5 animate-pulse text-primary/80" strokeWidth={2.5} />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-[140px] transition-[max-width,padding] duration-300 font-extrabold text-2xs uppercase tracking-widest whitespace-nowrap px-0 group-hover:px-2 text-foreground">
+        <Sparkles aria-hidden="true" className="w-5 h-5 animate-pulse text-primary-foreground/80" strokeWidth={2.5} />
+        <span className="max-w-0 overflow-hidden group-hover:max-w-[140px] transition-[max-width,padding] duration-300 font-extrabold text-2xs uppercase tracking-widest whitespace-nowrap px-0 group-hover:px-2 text-primary-foreground">
           Strategic Copilot
         </span>
       </button>
@@ -219,7 +219,7 @@ export function AiCopilot({ contextData, onGeneratingChange }: {
                 : 'bg-primary hover:bg-primary/80 hover:shadow-[0_0_15px_rgba(98,113,196,0.3)] border-primary/30 hover:border-primary/50'
             }`}
           >
-            <Send aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={2.5} />
+            <Send aria-hidden="true" className={`w-3.5 h-3.5 ${mode === 'analyst' ? 'text-destructive-foreground' : 'text-primary-foreground'}`} strokeWidth={2.5} />
           </button>
         </form>
         <p className="mt-3 text-2xs font-extrabold text-center text-muted-fg uppercase tracking-widest">

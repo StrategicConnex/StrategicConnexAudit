@@ -19,7 +19,7 @@ export function getSeverityBadge(severity: string): string {
     case 'critical':
       return 'text-destructive bg-destructive/10 border-destructive/20';
     case 'high':
-      return 'text-destructive/80 bg-destructive/10 border-destructive/20';
+      return 'text-destructive bg-destructive/10 border-destructive/20';
     case 'medium':
       return 'text-[oklch(75% 0.13 80)] bg-[oklch(75% 0.13 80)]/10 border-[oklch(75% 0.13 80)]/20';
     case 'low':
@@ -37,6 +37,6 @@ export function getScoreRating(score: number): ScoreRating {
   if (score >= 90) return { label: 'A - Excelente', color: 'text-chartreuse border-chartreuse/20 bg-chartreuse/10' };
   if (score >= 80) return { label: 'B - Bueno', color: 'text-primary border-primary/20 bg-primary/10' };
   if (score >= 70) return { label: 'C - Advertencia', color: 'text-[oklch(75% 0.13 80)] border-[oklch(75% 0.13 80)]/20 bg-[oklch(75% 0.13 80)]/10' };
-  if (score >= 50) return { label: 'D - Alto Riesgo', color: 'text-destructive/80 border-destructive/20 bg-destructive/10' };
+  if (score >= 50) return { label: 'D - Alto Riesgo', color: 'text-destructive border-destructive/20 bg-destructive/10' };
   return { label: 'F - Crítico', color: 'text-destructive border-destructive/20 bg-destructive/10' };
 }

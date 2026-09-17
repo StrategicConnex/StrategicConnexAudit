@@ -360,7 +360,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 action={latestCompletedAudit ? (
                   <Link 
                     href={`/projects/${projectId}/audits/${latestCompletedAudit.id}`}
-                    className="flex items-center gap-2 text-2xs font-extrabold uppercase tracking-widest text-destructive hover:text-destructive/80 transition-colors mt-6 w-fit bg-destructive/10 border border-destructive/20 px-4 py-2 rounded-xl"
+                    className="flex items-center gap-2 text-2xs font-extrabold uppercase tracking-widest text-destructive transition-colors mt-6 w-fit bg-destructive/10 border border-destructive/20 px-4 py-2 rounded-xl"
                   >
                     Generar PDF <ArrowRight className="w-4 h-4 ml-1" />
                   </Link>

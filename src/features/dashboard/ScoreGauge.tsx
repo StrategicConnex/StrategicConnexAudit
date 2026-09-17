@@ -16,7 +16,7 @@ function getScoreConfig(score: number) {
   if (score >= 85) return { label: 'Excelente', color: '#8BC34A', glow: 'rgba(140,200,80,0.5)', textColor: 'text-chartreuse', bg: 'bg-chartreuse/10 border-chartreuse/20' };
   if (score >= 70) return { label: 'Bueno', color: '#6271C4', glow: 'rgba(98,113,196,0.5)', textColor: 'text-primary', bg: 'bg-primary/10 border-primary/20' };
   if (score >= 50) return { label: 'Advertencia', color: '#EBA52D', glow: 'rgba(235,165,45,0.5)', textColor: 'text-[oklch(75% 0.13 80)]', bg: 'bg-[oklch(75% 0.13 80)]/10 border-[oklch(75% 0.13 80)]/20' };
-  if (score >= 30) return { label: 'Crítico', color: '#D4373C', glow: 'rgba(212,55,60,0.5)', textColor: 'text-destructive/80', bg: 'bg-destructive/10 border-destructive/20' };
+  if (score >= 30) return { label: 'Crítico', color: '#D4373C', glow: 'rgba(212,55,60,0.5)', textColor: 'text-destructive', bg: 'bg-destructive/10 border-destructive/20' };
   return { label: 'Peligro', color: '#D4373C', glow: 'rgba(212,55,60,0.5)', textColor: 'text-destructive', bg: 'bg-destructive/10 border-destructive/20' };
 }
 
@@ -195,7 +195,7 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
             : benchmark.rank === 'above'
             ? 'text-primary bg-primary/10 border-primary/20'
             : benchmark.rank === 'below'
-            ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+            ? 'text-chart-warning bg-chart-warning/10 border-chart-warning/20'
             : 'text-destructive bg-destructive/10 border-destructive/20'
         }`}>
           {benchmark.rank === 'top' && <TrendingUp className="w-3 h-3" />}

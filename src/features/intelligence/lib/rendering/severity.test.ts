@@ -7,7 +7,7 @@ describe("getSeverityBadge", () => {
   });
 
   it("mapea high con destructive/80", () => {
-    expect(getSeverityBadge("high")).toContain("text-destructive/80");
+    expect(getSeverityBadge("high")).toContain("text-destructive");
   });
 
   it("mapea medium con el color ámbar oklch", () => {

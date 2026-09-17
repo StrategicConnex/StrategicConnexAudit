@@ -97,9 +97,9 @@ export function PdfProgressBar({ genId, onComplete, onError }: PdfProgressBarPro
   }, [genId, onComplete, onError]);
 
   const barColor =
-    state.status === 'complete' ? '#A3E635' :
-    state.status === 'error' ? '#EF4444' :
-    '#6366F1';
+    state.status === 'complete' ? 'var(--chartreuse)' :
+    state.status === 'error' ? 'var(--destructive)' :
+    'var(--accent-indigo)';
 
   return (
     <div className="w-full space-y-2" style={{ minWidth: 280 }}>

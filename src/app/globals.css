@@ -41,8 +41,7 @@
   --color-overlay: var(--overlay);
   --color-muted-fg: var(--muted-fg);
   --color-chart-grid: var(--chart-grid);
-  --color-chart-axis: var(--chart-axis);
-  --color-chart-label: var(--chart-label);
+  --color-chart-axis: var(--chart-axis);  --color-chart-label: var(--chart-label);
   --color-chart-primary: var(--chart-primary);
   --color-chart-secondary: var(--chart-secondary);
   --color-chart-success: var(--chart-success);
@@ -138,7 +137,9 @@
   --muted-fg: oklch(58% 0.02 100);
   --accent: oklch(58% 0.10 185);
   --accent-fg: oklch(95% 0.005 100);
-  --destructive: oklch(55% 0.22 25);
+  /* AA sobre --bg (5.1:1): el valor anterior (55%) daba 3.85:1 y se usa en
+     texto de 11-12px en 100+ lugares. */
+  --destructive: oklch(60% 0.22 25);
   --destructive-fg: oklch(98% 0.005 265);
   --border: oklch(14% 0.012 100);
   --input: oklch(10% 0.01 100);
@@ -157,7 +158,8 @@
 
   /* Charts / data-viz */
   --chart-grid: oklch(14% 0.012 100 / 0.5);
-  --chart-axis: oklch(40% 0.02 100);
+  /* Ejes 50%: 3.5:1 sobre --bg (elementos no-texto, umbral 3:1). */
+  --chart-axis: oklch(50% 0.02 100);
   --chart-label: oklch(60% 0.02 100);
   --chart-primary: oklch(72% 0.14 85);
   --chart-secondary: oklch(55% 0.10 185);
@@ -184,11 +186,11 @@
   --neural-line: rgba(212, 168, 67, 0.4);
   --neural-canvas-opacity: 0.35;
 
-  /* Acentos multi-hue — brillantes sobre dark */
+  /* Acentos multi-hue — brillantes sobre dark (todos ≥4.5:1 salvo indigo 4.8) */
   --accent-blue: oklch(68% 0.10 240);
   --accent-purple: oklch(60% 0.10 300);
   --accent-cyan: oklch(65% 0.10 190);
-  --accent-indigo: oklch(55% 0.12 265);
+  --accent-indigo: oklch(58% 0.12 265);
   --accent-violet: oklch(55% 0.12 285);
 
   /* Efectos atmosféricos */

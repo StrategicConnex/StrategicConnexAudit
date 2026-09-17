@@ -95,9 +95,9 @@ export function RumIntegrationCard({
   const isStale = isActive ? isStaleEvent(stats.lastEventAt!) : false;
 
   const status = !isActive
-    ? { icon: <CircleAlert className="w-3.5 h-3.5 text-amber-400" />, label: 'Sin datos todavía', hint: 'Instala el snippet y visita tu sitio — la primera señal aparece en segundos.', cls: 'border-amber-400/20 bg-amber-400/5 text-amber-400' }
+    ? { icon: <CircleAlert className="w-3.5 h-3.5 text-chart-warning" />, label: 'Sin datos todavía', hint: 'Instala el snippet y visita tu sitio — la primera señal aparece en segundos.', cls: 'border-chart-warning/20 bg-chart-warning/5 text-chart-warning' }
     : isStale
-      ? { icon: <CircleAlert className="w-3.5 h-3.5 text-amber-400" />, label: `Última señal ${timeAgo(stats.lastEventAt!)}`, hint: 'No llegan eventos en más de 24 h — verifica que el snippet siga instalado.', cls: 'border-amber-400/20 bg-amber-400/5 text-amber-400' }
+      ? { icon: <CircleAlert className="w-3.5 h-3.5 text-chart-warning" />, label: `Última señal ${timeAgo(stats.lastEventAt!)}`, hint: 'No llegan eventos en más de 24 h — verifica que el snippet siga instalado.', cls: 'border-chart-warning/20 bg-chart-warning/5 text-chart-warning' }
       : { icon: <CircleCheck className="w-3.5 h-3.5 text-emerald-400" />, label: `Recibiendo datos · última señal ${timeAgo(stats.lastEventAt!)}`, hint: null, cls: 'border-emerald-400/20 bg-emerald-400/5 text-emerald-400' };
 
   return (

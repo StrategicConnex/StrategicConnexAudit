@@ -290,10 +290,10 @@ export default function ApiKeysDashboard() {
           accent="bg-sky-500/10 border-sky-500/20 text-sky-400"
         />
         <StatCard
-          icon={<Clock className="w-5 h-5 text-amber-400" />}
+          icon={<Clock className="w-5 h-5 text-chart-warning" />}
           label="Por vencer"
           value={expiringSoonKeys.length}
-          accent="bg-amber-500/10 border-amber-500/20 text-amber-400"
+          accent="bg-chart-warning/10 border-chart-warning/20 text-chart-warning"
         />
       </div>
 
@@ -377,7 +377,7 @@ export default function ApiKeysDashboard() {
               <input type="checkbox" checked={expiringSoon}
                 onChange={e => setExpiringSoon(e.target.checked)}
                 className="rounded border-zinc-700 text-primary focus:ring-primary/20 bg-black" />
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <Clock className="w-3.5 h-3.5 text-chart-warning" />
               <span className="text-2xs font-bold text-muted-fg uppercase tracking-wider">Por vencer</span>
             </label>
             <button
@@ -435,7 +435,7 @@ export default function ApiKeysDashboard() {
                       <td className="p-4 text-white font-bold flex items-center gap-2">
                         {key.name}
                         {isExpiring && (
-                          <span className="text-2xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-full font-bold">
+                          <span className="text-2xs bg-chart-warning/10 text-chart-warning border border-chart-warning/20 px-1.5 py-0.5 rounded-full font-bold">
                             {days}d
                           </span>
                         )}

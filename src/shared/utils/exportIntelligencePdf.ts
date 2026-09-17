@@ -130,12 +130,12 @@ const applyIntelligenceExportTheme = (clonedDoc: Document, _branding?: Intellige
         color: #b91c1c !important;
       }
 
-      .bg-amber-500\/10 {
+      .bg-chart-warning\/10 {
         background-color: #fef3c7 !important;
         border-color: #fcd34d !important;
         color: #b45309 !important;
       }
-      .text-amber-400 {
+      .text-chart-warning {
         color: #b45309 !important;
       }
 

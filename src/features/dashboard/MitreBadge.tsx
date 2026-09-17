@@ -9,7 +9,7 @@ const TACTIC_COLORS: Record<string, { bg: string; text: string; border: string }
   'Resource Development': { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20' },
   'Initial Access': { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
   'Execution': { bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20' },
-  'Persistence': { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
+  'Persistence': { bg: 'bg-chart-warning/10', text: 'text-chart-warning', border: 'border-chart-warning/20' },
   'Discovery': { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
   'Collection': { bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20' },
   'Command and Control': { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20' },

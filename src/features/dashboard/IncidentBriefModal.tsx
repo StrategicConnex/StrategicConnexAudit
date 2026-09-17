@@ -27,7 +27,7 @@ function parseBriefSections(brief: string): BriefSection[] {
     'activos': { icon: <Target className="w-3.5 h-3.5" />, color: 'text-[oklch(75% 0.13 80)]' },
     'vector': { icon: <AlertTriangle className="w-3.5 h-3.5" />, color: 'text-destructive' },
     'acciones': { icon: <Zap className="w-3.5 h-3.5" />, color: 'text-chartreuse' },
-    'impacto': { icon: <Shield className="w-3.5 h-3.5" />, color: 'text-destructive/80' },
+    'impacto': { icon: <Shield className="w-3.5 h-3.5" />, color: 'text-destructive' },
   };
 
   const lines = brief.split('\n');

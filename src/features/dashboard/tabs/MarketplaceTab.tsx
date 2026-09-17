@@ -53,7 +53,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   website: 'bg-chartreuse/10 text-chartreuse border-chartreuse/20',
   threat: 'bg-destructive/10 text-destructive border-destructive/20',
   osint: 'bg-primary/10 text-primary border-primary/20',
-  email: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  email: 'bg-chart-warning/10 text-chart-warning border-chart-warning/20',
   compliance: 'bg-chartreuse/10 text-chartreuse border-chartreuse/20',
 };
 
@@ -204,7 +204,7 @@ export function MarketplaceTab() {
             </span>
             {Number(pkg.rating) > 0 && (
               <span className="flex items-center gap-1">
-                <Star className="w-3 h-3 text-amber-400" />
+                <Star className="w-3 h-3 text-chart-warning" />
                 {pkg.rating}
               </span>
             )}

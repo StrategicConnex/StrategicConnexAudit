@@ -41,6 +41,10 @@ jobs:
       - name: Guard i18n parity (es/en)
         run: node scripts/i18n-parity.mjs --max-divergence 0.02
 
+      # QW5 paleta: falla si un token de texto baja de 4.5:1 WCAG.
+      - name: Guard contrast (WCAG AA tokens)
+        run: node scripts/contrast-guard.mjs
+
   secret-scan:
     name: Secret Scan (gitleaks)
     runs-on: ubuntu-latest

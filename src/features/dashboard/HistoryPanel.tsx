@@ -80,7 +80,7 @@ const RECORD_TYPE_COLORS: Record<string, { bg: string; text: string; border: str
   AAAA: { bg: 'bg-indigo-500/10', text: 'text-indigo-400', border: 'border-indigo-500/20' },
   MX: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20' },
   NS: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
-  TXT: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
+  TXT: { bg: 'bg-chart-warning/10', text: 'text-chart-warning', border: 'border-chart-warning/20' },
   CNAME: { bg: 'bg-pink-500/10', text: 'text-pink-400', border: 'border-pink-500/20' },
   SOA: { bg: 'bg-chartreuse/10', text: 'text-chartreuse', border: 'border-chartreuse/20' },
 };
@@ -303,7 +303,7 @@ export function HistoryPanel({ projectId, defaultQuery, defaultTab, onClose }: H
                         </div>
                         <div className="flex items-center gap-2 text-2xs font-mono">
                           {change.previousValue !== null ? (
-                            <span className="text-destructive/70 line-through truncate max-w-[140px]">{change.previousValue}</span>
+                            <span className="text-destructive line-through truncate max-w-[140px]">{change.previousValue}</span>
                           ) : (
                             <span className="text-muted-fg italic">(nuevo)</span>
                           )}

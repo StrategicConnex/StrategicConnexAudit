@@ -235,8 +235,8 @@ const handlePasswordLogin = async (e: React.FormEvent) => {
                 {t('emailSentSpamNote')}
               </p>
 
-              <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4 mb-6 sm:mb-8 text-left">
-                <p className="text-xs sm:text-sm text-amber-400/80 leading-relaxed flex items-start gap-2">
+              <div className="bg-chart-warning/5 border border-chart-warning/10 rounded-xl p-4 mb-6 sm:mb-8 text-left">
+                <p className="text-xs sm:text-sm text-chart-warning leading-relaxed flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   {t('emailSentWarning')}
                 </p>
@@ -473,7 +473,7 @@ const handlePasswordLogin = async (e: React.FormEvent) => {
             </button>              <p className="text-2xs sm:text-xs text-muted-fg/70 text-center leading-relaxed">
               {t('footerText')}
               {validationState === 'invalid' && validationReason?.toLowerCase().includes('desechable') && (
-                <span className="block mt-1.5 text-amber-400/60 text-2xs sm:text-xs">
+                <span className="block mt-1.5 text-chart-warning text-2xs sm:text-xs">
                   {t('disposableEmail')}
                 </span>
               )}

@@ -194,14 +194,14 @@ export function NetworkOsintSection({
                                 ping.latencyMs! < 100 
                                   ? 'bg-chartreuse' 
                                   : ping.latencyMs! < 250 
-                                  ? 'bg-amber-500' 
+                                  ? 'bg-chart-warning' 
                                   : 'bg-destructive'
                               }`} style={{ animationDuration: '2s' }}></div>
                               <div className={`absolute -inset-2 rounded-full opacity-10 ${
                                 ping.latencyMs! < 100 
                                   ? 'bg-chartreuse' 
                                   : ping.latencyMs! < 250 
-                                  ? 'bg-amber-500' 
+                                  ? 'bg-chart-warning' 
                                   : 'bg-destructive'
                               }`}></div>
                               
@@ -558,7 +558,7 @@ export function NetworkOsintSection({
                             const pulseRingColor = hop.latencyMs < 50 
                               ? 'bg-chartreuse/30' 
                               : hop.latencyMs < 150 
-                              ? 'bg-amber-500/30' 
+                              ? 'bg-chart-warning/30' 
                               : 'bg-destructive/30';
 
                             return (

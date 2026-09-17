@@ -643,7 +643,7 @@ export function SettingsTab({
                             <td className="p-4 text-right">
                               <button
                                 onClick={() => handleRevokeApiKey(key.id)}
-                                className="text-destructive hover:text-destructive/80 bg-destructive/10 hover:bg-destructive/20 p-2 rounded-lg border border-destructive/20 transition-colors cursor-pointer"
+                                className="text-destructive bg-destructive/10 hover:bg-destructive/20 p-2 rounded-lg border border-destructive/20 transition-colors cursor-pointer"
                                 title={t('apiKeysRevokeTitle')}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -866,7 +866,7 @@ export function SettingsTab({
 
                         <button
                           onClick={() => handleDeleteWebhook(wh.id)}
-                          className="text-destructive hover:text-destructive/80 bg-destructive/10 hover:bg-destructive/20 p-2 rounded-xl border border-destructive/20 transition-colors cursor-pointer"
+                          className="text-destructive bg-destructive/10 hover:bg-destructive/20 p-2 rounded-xl border border-destructive/20 transition-colors cursor-pointer"
                           title={t('webhooksDeleteTitle')}
                         >
                           <Trash2 className="w-4 h-4" />

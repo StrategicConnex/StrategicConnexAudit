@@ -81,7 +81,7 @@ describe("syntaxHighlightJson (escape-then-highlight pipeline)", () => {
     const highlighted = syntaxHighlightJson(escaped);
     expect(highlighted).toContain('class="text-primary"');
     expect(highlighted).toContain('class="text-chartreuse"');
-    expect(highlighted).toContain('class="text-amber-400"');
+    expect(highlighted).toContain('class="text-chart-warning"');
     expect(highlighted).toContain('class="text-muted-fg/50"');
     expect(highlighted).toContain('class="text-purple-400"');
   });

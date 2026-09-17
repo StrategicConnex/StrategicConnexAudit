@@ -416,7 +416,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                                 {mr.latencyMs ? `${mr.latencyMs}ms` : "—"}
                               </span>
                               {mr.error && (
-                                <span className="text-destructive/70 truncate max-w-[200px]" title={mr.error}>
+                                <span className="text-destructive truncate max-w-[200px]" title={mr.error}>
                                   {mr.error}
                                 </span>
                               )}

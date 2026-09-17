@@ -74,7 +74,7 @@ const categoryMetadata: Record<ToolCategory, { label: string; icon: LucideIcon }
 const planStyles: Record<string, string> = {
   free: "bg-muted/80 text-muted-fg border-border/50",
   pro: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  business: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  business: "bg-chart-warning/10 text-chart-warning border-chart-warning/20",
   enterprise: "bg-blue-500/10 text-blue-400 border-blue-500/20"
 };
 
