@@ -15,7 +15,7 @@ export interface MitreEvaluationPayload {
 export const runMitreEvaluationTask = task({
   id: "mitre-real-evaluation",
   retry: {
-    maxAttempts: 1,
+    maxAttempts: 3,
   },
   run: async (payload: MitreEvaluationPayload) => {
     console.log(`[MitreReal] Iniciando evaluación MITRE ${payload.evaluationId}`);

@@ -10,6 +10,7 @@ export const evaluateMonitorsTask = schedules.task({
   // Se ejecutaría según la configuración cron, por ejemplo diario a las 00:00
   // Aquí usamos un patrón de ejemplo para la definición del schedule trigger
   cron: "0 0 * * *", 
+  retry: { maxAttempts: 3 },
   run: async (payload) => {
     logger.info("Iniciando evaluación de monitores de seguridad", { timestamp: payload.timestamp.toISOString() });
 

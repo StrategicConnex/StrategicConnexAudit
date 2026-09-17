@@ -4,6 +4,7 @@ import { webVitalsLogs, projects } from '@/shared/db/schemas';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from "@/lib/logger";
+import { withRateLimit } from '@/shared/lib/ratelimit';
 
 // Tamaño máximo aceptado del cuerpo JSON (los beacons reales son < 8KB).
 // Un solo check mata el vector de DB-bloat independientemente del schema.
@@ -15,6 +16,9 @@ const boundedEntry = z.record(z.string(), z.union([z.string().max(1024), z.numbe
 // Define the validation schema for the incoming RUM v2.0 payload
 const vitalsSchema = z.object({
   projectId: z.string().uuid(),
+  // Secreto del beacon (P0-3): el snippet lo envía en el cuerpo. Opcional
+  // para no romper instalaciones legacy sin secreto (secret NULL = abierto).
+  beaconToken: z.string().max(128).optional(),
   url: z.string().min(1).max(2048),
   deviceType: z.enum(['desktop', 'mobile', 'tablet']).optional().default('desktop'),
 
@@ -75,22 +79,6 @@ const vitalsSchema = z.object({
   isFinal: z.boolean().optional(),
 });
 
-// SECURITY: Simple in-memory rate limiter for telemetry endpoint (60 req/min per IP).
-// Replace with Redis-backed limiter (Upstash) for multi-instance deployments.
-const telemetryRateLimit = new Map<string, { count: number; resetTime: number }>();
-
-function checkTelemetryRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const record = telemetryRateLimit.get(ip);
-  if (!record || now > record.resetTime) {
-    telemetryRateLimit.set(ip, { count: 1, resetTime: now + 60_000 });
-    return true;
-  }
-  if (record.count >= 60) return false;
-  record.count++;
-  return true;
-}
-
 // SECURITY: Determine allowed origins from env var.
 // Set ALLOWED_TELEMETRY_ORIGINS=https://mysite.com,https://otherdomain.com in .env
 // In development, all origins are allowed.
@@ -102,15 +90,10 @@ function getCorsOrigin(requestOrigin: string | null): string {
   return requestOrigin;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimit(
+  { limit: 60, window: 60, prefix: "telemetry" },
+  async (request: NextRequest) => {
   try {
-    // Rate limiting by IP
-    const forwarded = request.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0]!.trim() : (request.headers.get('x-real-ip') ?? 'unknown');
-    if (!checkTelemetryRateLimit(ip)) {
-      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
-    }
-
     // CORS origin validation
     const origin = request.headers.get('origin');
     const corsOrigin = getCorsOrigin(origin);
@@ -143,11 +126,18 @@ export async function POST(request: NextRequest) {
 // Verify project exists and is active (not deleted / not hidden)
 const project = await db.query.projects.findFirst({
   where: eq(projects.id, data.projectId),
-  columns: { id: true, deletedAt: true, isDeleted: true, isHidden: true },
+  columns: { id: true, deletedAt: true, isDeleted: true, isHidden: true, beaconSecret: true },
 });
 
 if (!project || project.deletedAt !== null || project.isDeleted || project.isHidden) {
   return NextResponse.json({ error: 'Project not found or inactive' }, { status: 404 });
+}
+
+// Beacon ownership (P0-3): si el proyecto tiene secreto, el cuerpo debe
+// traerlo. Proyectos legacy sin secreto (NULL) siguen abiertos hasta que el
+// owner lo genera desde la tarjeta RUM.
+if (project.beaconSecret && data.beaconToken !== project.beaconSecret) {
+  return NextResponse.json({ error: 'Beacon token inválido' }, { status: 401 });
 }
 
     // Extract device type
@@ -202,7 +192,8 @@ if (!project || project.deletedAt !== null || project.isDeleted || project.isHid
     logger.error('Telemetry error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+  }
+);
 
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('origin');

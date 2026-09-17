@@ -337,6 +337,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               projectId={project.id}
               appUrl={appUrl}
               stats={rumStats}
+              beaconSecret={project.beaconSecret ?? null}
             />
           </section>
           

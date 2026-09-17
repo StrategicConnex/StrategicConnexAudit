@@ -1,5 +1,6 @@
 'use server';
 
+import { randomUUID } from "node:crypto";
 import { logger } from "@/lib/logger";
 import { authenticatedAction } from "@/shared/lib/actions";
 import { z } from 'zod';
@@ -74,10 +75,12 @@ export const createProject = authenticatedAction(
       }
 
       // 2. Creacin del proyecto (Dispara el TRIGGER de cuotas en Postgres)
+      // beaconSecret: todo proyecto nuevo nace con secreto RUM propio (P0-3).
       await tx.insert(projects).values({
         name: data.name,
         domain: domain,
         ownerId: user.id,
+        beaconSecret: randomUUID(),
       });
 
       revalidatePath('/');
@@ -104,6 +107,32 @@ export const createProject = authenticatedAction(
 const DeactivateSchema = z.object({
   projectId: z.string().uuid(),
 });
+
+/**
+ * Rota el secreto del beacon RUM (P0-3). Solo el owner. Retorna el nuevo
+ * secreto para mostrarlo UNA vez en la tarjeta de integración.
+ */
+export const rotateBeaconSecret = authenticatedAction(
+  DeactivateSchema,
+  async ({ projectId }, { user, tx }) => {
+    const [updated] = await tx.update(projects)
+      .set({ beaconSecret: randomUUID(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(projects.id, projectId),
+          eq(projects.ownerId, user.id)
+        )
+      )
+      .returning({ beaconSecret: projects.beaconSecret });
+
+    if (!updated?.beaconSecret) {
+      return { error: "Proyecto no encontrado" };
+    }
+
+    revalidatePath(`/projects/${projectId}`);
+    return { success: true, beaconSecret: updated.beaconSecret };
+  }
+);
 
 export const deactivateProject = authenticatedAction(
   DeactivateSchema,

@@ -7,6 +7,7 @@ import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/eg
 export const uptimeMonitor = schedules.task({
   id: "uptime-monitor",
   cron: "*/15 * * * *", // Cada 15 minutos
+  retry: { maxAttempts: 3 },
   run: async (payload) => {
     console.log(`[Uptime] Iniciando ciclo de monitoreo: ${payload.timestamp}`);
 

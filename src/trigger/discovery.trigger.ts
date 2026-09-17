@@ -15,6 +15,7 @@ import { logger } from "@/lib/logger";
 export const continuousDiscovery = schedules.task({
   id: "continuous-discovery",
   cron: "0 */6 * * *",
+  retry: { maxAttempts: 3 },
   run: async (payload) => {
     logger.info(`[Discovery Trigger] Starting: ${payload.timestamp}`);
 

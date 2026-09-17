@@ -24,6 +24,7 @@ const INTERVAL_MS: Record<string, number> = {
 export const scheduledScanTask = schedules.task({
   id: "scheduled-scan-runner",
   cron: "0 * * * *", // Cada hora
+  retry: { maxAttempts: 3 },
   run: async (payload) => {
     // Usar el timestamp del ciclo (determinista y auditable) como base temporal
     const now = payload.timestamp;

@@ -17,7 +17,7 @@ export interface AdversaryAssessmentPayload {
 export const runAdversaryAssessment = task({
   id: "adversary-real-assessment",
   retry: {
-    maxAttempts: 1,
+    maxAttempts: 3,
   },
   run: async (payload: AdversaryAssessmentPayload) => {
     console.log(`[AdversaryReal] Iniciando evaluación real ${payload.assessmentId}`);

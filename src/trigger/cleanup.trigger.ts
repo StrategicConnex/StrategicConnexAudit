@@ -6,6 +6,7 @@ import { lt } from "drizzle-orm";
 export const cleanupOldLogs = schedules.task({
   id: "cleanup-old-logs",
   cron: "0 0 * * *", // Ejecutar cada medianoche
+  retry: { maxAttempts: 3 },
   run: async () => {
     console.log("[Cleanup] Iniciando purga de registros antiguos (>30 días)");
     

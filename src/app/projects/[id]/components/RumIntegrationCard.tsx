@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Copy, Server, Activity, CircleAlert, CircleCheck } from 'lucide-react';
+import { Check, Copy, Server, Activity, CircleAlert, CircleCheck, KeyRound, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { rotateBeaconSecret } from '@/app/actions/projects';
 
 export interface RumStats {
   /** Eventos recibidos (ventana de los últimos 100 registros). */
@@ -34,20 +35,42 @@ export function RumIntegrationCard({
   projectId,
   appUrl,
   stats,
+  beaconSecret,
 }: {
   projectId: string;
   appUrl: string;
   stats: RumStats;
+  /** Secreto del beacon (null = proyecto legacy sin secreto). */
+  beaconSecret: string | null;
 }) {
   const [copied, setCopied] = useState(false);
+  const [secret, setSecret] = useState<string | null>(beaconSecret);
+  const [rotating, setRotating] = useState(false);
+  const [rotated, setRotated] = useState(false);
 
   const snippet = `<script
   src="${appUrl}/scripts/vitals.js"
-  data-project-id="${projectId}"
+  data-project-id="${projectId}"${secret ? `\n  data-beacon-token="${secret}"` : ''}
   data-spa-tracking="true"
   data-sampling="1.0"
   defer>
 </script>`;
+
+  const masked = secret ? `${secret.slice(0, 6)}…${secret.slice(-4)}` : null;
+
+  const rotate = async () => {
+    setRotating(true);
+    try {
+      const result = await rotateBeaconSecret({ projectId });
+      if (result.data?.beaconSecret) {
+        setSecret(result.data.beaconSecret);
+        setRotated(true);
+        setTimeout(() => setRotated(false), 4000);
+      }
+    } finally {
+      setRotating(false);
+    }
+  };
 
   const copy = async () => {
     try {
@@ -131,6 +154,26 @@ export function RumIntegrationCard({
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-2xs text-muted-foreground relative z-10">
         <p><code className="font-mono text-accent-cyan">data-spa-tracking</code> — captura navegaciones sin recarga (React, Vue, Next…).</p>
         <p><code className="font-mono text-accent-cyan">data-sampling</code> — fracción de visitantes que envía métricas (0.1 = 10%).</p>
+      </div>
+
+      {/* Secreto del beacon (P0-3): solo quien tenga este token puede enviar datos */}
+      <div className="mt-4 p-4 rounded-xl border border-border bg-background/60 flex flex-col sm:flex-row sm:items-center gap-3 relative z-10">
+        <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-widest text-muted-foreground">
+          <KeyRound className="w-3.5 h-3.5 text-accent-cyan" />
+          {secret ? (
+            <span>Token del beacon: <code className="font-mono text-foreground">{masked}</code></span>
+          ) : (
+            <span>Sin token: cualquiera con el ID puede enviar datos. Genéralo.</span>
+          )}
+        </div>
+        <button
+          onClick={rotate}
+          disabled={rotating}
+          className="sm:ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-2xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors disabled:opacity-50 cursor-pointer"
+        >
+          <RefreshCw className={`w-3 h-3 ${rotating ? 'animate-spin' : ''}`} />
+          {rotated ? '¡Token actualizado!' : secret ? 'Rotar token' : 'Generar token'}
+        </button>
       </div>
     </div>
   );

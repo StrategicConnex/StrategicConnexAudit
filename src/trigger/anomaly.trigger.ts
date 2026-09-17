@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger";
 export const periodicAnomalyDetection = schedules.task({
   id: "periodic-anomaly-detection",
   cron: "*/15 * * * *",
+  retry: { maxAttempts: 3 },
   run: async (payload) => {
     logger.info(`[AnomalyDetector] Starting: ${payload.timestamp}`);
 

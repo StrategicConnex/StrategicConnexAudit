@@ -23,6 +23,7 @@ export const apiKeyExpiryAlert = schedules.task({
   id: "api-key-expiry-alert",
   // Run daily at 09:00 UTC
   cron: "0 9 * * *",
+  retry: { maxAttempts: 3 },
   run: async () => {
     logger.info("API Key Expiry Alert: iniciando verificación diaria", {
       timestamp: new Date().toISOString(),

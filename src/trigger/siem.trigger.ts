@@ -21,6 +21,7 @@ import { runSiemExport } from "@/server/security/siem-exporter";
 export const siemExporterTask = schedules.task({
   id: "siem-exporter",
   cron: "*/5 * * * *",
+  retry: { maxAttempts: 3 },
   run: async () => {
     logger.info("SIEM Exporter: iniciando ciclo de análisis", {
       timestamp: new Date().toISOString(),

@@ -6,6 +6,7 @@
  * <script
  *   src="https://scaudit.vercel.app/scripts/vitals.js"
  *   data-project-id="PROYECTO_ID"
+ *   data-beacon-token="SECRETO_DEL_PROYECTO"
  *   data-api-url="https://scaudit.vercel.app/api/telemetry/vitals"
  *   data-sampling="1.0"
  *   data-spa-tracking="true"
@@ -20,6 +21,9 @@
   if (!script) return;
 
   const PROJECT_ID = script.getAttribute('data-project-id');
+  // Secreto del beacon (P0-3): obligatorio si el proyecto lo tiene definido.
+  // Viaja en el cuerpo (sendBeacon no admite headers personalizados).
+  const BEACON_TOKEN = script.getAttribute('data-beacon-token') || null;
   const API_URL = script.getAttribute('data-api-url') || deriveApiUrl();
   const SAMPLING_RATE = parseFloat(script.getAttribute('data-sampling') || '1.0');
   const ENABLE_SPA = script.getAttribute('data-spa-tracking') !== 'false';
@@ -180,6 +184,7 @@
 
     return {
       projectId: PROJECT_ID,
+      beaconToken: BEACON_TOKEN,
       sessionId: sessionId,
       timestamp: new Date().toISOString(),
       url: currentUrl,
