@@ -8,6 +8,7 @@ import {
   intelligenceAssets,
 } from '@/shared/db/schemas';
 import { checkIntelScanRateLimit } from '@/shared/lib/ratelimit';
+import { assertProjectAccess } from '@/server/lib/project-access';
 import { withPublicApi, apiError, apiSuccess, type AuthenticatedRequest } from '@/server/api/public-router';
 import { API_SCOPES } from '@/shared/lib/api-keys';
 import type { Finding } from '@/server/intelligence/types/executor.types';
@@ -34,16 +35,18 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
 
   try {
     if (investigationId) {
-      // SECURITY: ownership check — la investigación debe pertenecer a un
-      // proyecto del dueño de la API key (evita lectura cross-tenant).
+      // SECURITY: la investigación debe pertenecer a un proyecto con acceso
+      // (owner o miembro) del dueño de la API key — evita lectura cross-tenant.
       const investigation = await directDb.query.intelligenceInvestigations.findFirst({
-        where: and(
-          eq(intelligenceInvestigations.id, investigationId),
-          eq(intelligenceInvestigations.ownerId, userId),
-        ),
+        where: eq(intelligenceInvestigations.id, investigationId),
       });
 
-      if (!investigation || investigation.ownerId !== userId) {
+      if (!investigation) {
+        return apiError('Investigation not found', 404);
+      }
+
+      const access = await assertProjectAccess(userId, investigation.projectId);
+      if (!access.ok) {
         return apiError('Investigation not found', 404);
       }
 
@@ -67,21 +70,14 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
       return apiError('projectId is required', 400);
     }
 
-    // SECURITY: verificar que el proyecto pertenece al dueño de la key
-    // antes de listar sus investigaciones.
-    const project = await directDb.query.projects.findFirst({
-      where: and(eq(projects.id, projectId), eq(projects.ownerId, userId)),
-    });
-
-    if (!project || project.ownerId !== userId) {
+    // SECURITY: owner o miembro del proyecto (P1-6) antes de listar.
+    const access = await assertProjectAccess(userId, projectId);
+    if (!access.ok) {
       return apiError('Project not found or access denied', 404);
     }
 
     const list = await directDb.query.intelligenceInvestigations.findMany({
-      where: and(
-        eq(intelligenceInvestigations.projectId, projectId),
-        eq(intelligenceInvestigations.ownerId, userId),
-      ),
+      where: eq(intelligenceInvestigations.projectId, projectId),
       orderBy: [desc(intelligenceInvestigations.createdAt)],
       limit: 50,
     });
@@ -120,12 +116,9 @@ export const POST = withPublicApi(async (req: AuthenticatedRequest) => {
 
     const { target, projectId } = parseResult.data;
 
-    // Check project access + ownership
-    const project = await directDb.query.projects.findFirst({
-      where: and(eq(projects.id, projectId), eq(projects.ownerId, userId)),
-    });
-
-    if (!project) {
+    // Lanzar scans escribe y cuesta cómputo: solo el owner (P1-6).
+    const access = await assertProjectAccess(userId, projectId);
+    if (!access.ok || access.role !== "owner") {
       return apiError('Project not found or access denied', 404);
     }
 

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { keywordTargets, rankHistory } from '@/shared/db/schemas';
 import { eq, desc } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
-import { withRLS } from '@/shared/db/rls';
+import { withRLS } from '@/shared/lib/../db/rls';
+import { assertProjectAccess } from '@/server/lib/project-access';
 import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,12 @@ export async function GET(
 
   if (!user) {
     return new NextResponse('Unauthorized', { status: 401 });
+  }
+
+  // P1-6: membresía explícita antes de exportar (no solo RLS).
+  const access = await assertProjectAccess(user.id, projectId);
+  if (!access.ok) {
+    return new NextResponse('Not found', { status: 404 });
   }
 
   try {

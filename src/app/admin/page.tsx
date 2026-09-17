@@ -9,17 +9,16 @@ import { AdminDashboardClient, type AdminUserRow, type AdminProjectRow } from ".
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "palacios_juan@hotmail.com";
-
 export default async function AdminPage() {
   // 1. Sesión
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // 2. Gate doble (rol + email) — 403 real, no 500
+  // 2. Gate por rol de plataforma (P1-6): users.role = 'admin'. Sin emails
+  // hardcodeados; el middleware ya filtró por lista ADMIN_EMAILS.
   const gate = await requireAdmin();
-  if (!gate.ok || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+  if (!gate.ok) {
     return <AccessDenied />;
   }
 
@@ -79,7 +78,7 @@ export default async function AdminPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Suspense fallback={<div className="p-8 text-muted-fg">Cargando panel…</div>}>
-        <AdminDashboardClient users={usersData} projects={projectsData} adminEmail={ADMIN_EMAIL} />
+        <AdminDashboardClient users={usersData} projects={projectsData} adminEmail={user.email ?? "—"} />
       </Suspense>
     </div>
   );

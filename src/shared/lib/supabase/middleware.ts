@@ -45,12 +45,15 @@ export async function updateSession(request: NextRequest) {
   const url = request.nextUrl.clone();
   const currentPath = request.nextUrl.pathname;
 
-  // ─── Gate /admin: solo el email admin de plataforma ───────────────────
-  // Cualquier otro usuario autenticado (o anónimo) vuelve a "/".
-  // La page de /admin re-valida con requireAdmin() + email (defense-in-depth).
-  const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "palacios_juan@hotmail.com";
+  // ─── Gate /admin: lista cerrada desde env (P1-6) ───────────────────────
+  // Sin ADMIN_EMAILS configurado nadie pasa (fail-closed). La page de /admin
+  // re-valida por rol (requireAdmin) como segunda barrera.
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
   if (currentPath.startsWith("/admin")) {
-    if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (!user || !user.email || !ADMIN_EMAILS.includes(user.email.toLowerCase())) {
       url.pathname = "/";
       return NextResponse.redirect(url);
     }
