@@ -101,18 +101,23 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
   const [competitorsList, setCompetitorsList] = useState<CompetitorRow[]>([]);
   const [competitorInput, setCompetitorInput] = useState('');
   const [keywordsLoading, setKeywordsLoading] = useState(false);
+  // A-3: rol efectivo en el proyecto seleccionado (null = sin acceso).
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const canEditKeywords = userRole === 'owner' || userRole === 'admin' || userRole === 'editor';
 
   const loadKeywords = useCallback(async (projectId: string) => {
     if (!projectId) {
       setKeywordsList([]);
       setCompetitorsList([]);
       setGscTotals({ impressions: 0, clicks: 0, ctr: null, position: null, hasData: false });
+      setUserRole(null);
       return;
     }
     setKeywordsLoading(true);
     try {
       const result = await listKeywordData({ projectId });
       if (result.data?.keywords) {
+        setUserRole(result.data.myRole);
         setKeywordsList(result.data.keywords.map((k) => ({
           id: k.id,
           keyword: k.keyword,
@@ -246,6 +251,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
                 setCompetitorInput={setCompetitorInput}
                 onAddCompetitor={handleAddCompetitor}
                 onDeleteCompetitor={handleDeleteCompetitor}
+                canEdit={canEditKeywords}
               />
             )}
 

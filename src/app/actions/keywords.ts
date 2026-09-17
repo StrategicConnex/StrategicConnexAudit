@@ -1,6 +1,7 @@
 'use server';
 
 import { authenticatedAction, type DbTransaction } from "@/shared/lib/actions";
+import { requireProjectPermission, getProjectRole } from "@/server/lib/project-access";
 import { z } from 'zod';
 import {
   keywordTargets, rankHistory, competitors, projects, integrationDataGsc,
@@ -99,6 +100,7 @@ export const listKeywordData = authenticatedAction(
 
     return {
       success: true as const,
+      myRole: await getProjectRole(user.id, projectId),
       keywords: rows,
       gsc: {
         impressions: Number(totals?.impressions ?? 0),
@@ -124,9 +126,9 @@ const AddKeywordSchema = z.object({
 export const addKeywordTarget = authenticatedAction(
   AddKeywordSchema,
   async ({ projectId, keyword }, { user, tx }) => {
-    if (!(await assertOwner(tx, user.id, projectId))) {
-      return { error: "Proyecto no encontrado" };
-    }
+    // A-3: scan:execute (editor+) en vez de solo owner.
+    const denied = await requireProjectPermission(user.id, projectId, "scan:execute");
+    if (denied) return { error: denied };
     const normalized = keyword.toLowerCase();
     await tx
       .insert(keywordTargets)
@@ -145,9 +147,11 @@ export const removeKeywordTarget = authenticatedAction(
     const target = await tx.query.keywordTargets.findFirst({
       where: eq(keywordTargets.id, id),
     });
-    if (!target || !(await assertOwner(tx, user.id, target.projectId))) {
+    if (!target) {
       return { error: "Keyword no encontrada" };
     }
+    const denied = await requireProjectPermission(user.id, target.projectId, "scan:execute");
+    if (denied) return { error: denied };
     await tx.delete(keywordTargets).where(eq(keywordTargets.id, id));
     revalidatePath('/');
     return { success: true as const };
@@ -171,9 +175,8 @@ const AddCompetitorSchema = z.object({
 export const addCompetitor = authenticatedAction(
   AddCompetitorSchema,
   async ({ projectId, domain }, { user, tx }) => {
-    if (!(await assertOwner(tx, user.id, projectId))) {
-      return { error: "Proyecto no encontrado" };
-    }
+    const denied = await requireProjectPermission(user.id, projectId, "scan:execute");
+    if (denied) return { error: denied };
     const clean = normalizeDomain(domain);
     await tx
       .insert(competitors)
@@ -190,9 +193,11 @@ export const removeCompetitor = authenticatedAction(
     const comp = await tx.query.competitors.findFirst({
       where: eq(competitors.id, id),
     });
-    if (!comp || !(await assertOwner(tx, user.id, comp.projectId))) {
+    if (!comp) {
       return { error: "Competidor no encontrado" };
     }
+    const denied = await requireProjectPermission(user.id, comp.projectId, "scan:execute");
+    if (denied) return { error: denied };
     await tx.delete(competitors).where(eq(competitors.id, id));
     revalidatePath('/');
     return { success: true as const };

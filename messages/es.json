@@ -409,7 +409,8 @@
     "webhooksModalTitle": "¡Webhook Registrado con Éxito!",
     "webhooksModalDesc": "Utilice este secreto de firma para validar de forma criptográfica la autenticidad e integridad de los payloads de eventos entrantes.",
     "webhooksModalSecretLabel": "Secret Token de Firma",
-    "webhooksModalButton": "He Guardado el Secreto"
+    "webhooksModalButton": "He Guardado el Secreto",
+    "teamSelectProject": "Selecciona un proyecto arriba para gestionar su equipo."
   },
   "performance": {
     "pageTitle": "StrategicAudit Pro",

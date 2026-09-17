@@ -28,6 +28,9 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  // A-3: solo owner/admin gestionan (invitar/quitar/anular).
+  const [myRole, setMyRole] = useState<string | null>(null);
+  const canManage = myRole === "owner" || myRole === "admin";
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Member["role"]>("viewer");
@@ -44,6 +47,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
         if (data.success) {
           setMembers(data.members ?? []);
           setInvitations(data.invitations ?? []);
+          setMyRole(data.myRole ?? null);
         } else {
           setLoadError(data.error || "No se pudo cargar el equipo.");
         }
@@ -138,6 +142,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
           </div>
         </div>
 
+        {canManage && (
         <form onSubmit={handleInvite} className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
@@ -170,6 +175,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
             {isSubmitting ? "Enviando..." : "Enviar Invitación"}
           </button>
         </form>
+        )}
 
         {successMsg && (
           <div className="mt-3 p-3 bg-chartreuse/10 border border-chartreuse/20 text-chartreuse rounded-lg text-sm flex items-center gap-2">
@@ -208,7 +214,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
                   {member.role}
                 </span>
 
-                {member.role !== "owner" && member.userId && (
+                {member.role !== "owner" && member.userId && canManage && (
                   <button
                     onClick={() => handleRemove(member.userId)}
                     className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
@@ -239,6 +245,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
                     Rol {inv.role} · vence {new Date(inv.expiresAt).toLocaleDateString()}
                   </p>
                 </div>
+                {canManage && (
                 <button
                   onClick={() => handleRescind(inv.id)}
                   className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
@@ -247,6 +254,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
+                )}
               </div>
             ))}
           </div>

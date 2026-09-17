@@ -41,6 +41,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     redirect('/login');
   }
 
+  // A-3: rol efectivo para gating de UI (el servidor ya lo exige de nuevo).
+  const { getProjectRole } = await import("@/server/lib/project-access");
+  const { canPerformAction } = await import("@/server/auth/rbac");
+  const viewerRole = await getProjectRole(user.id, projectId);
+  const canDelete = !!viewerRole && canPerformAction(viewerRole, "project:delete");
+  const canRotateSecrets = !!viewerRole && canPerformAction(viewerRole, "apikeys:manage");
+
   // Ejecutar todo el fetch dentro de un contexto RLS
   let data;
   try {
@@ -203,7 +210,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
              <span className="text-sm font-bold text-muted-foreground truncate max-w-[200px] mt-0.5">{project.domain}</span>
           </div>
           <div className="h-8 w-px bg-border mx-2" />
-          <DeactivateButton projectId={projectId} />
+          {canDelete && <DeactivateButton projectId={projectId} />}
           <AuditControl projectId={projectId} />
         </div>
       </header>
@@ -338,6 +345,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               appUrl={appUrl}
               stats={rumStats}
               beaconSecret={project.beaconSecret ?? null}
+              canRotate={canRotateSecrets}
             />
           </section>
           

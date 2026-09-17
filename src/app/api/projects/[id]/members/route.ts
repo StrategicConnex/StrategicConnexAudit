@@ -102,7 +102,7 @@ export async function GET(
   if (!data) {
     return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
   }
-  return NextResponse.json({ success: true, projectId, ...data });
+  return NextResponse.json({ success: true, projectId, myRole: auth.role, ...data });
 }
 
 const inviteSchema = z.object({

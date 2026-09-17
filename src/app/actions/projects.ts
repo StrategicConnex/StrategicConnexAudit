@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { projects, users } from '@/shared/db/schemas';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { requireProjectPermission } from "@/server/lib/project-access";
 import { validateSafeUrl } from "@/server/intelligence/security/egress-guard";
 
 const CreateProjectSchema = z.object({
@@ -115,6 +116,9 @@ const DeactivateSchema = z.object({
 export const rotateBeaconSecret = authenticatedAction(
   DeactivateSchema,
   async ({ projectId }, { user, tx }) => {
+    // A-3: apikeys:manage (admin+) en vez de solo owner.
+    const denied = await requireProjectPermission(user.id, projectId, "apikeys:manage");
+    if (denied) return { error: denied };
     const [updated] = await tx.update(projects)
       .set({ beaconSecret: randomUUID(), updatedAt: new Date() })
       .where(
@@ -137,6 +141,9 @@ export const rotateBeaconSecret = authenticatedAction(
 export const deactivateProject = authenticatedAction(
   DeactivateSchema,
   async ({ projectId }, { user, tx }) => {
+    // A-3: project:delete (owner). El where ownerId queda como red.
+    const denied = await requireProjectPermission(user.id, projectId, "project:delete");
+    if (denied) return { error: denied };
     await tx.update(projects)
       .set({ deletedAt: new Date(), isDeleted: true })
       .where(

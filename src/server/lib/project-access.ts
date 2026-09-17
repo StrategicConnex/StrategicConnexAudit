@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { directDb } from "@/shared/db";
 import { projects, projectMembers } from "@/shared/db/schemas";
 import type { ProjectRole } from "@/server/auth/rbac";
+import { canPerformAction, type PermissionAction } from "@/server/auth/rbac";
 
 export type ProjectAccessRole = "owner" | ProjectRole;
 
@@ -51,4 +52,21 @@ export async function assertProjectAccess(
   const role = await getProjectRole(userId, projectId);
   if (!role) return { ok: false, role: null };
   return { ok: true, role };
+}
+
+/**
+ * Gate de permiso para Server Actions y rutas (A-3).
+ * Retorna mensaje de error listo para responder, o null si puede continuar.
+ */
+export async function requireProjectPermission(
+  userId: string,
+  projectId: string,
+  action: PermissionAction
+): Promise<string | null> {
+  const role = await getProjectRole(userId, projectId);
+  if (!role) return "Proyecto no encontrado";
+  if (!canPerformAction(role, action)) {
+    return "No tienes permiso para esta acción";
+  }
+  return null;
 }

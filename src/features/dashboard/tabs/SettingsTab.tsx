@@ -23,6 +23,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { logger } from "@/lib/logger";
+import { TeamSettingsTab } from '../TeamSettingsTab';
 
 interface Project {
   id: string;
@@ -972,6 +973,15 @@ export function SettingsTab({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 6. Equipo del proyecto (A-2/A-3) */}
+      {selectedProjectId ? (
+        <TeamSettingsTab projectId={selectedProjectId} />
+      ) : (
+        <div className="glass-card p-10">
+          <p className="text-sm text-muted-fg">{t('teamSelectProject')}</p>
         </div>
       )}
 

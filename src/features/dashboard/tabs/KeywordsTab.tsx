@@ -29,12 +29,14 @@ interface KeywordsTabProps {
   setCompetitorInput: (val: string) => void;
   onAddCompetitor: (e: React.FormEvent) => void;
   onDeleteCompetitor: (id: string) => void;
+  /** A-3: viewer/guest ven datos pero no agregan ni borran. */
+  canEdit: boolean;
 }
 
 export function KeywordsTab({
   keywordsList, keywordInput, setKeywordInput, handleAddKeyword,
   onDeleteKeyword, gsc, competitors, competitorInput, setCompetitorInput,
-  onAddCompetitor, onDeleteCompetitor,
+  onAddCompetitor, onDeleteCompetitor, canEdit,
 }: KeywordsTabProps) {
   const t = useTranslations('keywords');
   return (
@@ -72,7 +74,8 @@ export function KeywordsTab({
         ))}
       </div>
 
-      {/* Add keyword form */}
+      {/* Add keyword form — solo con permiso de escritura */}
+      {canEdit && (
       <div className="glass-card p-10  relative overflow-hidden">
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         <div className="mb-8">
@@ -98,6 +101,7 @@ export function KeywordsTab({
           </button>
         </form>
       </div>
+      )}
 
       {/* Tracked keywords list */}
       <div className="glass-card overflow-hidden ">
@@ -115,7 +119,7 @@ export function KeywordsTab({
                 <th className="px-8 py-5 text-center">{t('colDifficulty')}</th>
                 <th className="px-8 py-5 text-center">{t('colPosition')}</th>
                 <th className="px-8 py-5 text-center">{t('colChange')}</th>
-                <th className="px-8 py-5"><span className="sr-only">{t('deleteKeyword')}</span></th>
+                {canEdit && <th className="px-8 py-5"><span className="sr-only">{t('deleteKeyword')}</span></th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04] text-sm">
@@ -160,6 +164,7 @@ export function KeywordsTab({
                     </div>
                   </td>
                   <td className="px-8 py-6 text-center">
+                    {canEdit && (
                     <button
                       onClick={() => onDeleteKeyword(String(kw.id))}
                       aria-label={`${t('deleteKeyword')}: ${kw.keyword}`}
@@ -168,6 +173,7 @@ export function KeywordsTab({
                     >
                       <X aria-hidden="true" className="w-4 h-4" />
                     </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -189,6 +195,7 @@ export function KeywordsTab({
           <h3 className="font-extrabold text-white text-lg tracking-tight">{t('compTitle')}</h3>
           <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-1">{t('compDesc')}</p>
         </div>
+        {canEdit && (
         <form onSubmit={onAddCompetitor} className="flex gap-4 flex-col sm:flex-row relative z-10 mb-6">
           <div className="relative flex-1">
             <Globe aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
@@ -207,6 +214,7 @@ export function KeywordsTab({
             <Plus className="w-4 h-4" /> {t('compAdd')}
           </button>
         </form>
+        )}
         {competitors.length === 0 ? (
           <p className="text-sm text-muted-fg">{t('compEmpty')}</p>
         ) : (
@@ -216,6 +224,7 @@ export function KeywordsTab({
                 <Globe aria-hidden="true" className="w-4 h-4 text-muted-fg shrink-0" />
                 <span className="font-bold text-white text-sm truncate flex-1">{c.domain}</span>
                 <span className="text-2xs text-muted-fg">{t('compFuture')}</span>
+                {canEdit && (
                 <button
                   onClick={() => onDeleteCompetitor(c.id)}
                   aria-label={`${t('deleteKeyword')}: ${c.domain}`}
@@ -224,6 +233,7 @@ export function KeywordsTab({
                 >
                   <X aria-hidden="true" className="w-4 h-4" />
                 </button>
+                )}
               </li>
             ))}
           </ul>

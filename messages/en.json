@@ -409,7 +409,8 @@
     "webhooksModalTitle": "Webhook Registered Successfully!",
     "webhooksModalDesc": "Use this signing secret to cryptographically validate the authenticity and integrity of incoming event payloads.",
     "webhooksModalSecretLabel": "Signing Secret Token",
-    "webhooksModalButton": "I Have Saved the Secret"
+    "webhooksModalButton": "I Have Saved the Secret",
+    "teamSelectProject": "Select a project above to manage its team."
   },
   "performance": {
     "pageTitle": "StrategicAudit Pro",

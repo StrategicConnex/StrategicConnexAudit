@@ -10,6 +10,7 @@ import {
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { withRateLimit } from "@/shared/lib/ratelimit";
+import { requireProjectPermission } from "@/server/lib/project-access";
 import { tasks } from "@trigger.dev/sdk";
 import { runAdversaryAssessment } from "@/trigger/adversary-assessment.trigger";
 import { extractTargetHost } from "@/server/intelligence/adversary/sandbox-executor";
@@ -19,14 +20,12 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * SECURITY: igual que /api/intelligence/adversary — ownership obligatorio.
- * Además el gate LEGAL: solo se lanza una evaluación real si
- * projects.active_testing_authorized = true (consentimiento explícito).
+ * SECURITY: proyecto accesible (owner o miembro con permiso ya verificado
+ * arriba) + gate LEGAL de consentimiento explícito.
  */
-
-async function getOwnedProject(userId: string, projectId: string) {
+async function getAccessibleProject(projectId: string) {
   return db.query.projects.findFirst({
-    where: and(eq(projects.id, projectId), eq(projects.ownerId, userId)),
+    where: eq(projects.id, projectId),
     columns: {
       id: true,
       domain: true,
@@ -72,7 +71,16 @@ export const POST = withRateLimit(
       return NextResponse.json({ success: false, error: "projectId inválido" }, { status: 400 });
     }
 
-    const project = await getOwnedProject(user.id, parsed.data.projectId);
+    // A-3: lanzar evaluaciones = scan:execute (editor+), no solo owner.
+    const denied = await requireProjectPermission(user.id, parsed.data.projectId, "scan:execute");
+    if (denied) {
+      return NextResponse.json(
+        { success: false, error: denied },
+        { status: denied === "Proyecto no encontrado" ? 404 : 403 }
+      );
+    }
+
+    const project = await getAccessibleProject(parsed.data.projectId);
     if (!project || project.isDeleted || project.deletedAt) {
       return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
     }
@@ -152,7 +160,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "projectId requerido" }, { status: 400 });
     }
 
-    const project = await getOwnedProject(user.id, projectId);
+    // A-3: lectura = report:view (guest+), no solo owner.
+    const denied = await requireProjectPermission(user.id, projectId, "report:view");
+    if (denied) {
+      return NextResponse.json({ success: false, error: denied }, { status: 404 });
+    }
+
+    const project = await getAccessibleProject(projectId);
     if (!project) {
       return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
     }
@@ -221,7 +235,16 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Payload inválido" }, { status: 400 });
     }
 
-    const owned = await getOwnedProject(user.id, parsed.data.projectId);
+    // A-3: cambiar consentimiento = project:update (admin+), no solo owner.
+    const denied = await requireProjectPermission(user.id, parsed.data.projectId, "project:update");
+    if (denied) {
+      return NextResponse.json(
+        { success: false, error: denied },
+        { status: denied === "Proyecto no encontrado" ? 404 : 403 }
+      );
+    }
+
+    const owned = await getAccessibleProject(parsed.data.projectId);
     if (!owned) {
       return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
     }

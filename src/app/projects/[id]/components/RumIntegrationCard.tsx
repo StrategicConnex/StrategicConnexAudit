@@ -36,12 +36,15 @@ export function RumIntegrationCard({
   appUrl,
   stats,
   beaconSecret,
+  canRotate = true,
 }: {
   projectId: string;
   appUrl: string;
   stats: RumStats;
   /** Secreto del beacon (null = proyecto legacy sin secreto). */
   beaconSecret: string | null;
+  /** A-3: solo owner/admin ven el botón de rotar. */
+  canRotate?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const [secret, setSecret] = useState<string | null>(beaconSecret);
@@ -168,8 +171,9 @@ export function RumIntegrationCard({
         </div>
         <button
           onClick={rotate}
-          disabled={rotating}
-          className="sm:ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-2xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors disabled:opacity-50 cursor-pointer"
+          disabled={rotating || !canRotate}
+          title={canRotate ? undefined : "Solo administradores pueden rotar el token"}
+          className="sm:ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-2xs font-bold uppercase tracking-widest text-muted-fg hover:text-foreground hover:border-primary/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <RefreshCw className={`w-3 h-3 ${rotating ? 'animate-spin' : ''}`} />
           {rotated ? '¡Token actualizado!' : secret ? 'Rotar token' : 'Generar token'}
