@@ -15,6 +15,7 @@
 import { envSecrets } from "@/shared/config/env-secrets";
 import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 import { recordAiUsage } from "./ai-usage";
+import { buildSemanticKey, getSemanticCache, setSemanticCache } from "./ai-cache";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,11 @@ export interface AIRequestOptions {
    * Opcional: callers sin usuario (crons) omiten el registro atribuido.
    */
   userId?: string | null;
+  /**
+   * Ámbito semántico de caché (P1-3), ej. `seo-report:{projectId}:{fecha}`.
+   * Regenerar el mismo ámbito dentro del TTL es hit seguro.
+   */
+  cacheScope?: string;
 }
 
 export interface AIResponse {
@@ -249,38 +255,10 @@ export const MODEL_TIMEOUTS: Record<AITaskType, number> = {
   "adversary-analysis": 60_000,
 };
 
-// ─── Simple In-Memory Response Cache ────────────────────────────────────────
-
-const responseCache = new Map<
-  string,
-  { content: string; modelId: string; timestamp: number }
->();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-function buildCacheKey(taskType: AITaskType, messages: AIMessage[]): string {
-  const lastMsg = messages[messages.length - 1]?.content?.slice(0, 100) || "";
-  return `${taskType}::${lastMsg}`;
-}
-
-function getCached(
-  key: string
-): { content: string; modelId: string } | null {
-  const entry = responseCache.get(key);
-  if (entry && Date.now() - entry.timestamp < CACHE_TTL_MS) {
-    return { content: entry.content, modelId: entry.modelId };
-  }
-  responseCache.delete(key);
-  return null;
-}
-
-function setCache(key: string, content: string, modelId: string): void {
-  if (responseCache.size > 200) {
-    // LRU eviction: delete oldest
-    const oldest = responseCache.keys().next().value;
-    if (oldest) responseCache.delete(oldest);
-  }
-  responseCache.set(key, { content, modelId, timestamp: Date.now() });
-}
+// ─── Caché semántica (P1-3) ─────────────────────────────────────────────────
+// Reemplaza al Map en memoria con clave de últimos 100 chars (hit-rate ~0).
+// Ver src/server/ai/ai-cache.ts: L1 memoria + L2 Redis, clave sha256 de los
+// mensajes completos + scope del caller.
 
 // ─── Circuit Breaker for OpenRouter ─────────────────────────────────────────
 
@@ -461,10 +439,11 @@ export async function callAIWithFallback(
     };
   };
 
-  // 1. Check cache (solo sin tools: los handlers devuelven estado mutable)
+  // 1. Check cache (solo sin tools: los handlers devuelven estado mutable).
+  // P1-3: clave semántica (mensajes completos + scope) en Redis/memoria.
+  const cacheKey = buildSemanticKey(taskType, options.cacheScope ?? "", messages);
   if (!useTools) {
-    const cacheKey = buildCacheKey(taskType, messages);
-    const cached = getCached(cacheKey);
+    const cached = await getSemanticCache(cacheKey);
     if (cached) {
       const res = track({ modelUsed: cached.modelId, success: true, fromCache: true });
       res.content = cached.content;
@@ -513,7 +492,7 @@ export async function callAIWithFallback(
 
       // Cache solo respuestas de contenido puro sin tools
       if (!useTools && !toolCalls?.length) {
-        setCache(buildCacheKey(taskType, messages), message.content ?? "", modelId!);
+        void setSemanticCache(cacheKey, message.content ?? "", modelId!, taskType);
       }
 
       console.log(

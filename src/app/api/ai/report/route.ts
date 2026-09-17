@@ -149,6 +149,8 @@ export const POST = withRateLimit(
       const aiResult = await callAIWithFallback({
         taskType: "seo-report",
         userId,
+        // P1-3: mismo proyecto + día = mismo informe (TTL 24h en ai-cache).
+        cacheScope: `${projectId}:${new Date().toISOString().slice(0, 10)}`,
         messages: [systemMsg, userMsg],
         temperature: 0.3,
         // 3000 tokens (no 4096): el reporte (resumen + tabla KPIs + mermaid)
