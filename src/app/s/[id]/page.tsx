@@ -16,6 +16,11 @@ function pct(up: number, total: number): string {
   return `${(Math.round((up / total) * 1000) / 10).toFixed(1)}%`;
 }
 
+/** Ventana de 30 días calculada fuera del render (regla no-impure-render). */
+function thirtyDaysAgo(): Date {
+  return new Date(Date.now() - 30 * 86400000);
+}
+
 /**
  * GET /s/[id] — Status page pública por UUID de proyecto (B-2).
  *
@@ -45,7 +50,7 @@ export default async function StatusPage({
 
   if (!project) notFound();
 
-  const since = new Date(Date.now() - 30 * 86400000);
+  const since = thirtyDaysAgo();
   const logs = await directDb
     .select({
       isUp: uptimeLogs.isUp,
