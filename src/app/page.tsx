@@ -19,6 +19,7 @@ async function DashboardContent() {
       <DashboardContainer 
         initialProjects={[]} 
         dashboardData={[]} 
+        userInitials="DEV"
       />
     );
   }
@@ -85,6 +86,7 @@ async function DashboardContent() {
     <DashboardContainer 
       initialProjects={allProjects} 
       dashboardData={dashboardData} 
+      userInitials={user.email?.slice(0, 2).toUpperCase() ?? '··'}
     />
   );
 }

@@ -103,7 +103,8 @@
       "apiPlayground": "API Playground",
       "apiPlaygroundBadge": "Swagger"
     },
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "resourcesTitle": "Recursos"
   },
   "language": {
     "switchTo": "English",

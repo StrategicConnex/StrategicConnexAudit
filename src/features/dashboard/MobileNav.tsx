@@ -3,8 +3,9 @@
 import { useEffect, useRef } from 'react';
 import {
   LayoutDashboard, Globe, Activity, Search, BarChart3, ShieldCheck,
-  Sliders, Skull, Package, Settings, X,
+  Sliders, Skull, Package, Settings, X, BookOpen, HeartPulse, Crosshair, Key, Zap,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { DashboardTab } from './DashboardSidebar';
 
@@ -26,6 +27,16 @@ const TABS: { tab: DashboardTab; icon: React.ReactNode; labelKey: string; hintKe
   { tab: 'adversary', icon: <Skull size={18} strokeWidth={2} />, labelKey: 'tabs.adversary', hintKey: 'hints.adversary' },
   { tab: 'plugins', icon: <Package size={18} strokeWidth={2} />, labelKey: 'tabs.marketplace', hintKey: 'hints.marketplace' },
   { tab: 'settings', icon: <Settings size={18} strokeWidth={2} />, labelKey: 'tabs.settings' },
+];
+
+// P2-5: paridad con el sidebar desktop (recursos externos).
+const RESOURCE_LINKS = [
+  { href: '/docs', icon: <BookOpen size={18} strokeWidth={2} />, labelKey: 'links.docs' },
+  { href: '/ai/health', icon: <HeartPulse size={18} strokeWidth={2} />, labelKey: 'links.aiHealth' },
+  { href: '/mitre-coverage', icon: <Crosshair size={18} strokeWidth={2} />, labelKey: 'links.mitre' },
+  { href: '/docs/api', icon: <BookOpen size={18} strokeWidth={2} />, labelKey: 'links.apiReference' },
+  { href: '/settings/api-keys', icon: <Key size={18} strokeWidth={2} />, labelKey: 'links.apiKeys' },
+  { href: '/swagger', icon: <Zap size={18} strokeWidth={2} />, labelKey: 'links.apiPlayground' },
 ];
 
 /**
@@ -97,6 +108,20 @@ export function MobileNav({ open, activeTab, onTabChange, onClose }: MobileNavPr
               </button>
             );
           })}
+          <p className="px-4 pt-4 pb-1 text-2xs font-extrabold uppercase tracking-widest text-muted-fg/60">
+            {t('resourcesTitle')}
+          </p>
+          {RESOURCE_LINKS.map(({ href, icon, labelKey }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={onClose}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground"
+            >
+              <span>{icon}</span>
+              <span>{t(labelKey)}</span>
+            </Link>
+          ))}
         </div>
       </nav>
     </div>

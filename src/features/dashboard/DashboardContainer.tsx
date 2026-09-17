@@ -77,9 +77,10 @@ interface DashboardContainerProps {
   initialProjects: ProjectRow[];
   dashboardData: ProjectWithNested[];
   defaultTab?: DashboardTab;
+  userInitials?: string;
 }
 
-export function DashboardContainer({ initialProjects, dashboardData, defaultTab }: DashboardContainerProps) {
+export function DashboardContainer({ initialProjects, dashboardData, defaultTab, userInitials }: DashboardContainerProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>(defaultTab || 'overview');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'visual' | 'markdown'>('visual');
@@ -203,6 +204,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab 
           NewProjectModal={NewProjectModal} 
           onMenu={() => setMobileNavOpen(true)}
           onNavigateProjects={() => openTab('projects')}
+          userInitials={userInitials}
         />
 
         {/* Dynamic Content Panel */}
