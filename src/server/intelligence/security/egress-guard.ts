@@ -1,6 +1,5 @@
 import { lookup } from "node:dns/promises";
 import net from "node:net";
-import { logger } from "@/lib/logger";
 
 /* ═══════════════════════════════════════════════════════════════════
    Egress Guard — SSRF & Private Network Protection
@@ -224,6 +223,39 @@ export async function safeFetch(url: string, init: RequestInit = {}): Promise<Re
 }
 export type SafeFetch = typeof safeFetch;
 
+/**
+ * safeFetchFollow — P2-4: sigue redirecciones revalidando CADA salto
+ * (máx. 3). Cierra el TOCTOU de `redirect: "follow"` nativo, donde solo el
+ * primer host se validaba. Lanza en: protocolo no http/https, host privado
+ * en cualquier salto, o exceso de saltos.
+ */
+const MAX_REDIRECT_HOPS = 3;
+
+export async function safeFetchFollow(
+  url: string,
+  init: RequestInit = {},
+  maxHops: number = MAX_REDIRECT_HOPS
+): Promise<Response> {
+  let current = url;
+  for (let hop = 0; hop <= maxHops; hop++) {
+    const response = await safeFetch(current, { ...init, redirect: "manual" });
+    const location = response.headers.get("location");
+    const isRedirect = response.status >= 300 && response.status < 400 && !!location;
+    if (!isRedirect) return response;
+    if (hop === maxHops) {
+      throw new Error("SSRF Prevention: demasiadas redirecciones (máx. 3).");
+    }
+    const next = new URL(location!, new URL(current));
+    if (!["http:", "https:"].includes(next.protocol)) {
+      throw new Error("SSRF Prevention: redirección a protocolo no permitido.");
+    }
+    // Revalidar DNS del destino (cierra DNS-rebinding entre saltos).
+    await assertPublicHostname(next.hostname);
+    current = next.toString();
+  }
+  throw new Error("SSRF Prevention: demasiadas redirecciones (máx. 3).");
+}
+
 // ─── Shared Network Utilities (consolidated from network.ts) ────────────
 
 /**
@@ -279,7 +311,9 @@ export async function validateSafeUrl(targetUrl: string): Promise<string> {
     if (err?.message?.includes("Acceso denegado")) {
       throw err;
     }
-    logger.warn(`[EgressGuard] No se pudo resolver DNS para el host ${hostname}:`, err?.message || err);
+    // P2-4 fail-closed: si el DNS no responde no podemos probar que el host
+    // sea público. Permitirlo sería SSRF por fallo de infraestructura.
+    throw new Error(`Acceso denegado: no se pudo verificar el host ${hostname} (fallo DNS).`);
   }
 
   return targetUrl;

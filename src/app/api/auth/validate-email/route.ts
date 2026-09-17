@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { validateEmail } from "@/lib/email-validation";
 import { checkEmailRateLimit, extractClientIp, buildRateLimitHeaders, isEmailAllowlisted } from "@/shared/lib/ratelimit";
 import { logger } from "@/lib/logger";
@@ -32,7 +33,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { email } = body as { email?: string };
+    // P2-4: schema cerrado (email RFC + longitud).
+    const parsed = z.object({ email: z.string().email().max(320) }).safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { valid: false, reason: "El correo electrónico no es válido." },
+        { status: 400 }
+      );
+    }
+    const { email } = parsed.data;
 
     if (!email || typeof email !== "string") {
       return NextResponse.json(

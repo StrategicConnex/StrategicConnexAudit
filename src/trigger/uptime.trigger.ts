@@ -2,7 +2,7 @@ import { schedules, wait } from "@trigger.dev/sdk";
 import { db } from "@/shared/db";
 import { projects, uptimeLogs } from "@/shared/db/schemas";
 import { and, eq, isNull } from "drizzle-orm";
-import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
+import { validateSafeUrl, normalizeUrl, safeFetchFollow } from "@/server/intelligence/security/egress-guard";
 
 export const uptimeMonitor = schedules.task({
   id: "uptime-monitor",
@@ -30,8 +30,10 @@ export const uptimeMonitor = schedules.task({
         const targetUrl = normalizeUrl(project.domain);
         await validateSafeUrl(targetUrl);
 
-        const response = await fetch(targetUrl, {
-          method: 'HEAD', // HEAD es más rápido y consume menos ancho de banda
+        // P2-4: safeFetchFollow revalida CADA salto de redirect (cierra
+        // DNS-rebinding entre validateSafeUrl y fetch, y entre saltos).
+        const response = await safeFetchFollow(targetUrl, {
+          method: 'HEAD',
           headers: {
             'User-Agent': 'StrategicAudit-UptimeBot/1.0',
           },

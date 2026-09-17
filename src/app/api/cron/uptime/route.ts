@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/db';
 import { projects, uptimeLogs } from '@/shared/db/schemas';
 import { and, eq, isNull } from 'drizzle-orm';
-import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
+import { validateSafeUrl, normalizeUrl, safeFetchFollow } from "@/server/intelligence/security/egress-guard";
 import { isCronAuthorized } from "@/server/auth/cron";
 import { logger } from "@/lib/logger";
 
@@ -50,8 +50,9 @@ export async function GET(request: Request) {
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
-        const response = await fetch(url, {
+
+        // P2-4: safeFetchFollow revalida cada redirect (cierra TOCTOU).
+        const response = await safeFetchFollow(url, {
           method: 'HEAD',
           signal: controller.signal,
           headers: {

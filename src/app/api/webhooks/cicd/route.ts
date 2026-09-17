@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { verifyWebhookSignature } from "@/server/security/cicd-helper";
 
 export async function POST(request: Request) {
@@ -25,7 +26,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = JSON.parse(rawBody || "{}");
+    // P2-4: schema cerrado (solo commit/ref acotados; resto se ignora).
+    const shape = z.object({
+      commit: z.string().max(120).optional(),
+      ref: z.string().max(256).optional(),
+    }).catchall(z.unknown()).safeParse(JSON.parse(rawBody || "{}"));
+    if (!shape.success) {
+      return NextResponse.json(
+        { success: false, error: "Payload inválido" },
+        { status: 400 }
+      );
+    }
+    const payload = shape.data;
 
     return NextResponse.json({
       success: true,

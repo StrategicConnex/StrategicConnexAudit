@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/shared/lib/supabase/server";
 import { directDb } from "@/shared/db";
 import { pushSubscriptions } from "@/shared/db/schemas/push-subscriptions";
@@ -41,16 +42,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Parse body
+    // 2. Parse body — P2-4: schema cerrado (endpoint URL acotada, claves con tamaño).
     const body = await req.json().catch(() => ({}));
-    const subscription = body.subscription as Record<string, unknown> | undefined;
-
-    if (!subscription || !subscription.endpoint) {
+    const parsed = z.object({
+      subscription: z.object({
+        endpoint: z.string().url().max(2048),
+        keys: z.object({
+          p256dh: z.string().max(256),
+          auth: z.string().max(256),
+        }).catchall(z.unknown()).optional(),
+      }).catchall(z.unknown()),
+    }).safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: "Invalid subscription object" },
         { status: 400 },
       );
     }
+    const subscription = parsed.data.subscription as Record<string, unknown>;
 
     const endpoint = subscription.endpoint as string;
 

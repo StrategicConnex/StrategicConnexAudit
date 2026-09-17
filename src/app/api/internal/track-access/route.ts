@@ -31,10 +31,12 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ ok: false }, { status: 401 });
     }
 
-    // 2. Extraer IP y país de los headers del request
+    // 2. Extraer IP y país de los headers del request.
+    // P2-4: x-forwarded-for es falsificable por el cliente; se prefiere
+    // x-real-ip (fijada por la plataforma) y se acota longitud.
     const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      request.headers.get("x-real-ip") ??
+      request.headers.get("x-real-ip")?.trim().slice(0, 64) ??
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim().slice(0, 64) ??
       null;
     const country = request.headers.get("x-vercel-ip-country") ?? null;
     const userAgent = request.headers.get("user-agent")?.slice(0, 400) ?? null;

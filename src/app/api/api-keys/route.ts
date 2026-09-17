@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from "@/lib/logger";
 import { createClient } from '@/shared/lib/supabase/server';
 import {
@@ -51,11 +52,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, scope, expiresAt } = body;
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json({ success: false, error: 'Name is required' }, { status: 400 });
+    // P2-4: schema cerrado — nombre acotado, expiración futura obligatoria si viene.
+    const parsed = z.object({
+      name: z.string().trim().min(1).max(64),
+      scope: z.array(z.string().max(64)).max(16).optional(),
+      expiresAt: z.string().datetime().refine((s) => new Date(s).getTime() > Date.now(), {
+        message: "expiresAt debe ser una fecha futura",
+      }).optional(),
+    }).safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: 'Datos inválidos' }, { status: 400 });
     }
+    const { name, scope, expiresAt } = parsed.data;
 
     // Vocabulario cerrado de scopes: rechazar valores desconocidos (antes se
     // persistía cualquier string y nunca se verificaba al usar la key).
