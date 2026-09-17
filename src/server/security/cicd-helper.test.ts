@@ -8,6 +8,8 @@ import {
   verifyWebhookSignature,
   generateGithubWorkflowSnippet,
   generateGitlabCiSnippet,
+  generateGithubGateSnippet,
+  evaluateGate,
 } from "./cicd-helper";
 
 const SECRET = "test-secret-123";
@@ -82,5 +84,42 @@ describe("generateGitlabCiSnippet", () => {
     expect(snippet).toContain("https://scaudit.vercel.app/api/webhooks/cicd");
     expect(snippet).toContain("X-SCAUDIT-Signature");
     expect(snippet).toContain("SCAUDIT_WEBHOOK_SECRET");
+  });
+});
+
+describe("evaluateGate — quality gate CI/CD (B-1)", () => {
+  it("pass con score alto y cero críticas", () => {
+    expect(evaluateGate(85, 0, 2)).toMatchObject({ gate: "pass", score: 85 });
+  });
+
+  it("fail con críticas sobre el máximo", () => {
+    const r = evaluateGate(90, 2, 0);
+    expect(r.gate).toBe("fail");
+    expect(r.reasons.join(" ")).toContain("crítica");
+  });
+
+  it("fail con score bajo el mínimo", () => {
+    const r = evaluateGate(60, 0, 1);
+    expect(r.gate).toBe("fail");
+    expect(r.reasons.join(" ")).toContain("60");
+  });
+
+  it("fail cerrado sin auditoría (score null)", () => {
+    const r = evaluateGate(null, 0, 0);
+    expect(r.gate).toBe("fail");
+  });
+
+  it("respeta política personalizada", () => {
+    expect(evaluateGate(60, 1, 0, { maxCritical: 2, minScore: 50 }).gate).toBe("pass");
+    expect(evaluateGate(60, 3, 0, { maxCritical: 2, minScore: 50 }).gate).toBe("fail");
+  });
+});
+
+describe("generateGithubGateSnippet", () => {
+  it("incluye projectId y salida con exit 1", () => {
+    const snippet = generateGithubGateSnippet("https://x/api/webhooks/cicd", "proj-1");
+    expect(snippet).toContain("proj-1");
+    expect(snippet).toContain("exit 1");
+    expect(snippet).toContain('"gate":"pass"');
   });
 });
