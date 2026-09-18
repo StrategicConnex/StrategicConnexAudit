@@ -2,8 +2,6 @@
  * Helper functions for Security Audit module
  */
 
-import type { SecurityEventType } from "./types";
-
 export const EVENT_LABELS: Record<string, { label: string; color: string; icon: string }> = {
   rate_limit_hit:        { label: "Rate Limit Hit",        color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10",        icon: "⚠" },
   open_redirect_attempt: { label: "Open Redirect Attempt", color: "text-destructive border-destructive/30 bg-destructive/10",              icon: "↗" },

@@ -40,6 +40,9 @@ yarn-error.log*
 # dev logs & temp files
 next-dev.log
 dev-audit.log
+dev_error.log
+dev_output.log
+dev-*.log
 *.bak
 design-report.html
 

@@ -100,7 +100,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
   const [gscTotals, setGscTotals] = useState<GscTotals>({ impressions: 0, clicks: 0, ctr: null, position: null, hasData: false });
   const [competitorsList, setCompetitorsList] = useState<CompetitorRow[]>([]);
   const [competitorInput, setCompetitorInput] = useState('');
-  const [keywordsLoading, setKeywordsLoading] = useState(false);
+  const [, setKeywordsLoading] = useState(false);
   // A-3: rol efectivo en el proyecto seleccionado (null = sin acceso).
   const [userRole, setUserRole] = useState<string | null>(null);
   const canEditKeywords = userRole === 'owner' || userRole === 'admin' || userRole === 'editor';

@@ -47,6 +47,36 @@ function mockApis(over: Record<string, unknown> = {}) {
       }
       return { ok: true, json: async () => over.apiKeys ?? { success: true, apiKeys: [] } };
     }
+    if (url.startsWith("/api/billing/entitlements")) {
+      return {
+        ok: true,
+        json: async () => over.entitlements ?? {
+          success: true,
+          entitlements: {
+            planName: "business",
+            maxProjects: 10,
+            maxKeywords: 5000,
+            seats: 5,
+            projectsUsed: 2,
+            keywordsUsed: 100,
+            seatsUsed: 1,
+          },
+        },
+      };
+    }
+    if (url.startsWith("/api/billing/plans")) {
+      return {
+        ok: true,
+        json: async () => over.plans ?? {
+          success: true,
+          plans: [
+            { id: "p-starter", name: "starter", maxProjects: 1, maxKeywords: 500, features: { seats: 1 }, priceMonthly: "0" },
+            { id: "p-business", name: "business", maxProjects: 10, maxKeywords: 5000, features: { seats: 5 }, priceMonthly: "49" },
+            { id: "p-enterprise", name: "enterprise", maxProjects: 100, maxKeywords: 100000, features: { seats: 50 }, priceMonthly: null },
+          ],
+        },
+      };
+    }
     if (url.startsWith("/api/bulk-scan")) {
       return { ok: true, json: async () => over.bulk ?? { success: true, message: "2 dominios añadidos a la cola" } };
     }
@@ -226,7 +256,7 @@ describe("MonitoringTab — schedule, webhooks, API keys, bulk scan y planes", (
     });
   });
 
-  it("abre el modal de planes y selecciona el plan starter", async () => {
+  it("abre el modal de planes y marca el plan actual", async () => {
     mockApis();
     render(<MonitoringTab {...props} />);
     await waitFor(() => {
@@ -237,16 +267,18 @@ describe("MonitoringTab — schedule, webhooks, API keys, bulk scan y planes", (
     await waitFor(() => {
       expect(screen.getByText("pricingTitle")).toBeTruthy();
     });
-    // Plan actual = business → solo starter y enterprise dicen 'planSelect' (2); business dice 'planActive'
-    const selectButtons = screen.getAllByText("planSelect");
-    expect(selectButtons.length).toBe(2);
-    expect(screen.getAllByText("planActive").length).toBe(1);
-
-    fireEvent.click(selectButtons[0]!); // Starter
+    // A-4: planes reales desde /api/billing/plans; el plan actual se marca con 'planActive'.
     await waitFor(() => {
-      expect(screen.queryByText("pricingTitle")).toBeNull(); // modal cerrado
+      expect(screen.getAllByText(/planViewAll/).length).toBe(3);
     });
-    expect(screen.getByText("Plan starter")).toBeTruthy();
+    expect(screen.getAllByText(/planActive/).length).toBe(1); // solo business es el actual
+    expect(screen.queryByText("planSelect")).toBeNull(); // el flujo antiguo de selección local ya no existe
+
+    // Cerrar el modal (✕) — la selección real de plan se hace en /pricing
+    fireEvent.click(screen.getByText("✕"));
+    await waitFor(() => {
+      expect(screen.queryByText("pricingTitle")).toBeNull();
+    });
   });
 
   it("triggerSlackTest añade alerta y llama al alert nativo", async () => {

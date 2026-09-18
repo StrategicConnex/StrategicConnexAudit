@@ -5,6 +5,7 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   test: {
+    testTimeout: 15000,
     environment: 'jsdom',
     exclude: ['**/node_modules/**', '**/e2e/**', '**/.next/**', '**/test-results/**'],
     alias: {

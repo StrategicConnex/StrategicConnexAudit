@@ -9,4 +9,10 @@
  */
 export const THEME_STORAGE_KEY = "scaudit-theme";
 
-export const themeInitScript = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");var s=t==="light"||t==="dark"||t==="system"?t:"system";var d=s==="dark"||(s==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var root=document.documentElement;root.setAttribute("data-theme",d?"dark":"light");root.style.colorScheme=d?"dark":"light";}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`;
+/**
+ * Anti-FOUC script. Reads theme from:
+ * 1. localStorage (client-side, fast)
+ * 2. Cookie (SSR-readable, cross-tab synced)
+ * 3. System preference (fallback)
+ */
+export const themeInitScript = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");if(!t||t==="system"){var m=document.cookie.match(new RegExp("(?:^|; )${THEME_STORAGE_KEY}=([^;]*)"));t=m?decodeURIComponent(m[1]):"system";}var s=t==="light"||t==="dark"||t==="system"?t:"system";var d=s==="dark"||(s==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var root=document.documentElement;root.setAttribute("data-theme",d?"dark":"light");root.style.colorScheme=d?"dark":"light";}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`;

@@ -28,6 +28,9 @@ export class SlidingWindowRateLimiter {
   private readonly maxRequests: number;
   private readonly windowMs: number;
   private readonly blockOnExcessMs: number;
+  /** Auto-purge: ejecuta purgeExpired() cada N calls para evitar memory leaks. */
+  private callCount = 0;
+  private readonly purgeInterval: number;
 
   constructor(options: {
     /** Máximo de requests permitidos en la ventana */
@@ -36,10 +39,13 @@ export class SlidingWindowRateLimiter {
     windowMs: number;
     /** Duración del bloqueo temporal al superar el límite (default: 1 min) */
     blockOnExcessMs?: number;
+    /** Frecuencia de auto-purge (default: 100 calls) */
+    purgeInterval?: number;
   }) {
     this.maxRequests = options.maxRequests;
     this.windowMs = options.windowMs;
     this.blockOnExcessMs = options.blockOnExcessMs ?? 60_000;
+    this.purgeInterval = options.purgeInterval ?? 100;
   }
 
   /**
@@ -47,6 +53,12 @@ export class SlidingWindowRateLimiter {
    * Registra el intento internamente.
    */
   check(key: string): RateLimitResult {
+    // Auto-purge expired entries periodically to prevent memory leaks
+    this.callCount++;
+    if (this.callCount % this.purgeInterval === 0) {
+      this.purgeExpired();
+    }
+
     const now = Date.now();
     const windowStart = now - this.windowMs;
 

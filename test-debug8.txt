@@ -1,0 +1,142 @@
+﻿node.exe : (node:11788) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+En C:\Program Files\nodejs\npx.ps1: 15 Carácter: 14
++ $NPM_PREFIX=(& $NODE_EXE $NPM_PREFIX_JS)
++              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:11788) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+node.exe : (node:18024) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+En línea: 1 Carácter: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\Juan\AppData\Roaming\n ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:18024) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm notice run strategicauditpro@0.1.0 npx
+npm notice run vitest run src/app/actions/keywords.test.ts
+(node:3500) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ RUN  v4.1.5 D:/ProyectosWeb/Proyectos/StrategicAudit Pro/strategicaudit-pro
+
+(node:3500) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:18620) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ÔØ» src/app/actions/keywords.test.ts (16 tests | 4 failed) 140ms
+       ├ù returns error when keyword not found 28ms
+       ├ù removes competitor when found and permitted 7ms
+       ├ù returns error when competitor not found 5ms
+       ├ù returns permission error when denied 10ms
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 4 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  src/app/actions/keywords.test.ts > keywords server actions > removeKeywordTarget > returns error when keyword 
+not found
+AssertionError: expected undefined to deeply equal { error: 'Keyword no encontrada' }
+
+- Expected:
+{
+  "error": "Keyword no encontrada",
+}
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/keywords.test.ts:253:27
+    251|
+    252|       const result = await removeKeywordTarget({ id: UUID_INVALID });
+    253|       expect(result.data).toEqual({ error: "Keyword no encontrada" });
+       |                           ^
+    254|     });
+    255|
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/4]ÔÄ»
+
+ FAIL  src/app/actions/keywords.test.ts > keywords server actions > removeCompetitor > removes competitor when found 
+and permitted
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/keywords.test.ts:341:36
+    339|
+    340|       const result = await removeCompetitor({ id: COMPETITOR_ID });
+    341|       expect(result.data?.success).toBe(true);
+       |                                    ^
+    342|       expect(mockRevalidatePath).toHaveBeenCalledWith("/");
+    343|     });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/4]ÔÄ»
+
+ FAIL  src/app/actions/keywords.test.ts > keywords server actions > removeCompetitor > returns error when competitor 
+not found
+AssertionError: expected undefined to deeply equal { error: 'Competidor no encontrado' }
+
+- Expected:
+{
+  "error": "Competidor no encontrado",
+}
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/keywords.test.ts:349:27
+    347|
+    348|       const result = await removeCompetitor({ id: UUID_INVALID });
+    349|       expect(result.data).toEqual({ error: "Competidor no encontrado" ÔÇª
+       |                           ^
+    350|     });
+    351|
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[3/4]ÔÄ»
+
+ FAIL  src/app/actions/keywords.test.ts > keywords server actions > removeCompetitor > returns permission error when 
+denied
+AssertionError: expected undefined to deeply equal { error: 'Denied' }
+
+- Expected:
+{
+  "error": "Denied",
+}
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/keywords.test.ts:357:27
+    355|
+    356|       const result = await removeCompetitor({ id: COMPETITOR_ID });
+    357|       expect(result.data).toEqual({ error: "Denied" });
+       |                           ^
+    358|     });
+    359|   });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[4/4]ÔÄ»
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 12 passed (16)
+   Start at  23:45:37
+   Duration  5.57s (transform 219ms, setup 0ms, import 1.65s, tests 140ms, environment 2.85s)
+

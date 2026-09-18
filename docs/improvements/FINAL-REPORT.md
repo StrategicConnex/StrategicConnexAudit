@@ -11,6 +11,20 @@ estado: Aprobado
 
 # FINAL REPORT — SCAUDIT Pro (B10, §51 del Master Prompt)
 
+> **⚠️ ACTUALIZACIÓN 2026-09-17 (Fase 0.1 del plan de mejoras).** Este reporte es un **snapshot fechado (2026-08-02)**. Estado real verificado contra el código actual:
+>
+> | Dato del reporte | Valor real 2026-09-17 |
+> |------------------|------------------------|
+> | 58 tablas · RLS 5/58 | **67 tablas `pgTable`**, **67/67 con `ENABLE RLS`** y al menos una policy (0 sin proteger) |
+> | Journal 0021 · 22 migraciones | **37 ficheros SQL** (33 en journal `drizzle-kit` + 4 manuales) |
+> | API Layer 42 route handlers | **55 route handlers** (50 privados + 5 públicos v1) |
+> | Jobs 12 triggers | **18 triggers** Trigger.dev (9 con test) |
+> | 34 tools nativos + 9 catálogo | **34 nativas con executor + 9 huérfanas = 43 definiciones** |
+> | Testing 29 archivos · 298 tests · Stmts 13.72% | **92 archivos · 754 tests (751 ✅ / 3 ❌) · Stmts 28.53% · Branch 21.62% · Funcs 24.61% · Lines 28.88%** |
+> | Build PASS | ✅ **PASS** hoy (bloqueante `keywords.ts:224` resuelto en Fase 0: `normalizeDomain` movido a `src/shared/utils/domain.ts`) |
+>
+> MAT-500 sigue con 5 PENDING (aprobación owner + backup + push de migraciones), pero ya no por cobertura ni por RLS: ambos avanzaron sustancialmente.
+
 {: .no_toc }
 
 <details open markdown="block">

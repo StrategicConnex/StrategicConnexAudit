@@ -1,8 +1,7 @@
 import { z } from 'zod';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { directDb } from '@/shared/db';
 import {
-  projects,
   intelligenceInvestigations,
   intelligenceFindings,
   intelligenceAssets,

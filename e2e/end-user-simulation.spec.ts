@@ -1,12 +1,21 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, type Page } from "@playwright/test";
 import * as fs from "fs";
 import * as path from "path";
 
 const SCREENSHOTS_DIR = "C:\\Users\\Juan\\AppData\\Local\\Temp\\opencode";
 const BASE_URL = "http://localhost:3000";
 
+interface UxFinding {
+  id: string;
+  severity: string;
+  evidence: string;
+  proposal: string;
+  effort: string;
+  index: number;
+}
+
 test.describe("End-User Simulation (super-skill)", () => {
-  const findings: Record<string, any[]> = { J1: [], J2: [], J3: [], J4: [] };
+  const findings: Record<string, UxFinding[]> = { J1: [], J2: [], J3: [], J4: [] };
 
   test.beforeAll(async () => {
     fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
@@ -15,7 +24,7 @@ test.describe("End-User Simulation (super-skill)", () => {
   test.afterAll(() => {
     const outPath = path.join(SCREENSHOTS_DIR, "ux-findings.json");
     fs.writeFileSync(outPath, JSON.stringify(
-      Object.entries(findings).flatMap(([j, f]) => f.map((fi: any) => ({ ...fi, journey: j }))),
+      Object.entries(findings).flatMap(([j, f]) => f.map((fi) => ({ ...fi, journey: j }))),
       null, 2
     ));
     console.log(`\n📋 Total findings: ${Object.values(findings).flat().length}`);
@@ -27,13 +36,13 @@ test.describe("End-User Simulation (super-skill)", () => {
     page.screenshot({ path: file, fullPage: true }).catch(() => {});
   }
 
-  function finding(sev: string, ev: string, prop: string, effort: string, idx: number) {
+  function finding(sev: string, ev: string, prop: string, effort: string, idx: number): UxFinding {
     return { id: `B-${100 + idx}`, severity: sev, evidence: ev, proposal: prop, effort, index: idx };
   }
 
   // ─── J1: Primer uso ────────────────────────────────────
   test("J1 Primer uso — creación de proyecto y validación", async ({ page }) => {
-    const f: any[] = [];
+    const f: UxFinding[] = [];
     await page.goto(BASE_URL + "/", { waitUntil: "networkidle", timeout: 30_000 });
     await page.waitForTimeout(2000);
     screenshot(page, "j1", "00-landing");
@@ -94,7 +103,7 @@ test.describe("End-User Simulation (super-skill)", () => {
   test("J2 Móvil 390px — navegación y contenido", async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, colorScheme: "dark" });
     const page = await ctx.newPage();
-    const f: any[] = [];
+    const f: UxFinding[] = [];
     try {
       await page.goto(BASE_URL + "/", { waitUntil: "networkidle", timeout: 30_000 });
       await page.waitForTimeout(2000);
@@ -131,7 +140,7 @@ test.describe("End-User Simulation (super-skill)", () => {
 
   // ─── J3: Recuperación ──────────────────────────────────
   test("J3 Recuperación — errores y mensajes", async ({ page }) => {
-    const f: any[] = [];
+    const f: UxFinding[] = [];
 
     // Ruta inexistente
     await page.goto(BASE_URL + "/projects/nonexistent-route-404-test", { waitUntil: "networkidle", timeout: 15_000 });
@@ -186,7 +195,7 @@ test.describe("End-User Simulation (super-skill)", () => {
 
   // ─── J4: Informe ───────────────────────────────────────
   test("J4 Informe — generación y comprensión", async ({ page }) => {
-    const f: any[] = [];
+    const f: UxFinding[] = [];
     await page.goto(BASE_URL + "/", { waitUntil: "networkidle", timeout: 30_000 });
     await page.waitForTimeout(2000);
 

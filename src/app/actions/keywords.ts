@@ -8,6 +8,7 @@ import {
 } from '@/shared/db/schemas';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { normalizeDomain } from '@/shared/utils/domain';
 
 const ProjectIdSchema = z.object({ projectId: z.string().uuid() });
 
@@ -220,15 +221,6 @@ export const importKeywordCsv = authenticatedAction(
     return { success: true as const, targets, imported };
   }
 );
-
-export function normalizeDomain(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .split('/')[0]!;
-}
 
 const AddCompetitorSchema = z.object({
   projectId: z.string().uuid(),

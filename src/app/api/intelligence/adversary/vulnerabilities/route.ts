@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { assertProjectAccess } from "@/server/lib/project-access";
+import type { runAdversaryAssessment } from "@/trigger/adversary-assessment.trigger";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +85,6 @@ export async function PATCH(req: NextRequest) {
         retestAssessmentId = created.id;
         try {
           const { tasks } = await import("@trigger.dev/sdk");
-          const { runAdversaryAssessment } = await import("@/trigger/adversary-assessment.trigger");
           await tasks.trigger<typeof runAdversaryAssessment>("adversary-real-assessment", {
             assessmentId: created.id,
           });

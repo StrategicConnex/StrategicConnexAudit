@@ -7,8 +7,8 @@ import * as schema from './schemas';
 import { logger } from '@/shared/lib/logger';
 
 /**
- * Ejecuta una funcin dentro de una transaccin de Postgres estableciendo el contexto de usuario
- * para que las polticas RLS de Supabase funcionen correctamente con Drizzle.
+ * Ejecuta una función dentro de una transacción de Postgres estableciendo el contexto de usuario
+ * para que las políticas RLS de Supabase funcionen correctamente con Drizzle.
  */
 export async function withRLS<T>(
   userId: string,
@@ -28,7 +28,7 @@ export async function withRLS<T>(
       return await callback(tx);
     });
   } catch (error: unknown) {
-    // Si el error es 42501 (Insufficient Privilege), es una violacin de RLS detectada por Postgres
+    // Si el error es 42501 (Insufficient Privilege), es una violación de RLS detectada por Postgres
     const dbError = error as { code?: string; detail?: string; hint?: string; message?: string };
     if (dbError.code === '42501') {
       await logger.security({

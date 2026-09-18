@@ -1,11 +1,8 @@
 import { schedules } from "@trigger.dev/sdk";
-import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/shared/db";
 import {
   projects,
-  uptimeLogs,
-  rankHistory,
-  keywordTargets,
   forecasts,
   type ForecastMetric,
 } from "@/shared/db/schemas";

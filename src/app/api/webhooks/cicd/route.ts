@@ -4,7 +4,6 @@ import { verifyWebhookSignature, evaluateGate, type GatePolicy } from "@/server/
 import { directDb } from "@/shared/db";
 import { audits, issues } from "@/shared/db/schemas";
 import { desc, eq, sql, count } from "drizzle-orm";
-import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {

@@ -62,6 +62,9 @@ function setPref(p: ThemePreference) {
   } catch {
     // storage no disponible (privacy mode) — el tema aplica solo en sesión
   }
+  // Persist in cookie so the server (proxy.ts) can read it for SSR.
+  // Max-age 1 year — theme preference is long-lived.
+  document.cookie = `${THEME_STORAGE_KEY}=${p}; path=/; max-age=31536000; SameSite=Lax`;
   prefListeners.forEach((l) => l());
 }
 

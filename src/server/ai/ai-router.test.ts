@@ -20,7 +20,7 @@ vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init?: RequestI
   return fetchHandler(urlStr, (init ?? {}) as RequestInit);
 }));
 
-import { callAIWithFallback, callAIAgentLoop } from "./ai-router";
+import { callAIWithFallback, callAIAgentLoop, modelCapabilities, getNoApiKeyResponse, TASK_ROUTING, MODEL_TIMEOUTS } from "./ai-router";
 import { registerTools } from "./tools/registry";
 import { z } from "zod";
 
@@ -237,5 +237,58 @@ describe("registerTools — validación Zod + schema JSON", () => {
     ] as never);
 
     await expect(handlers.get("slow")!({})).rejects.toThrow(/excedió 50ms/);
+  });
+});
+
+describe("modelCapabilities", () => {
+  it("returns capabilities for known models", () => {
+    const caps = modelCapabilities("nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free");
+    expect(caps.supportsTools).toBe(true);
+    expect(caps.supportsStructuredOutput).toBe(true);
+  });
+
+  it("returns defaults for unknown models", () => {
+    const caps = modelCapabilities("unknown/model:free");
+    expect(caps.supportsTools).toBe(false);
+    expect(caps.supportsStructuredOutput).toBe(false);
+  });
+});
+
+describe("getNoApiKeyResponse", () => {
+  it("returns Spanish message by default", () => {
+    const msg = getNoApiKeyResponse("general-chat");
+    expect(msg).toContain("OPENROUTER_API_KEY");
+    expect(msg).toContain(" gratis");
+  });
+
+  it("returns English message when locale is en", () => {
+    const msg = getNoApiKeyResponse("general-chat", "en");
+    expect(msg).toContain("OPENROUTER_API_KEY");
+    expect(msg).toContain("free");
+  });
+
+  it("covers all task types", () => {
+    const taskTypes = ["copilot-remediation", "incident-brief", "general-chat", "seo-report", "adversary-analysis", "anomaly-narrative"] as const;
+    for (const tt of taskTypes) {
+      expect(getNoApiKeyResponse(tt)).toBeTruthy();
+      expect(getNoApiKeyResponse(tt, "en")).toBeTruthy();
+    }
+  });
+});
+
+describe("TASK_ROUTING & MODEL_TIMEOUTS", () => {
+  it("has routing for all task types", () => {
+    const taskTypes = ["copilot-remediation", "incident-brief", "general-chat", "seo-report", "adversary-analysis", "anomaly-narrative"] as const;
+    for (const tt of taskTypes) {
+      expect(TASK_ROUTING[tt]).toBeDefined();
+      expect(TASK_ROUTING[tt].length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has timeouts for all task types", () => {
+    const taskTypes = ["copilot-remediation", "incident-brief", "general-chat", "seo-report", "adversary-analysis", "anomaly-narrative"] as const;
+    for (const tt of taskTypes) {
+      expect(MODEL_TIMEOUTS[tt]).toBeGreaterThan(0);
+    }
   });
 });

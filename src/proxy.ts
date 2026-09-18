@@ -97,15 +97,15 @@ function buildCsp(nonce: string): string {
  * 3. Run Supabase session refresh and route guard
  */
 export default async function proxy(request: NextRequest) {
-  // ── 1. Generate CSP nonce (unique per request) ──────────────────
+  // ── 1. Generate CSP nonce + request ID (unique per request) ─────
   const nonce = crypto.randomUUID();
+  const requestId = crypto.randomUUID();
   const csp = buildCsp(nonce);
 
-  // ── 2. Clone request with nonce + CSP so Next.js can extract the ──
-  // nonce and apply it to its inline scripts during rendering, and so
-  // layouts can read it via next/headers.
+  // ── 2. Clone request with nonce + CSP + requestId ──────────────
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-csp-nonce", nonce);
+  requestHeaders.set("x-request-id", requestId);
   requestHeaders.set("Content-Security-Policy", csp);
 
   const requestWithNonce = new NextRequest(request, {
@@ -113,11 +113,11 @@ export default async function proxy(request: NextRequest) {
   });
 
   // ── 3. Run Supabase auth session management ────────────────────
-  // Returns a response (potentially a redirect for unauthenticated routes)
   const response = await updateSession(requestWithNonce);
 
-  // ── 4. Apply security headers (CSP echoed with the same nonce) ──
+  // ── 4. Apply security headers + request ID ─────────────────────
   response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("X-Request-Id", requestId);
   response.headers.set(
     "Strict-Transport-Security",
     "max-age=31536000; includeSubDomains; preload"

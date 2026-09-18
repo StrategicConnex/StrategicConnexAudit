@@ -1,0 +1,93 @@
+﻿node.exe : (node:19524) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+En C:\Program Files\nodejs\npx.ps1: 15 Carácter: 14
++ $NPM_PREFIX=(& $NODE_EXE $NPM_PREFIX_JS)
++              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:19524) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+node.exe : (node:20348) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+En línea: 1 Carácter: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\Juan\AppData\Roaming\n ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:20348) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm notice run strategicauditpro@0.1.0 npx
+npm notice run vitest run src/app/actions/audits.test.ts -t creates audit
+(node:2008) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ RUN  v4.1.5 D:/ProyectosWeb/Proyectos/StrategicAudit Pro/strategicaudit-pro
+
+(node:2008) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:900) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+stdout | src/app/actions/audits.test.ts > audits server actions > triggerAudit > creates audit when project exists and no recent audit
+DEBUG result: {
+  "error": "Cannot read properties of undefined (reading 'getTime')"
+}
+DEBUG txState: {
+  "projectsFind": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "ownerId": "22222222-2222-4222-a222-222222222222"
+    }
+  ],
+  "recentAudits": [],
+  "insertAudit": [
+    {
+      "id": "33333333-3333-4333-b333-333333333333"
+    }
+  ],
+  "selectJoin": null
+}
+
+ ÔØ» src/app/actions/audits.test.ts (13 tests | 1 failed | 12 skipped) 50ms
+       ├ù creates audit when project exists and no recent audit 44ms
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 1 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  src/app/actions/audits.test.ts > audits server actions > triggerAudit > creates audit when project exists and 
+no recent audit
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/audits.test.ts:172:36
+    170|       console.log("DEBUG txState:", JSON.stringify(txState, null, 2));
+    171|
+    172|       expect(result.data?.success).toBe(true);
+       |                                    ^
+    173|       expect(result.data?.auditId).toBe(AUDIT_ID);
+    174|       expect(result.data?.projectId).toBe(PROJECT_ID);
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/1]ÔÄ»
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  23:17:27
+   Duration  13.21s (transform 928ms, setup 0ms, import 3.77s, tests 50ms, environment 7.50s)
+

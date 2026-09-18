@@ -31,7 +31,7 @@ vi.mock("@/shared/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/shared/db/rls", () => ({
-  withRLS: vi.fn(async (_userId: string, cb: (tx: any) => Promise<any>) => {
+  withRLS: vi.fn(async (_userId: string, cb: (tx: unknown) => Promise<unknown>) => {
     return cb({
       query: {
         projects: { findFirst: mockFindFirst },
@@ -59,7 +59,7 @@ vi.mock("@/shared/db/schemas", () => ({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function createRequest(method: string, path: string, body?: any): NextRequest {
+function createRequest(method: string, path: string, body?: unknown): NextRequest {
   const url = `http://localhost:3000/api/webhooks${path}`;
   return new NextRequest(
     new Request(url, {

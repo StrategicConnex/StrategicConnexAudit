@@ -1,4 +1,5 @@
 import { createClient } from "@/shared/lib/supabase/server";
+import { AuthError } from "@/server/lib/app-error";
 
 export async function getCurrentUser() {
   try {
@@ -13,7 +14,7 @@ export async function getCurrentUser() {
 export async function getCurrentUserOrThrow() {
   const user = await getCurrentUser();
   if (!user) {
-    throw new Error("No autorizado");
+    throw new AuthError();
   }
   return user;
 }

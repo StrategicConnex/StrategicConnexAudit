@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { dnsLookupExecutor } from "./dns-executors";
 import { emailSpfExecutor, emailDmarcExecutor } from "./email-executors";
 import {
@@ -44,11 +44,11 @@ vi.mock("node:dns/promises", () => {
       if (type === "DS") return [];
       if (type === "RRSIG") return [];
       throw new Error(`DNS type not found: ${type}`);
-    }) as any,
+    }) as unknown as typeof import("node:dns/promises").resolve,
   };
   return {
     default: defaultExports,
-    resolveTxt: defaultExports.resolveTxt as any,
+    resolveTxt: defaultExports.resolveTxt as unknown as typeof import("node:dns/promises").resolveTxt,
   };
 });
 
@@ -256,7 +256,7 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
   describe("DNS Advanced Executors (dns.dnssec, dns.propagation, dns.zone)", () => {
     it("Debería detectar DNSSEC habilitado cuando DNSKEY y DS están presentes", async () => {
       const dnsMod = await import("node:dns/promises");
-      (dnsMod.default.resolve as any).mockImplementation(async (host: string, type: string) => {
+      (dnsMod.default.resolve as unknown as Mock).mockImplementation(async (host: string, type: string) => {
         if (type === "DNSKEY") return [{ flags: 256, protocol: 3, algorithm: 13, publicKey: "key1" }];
         if (type === "DS") return [{ keyTag: 12345, algorithm: 13, digestType: 2, digest: "abc" }];
         if (type === "RRSIG") return [{ typeCovered: "A", algorithm: 13, labels: 2, originalTtl: 3600, expiration: 9999999999, inception: 1000000000, keyTag: 12345, signerName: "example.com", signature: "sig" }];
@@ -275,7 +275,7 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
 
     it("Debería reportar hallazgo cuando DNSSEC no está habilitado", async () => {
       const dnsMod = await import("node:dns/promises");
-      (dnsMod.default.resolve as any).mockRejectedValue(new Error("No such record"));
+      (dnsMod.default.resolve as unknown as Mock).mockRejectedValue(new Error("No such record"));
 
       const result = await dnsDnssecExecutor.execute(dummyCtx, { domain: "no-dnssec.com" });
       expect(result.success).toBe(true);
@@ -320,13 +320,13 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
       });
       vi.mocked(dnsMod.default.resolveNs).mockResolvedValue(["ns1.example.com"]);
       vi.mocked(dnsMod.default.resolveMx).mockResolvedValue([{ exchange: "mail.example.com", priority: 10 }]);
-      vi.mocked(dnsMod.default.resolveTxt).mockResolvedValue([["v=spf1 include:_spf.google.com ~all"] as any]);
+      vi.mocked(dnsMod.default.resolveTxt).mockResolvedValue([["v=spf1 include:_spf.google.com ~all"]]);
       vi.mocked(dnsMod.default.resolve4).mockResolvedValue(["192.0.2.1"]);
       vi.mocked(dnsMod.default.resolve6).mockResolvedValue(["2001:db8::1"]);
       vi.mocked(dnsMod.default.resolveSrv).mockResolvedValue([]);
-      (dnsMod.default.resolve as any).mockImplementation(async (host: string, type: string) => {
+      (dnsMod.default.resolve as unknown as Mock).mockImplementation(async (host: string, type: string) => {
         if (type === "CNAME") return [];
-        if (type === "CAA") return [{ critical: 0, tag: "issue", value: "letsencrypt.org" } as any];
+        if (type === "CAA") return [{ critical: 0, tag: "issue", value: "letsencrypt.org" }];
         return [];
       });
 
@@ -352,10 +352,10 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
       });
       vi.mocked(dnsMod.default.resolveNs).mockResolvedValue(["ns1.example.com"]);
       vi.mocked(dnsMod.default.resolveMx).mockResolvedValue([{ exchange: "mail.example.com", priority: 10 }]);
-      vi.mocked(dnsMod.default.resolveTxt).mockResolvedValue([] as any);
+      vi.mocked(dnsMod.default.resolveTxt).mockResolvedValue([]);
       vi.mocked(dnsMod.default.resolve4).mockResolvedValue(["192.0.2.1"]);
       vi.mocked(dnsMod.default.resolve6).mockResolvedValue([]);
-      (dnsMod.default.resolve as any).mockRejectedValue(new Error("No CAA"));
+      (dnsMod.default.resolve as unknown as Mock).mockRejectedValue(new Error("No CAA"));
       vi.mocked(dnsMod.default.resolveSrv).mockRejectedValue(new Error("No SRV"));
 
       const result = await dnsZoneExecutor.execute(dummyCtx, { domain: "no-caa.com" });

@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { directDb } from "@/shared/db";
 import { userLogs } from "@/shared/db/schemas";
 import { sql } from "drizzle-orm";

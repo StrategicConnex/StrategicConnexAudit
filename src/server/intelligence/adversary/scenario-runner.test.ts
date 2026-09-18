@@ -22,20 +22,27 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+type AnyTable = unknown;
+type Row = Record<string, unknown>;
+interface InsertedCall { table: AnyTable; values: Row }
+interface UpdatedCall { table: AnyTable; values: Row; cond: unknown }
+interface ConflictCall { table: AnyTable; values: Row; target: unknown }
+interface SelectedCall { kind: string; table: AnyTable; cond?: unknown; order?: unknown; limit?: number }
+
 // ─── Mock de @/shared/db (builder por tabla) + sandbox ──────────────────────
 const { db, dbState, sandboxMock } = vi.hoisted(() => {
   const dbState = {
-    selectQueue: new Map<any, any[][]>(),
-    selectDefault: new Map<any, any[]>(),
-    returningQueue: new Map<any, any[][]>(),
-    inserted: [] as Array<{ table: any; values: any }>,
-    updated: [] as Array<{ table: any; values: any; cond: any }>,
-    selected: [] as Array<any>,
-    conflicts: [] as Array<{ table: any; values: any; target: any }>,
+    selectQueue: new Map<AnyTable, Row[][]>(),
+    selectDefault: new Map<AnyTable, Row[]>(),
+    returningQueue: new Map<AnyTable, Row[][]>(),
+    inserted: [] as InsertedCall[],
+    updated: [] as UpdatedCall[],
+    selected: [] as SelectedCall[],
+    conflicts: [] as ConflictCall[],
     nextError: null as Error | null,
   };
 
-  const takeRows = (table: any) => {
+  const takeRows = (table: AnyTable): Row[] => {
     if (dbState.nextError) {
       const e = dbState.nextError;
       dbState.nextError = null;
@@ -48,10 +55,10 @@ const { db, dbState, sandboxMock } = vi.hoisted(() => {
 
   const db = {
     select: vi.fn(() => ({
-      from: vi.fn((table: any) => {
-        const q: any = {
-          where: vi.fn((cond: any) => ({
-            orderBy: vi.fn((order: any) => ({
+      from: vi.fn((table: AnyTable) => {
+        const q: Record<string, unknown> = {
+          where: vi.fn((cond: unknown) => ({
+            orderBy: vi.fn((order: unknown) => ({
               limit: vi.fn(async (n: number) => {
                 dbState.selected.push({ kind: "selectAll", table, cond, order, limit: n });
                 return takeRows(table);
@@ -65,7 +72,7 @@ const { db, dbState, sandboxMock } = vi.hoisted(() => {
         };
         // select().from(t) sin where (p.ej. catálogo en listScenariosWithRuns)
         // es awaitable: implementamos el protocolo thenable.
-        q.then = (onFulfilled: any, onRejected: any) => {
+        q.then = (onFulfilled: (value: Row[]) => unknown, onRejected?: (reason: unknown) => unknown) => {
           dbState.selected.push({ kind: "selectBare", table });
           return Promise.resolve()
             .then(() => takeRows(table))
@@ -74,11 +81,11 @@ const { db, dbState, sandboxMock } = vi.hoisted(() => {
         return q;
       }),
     })),
-    insert: vi.fn((table: any) => ({
-      values: vi.fn((values: any) => {
+    insert: vi.fn((table: AnyTable) => ({
+      values: vi.fn((values: Row) => {
         dbState.inserted.push({ table, values });
         return {
-          onConflictDoNothing: vi.fn(async (target: any) => {
+          onConflictDoNothing: vi.fn(async (target: unknown) => {
             dbState.conflicts.push({ table, values, target });
           }),
           returning: vi.fn(async () => {
@@ -93,9 +100,9 @@ const { db, dbState, sandboxMock } = vi.hoisted(() => {
         };
       }),
     })),
-    update: vi.fn((table: any) => ({
-      set: vi.fn((values: any) => ({
-        where: vi.fn(async (cond: any) => {
+    update: vi.fn((table: AnyTable) => ({
+      set: vi.fn((values: Row) => ({
+        where: vi.fn(async (cond: unknown) => {
           dbState.updated.push({ table, values, cond });
         }),
       })),
@@ -240,7 +247,7 @@ describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox",
     expect((simFinding.values as { title: string }).title).toBe(`[SIM] ${SCENARIO.name}`);
     expect((simFinding.values as { severity: string }).severity).toBe("high");
     expect((simFinding.values as { affectedAsset: string }).affectedAsset).toBe("example.com");
-    expect(((simFinding.values as any).evidence as { sandbox: unknown }).sandbox).toBeNull();
+    expect((simFinding.values as { evidence: { sandbox: unknown } }).evidence.sandbox).toBeNull();
 
     // Ejecutor manual → el sandbox NUNCA se invoca
     expect(sandboxMock.runSandboxedCommand).not.toHaveBeenCalled();
@@ -311,7 +318,7 @@ describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox",
     const simFinding = dbState.inserted.find(
       (i) => i.table === intelligenceFindings && (i.values as { title?: string }).title?.startsWith("[SIM]")
     )!;
-    const simSandbox = (simFinding.values as any).evidence.sandbox as {
+    const simSandbox = (simFinding.values as { evidence: { sandbox: unknown } }).evidence.sandbox as {
       executed: boolean; status: string; findingsCount: number;
     };
     expect(simSandbox).toMatchObject({ executed: true, status: "ok", findingsCount: 1 });
@@ -321,7 +328,7 @@ describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox",
       (i) => i.table === intelligenceFindings && (i.values as { title?: string }).title?.startsWith("[ADV-SANDBOX]")
     )!;
     expect((advFinding.values as { severity: string }).severity).toBe("high");
-    const advEvidence = (advFinding.values as any).evidence as Record<string, unknown>;
+    const advEvidence = (advFinding.values as { evidence: unknown }).evidence as Record<string, unknown>;
     expect(advEvidence).toMatchObject({ mitreId: "T1190", sandboxStatus: "ok" });
   });
 

@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRateLimit } from '@/shared/lib/ratelimit';
 import { withRLS } from '@/shared/db/rls';
-import { aiReportJobs, projects } from '@/shared/db/schemas';
+import { aiReportJobs } from '@/shared/db/schemas';
 import { eq } from 'drizzle-orm';
 import { tasks } from "@trigger.dev/sdk";
 import { runAiSeoReport } from "@/trigger/ai-report.trigger";
@@ -16,20 +16,6 @@ export const dynamic = 'force-dynamic';
 // P2-1: la generación vive en Trigger.dev; la ruta solo encola (<2s) y el
 // cliente hace polling a GET status. maxDuration corto a propósito.
 export const maxDuration = 30;
-
-interface ResilientReportData {
-  totalClicks: number;
-  totalImpressions: number;
-  avgCtr: number | null;
-  avgPosition: number | null;
-  totalActiveUsers: number;
-  totalConversions: number;
-  avgEngagementRate: number | null;
-  healthScore: number | null;
-  crawledCount: number;
-  keywordsCount: number;
-  isNewProject: boolean;
-}
 
 export const POST = withRateLimit(
   {

@@ -121,7 +121,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });    } catch (error: unknown) {
+    });
+  } catch (error: unknown) {
     logger.error("GET intelligence failure:", { error: getErrorMessage(error) });
     return NextResponse.json({
       success: false,

@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { AssessmentProgressBar } from './AssessmentProgressBar';
 import {
-  Radar, Loader2, AlertTriangle, ChevronDown, ShieldAlert,
-  FileDown, CheckCircle2, XCircle, Clock, Zap, Wrench
+  Radar, Loader2, AlertTriangle, ChevronDown,
+  CheckCircle2, XCircle, Clock, Zap, Wrench
 } from 'lucide-react';
 import { RemediationPanel } from '../RemediationPanel';
 

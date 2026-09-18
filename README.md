@@ -98,10 +98,10 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Persistencia**: assets en `intelligence_assets`, cambios en `asset_changes`, hallazgos de seguridad
 
 ### 🎯 MITRE ATT&CK Mapping (NUEVO)
-- **16 técnicas** MITRE mapeadas por toolId exacto (computado en vivo)
+- **16 técnicas** MITRE mapeadas por toolId exacto (computado en vivo) sobre 39 tools
 - **Badges visuales** en cada hallazgo con tooltip de técnica
 - **Dashboard de cobertura** en `/mitre-coverage` con gráficos
-- **Cobertura**: Reconnaissance, Resource Development, Initial Access, Discovery, C2, Defense Evasion
+- **Cobertura**: Reconnaissance, Resource Development, Discovery, Collection, Command and Control
 
 ### 🤖 AI Copilot & Reportes
 - **Copilot de Infraestructura**: asistente IA para planes de remediación técnica
@@ -246,7 +246,7 @@ flowchart TB
         end
 
         subgraph DATA["Data"]
-            DB["🗄️ Supabase Postgres<br/>63 tablas · 30 migraciones SQL · RLS"]
+            DB["🗄️ Supabase Postgres<br/>67 tablas · 37 migraciones SQL · RLS"]
             REDIS["⚡ Upstash Redis<br/>rate limit + cache (fail-open)"]
         end
     end
@@ -361,7 +361,7 @@ src/
 │   │   └── reports.ts            #   Generar reportes
 │   ├── ai/                       # AI Health Dashboard 🆕
 │   │   └── health/               #   Dashboard de salud de modelos
-│   ├── api/                      # API Routes (46 endpoints)
+│   ├── api/                      # API Routes (55 endpoints)
 │   │   ├── ai/                   #   Copilot, reportes, healthcheck
 │   │   ├── api-keys/             #   🆕 CRUD + usage tracking + expiry
 │   │   ├── auth/                 #   Validate email, callback
@@ -410,7 +410,7 @@ src/
 ├── shared/                       # Shared across app
 │   ├── config/                   #   Env validation
 │   ├── data/                     #   🆕 MITRE mapping data (shared)
-│   ├── db/                       #   Drizzle schemas (63 tablas)
+│   ├── db/                       #   Drizzle schemas (67 tablas)
 │   │   └── schemas/              #     health, intelligence, monitoring,
 │   │                             #     security-audit, api-keys, push-subscriptions
 │   ├── lib/                      #   Auth, ratelimit, audit-log, withPublicApi
@@ -513,6 +513,9 @@ Endpoints públicos con autenticación via API Key + rate limiting + audit loggi
 | `GET /api/public/v1/health` | GET | ❌ | Health check público |
 | `GET /api/public/v1/intelligence` | GET | ✅ API Key | Listar investigaciones |
 | `POST /api/public/v1/intelligence` | POST | ✅ API Key | Crear investigación |
+| `GET /api/public/v1/audits` | GET | ✅ API Key | Listar auditorías |
+| `GET /api/public/v1/reports` | GET | ✅ API Key | Listar reportes |
+| `GET /api/public/v1/uptime` | GET | ✅ API Key | Estado de monitoreo uptime |
 
 **Arquitectura:** `withPublicApi(handler)` middleware reusable en `src/server/api/public-router.ts`
 
@@ -949,7 +952,7 @@ pnpm db:generate   # Generar migración desde schemas
 pnpm db:push       # Aplicar migraciones a Supabase
 ```
 
-Las migraciones se almacenan en `drizzle/` (30 ficheros SQL: 26 en el journal de `drizzle-kit` + 4 manuales, incluyendo tablas `developer_api_keys`, `security_audit_logs`, `siem_alert_logs`, `ai_health_logs`, `push_subscriptions`).
+Las migraciones se almacenan en `drizzle/` (37 ficheros SQL: 33 en el journal de `drizzle-kit` + 4 manuales, incluyendo tablas `developer_api_keys`, `security_audit_logs`, `siem_alert_logs`, `ai_health_logs`, `push_subscriptions`).
 
 ---
 
@@ -1151,6 +1154,9 @@ El pipeline de GitHub Actions ejecuta:
 | `GET /api/public/v1/health` | GET | ❌ | Health check público |
 | `GET /api/public/v1/intelligence` | GET | ✅ API Key | Listar investigaciones |
 | `POST /api/public/v1/intelligence` | POST | ✅ API Key | Crear investigación |
+| `GET /api/public/v1/audits` | GET | ✅ API Key | Listar auditorías |
+| `GET /api/public/v1/reports` | GET | ✅ API Key | Listar reportes |
+| `GET /api/public/v1/uptime` | GET | ✅ API Key | Estado de monitoreo uptime |
 
 ### API Keys
 

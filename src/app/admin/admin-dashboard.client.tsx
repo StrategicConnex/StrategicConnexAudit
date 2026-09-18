@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Globe, EyeOff, Eye, Trash2, RotateCcw, Users, FolderKanban, ShieldAlert } from "lucide-react";
+import { EyeOff, Trash2, RotateCcw, Users, FolderKanban, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { softDeleteProject, restoreProject, setProjectHidden } from "./actions";

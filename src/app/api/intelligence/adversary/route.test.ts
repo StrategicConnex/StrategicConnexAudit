@@ -54,7 +54,7 @@ vi.mock("@/shared/db", () => ({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function createRequest(method: string, body?: any): NextRequest {
+function createRequest(method: string, body?: unknown): NextRequest {
   const url = `http://localhost:3000/api/intelligence/adversary`;
   return new NextRequest(
     new Request(url, {

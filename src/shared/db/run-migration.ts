@@ -1,3 +1,8 @@
+/**
+ * @deprecated This migration script is hardcoded to migration 0001 only.
+ * Use `drizzle-kit push` or `drizzle-kit migrate` for schema management.
+ * This file will be removed in a future release.
+ */
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';

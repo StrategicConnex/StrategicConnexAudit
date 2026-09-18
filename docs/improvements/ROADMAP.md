@@ -4,6 +4,18 @@
 > **Base:** Análisis competitivo de 10 herramientas del mercado (Shodan, Censys, SecurityTrails, GreyNoise, AttackIQ, Detectify, Moz Pro, SEMrush, Datadog, Grafana)
 > **Ubicación:** `docs/improvements/COMPETITIVE-ANALYSIS.md`
 
+> **⚠️ ACTUALIZACIÓN 2026-09-17 (Fase 0.1 del plan de mejoras).** Este roadmap es un **snapshot fechado (Julio 2026)**; varias cifras quedaron obsoletas. Estado real verificado contra el código:
+>
+> | Dato del roadmap | Valor real 2026-09-17 |
+> |------------------|------------------------|
+> | "Intelligence scanning (21 tools)" | **43 definiciones de tool** (34 nativas con executor + 9 huérfanas de catálogo) |
+> | 58 tablas | **67 tablas `pgTable`**, todas con `ENABLE RLS` y al menos una policy |
+> | 42 rutas API | **55 route handlers** (50 privados + 5 públicos v1: health, intelligence, audits, reports, uptime) |
+> | 12 triggers | **18 triggers** Trigger.dev (9 con test) |
+> | MITRE | **39 tools mapeados · 16 técnicas únicas · 5 tácticas** (Reconnaissance, Resource Development, Discovery, Collection, C2) |
+> | Cobertura | **Stmts 28.53% · Branch 21.62% · Funcs 24.61% · Lines 28.88%** (92 archivos · 751 ✅ / 3 ❌) |
+> | Build | ✅ **PASS** tras Fase 0 (bloqueante `keywords.ts:224` resuelto: `normalizeDomain` movido a `src/shared/utils/domain.ts`) |
+
 ---
 
 ## ═══════════════════════════════════════════════════════

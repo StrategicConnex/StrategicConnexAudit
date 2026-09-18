@@ -6,7 +6,7 @@
  * (Secure / HttpOnly / SameSite).
  */
 
-import type { CheckContext, CheckDefinition } from "../types";
+import type { CheckDefinition } from "../types";
 
 const SECURITY_HEADERS = [
   "content-security-policy",

@@ -42,7 +42,6 @@ export const vulnerabilitySchema = z.object({
 const triageResponseSchema = z.object({
   vulnerabilities: z.array(vulnerabilitySchema).max(30),
 });
-type TriageResponse = z.infer<typeof triageResponseSchema>;
 
 export type AnalyzedVulnerability = z.infer<typeof vulnerabilitySchema>;
 

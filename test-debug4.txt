@@ -1,0 +1,178 @@
+﻿node.exe : (node:8344) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+En C:\Program Files\nodejs\npx.ps1: 15 Carácter: 14
++ $NPM_PREFIX=(& $NODE_EXE $NPM_PREFIX_JS)
++              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:8344) [MO...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+node.exe : (node:4104) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+En línea: 1 Carácter: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\Juan\AppData\Roaming\n ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:4104) [MO...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm notice run strategicauditpro@0.1.0 npx
+npm notice run vitest run src/app/actions/audits.test.ts
+(node:6844) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ RUN  v4.1.5 D:/ProyectosWeb/Proyectos/StrategicAudit Pro/strategicaudit-pro
+
+(node:6844) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:7348) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+stdout | src/app/actions/audits.test.ts > audits server actions > startAuditAction > falls back to runLocalAudit when task.trigger throws
+{"timestamp":"2026-09-18T02:38:19.306Z","level":"info","message":"LocalAudit iniciando","context":{"auditId":"33333333-3333-4333-b333-333333333333"}}
+
+stderr | src/app/actions/audits.test.ts > audits server actions > startAuditAction > falls back to runLocalAudit when 
+task.trigger throws
+{"timestamp":"2026-09-18T02:38:19.306Z","level":"warn","message":"Trigger.dev no disponible, usando fallback 
+local","context":{"error":"Trigger.dev offline"}}
+{"timestamp":"2026-09-18T02:38:19.307Z","level":"error","message":"LocalAudit 
+error","context":{"auditId":"33333333-3333-4333-b333-333333333333","error":{}}}
+
+ ÔØ» src/app/actions/audits.test.ts (13 tests | 6 failed) 44ms
+       ├ù returns audit status for owned project 9ms
+       ├ù returns error when audit not found 2ms
+       ├ù throws when user is not project owner 5ms
+       ├ù expires pending audit stuck for more than 3 minutes (watchdog) 2ms
+       ├ù does not expire pending audit within 3 minutes 2ms
+       ├ù falls back to runLocalAudit when task.trigger throws 5ms
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 6 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  src/app/actions/audits.test.ts > audits server actions > getAuditStatus > returns audit status for owned project
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/audits.test.ts:228:36
+    226|
+    227|       const result = await getAuditStatus({ auditId: AUDIT_ID });
+    228|       expect(result.data?.success).toBe(true);
+       |                                    ^
+    229|       expect(result.data?.status).toBe("completed");
+    230|     });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/6]ÔÄ»
+
+ FAIL  src/app/actions/audits.test.ts > audits server actions > getAuditStatus > returns error when audit not found
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected:
+false
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/audits.test.ts:236:36
+    234|
+    235|       const result = await getAuditStatus({ auditId: AUDIT_ID });
+    236|       expect(result.data?.success).toBe(false);
+       |                                    ^
+    237|       expect(result.data?.message).toContain("no encontrada");
+    238|     });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/6]ÔÄ»
+
+ FAIL  src/app/actions/audits.test.ts > audits server actions > getAuditStatus > throws when user is not project owner
+AssertionError: expected 'tx.select(...).from(...).where(...).iÔÇª' to contain 'Acceso denegado'
+
+Expected: "Acceso denegado"
+Received: "tx.select(...).from(...).where(...).innerJoin(...).limit is not a function"
+
+ ÔØ» src/app/actions/audits.test.ts:247:28
+    245|
+    246|       const result = await getAuditStatus({ auditId: AUDIT_ID });
+    247|       expect(result.error).toContain("Acceso denegado");
+       |                            ^
+    248|     });
+    249|
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[3/6]ÔÄ»
+
+ FAIL  src/app/actions/audits.test.ts > audits server actions > getAuditStatus > expires pending audit stuck for more 
+than 3 minutes (watchdog)
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/audits.test.ts:259:36
+    257|
+    258|       const result = await getAuditStatus({ auditId: AUDIT_ID });
+    259|       expect(result.data?.success).toBe(true);
+       |                                    ^
+    260|       expect(result.data?.status).toBe("failed");
+    261|       expect(result.data?.errorMessage).toContain("worker no disponiblÔÇª
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[4/6]ÔÄ»
+
+ FAIL  src/app/actions/audits.test.ts > audits server actions > getAuditStatus > does not expire pending audit within 
+3 minutes
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/audits.test.ts:272:36
+    270|
+    271|       const result = await getAuditStatus({ auditId: AUDIT_ID });
+    272|       expect(result.data?.success).toBe(true);
+       |                                    ^
+    273|       expect(result.data?.status).toBe("pending");
+    274|     });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[5/6]ÔÄ»
+
+ FAIL  src/app/actions/audits.test.ts > audits server actions > startAuditAction > falls back to runLocalAudit when 
+task.trigger throws
+AssertionError: expected "vi.fn()" to be called with arguments: [ Array(2) ]
+
+Number of calls: 0
+
+ ÔØ» src/app/actions/audits.test.ts:320:30
+    318|       expect(result.data?.success).toBe(true);
+    319|       expect(result.data?.auditId).toBe(AUDIT_ID);
+    320|       expect(mockLoggerWarn).toHaveBeenCalledWith(
+       |                              ^
+    321|         expect.stringContaining("Trigger.dev"),
+    322|         expect.anything()
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[6/6]ÔÄ»
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 7 passed (13)
+   Start at  23:38:16
+   Duration  3.31s (transform 152ms, setup 0ms, import 729ms, tests 44ms, environment 1.98s)
+

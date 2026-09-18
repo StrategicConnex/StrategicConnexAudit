@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { Target, Loader2, ChevronDown, ShieldAlert, ShieldCheck, BookOpen, Zap } from 'lucide-react';
+import { Target, Loader2, ChevronDown, BookOpen, Zap } from 'lucide-react';
 import { AssessmentProgressBar } from './AssessmentProgressBar';
 
 export type MitreVerdict = 'exposed' | 'not_exposed' | 'not_externally_testable' | 'error';

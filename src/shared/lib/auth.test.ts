@@ -30,7 +30,7 @@ describe("auth — getCurrentUser / getCurrentUserOrThrow", () => {
     expect(await getCurrentUser()).toBeNull();
   });
 
-  it("getCurrentUserOrThrow lanza 'No autorizado' sin usuario", async () => {
+  it("getCurrentUserOrThrow lanza AuthError sin usuario", async () => {
     getUserMock.mockResolvedValue({ data: { user: null }, error: null });
     await expect(getCurrentUserOrThrow()).rejects.toThrow("No autorizado");
   });

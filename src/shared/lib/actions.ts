@@ -15,7 +15,7 @@ export type ActionState<T> = {
   validationErrors?: Record<string, string[]>;
 };
 
-// Tipo para la transaccin de Drizzle con esquemas
+// Tipo para la transacción de Drizzle con esquemas
 export type DbTransaction = PgTransaction<NodePgQueryResultHKT, typeof schema, ExtractTablesWithRelations<typeof schema>>;
 
 /**

@@ -7,7 +7,7 @@
  * y métodos HTTP peligrosos vía OPTIONS/TRACE.
  */
 
-import type { CheckContext, CheckDefinition } from "../types";
+import type { CheckDefinition } from "../types";
 import { getWithCapture } from "./exposure";
 
 const SQL_ERROR_PATTERNS: RegExp[] = [

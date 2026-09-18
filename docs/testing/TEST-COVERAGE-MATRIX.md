@@ -22,6 +22,19 @@ estado: Aprobado
 
 ---
 
+> **⚠️ ACTUALIZACIÓN 2026-09-17 (Fase 0.1 del plan de mejoras).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Baseline real medido contra el código actual:
+>
+> | Métrica | Valor 2026-09-17 | Nota |
+> |---------|------------------|------|
+> | `pnpm test` | **92 archivos · 754 tests → 751 ✅ / 3 ❌** | 167s. Fallos: `project-events.test.ts` (timeout) y `MonitoringTab.test.tsx` (2, i18n de placeholders) |
+> | `pnpm test:coverage` | **Stmts 28.53% · Branch 21.62% · Funcs 24.61% · Lines 28.88%** | Supera los umbrales vigentes `28/20/22/28` |
+> | Umbrales CI | actualizados a `statements 28 · branches 20 · functions 22 · lines 28` | `vitest.config.ts` (ratchet) |
+> | `pnpm lint` | 6 errores · 72 warnings | Errores: `no-explicit-any` en `e2e/end-user-simulation.spec.ts` |
+> | `pnpm build` | ✅ **PASS** (Turbopack, 16.6s + TS 48s) | Bloqueante `keywords.ts:224` resuelto en Fase 0 |
+> | `drizzle-kit check` | ✅ Everything's fine | — |
+>
+> Los conteos de rutas/triggers del cuerpo (42 rutas, 12 triggers) quedaron obsoletos: hoy son **55 route handlers** (50 privados + 5 públicos v1) y **18 triggers** (9 con test).
+
 ## 1. Scope y objetivos
 
 Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del master plan) cruzando el **baseline B00 real** contra el estado actual, por **módulo · trigger · endpoint**, con foco en las **rutas críticas y de seguridad**.

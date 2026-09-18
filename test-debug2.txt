@@ -1,0 +1,79 @@
+﻿node.exe : (node:18216) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+En C:\Program Files\nodejs\npx.ps1: 15 Carácter: 14
++ $NPM_PREFIX=(& $NODE_EXE $NPM_PREFIX_JS)
++              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:18216) [M...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+node.exe : (node:1520) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+En línea: 1 Carácter: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\Juan\AppData\Roaming\n ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:1520) [MO...se as CommonJS.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm notice run strategicauditpro@0.1.0 npx
+npm notice run vitest run src/app/actions/audits.test.ts -t creates audit
+(node:10248) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ RUN  v4.1.5 D:/ProyectosWeb/Proyectos/StrategicAudit Pro/strategicaudit-pro
+
+(node:10248) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:8336) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of 
+file:///C:/Users/Juan/AppData/Roaming/Python/Python314/site-packages/headroom/providers/opencode/hook-shim/handler.js 
+is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\Juan\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+stdout | src/app/actions/audits.test.ts > audits server actions > triggerAudit > creates audit when project exists and no recent audit
+DEBUG result: {
+  "error": "tx.insert(...).values(...).returning is not a function"
+}
+DEBUG selectCallCount: 2
+
+ ÔØ» src/app/actions/audits.test.ts (13 tests | 1 failed | 12 skipped) 19ms
+       ├ù creates audit when project exists and no recent audit 17ms
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 1 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  src/app/actions/audits.test.ts > audits server actions > triggerAudit > creates audit when project exists and 
+no recent audit
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ÔØ» src/app/actions/audits.test.ts:183:36
+    181|       console.log("DEBUG selectCallCount:", selectCallCount.count);
+    182|
+    183|       expect(result.data?.success).toBe(true);
+       |                                    ^
+    184|       expect(result.data?.auditId).toBe(AUDIT_ID);
+    185|       expect(result.data?.projectId).toBe(PROJECT_ID);
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/1]ÔÄ»
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  23:21:16
+   Duration  3.63s (transform 175ms, setup 0ms, import 833ms, tests 19ms, environment 2.25s)
+

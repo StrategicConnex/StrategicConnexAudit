@@ -6,7 +6,7 @@
  * el HTML de la homepage buscando mixed content y scripts CDN sin SRI.
  */
 
-import type { CheckContext, CheckDefinition } from "../types";
+import type { CheckDefinition } from "../types";
 import { getWithCapture } from "./exposure";
 
 /** Tabla estática mínima: producto → versión máxima vulnerable. */

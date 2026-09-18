@@ -6,7 +6,6 @@
 
 import { directDb } from "@/shared/db";
 import { mitreEvaluations, mitreTechniqueResults } from "@/shared/db/schemas/adversary";
-import { projects } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { mapLimit } from "@/shared/lib/map-limit";
 import { runMitreEvaluation, type MitreVerdict } from "./mitre-runner";

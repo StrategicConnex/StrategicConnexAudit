@@ -1,20 +1,27 @@
 /**
  * Structured Logger for StrategicAudit Pro
- * 
+ *
  * Replaces console.log/warn/error with structured JSON logging.
  * Compatible with Vercel Logs, Datadog, and other log aggregators.
- * 
+ *
+ * Supports request ID correlation via AsyncLocalStorage.
+ *
  * Usage:
  *   import { logger } from "@/lib/logger";
  *   logger.info("Project created", { projectId, userId });
  *   logger.error("Failed to save", { error, context: "audit-save" });
  */
 
+import { AsyncLocalStorage } from "node:async_hooks";
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 interface LogContext {
   [key: string]: unknown;
 }
+
+/** AsyncLocalStorage for request-scoped context (requestId, userId, etc.). */
+export const requestContext = new AsyncLocalStorage<{ requestId?: string; userId?: string }>();
 
 function formatTimestamp(): string {
   return new Date().toISOString();
@@ -28,11 +35,18 @@ function log(level: LogLevel, message: string, context?: LogContext | unknown): 
       : context !== undefined && context !== null
         ? { value: context }
         : undefined;
+
+  // Merge with request-scoped context (requestId, userId)
+  const store = requestContext.getStore();
+  const scopedContext = store
+    ? { ...store, ...normalizedContext }
+    : normalizedContext;
+
   const entry = {
     timestamp: formatTimestamp(),
     level,
     message,
-    ...(normalizedContext && Object.keys(normalizedContext).length > 0 ? { context: normalizedContext } : {}),
+    ...(scopedContext && Object.keys(scopedContext).length > 0 ? { context: scopedContext } : {}),
   };
 
   const formatted = JSON.stringify(entry);
@@ -63,7 +77,7 @@ export const logger = {
 
 /**
  * Create a child logger with a fixed context (e.g., module name).
- * 
+ *
  * Usage:
  *   const log = logger.child({ module: "audit" });
  *   log.info("Starting audit", { auditId });

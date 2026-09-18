@@ -6,7 +6,6 @@ import { Globe, FileSearch, Siren, ShieldAlert, ShieldCheck, LockKeyhole } from 
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageShellBar } from "@/components/ui/PageShell";
-import { logger } from "@/lib/logger";
 import type { AuditLogEntry, ApiResponse, SiemAlertEntry, SiemAlertsApiResponse, Tab } from "./types";
 import { EVENT_LABELS, formatDate, timeAgo, truncate } from "./helpers";
 
