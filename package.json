@@ -90,21 +90,17 @@
     "typescript": "^5",
     "vitest": "^4.1.5"
   },
-  "pnpm": {
-    "overrides": {
-      "systeminformation": ">=5.30.8",
-      "undici": ">=7.10.0"
-    },
-    "onlyBuiltDependencies": [
-      "sharp",
-      "unrs-resolver",
-      "@scarf/scarf",
-      "esbuild",
-      "protobufjs",
-      "core-js",
-      "@biomejs/biome",
-      "es5-ext",
-      "msw"
-    ]
-  }
+    "pnpm": {
+      "onlyBuiltDependencies": [
+        "sharp",
+        "unrs-resolver",
+        "@scarf/scarf",
+        "esbuild",
+        "protobufjs",
+        "core-js",
+        "@biomejs/biome",
+        "es5-ext",
+        "msw"
+      ]
+    }
 }
