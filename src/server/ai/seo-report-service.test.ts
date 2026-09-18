@@ -21,20 +21,32 @@ vi.mock("drizzle-orm", () => ({
   ),
 }));
 
-const mockChain = vi.hoisted(() => {
-  const chain = {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    then: vi.fn(),
+let queryResults: unknown[] = [];
+let queryIndex = 0;
+
+function createMockTx() {
+  queryIndex = 0;
+  const createBuilder = (): Record<string, unknown> => {
+    const builder: Record<string, unknown> = {};
+    builder.select = vi.fn(() => createBuilder());
+    builder.from = vi.fn(() => createBuilder());
+    builder.where = vi.fn(() => createBuilder());
+    builder.orderBy = vi.fn(() => createBuilder());
+    builder.limit = vi.fn(() => createBuilder());
+    builder.then = vi.fn((resolve: (val: unknown) => void, reject?: (err: unknown) => void) => {
+      try {
+        resolve(queryResults[queryIndex++] ?? []);
+      } catch (e) {
+        reject?.(e);
+      }
+    });
+    return builder;
   };
-  return chain;
-});
+  return createBuilder();
+}
 
 vi.mock("@/shared/db/rls", () => ({
-  withRLS: vi.fn(async (_userId: string, cb: (tx: typeof mockChain) => Promise<unknown>) => cb(mockChain)),
+  withRLS: vi.fn(),
 }));
 
 vi.mock("@/server/ai/ai-router", () => ({
@@ -45,22 +57,18 @@ import { generateSeoReport } from "./seo-report-service";
 import { withRLS } from "@/shared/db/rls";
 import { callAIWithFallback } from "@/server/ai/ai-router";
 
-let thenCallCount = 0;
-let thenResults: unknown[] = [];
-
 function setupThenResults(results: unknown[]) {
-  thenResults = results;
-  thenCallCount = 0;
-  mockChain.then.mockImplementation((resolve: (val: unknown) => void) => {
-    resolve(thenResults[thenCallCount++] ?? []);
-  });
+  queryResults = results;
+  queryIndex = 0;
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  thenCallCount = 0;
-  thenResults = [];
-  mockChain.then.mockImplementation((resolve: (val: unknown) => void) => resolve([]));
+  queryResults = [];
+  queryIndex = 0;
+  vi.mocked(withRLS).mockImplementation(
+    async (_userId: string, cb: (tx: unknown) => Promise<unknown>) => cb(createMockTx())
+  );
 });
 
 describe("generateSeoReport", () => {

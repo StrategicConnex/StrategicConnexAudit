@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 const USER_ID = "22222222-2222-4222-a222-222222222222";
 const KEYWORD_ID = "33333333-3333-4333-b333-333333333333";
-const COMPETITOR_ID = "44444444-4444-4444-c444-444444444444";
-const UUID_INVALID = "00000000-0000-0000-0000-000000000099";
+const COMPETITOR_ID = "44444444-4444-4444-a444-444444444444";
+const UUID_NOT_FOUND = "00000000-0000-4000-8000-000000000099";
 
 // ─── Hoisted mocks ──────────────────────────────────────────────────────────
 const { txState } = vi.hoisted(() => ({
@@ -170,7 +170,7 @@ describe("keywords server actions", () => {
       txState.projectsFind = { id: PROJECT_ID, ownerId: USER_ID, name: "My Project" };
       txState.keywordTargetsFindMany = [
         { id: KEYWORD_ID, keyword: "seo", createdAt: new Date() },
-        { id: UUID_INVALID, keyword: "audit", createdAt: new Date() },
+        { id: UUID_NOT_FOUND, keyword: "audit", createdAt: new Date() },
       ];
       txState.rankHistoryFindFirst = { position: 5, searchVolume: 1000 };
       txState.gscTotals = [{ impressions: 5000, clicks: 200, ctr: 0.04, position: 12 }];
@@ -249,8 +249,7 @@ describe("keywords server actions", () => {
     it("returns error when keyword not found", async () => {
       txState.keywordTargetFindFirst = null;
 
-      const result = await removeKeywordTarget({ id: UUID_INVALID });
-      console.log("DEBUG removeKeywordTarget result:", JSON.stringify(result, null, 2));
+      const result = await removeKeywordTarget({ id: UUID_NOT_FOUND });
       expect(result.data).toEqual({ error: "Keyword no encontrada" });
     });
 
@@ -346,7 +345,7 @@ describe("keywords server actions", () => {
     it("returns error when competitor not found", async () => {
       txState.competitorFindFirst = null;
 
-      const result = await removeCompetitor({ id: UUID_INVALID });
+      const result = await removeCompetitor({ id: UUID_NOT_FOUND });
       expect(result.data).toEqual({ error: "Competidor no encontrado" });
     });
 

@@ -118,13 +118,23 @@ describe("weekly-digest — runWeeklyDigest", () => {
       where: vi.fn().mockImplementation(() => {
         throw new Error("DB crash");
       }),
+      leftJoin: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
       then: vi.fn(),
     };
-    vi.mocked(errorChain.where).mockImplementation(() => {
-      throw new Error("DB crash");
-    });
+
+    const { directDb } = await import("@/shared/db");
+    const origSelect = directDb.select;
+    let callCount = 0;
+    directDb.select = ((...args: unknown[]) => {
+      callCount++;
+      if (callCount === 1) return origSelect(...args);
+      return errorChain;
+    }) as typeof directDb.select;
 
     const result = await runWeeklyDigest();
+    directDb.select = origSelect;
     expect(result.failed).toBe(1);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toContain("fail.com");

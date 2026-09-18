@@ -184,7 +184,7 @@ describe("GET /api/ai/healthcheck", () => {
     const res = await GET(createRequest());
     const body = await res.json();
     expect(body.overallStatus).toBe("degraded");
-    expect(body.modelsFailed).toBe(2);
+    expect(body.modelsFailed).toBe(3);
   });
 
   it("marks 402 as degraded", async () => {

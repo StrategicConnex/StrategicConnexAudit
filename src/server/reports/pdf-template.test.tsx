@@ -377,9 +377,8 @@ describe("PdfReport — document metadata", () => {
   it("sets document title, author and subject", () => {
     const el = React.createElement(PdfReport, { data: baseData });
     expect(el).toBeDefined();
-    // The Document component receives these props
-    const docProps = (el.props as { children: React.ReactNode[] }).children;
-    expect(docProps).toBeDefined();
+    expect((el.props as { data: PdfReportData }).data).toBeDefined();
+    expect((el.props as { data: PdfReportData }).data.projectName).toBe("Test Project");
   });
 
   it("uses branding agencyName as author when available", () => {
