@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
 import { withRLS } from "@/shared/db/rls";
-import { directDb } from "@/shared/db/direct";
 import { reports } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   _req: NextRequest,
@@ -32,7 +31,7 @@ export async function GET(
 
     // Generate PDF (placeholder for now)
     const pdfContent = Buffer.from(
-      JSON.stringify({ reportId: report.id, title: report.title }),
+      JSON.stringify({ reportId: report.id, title: report.name }),
       "utf-8"
     );
 
@@ -43,7 +42,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    logger.error("PDF generation error", error);
+    logger.error("PDF generation error", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

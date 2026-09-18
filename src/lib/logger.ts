@@ -25,7 +25,7 @@ if (typeof window === "undefined") {
   // Server-side only
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { AsyncLocalStorage } = require("node:async_hooks");
+    const { AsyncLocalStorage } = require("node:async_hooks") as { AsyncLocalStorage: new <T>() => { getStore: () => T | undefined; run: <R>(store: T, fn: () => R) => R } };
     requestContext = new AsyncLocalStorage<{ requestId?: string; userId?: string }>();
   } catch {
     // AsyncLocalStorage not available
