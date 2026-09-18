@@ -15,7 +15,7 @@ vi.mock("@/shared/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/shared/lib/ratelimit", () => ({
-  withRateLimit: (config: any, handler: any) => {
+  withRateLimit: (config: Record<string, unknown>, handler: (...args: unknown[]) => Promise<Response>) => {
     return async (req: NextRequest) => {
       try {
         if (config.authenticate) {
