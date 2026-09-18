@@ -56,6 +56,8 @@ export const projects = pgTable("projects", {
   // Gate legal de evaluación activa (adversary real assessment):
   // el propietario consiente explícitamente pruebas no destructivas contra su dominio.
   activeTestingAuthorized: boolean("active_testing_authorized").notNull().default(false),
+  // Secreto del beacon RUM (P0-3): cada proyecto tiene su propio secreto para autenticar eventos
+  beaconSecret: text("beacon_secret"),
 });
 
 // 3. Subscription Plans

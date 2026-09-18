@@ -97,11 +97,11 @@ export default async function DocPage({ params }: Props) {
   const { slug } = await params;
   const filePath = resolveFilePath(slug);
 
-  if (!filePath || !fs.existsSync(filePath)) {
+  if (!filePath || !fs.existsSync(/*turbopackIgnore: true*/ filePath)) {
     notFound();
   }
 
-  const rawContent = fs.readFileSync(filePath, "utf-8");
+  const rawContent = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
   const title = extractTitle(rawContent);
   const content = preprocessMarkdown(rawContent);
 
@@ -257,7 +257,7 @@ export async function generateMetadata({ params }: Props) {
   const filePath = resolveFilePath(slug);
   if (!filePath) return { title: "Documentación - SCAUDIT Pro" };
 
-  const raw = fs.readFileSync(filePath, "utf-8");
+  const raw = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
   const title = extractTitle(raw);
   return {
     title: `${title} - SCAUDIT Pro`,
