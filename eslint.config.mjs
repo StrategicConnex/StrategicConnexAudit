@@ -18,6 +18,7 @@ const eslintConfig = defineConfig([
         },
       ],
       "@typescript-eslint/no-explicit-any": "error",
+      "prefer-const": "error",
     },
   },
   {

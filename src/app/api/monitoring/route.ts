@@ -10,6 +10,7 @@ import { eq, desc } from "drizzle-orm";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
 import { withErrorHandler } from "@/server/lib/error-handler";
 import { NotFoundError, ValidationError } from "@/server/lib/app-error";
+import { ProjectIdSchema } from "@/shared/schemas/api";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +24,11 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const user = await getCurrentUserOrThrow();
 
   const { searchParams } = new URL(req.url);
-  const projectId = searchParams.get("projectId");
-
-  if (!projectId) {
-    throw new ValidationError("Falta ID de proyecto");
+  const parsed = ProjectIdSchema.safeParse({ projectId: searchParams.get("projectId") });
+  if (!parsed.success) {
+    throw new ValidationError("Falta ID de proyecto o formato inválido");
   }
+  const { projectId } = parsed.data;
 
   const result = await withRLS(user.id, async (tx) => {
     const project = await tx.query.projects.findFirst({

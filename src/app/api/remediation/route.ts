@@ -6,6 +6,7 @@ import { listActions, proposeAction, approveAction, executeAction } from "@/serv
 import { CONNECTORS, type RemediationConnector } from "@/server/lib/remediation/connectors";
 import { withErrorHandler } from "@/server/lib/error-handler";
 import { ValidationError, NotFoundError, ForbiddenError } from "@/server/lib/app-error";
+import { ProjectIdSchema } from "@/shared/schemas/api";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +18,11 @@ const CONNECTOR_IDS = CONNECTORS.map((c) => c.id);
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const user = await getCurrentUserOrThrow();
-  const projectId = new URL(req.url).searchParams.get("projectId");
-  if (!projectId) {
-    throw new ValidationError("Falta projectId");
+  const parsed = ProjectIdSchema.safeParse({ projectId: new URL(req.url).searchParams.get("projectId") });
+  if (!parsed.success) {
+    throw new ValidationError("Falta projectId o formato inválido");
   }
+  const { projectId } = parsed.data;
   const denied = await requireProjectPermission(user.id, projectId, "report:view");
   if (denied) {
     throw denied === "Proyecto no encontrado"

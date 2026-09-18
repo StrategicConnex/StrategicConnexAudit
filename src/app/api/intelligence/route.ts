@@ -20,6 +20,7 @@ import { Finding } from "@/server/intelligence/types/executor.types";
 import { buildResultMap, getPrimaryIp, buildScanResponse, buildScanMetadata } from "@/server/intelligence/core/scan-response";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/lib/logger";
+import { ProjectIdSchema } from "@/shared/schemas/api";
 
 export const dynamic = "force-dynamic";
 
@@ -101,8 +102,13 @@ export async function GET(req: NextRequest) {
         return { success: false, status: 400, error: "Falta ID de proyecto" };
       }
 
+      const projectParsed = ProjectIdSchema.safeParse({ projectId });
+      if (!projectParsed.success) {
+        return { success: false, status: 400, error: "Formato de projectId inválido" };
+      }
+
       const list = await tx.query.intelligenceInvestigations.findMany({
-        where: eq(intelligenceInvestigations.projectId, projectId),
+        where: eq(intelligenceInvestigations.projectId, projectParsed.data.projectId),
         orderBy: [desc(intelligenceInvestigations.createdAt)],
         limit: 50
       });
