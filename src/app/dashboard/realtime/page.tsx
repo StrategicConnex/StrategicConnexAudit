@@ -8,8 +8,8 @@ export default function RealtimeDashboard() {
   const [provider] = useState(() => new RealtimeProvider());
 
   useEffect(() => {
-    const unsub = provider.subscribe("updates", (data: Record<string, unknown>) => {
-      setEvents((prev) => [...prev.slice(-9), data]);
+    const unsub = provider.subscribe("updates", (data) => {
+      setEvents((prev) => [...prev.slice(-9), data as Record<string, unknown>]);
     });
     return () => {
       unsub();
