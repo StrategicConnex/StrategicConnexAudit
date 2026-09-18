@@ -12,8 +12,6 @@
  *   logger.error("Failed to save", { error, context: "audit-save" });
  */
 
-import { AsyncLocalStorage } from "node:async_hooks";
-
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 interface LogContext {
@@ -21,7 +19,18 @@ interface LogContext {
 }
 
 /** AsyncLocalStorage for request-scoped context (requestId, userId, etc.). */
-export const requestContext = new AsyncLocalStorage<{ requestId?: string; userId?: string }>();
+let requestContext: { getStore: () => { requestId?: string; userId?: string } | undefined; run: <T>(store: { requestId?: string; userId?: string }, fn: () => T) => T } | null = null;
+
+if (typeof window === "undefined") {
+  // Server-side only
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { AsyncLocalStorage } = require("node:async_hooks");
+    requestContext = new AsyncLocalStorage<{ requestId?: string; userId?: string }>();
+  } catch {
+    // AsyncLocalStorage not available
+  }
+}
 
 function formatTimestamp(): string {
   return new Date().toISOString();
@@ -37,7 +46,7 @@ function log(level: LogLevel, message: string, context?: LogContext | unknown): 
         : undefined;
 
   // Merge with request-scoped context (requestId, userId)
-  const store = requestContext.getStore();
+  const store = requestContext?.getStore();
   const scopedContext = store
     ? { ...store, ...normalizedContext }
     : normalizedContext;
