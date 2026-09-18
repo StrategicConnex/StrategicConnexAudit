@@ -14,7 +14,7 @@ const envSchema = z.object({
 function getEnv() {
   // Skip validation during build time (Vercel doesn't have env vars then)
   if (process.env.NEXT_PHASE === "phase-production-build" || process.env.CI) {
-    return process.env as z.infer<typeof envSchema>;
+    return process.env as unknown as z.infer<typeof envSchema>;
   }
   return envSchema.parse(process.env);
 }
