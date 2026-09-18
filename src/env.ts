@@ -1,26 +1,13 @@
-import { z } from "zod";
+// Environment variables - validated at runtime, not build time
+// Vercel doesn't have env vars during build phase
 
-const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  DIRECT_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  OPENROUTER_API_KEY: z.string().min(1),
-  RESEND_API_KEY: z.string().optional(),
-  SLACK_WEBHOOK_URL: z.string().url().optional(),
-  TEAMS_WEBHOOK_URL: z.string().url().optional(),
-});
-
-function getEnv() {
-  // Skip validation during build time (Vercel doesn't have env vars then)
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.CI) {
-    return process.env as unknown as z.infer<typeof envSchema>;
-  }
-  return envSchema.parse(process.env);
-}
-
-export const env = new Proxy({} as z.infer<typeof envSchema>, {
-  get(_, prop) {
-    return getEnv()[prop as keyof z.infer<typeof envSchema>];
-  },
-});
+export const env = {
+  DATABASE_URL: process.env.DATABASE_URL,
+  DIRECT_URL: process.env.DIRECT_URL,
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
+  TEAMS_WEBHOOK_URL: process.env.TEAMS_WEBHOOK_URL,
+} as const;
