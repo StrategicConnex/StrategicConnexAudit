@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { RealtimeProvider } from "@/shared/lib/realtime";
 
 export default function RealtimeDashboard() {
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<Record<string, unknown>[]>([]);
   const [provider] = useState(() => new RealtimeProvider());
 
   useEffect(() => {

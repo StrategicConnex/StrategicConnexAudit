@@ -120,7 +120,7 @@ function bar(score) {
   return "█".repeat(filled) + "░".repeat(10 - filled);
 }
 
-let md = `---
+const md = `---
 layout: default
 title: Quality Gate Report
 nav_order: 6

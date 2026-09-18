@@ -45,7 +45,7 @@
   let pageViews = 0;
   let currentUrl = location.href;
   let currentPath = location.pathname + location.search;
-  let buffer = []; // Cola de eventos antes de enviar
+  const buffer = []; // Cola de eventos antes de enviar
   let vitals = {}; // Web Vitals acumulados
   let errors = []; // Errores JS capturados
   let interactions = []; // Interacciones para INP/contexto

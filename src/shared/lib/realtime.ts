@@ -1,4 +1,4 @@
-type EventCallback = (data: any) => void;
+type EventCallback = (data: unknown) => void;
 
 export class RealtimeProvider {
   private callbacks: Map<string, Set<EventCallback>> = new Map();
@@ -13,7 +13,7 @@ export class RealtimeProvider {
     };
   }
 
-  emit(channel: string, data: any) {
+  emit(channel: string, data: unknown) {
     this.callbacks.get(channel)?.forEach((cb) => cb(data));
   }
 
