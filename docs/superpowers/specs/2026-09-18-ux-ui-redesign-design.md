@@ -270,4 +270,8 @@ Migrar componentes shadcn → Headless UI **módulo por módulo**:
 | `Dialog` | `Dialog` | Alta |
 | `DropdownMenu` | `Menu` | Alta |
 | `Select` | `Listbox` | Alta |
-| `Swi
+| `Switch` | `Switch` | Alta |
+| `Tabs` | `Tabs` | Alta |
+| `Accordion` | `Disclosure` | Media |
+| `Tooltip` / `Popover` | `Popover` | Media |
+| `Toast` | `Transition` | Baja |

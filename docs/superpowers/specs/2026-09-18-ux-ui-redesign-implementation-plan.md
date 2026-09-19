@@ -289,4 +289,90 @@ Plan de implementación para el rediseño completo de UX/UI de SCAUDIT Pro. Cada
    - Gráfico de línea de score historical
 
 **Archivos a crear/modificar**:
-- `src/app/p/[token]/page.tsx` 
+- `src/app/p/[token]/page.tsx` (reemplazar)
+- `src/components/ClientScoreCard.tsx` (nuevo)
+- `src/components/TrendChart.tsx` (nuevo)
+
+**Criterio de aceptación**:
+- Resumen ejecutivo muestra score general y por categoría
+- Tendencia muestra últimos 30 días
+- Últimas auditorías listadas en orden cronológico
+- Responsive en mobile
+
+---
+
+### Semana 10: Reportes y Notificaciones
+
+**Objetivo**: Exportaciones del portal y notificaciones.
+
+**Tareas**:
+1. Crear `AuditExportPanel.tsx`:
+   - PDF Ejecutivo (1-2 páginas, resumen C-level)
+   - CSV Detallado (datos crudos)
+   - Informe Completo (PDF multi-página con gráficos)
+   - Estados: pendiente, generando, listo, error
+2. Crear `NotificationCenter.tsx`:
+   - Toasts in-app (esquina superior derecha)
+   - Resumen semanal por email
+   - Alertas críticas por Telegram (si está configurado)
+
+**Archivos a crear**:
+- `src/components/AuditExportPanel.tsx` (nuevo)
+- `src/components/NotificationCenter.tsx` (nuevo)
+
+**Criterio de aceptación**:
+- Exportaciones generan archivos descargables
+- Estados de exportación se muestran correctamente
+- Toasts aparecen y desaparecen (300ms slide-in)
+- Reintentar funciona tras error
+
+---
+
+## Fase 6: Mobile y Accesibilidad (Semanas 11-12)
+
+### Semana 11: Responsive Mobile
+
+**Objetivo**: Adaptar layout y vistas a `< 768px`.
+
+**Tareas**:
+1. Bottom navigation con 5 tabs principales
+2. Cards apiladas verticalmente, full-width
+3. Tablas con scroll horizontal o vista de cards
+4. Modales full-screen en mobile
+
+**Archivos a crear/modificar**:
+- `src/features/dashboard/MobileNav.tsx` (modificar)
+- `src/app/globals.css` (modificar)
+
+**Criterio de aceptación**:
+- Navegación inferior funciona en mobile
+- Sin scroll horizontal no deseado
+- Modales ocupan pantalla completa en mobile
+
+---
+
+### Semana 12: Accesibilidad y Cierre
+
+**Objetivo**: Cumplir WCAG 2.1 AA y cerrar el rediseño.
+
+**Tareas**:
+1. Contraste mínimo 4.5:1 en texto, 3:1 en UI
+2. Focus visible de 2px en elementos interactivos
+3. Navegación por teclado (tab order, Escape cierra modales)
+4. Labels y landmarks ARIA en inputs y regiones
+5. Respetar `prefers-reduced-motion`
+6. Verificar duraciones: páginas 200ms, hover 150ms, modal 200ms, shimmer 1.5s, toast 300ms
+
+**Criterio de aceptación**:
+- Auditoría de accesibilidad sin bloqueantes
+- Navegación completa por teclado
+- Sin animaciones con `prefers-reduced-motion`
+
+---
+
+## Cierre
+
+- [ ] Fases 1-6 mergeadas (un PR por semana)
+- [ ] Sin imports de shadcn en componentes migrados
+- [ ] Tests y accesibilidad verificados por fase
+- [ ] Rollback disponible por PR si alguna fase falla
