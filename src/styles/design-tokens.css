@@ -1,0 +1,67 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCAUDIT — Corporate Design Tokens (spec 2026-09-18 UX/UI redesign, §3)
+   Adaptación al repo: Tailwind CSS v4 CSS-first (sin tailwind.config.ts).
+   - Namespace `--corporate-*`: tokens ADITIVOS. No sobrescriben el DS v4
+     vivo (olive/gold/teal de globals.css); coexisten para la migración
+     incremental módulo por módulo.
+   - El bloque `@theme inline` expone los tokens a Tailwind:
+     bg-corporate-primary, text-corporate-accent, font-corporate,
+     rounded-corporate-md, shadow-corporate-card, etc.
+   - Espaciado §3.3 (escala 4–64px): lo cubre el spacing dinámico de
+     Tailwind v4 (múltiplos de --spacing); sin tokens extra.
+   - Fuente §3.2: `--font-corporate` declara "DM Sans" con fallback a
+     Inter. La carga de la face (next/font en layout.tsx) queda pendiente;
+     @fontsource/dm-sans ya es dependencia del proyecto.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root,
+[data-theme="dark"],
+[data-theme="light"] {
+  /* §3.1 Paleta corporativa */
+  --corporate-primary: #1E3A5F;
+  --corporate-primary-light: #2563EB;
+  --corporate-accent: #D4A843;
+  --corporate-success: #059669;
+  --corporate-warning: #D97706;
+  --corporate-danger: #DC2626;
+  --corporate-surface: #F8FAFC;
+  --corporate-surface-elevated: #FFFFFF;
+  --corporate-border: #E2E8F0;
+  --corporate-text: #0F172A;
+  --corporate-text-secondary: #64748B;
+
+  /* §3.2 Tipografía (face DM Sans pendiente — ver cabecera) */
+  --font-corporate: "DM Sans", var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-corporate-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* §3.3 Sombra de card del spec */
+  --shadow-corporate-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+@theme inline {
+  /* Colores → bg-corporate-*, text-corporate-*, border-corporate-* … */
+  --color-corporate-primary: var(--corporate-primary);
+  --color-corporate-primary-light: var(--corporate-primary-light);
+  --color-corporate-accent: var(--corporate-accent);
+  --color-corporate-success: var(--corporate-success);
+  --color-corporate-warning: var(--corporate-warning);
+  --color-corporate-danger: var(--corporate-danger);
+  --color-corporate-surface: var(--corporate-surface);
+  --color-corporate-surface-elevated: var(--corporate-surface-elevated);
+  --color-corporate-border: var(--corporate-border);
+  --color-corporate-text: var(--corporate-text);
+  --color-corporate-text-secondary: var(--corporate-text-secondary);
+
+  /* Tipografía → font-corporate, font-corporate-mono */
+  --font-corporate: var(--font-corporate);
+  --font-corporate-mono: var(--font-corporate-mono);
+
+  /* §3.3 Border radius → rounded-corporate-sm/md/lg/xl */
+  --radius-corporate-sm: 6px;
+  --radius-corporate-md: 8px;
+  --radius-corporate-lg: 12px;
+  --radius-corporate-xl: 16px;
+
+  /* §3.3 Sombra → shadow-corporate-card */
+  --shadow-corporate-card: var(--shadow-corporate-card);
+}

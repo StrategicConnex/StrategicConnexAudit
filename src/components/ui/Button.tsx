@@ -39,6 +39,8 @@ export const buttonVariants = cva(
           "bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 shadow-md",
         light:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/60 shadow-sm",
+        corporate:
+          "bg-corporate-primary text-white border border-corporate-primary/20 hover:bg-corporate-primary-light shadow-sm",
       },
       size: {
         xs: "h-7 px-2.5 text-2xs rounded-md gap-1.5",
