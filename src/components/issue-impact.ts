@@ -81,3 +81,8 @@ export function sortIssuesByImpact<T extends ImpactInput>(issues: T[]): T[] {
     (a, b) => calculateImpactScore(b).score - calculateImpactScore(a).score,
   );
 }
+
+/** Salud 0-100 con la fórmula del producto (15 por crítico, 5 por aviso). */
+export function healthScoreFor(criticals: number, warnings: number): number {
+  return Math.max(0, 100 - criticals * 15 - warnings * 5);
+}

@@ -29,7 +29,7 @@ const SEVERITIES = [
   { value: 'info', label: 'Info' },
 ] as const;
 
-const CATEGORY_LABELS: Record<string, string> = {
+export const CATEGORY_LABELS: Record<string, string> = {
   all: 'Todas las categorías',
   meta: 'Metadatos',
   seo: 'SEO técnico',

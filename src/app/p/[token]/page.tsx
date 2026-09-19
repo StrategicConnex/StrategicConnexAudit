@@ -1,9 +1,18 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Activity } from "lucide-react";
 import { directDb } from "@/shared/db";
 import { projects, uptimeLogs, audits, issues, aiReportJobs } from "@/shared/db/schemas";
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { verifyPortalToken } from "@/server/lib/portal-tokens";
+import { ClientScoreCard } from "@/components/ClientScoreCard";
+import { TrendChart, type TrendPoint } from "@/components/TrendChart";
+import { MetricCard } from "@/components/MetricCard";
+import { AuditStatusBadge } from "@/components/ui/AuditStatusBadge";
+import { Card } from "@/components/ui/Card";
+import { PortalPdfButton } from "./components/PortalPdfButton";
+import { healthScoreFor } from "@/components/issue-impact";
+import { CATEGORY_LABELS } from "@/components/IssueList";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +26,8 @@ interface Branding {
 function thirtyDaysAgo(): Date {
   return new Date(Date.now() - 30 * 86400000);
 }
+
+const CATEGORY_ORDER = ['seo', 'meta', 'performance', 'security', 'link', 'accessibility'];
 
 /**
  * GET /p/[token] — Portal cliente read-only con marca blanca (B-4).
@@ -65,27 +76,74 @@ export default async function ClientPortalPage({
   const ups = Number(up?.ups ?? 0);
   const uptimePct = total > 0 ? `${(Math.round((ups / total) * 1000) / 10).toFixed(1)}%` : "—";
 
-  const [latest] = await directDb
-    .select({ id: audits.id })
+  // Últimas 10 completadas → tendencia de 30 días (2 queries, sin N+1)
+  const recentCompleted = await directDb
+    .select({ id: audits.id, createdAt: audits.createdAt })
     .from(audits)
     .where(and(eq(audits.projectId, project.id), eq(audits.status, "completed")))
     .orderBy(desc(audits.createdAt))
-    .limit(1);
+    .limit(10);
 
-  let score: number | null = null;
-  if (latest) {
-    const [stats] = await directDb
-      .select({
-        criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
-        warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`),
-      })
-      .from(issues)
-      .where(eq(issues.auditId, latest.id));
-    score = Math.max(
-      0,
-      100 - Number(stats?.criticalCount || 0) * 15 - Number(stats?.warningCount || 0) * 5
-    );
+  const completedIds = recentCompleted.map((a) => a.id);
+  const perAudit = completedIds.length > 0
+    ? await directDb
+        .select({
+          auditId: issues.auditId,
+          criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
+          warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`),
+        })
+        .from(issues)
+        .where(inArray(issues.auditId, completedIds))
+        .groupBy(issues.auditId)
+    : [];
+  const scoreByAudit = new Map(
+    perAudit.map((r) => [
+      r.auditId,
+      healthScoreFor(Number(r.criticalCount || 0), Number(r.warningCount || 0)),
+    ]),
+  );
+  const trend: TrendPoint[] = [...recentCompleted]
+    .reverse()
+    .map((a) => ({
+      label: a.createdAt
+        ? new Date(a.createdAt).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })
+        : "—",
+      value: scoreByAudit.get(a.id) ?? 100,
+    }));
+
+  const latest = recentCompleted[0] ?? null;
+  const score = latest ? (scoreByAudit.get(latest.id) ?? null) : null;
+
+  // Scores por categoría de la última auditoría completada
+  const catRows = latest
+    ? await directDb
+        .select({
+          category: issues.category,
+          severity: issues.severity,
+          n: count(),
+        })
+        .from(issues)
+        .where(eq(issues.auditId, latest.id))
+        .groupBy(issues.category, issues.severity)
+    : [];
+  const byCat = new Map<string, { c: number; w: number }>();
+  for (const r of catRows) {
+    const entry = byCat.get(r.category) ?? { c: 0, w: 0 };
+    if (r.severity === "critical") entry.c += Number(r.n);
+    else if (r.severity === "warning") entry.w += Number(r.n);
+    byCat.set(r.category, entry);
   }
+  const catScores = CATEGORY_ORDER.filter((c) => byCat.has(c)).map((c) => ({
+    label: CATEGORY_LABELS[c] ?? c,
+    value: healthScoreFor(byCat.get(c)!.c, byCat.get(c)!.w),
+  }));
+
+  const recentAudits = await directDb
+    .select({ id: audits.id, createdAt: audits.createdAt, status: audits.status })
+    .from(audits)
+    .where(eq(audits.projectId, project.id))
+    .orderBy(desc(audits.createdAt))
+    .limit(5);
 
   const reports = await directDb.query.aiReportJobs.findMany({
     where: eq(aiReportJobs.projectId, project.id),
@@ -96,7 +154,7 @@ export default async function ClientPortalPage({
 
   return (
     <div className="min-h-dvh w-full bg-background text-foreground">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16 space-y-8">
+      <div id="portal-export-content" className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16 space-y-8">
         <div className="text-center space-y-2">
           {branding.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -109,17 +167,58 @@ export default async function ClientPortalPage({
           <p className="text-sm text-muted-fg font-mono">{project.domain}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div className="glass-card p-6">
-            <p className="text-3xl font-black">{uptimePct}</p>
-            <p className="text-2xs text-muted-fg uppercase tracking-widest mt-1">Uptime 30d</p>
+        <ClientScoreCard
+          overall={score}
+          overallLabel={`Salud SEO de ${brandName}`}
+          categories={catScores}
+          accent={accent}
+        />
+
+        <Card className="p-6 sm:p-8">
+          <h2 className="text-sm font-extrabold uppercase tracking-widest text-muted-fg">
+            Tendencia · últimos 30 días
+          </h2>
+          <div className="mt-4">
+            <TrendChart
+              points={trend}
+              ariaLabel={`Evolución de la salud SEO de ${brandName}`}
+              accent={accent}
+              emptyLabel="Sin auditorías completadas en los últimos 30 días."
+            />
           </div>
-          <div className="glass-card p-6">
-            <p className="text-3xl font-black" style={{ color: accent }}>
-              {score !== null ? `${score}/100` : "—"}
+        </Card>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <MetricCard
+            icon={<Activity aria-hidden="true" />}
+            label="Uptime 30d"
+            value={uptimePct}
+          />
+          <Card className="p-5">
+            <p className="text-2xs font-extrabold uppercase tracking-widest text-muted-fg">
+              Últimas auditorías
             </p>
-            <p className="text-2xs text-muted-fg uppercase tracking-widest mt-1">Salud SEO</p>
-          </div>
+            {recentAudits.length === 0 ? (
+              <p className="mt-2 text-xs text-muted-fg">Aún no hay auditorías.</p>
+            ) : (
+              <ul className="mt-3 space-y-2.5">
+                {recentAudits.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="tabular-nums text-muted-fg">
+                      {a.createdAt
+                        ? new Date(a.createdAt).toLocaleDateString("es-ES", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "—"}
+                    </span>
+                    <AuditStatusBadge status={a.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
         </div>
 
         <div className="glass-card p-6">
@@ -145,9 +244,12 @@ export default async function ClientPortalPage({
           )}
         </div>
 
-        <p className="text-center text-2xs text-muted-fg">
-          Generado por <span className="font-bold">StrategicAudit Pro</span>
-        </p>
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <PortalPdfButton targetElementId="portal-export-content" />
+          <p className="text-2xs text-muted-fg">
+            Generado por <span className="font-bold">StrategicAudit Pro</span>
+          </p>
+        </div>
         <p className="text-center">
           <Link href="/" className="text-sm text-primary hover:underline">
             Inicio
