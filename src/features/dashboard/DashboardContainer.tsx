@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { DashboardSidebar, type DashboardTab } from './DashboardSidebar';
 import { MobileNav, MobileBottomNav } from './MobileNav';
 import { DashboardHeader } from './DashboardHeader';
+import { CommandPalette } from '@/components/CommandPalette';
 import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
 import { OverviewTab } from './tabs/OverviewTab';
 import { TabSkeleton } from './TabSkeleton';
@@ -209,6 +210,16 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
 
       {/* Barra inferior móvil con las 5 pestañas principales */}
       <MobileBottomNav activeTab={activeTab} onTabChange={openTab} />
+
+      {/* Paleta de comandos global (⌘K) */}
+      <CommandPalette
+        projects={initialProjects.map((p) => ({
+          id: p.id,
+          name: p.name,
+          domain: p.domain,
+        }))}
+        onNavigateTab={openTab}
+      />
 
       {/* Main Content Area — bg transparente para dejar ver la red neuronal de fondo */}
       <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col h-screen overflow-hidden">

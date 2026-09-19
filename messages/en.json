@@ -121,6 +121,15 @@
     "userMenu": {
       "account": "Account",
       "settings": "Settings"
+    },
+    "palette": {
+      "noResults": "No results",
+      "nav": "Navigation",
+      "projects": "Projects",
+      "actions": "Actions",
+      "help": "Help",
+      "newProject": "New project",
+      "docs": "Open documentation"
     }
   },
   "language": {
