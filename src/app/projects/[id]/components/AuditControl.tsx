@@ -160,22 +160,22 @@ export default function AuditControl({ projectId }: AuditControlProps) {
       <button
         onClick={handleStartAudit}
         disabled={isDisabled}
-        className={`relative h-11 px-8 rounded-apple-pill text-xs font-semibold tracking-widest uppercase transition-all overflow-hidden flex items-center justify-center gap-2.5 
+        className={`relative h-11 px-8 rounded-full text-xs font-semibold tracking-widest uppercase transition-all overflow-hidden flex items-center justify-center gap-2.5 
           ${isDisabled 
-            ? 'bg-apple-gray/40 text-apple-ink/40 cursor-not-allowed border border-apple-ink/5' 
-            : 'bg-apple-blue text-white shadow-[0_4px_12px_rgba(0,113,227,0.3)] hover:shadow-[0_6px_16px_rgba(0,113,227,0.4)] hover:scale-[1.02] active:scale-[0.98]'}`}
+            ? 'bg-muted/40 text-muted-fg cursor-not-allowed border border-border' 
+            : 'bg-corporate-primary text-white shadow-[0_4px_12px_rgba(30,58,95,0.4)] hover:bg-corporate-primary-light hover:shadow-[0_6px_16px_rgba(30,58,95,0.5)] hover:scale-[1.02] active:scale-[0.98]'}`}
       >
         {/* Background Progress Layer */}
         {isAuditing && (
           <div 
-            className="absolute inset-0 bg-apple-ink/5 transition-all duration-500 ease-out"
+            className="absolute inset-0 bg-white/20 transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         )}
         
         {cooldown > 0 && status === 'idle' && (
           <div 
-            className="absolute inset-0 bg-apple-ink/10 transition-all duration-1000 linear"
+            className="absolute inset-0 bg-white/10 transition-all duration-1000 linear"
             style={{ width: `${(cooldown/30)*100}%` }}
           />
         )}
@@ -220,19 +220,37 @@ export default function AuditControl({ projectId }: AuditControlProps) {
         </div>
       </button>
 
+      {isAuditing && (
+        <div
+          className="w-full max-w-[240px]"
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Progreso de la auditoría"
+        >
+          <div className="h-1.5 overflow-hidden rounded-full bg-muted/40">
+            <div
+              className="h-full rounded-full bg-corporate-primary transition-[width] duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {errorMessage && (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-apple-sm bg-red-500/5 border border-red-500/10 max-w-xs animate-in fade-in slide-in-from-top-1">
-          <AlertCircle className="w-3 h-3 text-red-500" />
-          <span className="text-2xs text-red-500/80 font-medium text-right leading-tight">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 max-w-xs animate-in fade-in slide-in-from-top-1">
+          <AlertCircle className="w-3 h-3 text-destructive" />
+          <span className="text-2xs text-destructive/80 font-medium text-right leading-tight">
             {errorMessage}
           </span>
         </div>
       )}
 
       {showWorkerWarning && (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-apple-sm bg-apple-gray/50 border border-apple-ink/5 max-w-xs animate-pulse">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border max-w-xs animate-pulse">
           <div className="w-1.5 h-1.5 rounded-full bg-chart-warning" />
-          <span className="text-2xs text-apple-ink/60 font-medium text-right leading-tight">
+          <span className="text-2xs text-muted-fg font-medium text-right leading-tight">
             Server response delayed. Waiting for analyzer...
           </span>
         </div>

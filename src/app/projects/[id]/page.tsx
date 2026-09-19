@@ -6,6 +6,10 @@ import { ArrowLeft, Globe, Activity, FileText, AlertTriangle, ArrowRight, Downlo
 import Link from 'next/link';
 import AuditControl from './components/AuditControl';
 import DeactivateButton from './components/DeactivateButton';
+import { ProjectTabs } from './components/ProjectTabs';
+import { ProjectScoreCard } from '@/components/ProjectScoreCard';
+import { AuditStatusBadge } from '@/components/ui/AuditStatusBadge';
+import { Badge } from '@/components/ui/Badge';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
 import { ExportCsvButton } from '@/features/dashboard/ExportCsvButton';
@@ -72,6 +76,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       let healthScore = "--";
       let pagesCrawled = "0";
       let criticalIssuesCount = "0";
+      let warningIssuesCount = "0";
 
       if (latestCompletedAudit) {
         // Optimizamos usando count() nativo de Drizzle
@@ -93,6 +98,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         const warnings = Number(issueStats?.warningCount || 0);
         
         criticalIssuesCount = criticals.toString();
+        warningIssuesCount = warnings.toString();
         healthScore = Math.max(0, 100 - (criticals * 15) - (warnings * 5)).toString() + "%";
       }
 
@@ -144,6 +150,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         healthScore,
         pagesCrawled,
         criticalIssuesCount,
+        warningIssuesCount,
         currentUptimeStatus,
         vitalsAverages,
         rumStats,
@@ -182,7 +189,24 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, currentUptimeStatus, vitalsAverages, rumStats, latestCompletedAudit } = data;
+  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, warningIssuesCount, currentUptimeStatus, vitalsAverages, rumStats, latestCompletedAudit } = data;
+
+  // ── Scores por categoría (Semana 6 — misma fórmula y umbrales que el UI) ──
+  const healthNumeric = healthScore === '--' ? null : Number.parseInt(healthScore, 10);
+  type VitalStatus = 'good' | 'needs-improvement' | 'poor' | 'none';
+  const lcpStatus: VitalStatus = vitalsAverages.LCP > 2500 ? 'poor' : vitalsAverages.LCP > 0 ? 'good' : 'none';
+  const clsStatus: VitalStatus = vitalsAverages.CLS > 0.1 ? 'needs-improvement' : vitalsAverages.CLS > 0 ? 'good' : 'none';
+  const fcpStatus: VitalStatus = vitalsAverages.FCP > 1800 ? 'needs-improvement' : vitalsAverages.FCP > 0 ? 'good' : 'none';
+  const inpStatus: VitalStatus = vitalsAverages.INP > 500 ? 'poor' : vitalsAverages.INP > 200 ? 'needs-improvement' : vitalsAverages.INP > 0 ? 'good' : 'none';
+  const errStatus: VitalStatus = vitalsAverages.errorCount > 5 ? 'poor' : vitalsAverages.errorCount > 0 ? 'needs-improvement' : 'good';
+  const memStatus: VitalStatus = vitalsAverages.TTFB > 1500 ? 'poor' : vitalsAverages.TTFB > 800 ? 'needs-improvement' : vitalsAverages.TTFB > 0 ? 'good' : 'none';
+  // Rendimiento = media ponderada (good 1, needs-improvement 0.5, poor 0),
+  // excluyendo señales sin dato. null si no hay ninguna señal.
+  const perfSignals = [lcpStatus, clsStatus, fcpStatus, inpStatus, errStatus, memStatus].filter((s) => s !== 'none');
+  const perfScore = perfSignals.length === 0 ? null : Math.round(
+    (perfSignals.reduce((acc, s) => acc + (s === 'good' ? 1 : s === 'needs-improvement' ? 0.5 : 0), 0) / perfSignals.length) * 100,
+  );
+  const uptimeScore = currentUptimeStatus === 'up' ? 100 : currentUptimeStatus === 'down' ? 0 : null;
   
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans relative overflow-hidden">
@@ -200,6 +224,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             <span className="text-2xs font-extrabold text-muted-foreground uppercase tracking-widest">Proyecto Activo</span>
             <span className="w-1.5 h-1.5 rounded-full bg-foreground/20" />
             <span className="text-2xs font-extrabold text-accent-cyan uppercase tracking-widest">{project.id.substring(0, 8)}</span>
+            <span className="hidden sm:flex items-center gap-1.5 ml-1">
+              <Badge variant="neutral">SOC 2</Badge>
+              <Badge variant="neutral">OWASP</Badge>
+            </span>
           </div>
           <h1 className="text-xl font-bold tracking-tight text-foreground leading-tight truncate mt-0.5" title={project.name}>{project.name}</h1>
         </div>
@@ -210,15 +238,36 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
              <span className="text-sm font-bold text-muted-foreground truncate max-w-[200px] mt-0.5">{project.domain}</span>
           </div>
           <div className="h-8 w-px bg-border mx-2" />
-          {canDelete && <DeactivateButton projectId={projectId} />}
           <AuditControl projectId={projectId} />
         </div>
       </header>
       
       {/* Content */}
-      <main id="main-content" tabIndex={-1} className="flex-1 p-10 overflow-y-auto relative z-10">
-        <div className="max-w-[1400px] mx-auto space-y-12">
-          
+      <main id="main-content" tabIndex={-1} className="flex-1 p-4 sm:p-10 overflow-y-auto relative z-10">
+        <div className="max-w-[1400px] mx-auto space-y-8">
+
+          <ProjectScoreCard
+            overall={healthNumeric}
+            overallLabel={`Salud SEO del proyecto ${project.name}`}
+            categories={[
+              { label: 'Salud SEO', value: healthNumeric, display: healthScore },
+              { label: 'Rendimiento', value: perfScore, display: perfScore != null ? `${perfScore}%` : '—' },
+              {
+                label: 'Disponibilidad',
+                value: uptimeScore,
+                display: currentUptimeStatus === 'up' ? 'En línea' : currentUptimeStatus === 'down' ? 'Caído' : 'Sin datos',
+              },
+            ]}
+            updatedLabel={
+              latestCompletedAudit?.createdAt
+                ? `Última auditoría: ${new Date(latestCompletedAudit.createdAt).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}`
+                : 'Sin auditorías todavía'
+            }
+          />
+
+          <ProjectTabs
+            overview={
+              <>
           {/* Panel de Métricas Rápidas */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <StatBox icon={<ShieldCheck className="w-5 h-5" strokeWidth={2.5} />} title="Salud SEO" value={healthScore} accent="blue" />
@@ -253,26 +302,26 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <VitalsCard label="Largest Contentful Paint" value={vitalsAverages.LCP ? `${Math.round(vitalsAverages.LCP)}ms` : '--'} status={vitalsAverages.LCP > 2500 ? 'poor' : vitalsAverages.LCP > 0 ? 'good' : 'none'} desc="Mide el rendimiento de carga del contenido principal." />
-              <VitalsCard label="Cumulative Layout Shift" value={vitalsAverages.CLS ? vitalsAverages.CLS.toFixed(3) : '--'} status={vitalsAverages.CLS > 0.1 ? 'needs-improvement' : vitalsAverages.CLS > 0 ? 'good' : 'none'} desc="Mide la estabilidad visual de la estructura web." />
-              <VitalsCard label="First Contentful Paint" value={vitalsAverages.FCP ? `${Math.round(vitalsAverages.FCP)}ms` : '--'} status={vitalsAverages.FCP > 1800 ? 'needs-improvement' : vitalsAverages.FCP > 0 ? 'good' : 'none'} desc="Tiempo hasta que se procesa el primer elemento DOM." />
+              <VitalsCard label="Largest Contentful Paint" value={vitalsAverages.LCP ? `${Math.round(vitalsAverages.LCP)}ms` : '--'} status={lcpStatus} desc="Mide el rendimiento de carga del contenido principal." />
+              <VitalsCard label="Cumulative Layout Shift" value={vitalsAverages.CLS ? vitalsAverages.CLS.toFixed(3) : '--'} status={clsStatus} desc="Mide la estabilidad visual de la estructura web." />
+              <VitalsCard label="First Contentful Paint" value={vitalsAverages.FCP ? `${Math.round(vitalsAverages.FCP)}ms` : '--'} status={fcpStatus} desc="Tiempo hasta que se procesa el primer elemento DOM." />
               
               <VitalsCard 
                 label="INP & FID (Interactividad)" 
                 value={vitalsAverages.INP ? `${Math.round(vitalsAverages.INP)}ms` : '--'} 
-                status={vitalsAverages.INP > 500 ? 'poor' : vitalsAverages.INP > 200 ? 'needs-improvement' : vitalsAverages.INP > 0 ? 'good' : 'none'} 
+                status={inpStatus} 
                 desc={`Latencia de respuesta a interacciones (INP). Primer Delay (FID): ${vitalsAverages.FID ? Math.round(vitalsAverages.FID) + 'ms' : '--'}.`} 
               />
               <VitalsCard 
                 label="JavaScript Hot Errors" 
                 value={String(vitalsAverages.errorCount)} 
-                status={vitalsAverages.errorCount > 5 ? 'poor' : vitalsAverages.errorCount > 0 ? 'needs-improvement' : 'good'} 
+                status={errStatus} 
                 desc="Excepciones de JavaScript no controladas y fallos de ejecución capturados en caliente." 
               />
               <VitalsCard 
                 label="User System Heap & Tráfico" 
                 value={vitalsAverages.avgMemoryMB !== '--' ? `${vitalsAverages.avgMemoryMB} MB` : '--'} 
-                status={vitalsAverages.TTFB > 1500 ? 'poor' : vitalsAverages.TTFB > 800 ? 'needs-improvement' : vitalsAverages.TTFB > 0 ? 'good' : 'none'} 
+                status={memStatus} 
                 desc={`Memoria heap promedio del cliente. Vistas: ${vitalsAverages.totalPagesViews}. TTFB promedio de red: ${vitalsAverages.TTFB ? Math.round(vitalsAverages.TTFB) + 'ms' : '--'}.`} 
               />
             </div>
@@ -348,7 +397,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               canRotate={canRotateSecrets}
             />
           </section>
-          
+              </>
+            }
+            audits={
+              <>
           {/* Sección de Reportes */}
           <section className="space-y-6">
             <div>
@@ -402,20 +454,6 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             ) : (
               <div className="divide-y divide-border">
                 {projectAudits.map((audit) => {
-                  let statusLabel = "Pendiente";
-                  let statusStyle = "bg-surface-muted text-muted-foreground border-border";
-                  
-                  if (audit.status === 'completed') {
-                    statusLabel = "Completado";
-                    statusStyle = "bg-chartreuse/10 text-chartreuse border-chartreuse/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]";
-                  } else if (audit.status === 'failed') {
-                    statusLabel = "Fallido";
-                    statusStyle = "bg-destructive/10 text-destructive border-destructive/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]";
-                  } else if (audit.status === 'running') {
-                    statusLabel = "Analizando";
-                    statusStyle = "bg-accent-cyan/10 text-accent-cyan border-accent-cyan/20 animate-pulse shadow-[0_0_15px_rgba(6,182,212,0.1)]";
-                  }
-
                   return (
                     <Link 
                       key={audit.id} 
@@ -445,9 +483,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       </div>
                       
                       <div className="flex items-center gap-6">
-                        <span className={`text-2xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border ${statusStyle}`}>
-                          {statusLabel}
-                        </span>
+                        <AuditStatusBadge status={audit.status} />
                         <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" strokeWidth={2.5} />
                       </div>
                     </Link>
@@ -456,6 +492,42 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               </div>
             )}
           </section>
+              </>
+            }
+            config={
+              <section className="backdrop-blur-xl border border-border bg-card/60 rounded-2xl p-6 sm:p-10 shadow-[var(--shadow-card)] space-y-8">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-foreground">Configuración</h2>
+                  <p className="text-sm text-muted-foreground mt-2">Identidad del proyecto y zona de peligro.</p>
+                </div>
+                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="rounded-xl border border-border bg-surface-muted/60 p-4">
+                    <dt className="text-2xs font-extrabold uppercase tracking-widest text-muted-fg">ID</dt>
+                    <dd className="mt-1 font-mono text-xs text-foreground break-all">{project.id}</dd>
+                  </div>
+                  <div className="rounded-xl border border-border bg-surface-muted/60 p-4">
+                    <dt className="text-2xs font-extrabold uppercase tracking-widest text-muted-fg">Dominio</dt>
+                    <dd className="mt-1 text-xs font-bold text-foreground break-all">{project.domain}</dd>
+                  </div>
+                  <div className="rounded-xl border border-border bg-surface-muted/60 p-4">
+                    <dt className="text-2xs font-extrabold uppercase tracking-widest text-muted-fg">Creado</dt>
+                    <dd className="mt-1 text-xs font-bold text-foreground">
+                      {project.createdAt ? new Date(project.createdAt).toLocaleDateString('es-ES', { dateStyle: 'medium' }) : '—'}
+                    </dd>
+                  </div>
+                </dl>
+                {canDelete && (
+                  <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-foreground">Zona de peligro</h3>
+                      <p className="text-xs text-muted-foreground mt-1">Desactivar oculta el proyecto sin borrar sus datos.</p>
+                    </div>
+                    <DeactivateButton projectId={projectId} />
+                  </div>
+                )}
+              </section>
+            }
+          />
           
         </div>
       </main>

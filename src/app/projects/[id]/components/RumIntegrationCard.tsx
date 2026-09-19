@@ -117,6 +117,22 @@ export function RumIntegrationCard({
         para capturar Core Web Vitals, errores JS, navegación SPA y sesiones reales directamente en su consola.
       </p>
 
+      {/* Pasos de instalación */}
+      <ol className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-5 relative z-10">
+        {[
+          'Pegue el snippet en el <head>',
+          'Visite su sitio web',
+          'Verifique la primera señal aquí',
+        ].map((step, i) => (
+          <li key={i} className="flex items-center gap-2.5 rounded-xl border border-border bg-background/60 px-3 py-2.5">
+            <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-2xs font-extrabold text-primary">
+              {i + 1}
+            </span>
+            <span className="text-2xs font-semibold text-muted-foreground">{step}</span>
+          </li>
+        ))}
+      </ol>
+
       {/* Estado de instalación en vivo */}
       <div className={`inline-flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 rounded-xl border mb-5 relative z-10 ${status.cls}`}>
         <span className="flex items-center gap-2 text-2xs font-bold uppercase tracking-widest">
