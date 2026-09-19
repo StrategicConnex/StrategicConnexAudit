@@ -1,12 +1,20 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { createProject } from '@/app/actions/projects';
-import { Plus, X, Loader2 } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogCloseButton,
+  DialogDescription,
+  DialogPopup,
+  DialogPortal,
+  DialogTitle,
+} from '@/components/ui/Dialog';
 
 export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
   const t = useTranslations('projects');
@@ -16,14 +24,12 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
   const [state, setState] = useState<{ success?: boolean; message?: string; errors?: Record<string, string[]> } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMounted(true);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+  const close = () => {
+    setIsOpen(false);
+    setState(null);
+    setPosition({ x: 0, y: 0 });
+  };
 
   // Dragging state
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -50,19 +56,10 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
-  // Foco inicial + Escape: diálogo real, no solo un div flotante.
+  // Foco inicial al abrir. Base UI aporta focus-trap, Escape y scroll-lock.
   useEffect(() => {
     if (!isOpen) return;
     firstInputRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-        setState(null);
-        setPosition({ x: 0, y: 0 });
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
   }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -87,9 +84,8 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
         });
       } else {
         setState({ success: true });
-        setIsOpen(false);
-        setPosition({ x: 0, y: 0 });
         formRef.current?.reset();
+        close();
         // El usuario debe ENTERARSE y LLEGAR a su proyecto: refrescar datos,
         // toast con acción y (si el padre lo pide) navegar a la pestaña.
         router.refresh();
@@ -118,33 +114,28 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
         <span>Nuevo Proyecto</span>
       </button>
 
-      {isOpen && mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/75 backdrop-blur-md animate-in fade-in duration-300">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="new-project-title"
-            className={`glass-card rounded-2xl w-full max-w-md p-8 shadow-2xl relative animate-in zoom-in-95 duration-300 border border-border ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (open) setIsOpen(true);
+          else close();
+        }}
+      >
+        <DialogPortal>
+          <DialogBackdrop />
+          <DialogPopup
+            className={`transition-[opacity,translate,scale] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
           >
-            <button 
-              onClick={() => {
-                setIsOpen(false);
-                setState(null);
-                setPosition({ x: 0, y: 0 });
-              }}
-              className="absolute top-5 right-5 text-muted-fg hover:text-white transition-colors cursor-pointer"
-            >
-              <X size={18} strokeWidth={2.5} />
-            </button>
+            <DialogCloseButton />
             
             <div className="mb-6 pointer-events-none select-none">
-              <h2 id="new-project-title" className="text-xl font-bold text-foreground tracking-tight">Agregar Dominio</h2>
-              <p className="text-xs font-semibold text-muted-fg mt-1">Agrega tu sitio web y empezaremos a vigilarlo por ti.</p>
+              <DialogTitle>Agregar Dominio</DialogTitle>
+              <DialogDescription>Agrega tu sitio web y empezaremos a vigilarlo por ti.</DialogDescription>
             </div>
             
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-5 cursor-auto">
@@ -188,11 +179,7 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
               <div className="pt-4 flex items-center justify-end gap-4">
                 <button 
                   type="button" 
-                  onClick={() => {
-                    setIsOpen(false);
-                    setState(null);
-                    setPosition({ x: 0, y: 0 });
-                  }}
+                  onClick={close}
                   className="text-2xs font-extrabold uppercase tracking-widest text-muted-fg hover:text-white transition-colors"
                   disabled={isPending}
                 >
@@ -207,10 +194,9 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
                 </button>
               </div>
             </form>
-          </div>
-        </div>,
-        document.body
-      )}
+          </DialogPopup>
+        </DialogPortal>
+      </Dialog>
     </>
   );
 }
