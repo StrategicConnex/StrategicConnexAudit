@@ -3,20 +3,26 @@ import { eq, and } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
-import { 
-  ArrowLeft, 
-  CheckCircle2, 
-  AlertCircle, 
-  AlertTriangle, 
-  Heading1, 
-  Heading2, 
-  Calendar, 
-  Hash, 
-  Sparkles,
+import {
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  Heading1,
+  Heading2,
+  Calendar,
+  Hash,
   Search
 } from 'lucide-react';
 import Link from 'next/link';
 import { ExportPdfButton } from '@/features/dashboard/ExportPdfButton';
+import { ScoreGauge } from '@/components/ui/ScoreGauge';
+import { MetricCard } from '@/components/MetricCard';
+import { AuditStatusBadge } from '@/components/ui/AuditStatusBadge';
+import { IssueList } from '@/components/IssueList';
+import { AuditExportPanel } from '@/components/AuditExportPanel';
+import { sortIssuesByImpact } from '@/components/issue-impact';
+import { toggleIssueFixed } from '@/app/actions/audits';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,59 +75,9 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
   const criticalIssues = auditIssues.filter(i => i.severity === 'critical');
   const warningIssues = auditIssues.filter(i => i.severity === 'warning');
 
-  // Funciones de cálculo para el SEO Impact Score
-  const calculateImpactScore = (issue: typeof auditIssues[0]) => {
-    let score = 50;
-    let difficulty = 'Media';
-    let roi = 'Medio';
-    let urgency = 'Normal';
-
-    // Peso por gravedad
-    if (issue.severity === 'critical') {
-      score += 30;
-      urgency = 'Alta';
-      roi = 'Alto';
-    } else if (issue.severity === 'warning') {
-      score += 10;
-    }
-
-    // Ajuste fino por categoría (simulando impacto algorítmico)
-    switch (issue.category) {
-      case 'meta':
-      case 'seo':
-        score += 15;
-        difficulty = 'Baja'; // Fácil de cambiar texto
-        if (issue.severity === 'critical') roi = 'Muy Alto'; // Ej. Falta Title
-        break;
-      case 'performance':
-        score += 10;
-        difficulty = 'Alta'; // Optimizar LCP o JS es difícil
-        break;
-      case 'accessibility':
-        score += 5;
-        difficulty = 'Media';
-        break;
-      case 'link':
-        score += 12;
-        difficulty = 'Baja';
-        break;
-      case 'security':
-        score += 20;
-        difficulty = 'Media';
-        urgency = 'Alta';
-        break;
-    }
-
-    // Normalizar a 100
-    score = Math.min(100, Math.max(1, score));
-
-    return { score, difficulty, roi, urgency };
-  };
-
+  // Funciones de cálculo para el SEO Impact Score (módulo puro compartido)
   // Ordenar auditIssues por Impact Score (los más urgentes primero)
-  const sortedAuditIssues = [...auditIssues].sort((a, b) => {
-    return calculateImpactScore(b).score - calculateImpactScore(a).score;
-  });
+  const sortedAuditIssues = sortIssuesByImpact(auditIssues);
   
   let healthScore = 100;
   if (audit.status === 'completed') {
@@ -129,17 +85,6 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
   }
   
   // Parámetros del círculo de progreso SVG
-  const radius = 50;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (healthScore / 100) * circumference;
-  
-  // Not used in JSX directly but kept for potential future use
-  void (healthScore < 50 ? null : healthScore < 85 ? null : null);
-
-  let translatedStatus = "Pendiente";
-  if (audit.status === 'completed') translatedStatus = "Completado";
-  if (audit.status === 'failed') translatedStatus = "Fallido";
-  if (audit.status === 'running') translatedStatus = "Analizando";
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -158,14 +103,7 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
         
         <div className="ml-auto flex items-center gap-3">
           <ExportPdfButton targetElementId="pdf-export-content" />
-          <div className={`text-xs px-3 py-1 rounded-full font-medium border capitalize flex items-center gap-1.5
-            ${audit.status === 'completed' ? 'bg-green-500/10 border-green-500/20 text-green-600' : 
-              audit.status === 'failed' ? 'bg-red-500/10 border-red-500/20 text-red-600' : 
-              'bg-yellow-500/10 border-yellow-500/20 text-yellow-600'}`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${audit.status === 'completed' ? 'bg-green-600 animate-pulse' : audit.status === 'failed' ? 'bg-red-600' : 'bg-yellow-600 animate-pulse'}`} />
-            {translatedStatus}
-          </div>
+          <AuditStatusBadge status={audit.status} />
         </div>
       </header>
 
@@ -175,53 +113,17 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
           {/* Fila de Score de Salud y Métricas rápidas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            {/* Círculo de Score de Salud SEO - High Impact */}
-            <div className="glass-card rounded-2xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group shadow-2xl border border-white/10 tech-scanline">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-              <h3 className="text-2xs font-bold text-muted-foreground uppercase tracking-[0.15em] mb-4 text-technical">SEO Quality Score</h3>
-              
-              <div className="relative w-36 h-36 flex items-center justify-center mb-4">
-                <svg className="w-full h-full transform -rotate-90 drop-shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                  <circle
-                    cx="72"
-                    cy="72"
-                    r={radius}
-                    stroke="rgba(255,255,255,0.05)"
-                    strokeWidth="10"
-                    fill="transparent"
-                  />
-                  {/* Gradiente para el trazo */}
-                  <defs>
-                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#10B981" />
-                      <stop offset="100%" stopColor="#3B82F6" />
-                    </linearGradient>
-                  </defs>
-                  <circle
-                    cx="72"
-                    cy="72"
-                    r={radius}
-                    stroke="url(#scoreGradient)"
-                    strokeWidth="12"
-                    fill="transparent"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    style={{
-                      transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                  />
-                </svg>
-                <div className="absolute flex flex-col items-center">
-                  <span className="text-5xl font-black tracking-tighter text-foreground">
-                    {audit.status === 'completed' ? `${healthScore}` : '--'}
-                    <span className="text-xl text-muted-foreground">%</span>
-                  </span>
-                  <span className="text-2xs text-green-400 uppercase font-bold tracking-widest mt-1">Calidad</span>
-                </div>
-              </div>
-              
-              <p className="text-2xs text-muted-foreground mt-1 max-w-[200px] leading-relaxed">
+            {/* Gauge de Salud SEO */}
+            <div className="glass-card rounded-2xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+              <h3 className="text-2xs font-bold text-muted-foreground uppercase tracking-[0.15em] mb-4">SEO Quality Score</h3>
+
+              <ScoreGauge
+                value={audit.status === 'completed' ? healthScore : null}
+                size={144}
+                ariaLabel={`Puntuación SEO ${healthScore} sobre 100`}
+              />
+
+              <p className="text-2xs text-muted-foreground mt-4 max-w-[200px] leading-relaxed">
                 {healthScore >= 90 ? "Estado óptimo de excelencia técnica y ciberseguridad." :
                  healthScore >= 70 ? "Bases sólidas. Aplique ajustes recomendados para escalar." :
                  audit.status === 'completed' ? "Requiere intervención inmediata para mitigar riesgos." : "Procesando inteligencia técnica..."}
@@ -230,53 +132,39 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
 
             {/* Módulos de métricas secundarias */}
             <div className="md:col-span-2 grid grid-cols-2 gap-4">
-              <div className="glass-card rounded-2xl p-6 flex flex-col justify-between border-l-4 border-red-500 shadow-xl bg-background">
-                <div>
-                  <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-600 border border-red-500/30 flex items-center justify-center mb-3">
-                    <AlertCircle className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-2xs font-bold text-muted-foreground uppercase tracking-widest text-technical">Hallazgos Críticos</h4>
-                  <p className="text-4xl font-black mt-1 text-foreground">{audit.status === 'completed' ? criticalIssues.length : '--'}</p>
-                </div>
-                <p className="text-2xs text-muted-foreground mt-4 border-t border-border/20 pt-2 text-left font-medium">Prioridad de ejecución inmediata.</p>
-              </div>
-
-              <div className="glass-card rounded-2xl p-6 flex flex-col justify-between">
-                <div>
-                  <div className="w-8 h-8 rounded-lg bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center justify-center mb-3">
-                    <AlertTriangle className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-sm font-medium text-muted-foreground">Advertencias</h4>
-                  <p className="text-3xl font-bold mt-1 text-yellow-400">{audit.status === 'completed' ? warningIssues.length : '--'}</p>
-                </div>
-                <p className="text-xs text-muted-foreground mt-4 border-t border-border/20 pt-2 text-left">Oportunidades de mejora para escalabilidad.</p>
-              </div>
-
-              <div className="glass-card rounded-2xl p-6 flex flex-col justify-between">
-                <div>
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center mb-3">
-                    <Hash className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-sm font-medium text-muted-foreground">Conteo de Palabras</h4>
-                  <p className="text-3xl font-bold mt-1">{crawl?.wordCount || '--'}</p>
-                </div>
-                <p className="text-xs text-muted-foreground mt-4 border-t border-border/20 pt-2 text-left">La extensión de texto ideal varía según palabra clave.</p>
-              </div>
-
-              <div className="glass-card rounded-2xl p-6 flex flex-col justify-between">
-                <div>
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center mb-3">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-sm font-medium text-muted-foreground">Fecha de Auditoría</h4>
-                  <p className="text-sm font-semibold mt-2 text-left">{audit.createdAt ? new Date(audit.createdAt).toLocaleDateString('es-ES') : '--'}</p>
-                  <p className="text-xs text-muted-foreground text-left">{audit.createdAt ? new Date(audit.createdAt).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'}) : '--'}</p>
-                </div>
-                <p className="text-xs text-muted-foreground mt-4 border-t border-border/20 pt-2 text-left">Los reportes históricos expiran al actualizar la web.</p>
-              </div>
+              <MetricCard
+                icon={<AlertCircle aria-hidden="true" />}
+                label="Hallazgos Críticos"
+                value={audit.status === 'completed' ? String(criticalIssues.length) : '--'}
+                hint="Prioridad de ejecución inmediata."
+              />
+              <MetricCard
+                icon={<AlertTriangle aria-hidden="true" />}
+                label="Advertencias"
+                value={audit.status === 'completed' ? String(warningIssues.length) : '--'}
+                hint="Oportunidades de mejora para escalabilidad."
+              />
+              <MetricCard
+                icon={<Hash aria-hidden="true" />}
+                label="Conteo de Palabras"
+                value={crawl?.wordCount ? String(crawl.wordCount) : '--'}
+                hint="La extensión ideal varía según palabra clave."
+              />
+              <MetricCard
+                icon={<Calendar aria-hidden="true" />}
+                label="Fecha de Auditoría"
+                value={audit.createdAt ? new Date(audit.createdAt).toLocaleDateString('es-ES') : '--'}
+                hint={audit.createdAt ? new Date(audit.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'Los reportes expiran al actualizar la web.'}
+              />
             </div>
 
           </div>
+
+          <AuditExportPanel
+            projectId={projectId}
+            pdfTargetId="pdf-export-content"
+            auditCompleted={audit.status === 'completed'}
+          />
 
           {audit.status === 'failed' && (
             <div className="p-6 bg-red-950/20 border border-red-500/30 rounded-2xl flex items-start gap-4">
@@ -566,71 +454,19 @@ export default async function AuditDetailPage({ params }: { params: Promise<{ id
 
                 <div className="glass-card rounded-2xl p-6">
                   {sortedAuditIssues.length > 0 ? (
-                    <div className="space-y-4">
-                      {sortedAuditIssues.map((issue) => {
-                        const impact = calculateImpactScore(issue);
-                        return (
-                          <div 
-                            key={issue.id} 
-                            className={`p-5 rounded-xl border flex flex-col md:flex-row gap-4 items-start justify-between bg-muted/5 transition-all hover:bg-muted/10
-                              ${issue.severity === 'critical' ? 'border-destructive/30 shadow-[0_0_15px_rgba(239,68,68,0.05)]' : 'border-yellow-500/30'}`}
-                          >
-                            <div className="flex flex-col md:flex-row items-start gap-4 w-full">
-                              {/* Icono izquierdo Infográfico */}
-                              <div className={`p-3 rounded-xl shrink-0 flex flex-col items-center justify-center min-w-[80px]
-                                ${issue.severity === 'critical' ? 'bg-red-500/10 border border-red-500/20' : 'bg-yellow-500/10 border border-yellow-500/20'}`}
-                              >
-                                {issue.severity === 'critical' ? <AlertCircle className="w-8 h-8 text-red-400 mb-1" /> : <AlertTriangle className="w-8 h-8 text-yellow-400 mb-1" />}
-                                <span className={`text-2xs font-bold uppercase tracking-wider ${issue.severity === 'critical' ? 'text-red-400' : 'text-yellow-400'}`}>
-                                  {issue.severity === 'critical' ? "CRÍTICO" : "AVISO"}
-                                </span>
-                              </div>
-
-                              {/* Contenido Central */}
-                              <div className="space-y-2 text-left flex-1">
-                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded border border-zinc-700 uppercase font-mono font-semibold">{issue.category}</span>
-                                  
-                                  {/* Insignia Impact Score Mejorada */}
-                                  <span className="text-2xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border bg-blue-500/10 text-blue-400 border-blue-500/20 flex items-center gap-1">
-                                    <Sparkles className="w-3 h-3 text-blue-400" /> Score de Impacto: {impact.score}/100
-                                  </span>
-                                </div>
-                                
-                                <h4 className="text-base font-bold text-foreground tracking-tight">{issue.title}</h4>
-                                <p className="text-sm text-zinc-400 leading-relaxed max-w-3xl">{issue.description}</p>
-                                
-                                {/* Matrices de Impacto Infográficas */}
-                                <div className="grid grid-cols-3 gap-2 pt-3 max-w-md">
-                                  <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 flex flex-col items-center justify-center text-center">
-                                    <span className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1">Prioridad</span>
-                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${impact.urgency === 'Alta' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'}`}>{impact.urgency}</span>
-                                  </div>
-                                  <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 flex flex-col items-center justify-center text-center">
-                                    <span className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1">Dificultad</span>
-                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${impact.difficulty === 'Alta' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : impact.difficulty === 'Media' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>{impact.difficulty}</span>
-                                  </div>
-                                  <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-lg p-2 flex flex-col items-center justify-center text-center">
-                                    <span className="text-2xs text-zinc-500 uppercase tracking-wider font-semibold mb-1">Retorno (ROI)</span>
-                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${impact.roi.includes('Alto') ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>{impact.roi}</span>
-                                  </div>
-                                </div>
-
-                                {/* Acción sugerida - Estilo Cybersecurity Technical */}
-                                {issue.recommendation && (
-                                  <div className="mt-4 p-4 rounded-xl bg-sky-500/10 border-l-[3px] border-sky-500 text-sm text-zinc-300 space-y-2 text-left max-w-3xl shadow-sm">
-                                    <span className="font-bold text-sky-400 flex items-center gap-2 uppercase tracking-wider text-xs">
-                                      <CheckCircle2 className="w-4 h-4 text-sky-400" /> Plan de Acción:
-                                    </span>
-                                    <p className="leading-relaxed text-zinc-300 font-medium">{issue.recommendation}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <IssueList
+                      issues={sortedAuditIssues.map((issue) => ({
+                        id: issue.id,
+                        severity: issue.severity,
+                        category: issue.category,
+                        title: issue.title,
+                        description: issue.description,
+                        recommendation: issue.recommendation,
+                        url: issue.url,
+                        fixed: issue.fixed,
+                      }))}
+                      onToggleFixed={toggleIssueFixed}
+                    />
                   ) : (
                     <div className="text-center py-16 border border-dashed border-green-500/20 rounded-2xl bg-green-500/5">
                       <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-4 animate-pulse" />

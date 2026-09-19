@@ -259,3 +259,30 @@ export const cancelAuditAction = authenticatedAction(
     return { success: true, status: "canceled" };
   }
 );
+
+const ToggleFixedSchema = z.object({
+  issueId: z.string().uuid(),
+  fixed: z.boolean(),
+});
+
+/** Marca un hallazgo como resuelto/reabierto (Semana 8). Solo el owner. */
+export const toggleIssueFixed = authenticatedAction(
+  ToggleFixedSchema,
+  async ({ issueId, fixed }, { user, tx }) => {
+    const result = await tx
+      .select({ issue: issues, project: projects })
+      .from(issues)
+      .where(eq(issues.id, issueId))
+      .innerJoin(projects, eq(issues.projectId, projects.id))
+      .limit(1);
+
+    const record = result[0];
+    if (!record) return { success: false, message: "Hallazgo no encontrado." };
+    if (record.project.ownerId !== user.id) throw new Error("Acceso denegado");
+
+    await directDb.update(issues)
+      .set({ fixed, updatedAt: new Date() })
+      .where(eq(issues.id, issueId));
+    return { success: true, fixed };
+  }
+);

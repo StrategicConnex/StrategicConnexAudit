@@ -125,7 +125,7 @@ vi.mock("@/shared/db/schemas", () => ({
   audits: { id: "id", projectId: "projectId", status: "status", createdAt: "createdAt", startedAt: "startedAt", createdBy: "createdBy", errorMessage: "errorMessage", completedAt: "completedAt", type: "type" },
   projects: { id: "id", ownerId: "ownerId", domain: "domain", name: "name" },
   crawlResults: { auditId: "auditId" },
-  issues: { projectId: "projectId", auditId: "auditId" },
+  issues: { id: "id", projectId: "projectId", auditId: "auditId", fixed: "fixed", updatedAt: "updatedAt" },
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -149,7 +149,7 @@ vi.mock("@/server/intelligence/security/egress-guard", () => ({
 }));
 
 // ─── Import under test ──────────────────────────────────────────────────────
-import { triggerAudit, getAuditStatus, startAuditAction, cancelAuditAction } from "./audits";
+import { triggerAudit, getAuditStatus, startAuditAction, cancelAuditAction, toggleIssueFixed } from "./audits";
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
@@ -348,6 +348,54 @@ describe("audits server actions", () => {
     it("propagates validation error for invalid auditId", async () => {
       const result = await cancelAuditAction({ auditId: "not-a-uuid" } as never);
       expect(result.error).toBeTruthy();
+    });
+  });
+
+  // ── toggleIssueFixed (Semana 8) ────────────────────────────────────────────
+
+  describe("toggleIssueFixed", () => {
+    const ISSUE_ID = "55555555-5555-4555-8555-555555555555";
+
+    it("marks an owned issue as fixed", async () => {
+      txState.selectJoin = [{
+        issue: { id: ISSUE_ID, fixed: false },
+        project: { id: PROJECT_ID, ownerId: DEV_BYPASS_USER_ID },
+      }];
+      ddState.updateResult = [{ id: ISSUE_ID }];
+
+      const result = await toggleIssueFixed({ issueId: ISSUE_ID, fixed: true });
+      expect(result.data?.success).toBe(true);
+      expect(result.data?.fixed).toBe(true);
+    });
+
+    it("reopens a fixed issue", async () => {
+      txState.selectJoin = [{
+        issue: { id: ISSUE_ID, fixed: true },
+        project: { id: PROJECT_ID, ownerId: DEV_BYPASS_USER_ID },
+      }];
+      ddState.updateResult = [{ id: ISSUE_ID }];
+
+      const result = await toggleIssueFixed({ issueId: ISSUE_ID, fixed: false });
+      expect(result.data?.success).toBe(true);
+      expect(result.data?.fixed).toBe(false);
+    });
+
+    it("returns error when issue not found", async () => {
+      txState.selectJoin = [];
+
+      const result = await toggleIssueFixed({ issueId: ISSUE_ID, fixed: true });
+      expect(result.data?.success).toBe(false);
+      expect(result.data?.message).toContain("no encontrado");
+    });
+
+    it("throws when user is not project owner", async () => {
+      txState.selectJoin = [{
+        issue: { id: ISSUE_ID, fixed: false },
+        project: { id: PROJECT_ID, ownerId: OTHER_USER },
+      }];
+
+      const result = await toggleIssueFixed({ issueId: ISSUE_ID, fixed: true });
+      expect(result.error).toContain("Acceso denegado");
     });
   });
 
