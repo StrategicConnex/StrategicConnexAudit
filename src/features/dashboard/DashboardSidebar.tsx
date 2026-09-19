@@ -46,16 +46,17 @@ function NavButton({ tab, activeTab, icon, label, hint, badge, onClick, onHover,
       onClick={onClick}
       onMouseEnter={onHover}
       title={hint ?? (collapsed ? label : undefined)}
-      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 rounded-lg text-sm font-medium transition-colors duration-300 group border cursor-pointer ${
+      aria-current={isActive ? 'page' : undefined}
+      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 rounded-lg text-sm font-medium transition-colors duration-200 group border cursor-pointer ${
         isActive
-          ? 'bg-primary/8 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
+          ? 'bg-primary/10 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
           : 'text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10'
       }`}
     >
       {isActive && (
         <span
           aria-hidden="true"
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary"
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-primary"
         />
       )}
       <div className="flex items-center gap-3">
@@ -66,6 +67,21 @@ function NavButton({ tab, activeTab, icon, label, hint, badge, onClick, onHover,
       </div>
       {!collapsed && badge}
     </button>
+  );
+}
+
+// ─── NavSection ───────────────────────────────────────────────────────────────
+
+function NavSection({ id, title, collapsed, children }: { id: string; title: string; collapsed?: boolean; children: React.ReactNode }) {
+  return (
+    <section aria-labelledby={id} className="space-y-1">
+      {!collapsed && (
+        <h2 id={id} className="px-4 pt-3 pb-1 text-2xs font-extrabold uppercase tracking-widest text-muted-fg/60">
+          {title}
+        </h2>
+      )}
+      {children}
+    </section>
   );
 }
 
@@ -115,8 +131,9 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 z-10 mt-2">
+      {/* Navigation — agrupada por secciones (spec §4.2) */}
+      <nav aria-label={t('navLabel')} className="flex-1 overflow-y-auto p-4 pt-2 space-y-4 z-10 mt-2 min-h-0">
+        <NavSection id="sidebar-section-main" title={t('sections.main')} collapsed={collapsed}>
         <NavButton
           collapsed={collapsed}
           tab="overview"
@@ -164,7 +181,9 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           badge={<Badge variant="neutral">{t('audit')}</Badge>}
           onClick={() => onTabChange('reports')}
         />
+        </NavSection>
 
+        <NavSection id="sidebar-section-intel" title={t('sections.intel')} collapsed={collapsed}>
         <NavButton
           collapsed={collapsed}
           tab="intelligence"
@@ -209,6 +228,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           badge={<Badge variant="neutral">{t('new')}</Badge>}
           onClick={() => onTabChange('plugins')}
         />
+        </NavSection>
       </nav>
 
       {/* Live AI Scanner Status Card — hidden when collapsed */}
@@ -233,9 +253,12 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         </div>
       )}
 
-      {/* External Links — hidden when collapsed */}
+      {/* External Links — sección Recursos, hidden when collapsed */}
       {!collapsed && (
-        <div className="px-4 mb-1 z-10 space-y-1">
+        <section aria-labelledby="sidebar-section-resources" className="px-4 mb-1 z-10 space-y-1 shrink-0">
+          <h2 id="sidebar-section-resources" className="px-4 pt-2 pb-1 text-2xs font-extrabold uppercase tracking-widest text-muted-fg/60">
+            {t('sections.resources')}
+          </h2>
           <Link href="/docs" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
             <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
             <span className="tracking-tight">{t('links.docs')}</span>
@@ -266,7 +289,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
             <span className="tracking-tight">{t('links.apiPlayground')}</span>
             <Badge variant="neutral" className="ml-auto">{t('links.apiPlaygroundBadge')}</Badge>
           </Link>
-        </div>
+        </section>
       )}
 
       {/* Settings Footer — hidden when collapsed */}

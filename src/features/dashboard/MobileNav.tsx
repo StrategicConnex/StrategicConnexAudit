@@ -42,6 +42,10 @@ const RESOURCE_LINKS = [
 /**
  * Navegación móvil del dashboard: el sidebar es `hidden md:flex`, así que sin
  * esto no hay forma de cambiar de pestaña en pantallas pequeñas.
+ *
+ * Dos piezas (spec §4.4):
+ * - `MobileNav`: drawer lateral con todas las pestañas + recursos.
+ * - `MobileBottomNav`: barra inferior fija con las 5 pestañas principales.
  */
 export function MobileNav({ open, activeTab, onTabChange, onClose }: MobileNavProps) {
   const t = useTranslations('sidebar');
@@ -125,5 +129,58 @@ export function MobileNav({ open, activeTab, onTabChange, onClose }: MobileNavPr
         </div>
       </nav>
     </div>
+  );
+}
+
+// ─── MobileBottomNav ──────────────────────────────────────────────────────────
+
+// Las 5 pestañas principales en la barra inferior (spec §4.4). El resto de
+// pestañas y los recursos siguen disponibles en el drawer (MobileNav).
+const BOTTOM_TABS: { tab: DashboardTab; icon: React.ReactNode; labelKey: string }[] = [
+  { tab: 'overview', icon: <LayoutDashboard size={20} strokeWidth={2} />, labelKey: 'tabs.overview' },
+  { tab: 'projects', icon: <Globe size={20} strokeWidth={2} />, labelKey: 'tabs.projects' },
+  { tab: 'performance', icon: <Activity size={20} strokeWidth={2} />, labelKey: 'tabs.performance' },
+  { tab: 'reports', icon: <BarChart3 size={20} strokeWidth={2} />, labelKey: 'tabs.reports' },
+  { tab: 'intelligence', icon: <ShieldCheck size={20} strokeWidth={2} />, labelKey: 'tabs.intelligence' },
+];
+
+export function MobileBottomNav({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: DashboardTab;
+  onTabChange: (tab: DashboardTab) => void;
+}) {
+  const t = useTranslations('sidebar');
+  return (
+    <nav
+      aria-label={t('navLabel')}
+      className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-surface/90 backdrop-blur-2xl border-t border-border pb-[env(safe-area-inset-bottom)]"
+    >
+      <div className="grid grid-cols-5 px-2 pt-1">
+        {BOTTOM_TABS.map(({ tab, icon, labelKey }) => {
+          const isActive = activeTab === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => onTabChange(tab)}
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative flex flex-col items-center gap-1 px-1 py-2 rounded-lg text-2xs font-bold transition-colors duration-200 cursor-pointer ${
+                isActive ? 'text-primary' : 'text-muted-fg'
+              }`}
+            >
+              {isActive && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-0 h-[3px] w-8 rounded-full bg-primary"
+                />
+              )}
+              {icon}
+              <span className="tracking-tight leading-none">{t(labelKey)}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

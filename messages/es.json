@@ -69,7 +69,11 @@
       "monitoringSubtitle": "Monitoreo de Seguridad y APIs",
       "adversarySubtitle": "Simulación de ataques controlados",
       "marketplaceSubtitle": "Integraciones y extensiones",
-      "settingsSubtitle": "Cuenta y preferencias"
+      "settingsSubtitle": "Cuenta y preferencias",
+      "home": "Inicio",
+      "breadcrumb": "Miga de pan",
+      "searchPlaceholder": "Buscar o ejecutar comando…",
+      "openPalette": "Abrir búsqueda global"
     },
     "pwa": {
       "install": "Instalar",
@@ -104,7 +108,20 @@
       "apiPlaygroundBadge": "Swagger"
     },
     "settings": "Configuración",
-    "resourcesTitle": "Recursos"
+    "resourcesTitle": "Recursos",
+    "sections": {
+      "main": "Principal",
+      "intel": "Inteligencia",
+      "resources": "Recursos"
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "empty": "Sin notificaciones nuevas"
+    },
+    "userMenu": {
+      "account": "Cuenta",
+      "settings": "Configuración"
+    }
   },
   "language": {
     "switchTo": "English",

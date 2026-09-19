@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { DashboardSidebar, type DashboardTab } from './DashboardSidebar';
-import { MobileNav } from './MobileNav';
+import { MobileNav, MobileBottomNav } from './MobileNav';
 import { DashboardHeader } from './DashboardHeader';
 import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
 import { OverviewTab } from './tabs/OverviewTab';
@@ -207,6 +207,9 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
         onClose={() => setMobileNavOpen(false)}
       />
 
+      {/* Barra inferior móvil con las 5 pestañas principales */}
+      <MobileBottomNav activeTab={activeTab} onTabChange={openTab} />
+
       {/* Main Content Area — bg transparente para dejar ver la red neuronal de fondo */}
       <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header Component */}
@@ -215,6 +218,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
           NewProjectModal={NewProjectModal} 
           onMenu={() => setMobileNavOpen(true)}
           onNavigateProjects={() => openTab('projects')}
+          onOpenSettings={() => openTab('settings')}
           userInitials={userInitials}
         />
 
