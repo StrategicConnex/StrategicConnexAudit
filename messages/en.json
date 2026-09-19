@@ -194,6 +194,17 @@
     "tlsScan": "TLS/SSL Scan"
   },
   "overview": {
+    "greeting": "Hello",
+    "welcomeSummary": "You have {count} monitored projects",
+    "portfolioCoverage": "Audit coverage",
+    "metricsProjects": "Projects",
+    "metricsAudits": "Audits",
+    "metricsUptime": "24h Uptime",
+    "metricsAlerts": "Alerts",
+    "timelineTitle": "Recent activity",
+    "timelineEmpty": "No recent activity in the last 24 h",
+    "eventProjectAdded": "Project added",
+    "eventCheckFailed": "Check failed",
     "pageTitle": "Command Center",
     "pageSubtitle": "System overview, technical health and real-time monitoring.",
     "telemetry": "Telemetry (30 Days)",

@@ -194,6 +194,17 @@
     "tlsScan": "Escaneo TLS/SSL"
   },
   "overview": {
+    "greeting": "Hola",
+    "welcomeSummary": "Tienes {count} proyectos en monitoreo",
+    "portfolioCoverage": "Cobertura de auditoría",
+    "metricsProjects": "Proyectos",
+    "metricsAudits": "Auditorías",
+    "metricsUptime": "Uptime 24h",
+    "metricsAlerts": "Alertas",
+    "timelineTitle": "Actividad reciente",
+    "timelineEmpty": "Sin actividad reciente en las últimas 24 h",
+    "eventProjectAdded": "Proyecto añadido",
+    "eventCheckFailed": "Chequeo fallido",
     "pageTitle": "Centro de Comando",
     "pageSubtitle": "Vista general del sistema, salud técnica y monitoreo en tiempo real.",
     "telemetry": "Telemetría (30 Días)",

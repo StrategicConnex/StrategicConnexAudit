@@ -243,6 +243,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
                 dashboardData={dashboardData} 
                 setActiveTab={(tab) => openTab(tab as DashboardTab)}
                 projectId={selectedProjectId}
+                userInitials={userInitials}
               />
             )}
 
