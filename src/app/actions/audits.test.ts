@@ -149,7 +149,7 @@ vi.mock("@/server/intelligence/security/egress-guard", () => ({
 }));
 
 // ─── Import under test ──────────────────────────────────────────────────────
-import { triggerAudit, getAuditStatus, startAuditAction } from "./audits";
+import { triggerAudit, getAuditStatus, startAuditAction, cancelAuditAction } from "./audits";
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
@@ -213,6 +213,22 @@ describe("audits server actions", () => {
       const result = await triggerAudit({ projectId: "not-a-uuid" } as never);
       expect(result.error).toBeTruthy();
     });
+
+    it("accepts custom type/depth/userAgent (Semana 7 config)", async () => {
+      txState.projectsFind = [{ id: PROJECT_ID, ownerId: USER_ID }];
+      txState.recentAudits = [];
+      txState.insertAudit = [{ id: AUDIT_ID }];
+
+      const result = await triggerAudit({
+        projectId: PROJECT_ID,
+        type: "technical",
+        depth: 5,
+        userAgent: "TestBot/1.0",
+      });
+
+      expect(result.data?.success).toBe(true);
+      expect(result.data?.auditId).toBe(AUDIT_ID);
+    });
   });
 
   // ── getAuditStatus ───────────────────────────────────────────────────────
@@ -271,6 +287,67 @@ describe("audits server actions", () => {
       const result = await getAuditStatus({ auditId: AUDIT_ID });
       expect(result.data?.success).toBe(true);
       expect(result.data?.status).toBe("pending");
+    });
+
+    it("includes pagesScanned as a number (Semana 7 stat)", async () => {
+      txState.selectJoin = [{
+        audit: { id: AUDIT_ID, status: "running", errorMessage: null, startedAt: new Date() },
+        project: { id: PROJECT_ID, ownerId: DEV_BYPASS_USER_ID },
+      }];
+
+      const result = await getAuditStatus({ auditId: AUDIT_ID });
+      expect(result.data?.success).toBe(true);
+      expect(typeof result.data?.pagesScanned).toBe("number");
+    });
+  });
+
+  // ── cancelAuditAction (Semana 7) ───────────────────────────────────────────
+
+  describe("cancelAuditAction", () => {
+    it("cancels a running audit owned by the user", async () => {
+      txState.selectJoin = [{
+        audit: { id: AUDIT_ID, status: "running", errorMessage: null },
+        project: { id: PROJECT_ID, ownerId: DEV_BYPASS_USER_ID },
+      }];
+      ddState.updateResult = [{ id: AUDIT_ID }];
+
+      const result = await cancelAuditAction({ auditId: AUDIT_ID });
+      expect(result.data?.success).toBe(true);
+      expect(result.data?.status).toBe("canceled");
+    });
+
+    it("refuses an already terminal audit", async () => {
+      txState.selectJoin = [{
+        audit: { id: AUDIT_ID, status: "completed", errorMessage: null },
+        project: { id: PROJECT_ID, ownerId: DEV_BYPASS_USER_ID },
+      }];
+
+      const result = await cancelAuditAction({ auditId: AUDIT_ID });
+      expect(result.data?.success).toBe(false);
+      expect(result.data?.message).toContain("ya terminó");
+    });
+
+    it("returns error when audit not found", async () => {
+      txState.selectJoin = [];
+
+      const result = await cancelAuditAction({ auditId: AUDIT_ID });
+      expect(result.data?.success).toBe(false);
+      expect(result.data?.message).toContain("no encontrada");
+    });
+
+    it("throws when user is not project owner", async () => {
+      txState.selectJoin = [{
+        audit: { id: AUDIT_ID, status: "running", errorMessage: null },
+        project: { id: PROJECT_ID, ownerId: OTHER_USER },
+      }];
+
+      const result = await cancelAuditAction({ auditId: AUDIT_ID });
+      expect(result.error).toContain("Acceso denegado");
+    });
+
+    it("propagates validation error for invalid auditId", async () => {
+      const result = await cancelAuditAction({ auditId: "not-a-uuid" } as never);
+      expect(result.error).toBeTruthy();
     });
   });
 

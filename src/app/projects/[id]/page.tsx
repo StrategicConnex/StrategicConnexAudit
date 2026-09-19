@@ -238,7 +238,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
              <span className="text-sm font-bold text-muted-foreground truncate max-w-[200px] mt-0.5">{project.domain}</span>
           </div>
           <div className="h-8 w-px bg-border mx-2" />
-          <AuditControl projectId={projectId} />
+          <AuditControl projectId={projectId} projectName={project.name} />
         </div>
       </header>
       

@@ -12,7 +12,8 @@ export type AuditStatus =
   | 'running'
   | 'completed'
   | 'failed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'canceled';
 
 const STATUS: Record<
   AuditStatus,
@@ -31,6 +32,12 @@ const STATUS: Record<
   },
   failed: { label: 'Fallido', variant: 'critical', dot: 'bg-corporate-danger' },
   cancelled: {
+    label: 'Cancelado',
+    variant: 'warning',
+    dot: 'bg-corporate-warning',
+  },
+  // Spelling del enum DB (audit_status): 'canceled' con una sola L.
+  canceled: {
     label: 'Cancelado',
     variant: 'warning',
     dot: 'bg-corporate-warning',

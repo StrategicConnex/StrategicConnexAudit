@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 import { ActionState, authenticatedAction } from "@/shared/lib/actions";
 import { z } from "zod";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, count } from "drizzle-orm";
 import { tasks } from "@trigger.dev/sdk";
 import type { runProjectAudit } from "@/trigger/audit.trigger";
 import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
@@ -12,6 +12,12 @@ import { directDb } from "@/shared/db";
 
 const AuditSchema = z.object({
   projectId: z.string().uuid(),
+  /** Tipo de auditoría (Semana 7: configurable desde el modal). */
+  type: z.enum(["crawl", "performance", "technical", "full"]).default("full"),
+  /** Profundidad de rastreo 1-5 (default = default del proyecto). */
+  depth: z.number().int().min(1).max(5).default(3),
+  /** User-Agent del rastreador. */
+  userAgent: z.string().min(1).max(200).default("StrategicAuditBot/1.0"),
 });
 
 export interface StartAuditResponse {
@@ -24,7 +30,7 @@ export interface StartAuditResponse {
 
 export const triggerAudit = authenticatedAction(
   AuditSchema,
-  async ({ projectId }, { user, tx }): Promise<StartAuditResponse> => {
+  async ({ projectId, type, depth, userAgent }, { user, tx }): Promise<StartAuditResponse> => {
     const projectResult = await tx
       .select()
       .from(projects)
@@ -48,7 +54,8 @@ export const triggerAudit = authenticatedAction(
     }
 
     const [audit] = await tx.insert(audits).values({
-      projectId, type: "full", status: "pending", startedAt: new Date(), createdBy: user.id,
+      projectId, type, status: "pending", startedAt: new Date(), createdBy: user.id,
+      config: { depth, userAgent },
     }).returning();
 
     return { success: true, auditId: audit!.id, projectId, userId: user.id };
@@ -206,6 +213,49 @@ export const getAuditStatus = authenticatedAction(
       }
     }
 
-    return { success: true, status: record.audit.status, errorMessage: record.audit.errorMessage };
+    // Páginas rastreadas hasta ahora (Semana 7: stat en tiempo real del
+    // progreso). Resiliente: un fallo aquí no rompe el polling de estado.
+    let pagesScanned = 0;
+    try {
+      const [row] = await tx
+        .select({ value: count() })
+        .from(crawlResults)
+        .where(eq(crawlResults.auditId, auditId))
+        .limit(1);
+      pagesScanned = Number(row?.value ?? 0);
+    } catch (e: unknown) {
+      logger.warn("pagesScanned no disponible", { auditId, error: (e as { message?: string })?.message });
+    }
+
+    return { success: true, status: record.audit.status, errorMessage: record.audit.errorMessage, pagesScanned };
+  }
+);
+
+const CancelSchema = z.object({ auditId: z.string().uuid() });
+
+/** Cancela una auditoría en curso (Semana 7). Solo pending/running + owner. */
+export const cancelAuditAction = authenticatedAction(
+  CancelSchema,
+  async ({ auditId }, { user, tx }) => {
+    const result = await tx
+      .select({ audit: audits, project: projects })
+      .from(audits)
+      .where(eq(audits.id, auditId))
+      .innerJoin(projects, eq(audits.projectId, projects.id))
+      .limit(1);
+
+    const record = result[0];
+    if (!record) return { success: false, message: "Auditoria no encontrada." };
+    if (record.project.ownerId !== user.id) throw new Error("Acceso denegado");
+
+    const terminal = ["completed", "failed", "canceled"];
+    if (terminal.includes(record.audit.status)) {
+      return { success: false, message: "La auditoría ya terminó." };
+    }
+
+    await directDb.update(audits)
+      .set({ status: "canceled", completedAt: new Date(), errorMessage: "Cancelada por el usuario." })
+      .where(eq(audits.id, auditId));
+    return { success: true, status: "canceled" };
   }
 );

@@ -17,6 +17,7 @@ describe("AuditStatusBadge", () => {
     ["completed", "Completado"],
     ["failed", "Fallido"],
     ["cancelled", "Cancelado"],
+    ["canceled", "Cancelado"],
   ])("estado %s muestra %s", (status, label) => {
     render(<AuditStatusBadge status={status} />);
     expect(screen.getByText(label)).toBeInTheDocument();
