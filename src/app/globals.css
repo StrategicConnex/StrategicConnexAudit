@@ -372,9 +372,7 @@
   .vt-fallback-enter {
     animation: page-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
-}
-
-/* ─── Reduced motion — disable all view transitions ─────────────────── */
+}/* ─── Reduced motion — disable all view transitions ─────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(*),
@@ -388,6 +386,28 @@
   /* Fallback enter animation must also respect reduced motion */
   .vt-fallback-enter {
     animation: none !important;
+
+  }
+}
+
+/* ─── Reduced motion global (Semana 12, WCAG 2.1 AA) ──────────────────
+   El spec §8.3 exige respetar la preferencia del usuario. Animaciones
+   decorativas (pulse/ping/bounce/shimmer/scan) se desactivan por
+   completo; los spinners indican carga (funcionales) pero se ralentizan
+   a un paso por segundo para reducir el movimiento sin perder feedback. */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  /* Spinners: feedback funcional que no debe congelarse del todo */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
   }
 }
 

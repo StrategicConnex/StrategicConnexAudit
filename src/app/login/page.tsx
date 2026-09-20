@@ -498,6 +498,7 @@ const handlePasswordLogin = async (e: React.FormEvent) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
+              aria-label={t('passwordPlaceholder')}
               placeholder={t('passwordPlaceholder')}
               className="block w-full px-4 py-2.5 bg-input/50 border border-border rounded-xl text-sm
                          focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/50

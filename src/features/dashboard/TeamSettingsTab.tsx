@@ -97,6 +97,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="correo@empresa.com"
+              aria-label="Email del miembro a invitar"
               required
               className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
             />
@@ -105,6 +106,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
           <select
             value={inviteRole}
             onChange={(e) => setInviteRole(e.target.value as Member["role"])}
+            aria-label="Rol del miembro a invitar"
             className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
           >
             <option value="admin">ADMIN — Control total de equipo y escaneos</option>

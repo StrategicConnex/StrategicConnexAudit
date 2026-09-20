@@ -63,6 +63,7 @@ export function TelegramDigestCard({ projectId }: { projectId: string }) {
               type="text"
               value={chatId}
               onChange={(e) => setChatId(e.target.value)}
+              aria-label={t('tgPlaceholder')}
               placeholder={t('tgPlaceholder')}
               className="flex-1 min-w-0 bg-card border border-border focus:border-primary rounded-xl px-4 py-2.5 text-sm text-foreground/80 font-mono focus:outline-none"
             />

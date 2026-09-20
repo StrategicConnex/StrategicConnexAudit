@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { focusRing } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -227,6 +228,7 @@ export function CommandPalette({ projects, onNavigateTab }: CommandPaletteProps)
                       onClick={() => runAndClose(cmd.run)}
                       className={cn(
                         'flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-semibold outline-none transition-colors',
+                        focusRing,
                         selected
                           ? 'bg-primary/10 text-foreground'
                           : 'text-muted-fg',
