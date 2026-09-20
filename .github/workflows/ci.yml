@@ -162,6 +162,49 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # DB-DRIFT en cada push (lección del drift 0025-0032 detectado en prod):
+  # FALLA si el schema de Drizzle y la BD divergen. El check PROGRAMADO diario
+  # (detección sin pushes) vive en .github/workflows/db-drift.yml.
+  db-drift-check:
+    name: DB Drift Check (schema vs BD)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check migrations journal integrity
+        run: pnpm exec drizzle-kit check
+
+      - name: Anti-drift (schema Drizzle vs BD)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "❌ Secreto DIRECT_URL no configurado — imposible verificar drift schema↔BD."
+            echo "   Añádelo en Settings → Secrets → Actions para activar este check."
+            echo "   (En PRs de forks el secreto no está disponible: es esperado.)"
+            exit 1
+          fi
+          node scripts/db/drift-check.mjs
+
+      - name: Report drift status
+        if: always()
+        run: |
+          {
+            echo '## 🗄️ DB Drift Check'
+            echo ''
+            echo 'Schema Drizzle (`src/shared/db/schemas`) vs BD — conexión solo lectura.'
+            echo ''
+            echo 'Estado: ${{ job.status }}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest

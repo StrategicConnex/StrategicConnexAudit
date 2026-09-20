@@ -108,11 +108,18 @@ DECLARE
   ];
 BEGIN
   FOREACH t IN ARRAY tables LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I_member_access ON %I', t || '_fase2', t);
-    EXECUTE format(
-      'CREATE POLICY %I ON %I FOR ALL TO authenticated USING (public.user_has_project_access(project_id)) WITH CHECK (public.user_has_project_access(project_id))',
-      t || '_fase2', t
-    );
+    BEGIN
+      -- Guard por sentencia: algunas tablas de la lista no tienen project_id
+      -- (p.ej. integration_sync_logs) y el CREATE POLICY fallaría, abortando
+      -- TODO el bloque (transaccional). Con EXCEPTION seguimos con el resto.
+      EXECUTE format('DROP POLICY IF EXISTS %I ON %I', t || '_fase2', t);
+      EXECUTE format(
+        'CREATE POLICY %I ON %I FOR ALL TO authenticated USING (public.user_has_project_access(project_id)) WITH CHECK (public.user_has_project_access(project_id))',
+        t || '_fase2', t
+      );
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'policy %_fase2 omitida: %', t, SQLERRM;
+    END;
   END LOOP;
 END $$;
 --> statement-breakpoint

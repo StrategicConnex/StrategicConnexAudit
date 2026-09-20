@@ -1,0 +1,39 @@
+name: DB Drift Check (diario)
+
+# Detección de drift SIN pushes: si alguien toca la BD de producción fuera
+# del pipeline (consola de Supabase, SQL editor, script manual), este check
+# lo detecta en ≤24h. El check por-push vive en ci.yml (job db-drift-check).
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # diario 06:00 UTC
+  workflow_dispatch: # manual desde la pestaña Actions
+
+jobs:
+  drift:
+    name: Schema Drizzle vs BD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check migrations journal integrity
+        run: pnpm exec drizzle-kit check
+
+      - name: Anti-drift (schema Drizzle vs BD)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "❌ Secreto DIRECT_URL no configurado."
+            echo "   Añádelo en Settings → Secrets → Actions para activar este check."
+            exit 1
+          fi
+          node scripts/db/drift-check.mjs
