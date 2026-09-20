@@ -12,7 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/DropdownMenu';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { NotificationCenter } from '@/components/NotificationCenter';
+import { useNotificationCenter } from '@/shared/hooks/use-notification-center';
 
 /* ─── Command palette (Semana 4) — contrato de apertura ───────────────
    La paleta vivirá en Semana 4 escuchando este evento + el atajo ⌘K/Ctrl+K
@@ -60,6 +61,9 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const t = useTranslations('sidebar');
   const title = t(TITLE_KEYS[activeTab] ?? 'header.overviewTitle');
+  // Semana 10: badge de la campana alimentado por el NotificationCenter.
+  const { unreadCount: liveUnread } = useNotificationCenter();
+  const bellCount = notificationCount > 0 ? notificationCount : liveUnread;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -117,23 +121,16 @@ export function DashboardHeader({
             className="relative w-9 h-9 flex items-center justify-center rounded-lg text-muted-fg hover:text-foreground hover:bg-muted/40 transition-colors duration-200"
           >
             <Bell className="w-5 h-5" />
-            {notificationCount > 0 && (
+            {bellCount > 0 && (
               <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-corporate-danger text-white text-2xs font-extrabold flex items-center justify-center">
-                {notificationCount > 9 ? '9+' : notificationCount}
+                {bellCount > 9 ? '9+' : bellCount}
               </span>
             )}
           </DropdownMenuTrigger>
           <DropdownMenuPortal>
             <DropdownMenuPositioner align="end">
               <DropdownMenuPopup className="w-80 p-2">
-                <p className="px-3 pt-2 pb-1 text-2xs font-extrabold uppercase tracking-widest text-muted-fg">
-                  {t('notifications.title')}
-                </p>
-                <EmptyState
-                  icon={<Bell size={20} />}
-                  title={t('notifications.empty')}
-                  className="py-8 border-0"
-                />
+                <NotificationCenter />
               </DropdownMenuPopup>
             </DropdownMenuPositioner>
           </DropdownMenuPortal>
