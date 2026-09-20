@@ -5,6 +5,7 @@ import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ToasterProvider } from "@/features/dashboard/ToasterProvider";
 import { I18nProvider } from "@/features/dashboard/I18nProvider";
+import { QueryProvider } from "@/shared/lib/query-provider";
 import { RegisterServiceWorker } from "@/features/dashboard/RegisterServiceWorker";
 import { ThemeProvider, themeInitScript } from "@/shared/design-system";
 import { getLocale, getMessages } from "@/i18n/request";
@@ -130,9 +131,11 @@ export default async function RootLayout({
         </a>
         <RegisterServiceWorker />
         <ThemeProvider>
-          <I18nProvider locale={locale} messages={messages}>
-            {children}
-          </I18nProvider>
+          <QueryProvider>
+            <I18nProvider locale={locale} messages={messages}>
+              {children}
+            </I18nProvider>
+          </QueryProvider>
         </ThemeProvider>
         <ToasterProvider />
       </body>

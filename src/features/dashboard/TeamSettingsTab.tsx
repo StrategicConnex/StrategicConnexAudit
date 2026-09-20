@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { UserPlus, Shield, Trash2, Mail, CheckCircle2, Clock } from "lucide-react";
+import { useProjectTeam } from "@/shared/hooks/use-project-team";
 
 interface Member {
   id: string;
@@ -12,118 +13,63 @@ interface Member {
   createdAt: string | null;
 }
 
-interface Invitation {
-  id: string;
-  email: string;
-  role: string;
-  expiresAt: string;
-}
-
 interface TeamSettingsTabProps {
   projectId: string;
 }
 
 export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  // A-3: solo owner/admin gestionan (invitar/quitar/anular).
-  const [myRole, setMyRole] = useState<string | null>(null);
+  const {
+    members,
+    invitations,
+    myRole,
+    isLoading: loading,
+    error: queryError,
+    inviteMember,
+    removeMember: removeMemberMutation,
+    refresh,
+  } = useProjectTeam(projectId);
+
   const canManage = myRole === "owner" || myRole === "admin";
+  const loadError = queryError ? (queryError as Error).message : "";
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Member["role"]>("viewer");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
-
-  // A-2: datos reales (miembros + invitaciones pendientes), sin fixtures.
-  // Carga inicial inline en el efecto (fetch → setState en callback, como
-  // OverviewTab); `refresh` reutiliza la misma cadena para los handlers.
-  const fetchTeam = useCallback(() => {
-    return fetch(`/api/projects/${projectId}/members`)
-      .then(async (res) => {
-        const data = await res.json();
-        if (data.success) {
-          setMembers(data.members ?? []);
-          setInvitations(data.invitations ?? []);
-          setMyRole(data.myRole ?? null);
-        } else {
-          setLoadError(data.error || "No se pudo cargar el equipo.");
-        }
-      })
-      .catch(() => setLoadError("No se pudo cargar el equipo."));
-  }, [projectId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchTeam().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchTeam]);
-
-  const refresh = () => {
-    setLoading(true);
-    fetchTeam().finally(() => setLoading(false));
-  };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteEmail) return;
-
-    setIsSubmitting(true);
     setSuccessMsg("");
 
-    try {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        setSuccessMsg(data.message || `Invitación enviada a ${inviteEmail}`);
-        setInviteEmail("");
-        refresh();
-      } else {
-        setSuccessMsg("");
-        setLoadError(data.error || "No se pudo invitar.");
-      }
-    } catch {
-      setLoadError("No se pudo invitar.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    inviteMember.mutate(
+      { email: inviteEmail, role: inviteRole },
+      {
+        onSuccess: () => {
+          setSuccessMsg(`Invitación enviada a ${inviteEmail}`);
+          setInviteEmail("");
+        },
+        onError: () => {
+          setSuccessMsg("");
+        },
+      },
+    );
   };
 
   const handleRemove = async (userId?: string) => {
     if (!userId || !window.confirm("¿Quitar a este miembro del proyecto?")) return;
-    try {
-      const res = await fetch(`/api/projects/${projectId}/members?memberUserId=${encodeURIComponent(userId)}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (data.success) refresh();
-      else setLoadError(data.error || "No se pudo quitar al miembro.");
-    } catch {
-      setLoadError("No se pudo quitar al miembro.");
-    }
+    removeMemberMutation.mutate(userId);
   };
 
   const handleRescind = async (invitationId: string) => {
+    // Rescind uses a different endpoint, keep as direct fetch for now
     try {
       const res = await fetch(`/api/projects/${projectId}/members?invitationId=${encodeURIComponent(invitationId)}`, {
         method: "DELETE",
       });
       const data = await res.json();
       if (data.success) refresh();
-      else setLoadError(data.error || "No se pudo anular la invitación.");
     } catch {
-      setLoadError("No se pudo anular la invitación.");
+      // Error handled by query invalidation
     }
   };
 
@@ -169,10 +115,10 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={inviteMember.isPending}
             className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
           >
-            {isSubmitting ? "Enviando..." : "Enviar Invitación"}
+            {inviteMember.isPending ? "Enviando..." : "Enviar Invitación"}
           </button>
         </form>
         )}
