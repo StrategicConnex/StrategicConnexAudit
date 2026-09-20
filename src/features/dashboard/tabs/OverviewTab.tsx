@@ -285,8 +285,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
             <p className="text-sm text-muted-fg max-w-md">{t('heroNoDataDesc')}</p>
             <button
               onClick={() => setActiveTab('projects')}
-              className="mt-2 text-2xs font-bold uppercase tracking-widest text-primary transition-colors flex items-center gap-1.5 group px-4 py-2 rounded-md border cursor-pointer"
-              style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}
+              className="mt-2 text-2xs font-bold uppercase tracking-widest text-primary transition-colors flex items-center gap-1.5 group px-4 py-2 rounded-md border cursor-pointer bg-primary/8 border border-primary/15"
             >
               {t('heroNoDataCta')}
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -342,28 +341,28 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
 
               {/* KPI stack — solo valores reales, "—" si no hay dato */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                <div className="rounded-xl p-3.5 flex flex-col justify-center bg-surface border border-border">
                   <span className="text-2xs uppercase tracking-widest font-bold text-muted-fg">{t('latency')}</span>
                   <span className="font-display text-xl font-extrabold text-foreground mt-0.5">
                     {hero.avgLatencyMs != null ? hero.avgLatencyMs : '—'}
                     {hero.avgLatencyMs != null && <span className="text-xs font-mono text-muted-fg ml-0.5">ms</span>}
                   </span>
                 </div>
-                <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                <div className="rounded-xl p-3.5 flex flex-col justify-center bg-surface border border-border">
                   <span className="text-2xs uppercase tracking-widest font-bold text-muted-fg">{t('uptime')}</span>
                   <span className="font-display text-xl font-extrabold text-foreground mt-0.5">
                     {hero.uptimePercent != null ? (hero.uptimePercent * 100).toFixed(1) : '—'}
                     {hero.uptimePercent != null && <span className="text-xs font-mono text-muted-fg ml-0.5">%</span>}
                   </span>
                 </div>
-                <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                <div className="rounded-xl p-3.5 flex flex-col justify-center bg-surface border border-border">
                   <span className="text-2xs uppercase tracking-widest font-bold text-muted-fg">{t('heroChecks')}</span>
-                  <span className="font-display text-xl font-extrabold mt-0.5" style={{ color: 'var(--accent)' }}>
+                  <span className="font-display text-xl font-extrabold mt-0.5 text-accent">
                     {hero.checks.length}
                     <span className="text-xs font-mono text-muted-fg ml-0.5">· 24h</span>
                   </span>
                 </div>
-                <div className="rounded-xl p-3.5 flex flex-col justify-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                <div className="rounded-xl p-3.5 flex flex-col justify-center bg-surface border border-border">
                   <span className="text-2xs uppercase tracking-widest font-bold text-muted-fg">{t('aiModels')}</span>
                   <span className="font-display text-xl font-extrabold text-foreground mt-0.5">
                     {hero.aiHealthy != null ? hero.aiHealthy : '—'}
@@ -378,8 +377,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
 
       {/* ═══ 2. ASYMMETRIC BENTO: Chart + Terminal ═══ */}
       <div
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in motion-reduce:animate-none"
-        style={{ animationDelay: '200ms' }}
+        className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in motion-reduce:animate-none delay-200"
       >
 
         {/* Chart area (2fr) */}
@@ -410,7 +408,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
             </div>
           </div>
 
-          <div className="relative h-48 w-full border-b border-l" style={{ borderColor: 'oklch(15% 0.008 265 / 0.3)' }}>
+          <div className="relative h-48 w-full border-b border-l border-border/30">
             <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
               <defs>
                 <linearGradient id="gradientPrimary" x1="0" y1="0" x2="0" y2="1">
@@ -445,8 +443,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
             {t('activityLog')}
           </h3>
 
-          <div className="flex-1 font-mono text-2xs space-y-2.5 relative"
-               style={{ background: 'oklch(2% 0.003 265)', borderRadius: '10px', border: '1px solid oklch(15% 0.008 265 / 0.15)', padding: '1rem' }}>
+          <div className="flex-1 font-mono text-2xs space-y-2.5 relative bg-surface rounded-[10px] border border-border/15 p-4">
             {hero.status === 'loading' ? (
               <div className="space-y-2.5 animate-pulse" aria-busy="true">
                 {[0, 1, 2].map((i) => (
@@ -480,13 +477,12 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
       {/* ═══ 4. COMPLIANCE & TRUST BANNER ═══ */}
       <Card
         variant="elevation"
-        className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 animate-fade-in motion-reduce:animate-none"
-        style={{ animationDelay: '400ms' }}
+        className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 animate-fade-in motion-reduce:animate-none delay-400"
       >
-        <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full" style={{ background: 'oklch(68% 0.14 230 / 0.3)' }} />
+        <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-primary/30" />
         <div className="space-y-1.5 max-w-xl pl-4">
           <div className="flex items-center gap-2">
-            <span className="text-2xs font-extrabold text-primary uppercase tracking-wider flex items-center gap-1 px-2 py-0.5 rounded-md border" style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}>
+            <span className="text-2xs font-extrabold text-primary uppercase tracking-wider flex items-center gap-1 px-2 py-0.5 rounded-md border bg-primary/8 border border-primary/15">
               {t('enterprise')}
             </span>
             <span className="w-1 h-1 rounded-full bg-border" />
@@ -503,11 +499,11 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
         </div>
 
         <div className="flex flex-wrap items-center gap-4 rounded-xl p-3" style={{ background: "var(--surface)", border: '1px solid oklch(15% 0.008 265 / 0.2)' }}>
-          <div className="text-center px-4 py-1" style={{ borderRight: '1px solid oklch(15% 0.008 265 / 0.2)' }}>
+          <div className="text-center px-4 py-1 border-r border-border/20">
             <p className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest">Compliance</p>
             <p className="text-xs font-bold text-foreground mt-0.5 font-display">SOC 2</p>
           </div>
-          <div className="text-center px-4 py-1" style={{ borderRight: '1px solid oklch(15% 0.008 265 / 0.2)' }}>
+          <div className="text-center px-4 py-1 border-r border-border/20">
             <p className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest">{t('standard')}</p>
             <p className="text-xs font-bold text-foreground mt-0.5 font-display">Lighthouse 12</p>
           </div>
@@ -522,7 +518,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
 
       {/* ═══ 4. RECENT PROJECTS GRID ═══ */}
       <div className="space-y-6 pt-4">
-        <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'oklch(15% 0.008 265 / 0.2)' }}>
+        <div className="flex items-center justify-between border-b pb-4 border-border/20">
           <div>
             <h2 className="font-display text-lg font-extrabold tracking-tight text-foreground flex items-center gap-2">
               <Globe className="w-4 h-4 text-primary" />
@@ -532,8 +528,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
           </div>
           <button 
             onClick={() => setActiveTab('projects')}
-            className="text-2xs font-bold uppercase tracking-widest text-primary transition-colors flex items-center gap-1.5 group px-3 py-1.5 rounded-md border" 
-            style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}
+            className="text-2xs font-bold uppercase tracking-widest text-primary transition-colors flex items-center gap-1.5 group px-3 py-1.5 rounded-md border bg-primary/8 border border-primary/15"
           >
             {t('exploreNetwork')}
             <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -550,8 +545,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
                 action={
                   <button
                     onClick={() => setActiveTab('projects')}
-                    className="text-2xs font-bold uppercase tracking-widest text-primary transition-colors inline-flex items-center gap-1.5 group px-4 py-2 rounded-md border cursor-pointer"
-                    style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}
+                    className="text-2xs font-bold uppercase tracking-widest text-primary transition-colors inline-flex items-center gap-1.5 group px-4 py-2 rounded-md border cursor-pointer bg-primary/8 border border-primary/15"
                   >
                     {t('projectsEmptyCta')}
                     <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />

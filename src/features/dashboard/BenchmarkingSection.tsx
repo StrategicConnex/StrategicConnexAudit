@@ -130,8 +130,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
         <p className="text-xs text-muted-fg max-w-sm">{t("lockedDesc")}</p>
         <Link
           href="/login"
-          className="mt-1 text-2xs font-bold uppercase tracking-widest text-primary transition-colors inline-flex items-center gap-1.5 px-4 py-2 rounded-md border"
-          style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}
+          className="mt-1 text-2xs font-bold uppercase tracking-widest text-primary transition-colors inline-flex items-center gap-1.5 px-4 py-2 rounded-md border bg-primary/8 border border-primary/15"
         >
           {t("login")}
         </Link>
