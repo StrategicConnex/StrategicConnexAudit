@@ -3,6 +3,7 @@ import { z } from "zod";
 import { canPerformAction } from "@/server/auth/rbac";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRLS } from "@/shared/db/rls";
+import { directDb } from "@/shared/db";
 import { projects, users, projectMembers, projectInvitations } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { getProjectRole, type ProjectAccessRole } from "@/server/lib/project-access";
@@ -41,16 +42,21 @@ export async function GET(
   const data = await withRLS(auth.userId, async (tx) => {
     const project = await tx.query.projects.findFirst({
       where: eq(projects.id, projectId),
-      columns: { id: true, ownerId: true },
+      columns: { id: true, ownerId: true, name: true },
     });
     if (!project) return null;
 
+    // Identidades del equipo fuera del contexto RLS: la policy users_select_self
+    // (0025) solo expone el propio perfil al rol authenticated, pero los emails
+    // de los miembros de un proyecto son datos de negocio del proyecto (el
+    // acceso ya fue autorizado por getProjectRole) y se resuelven con la
+    // conexión de servicio.
     const [owner, members, invitations] = await Promise.all([
-      tx.query.users.findFirst({
+      directDb.query.users.findFirst({
         where: eq(users.id, project.ownerId),
         columns: { id: true, email: true, fullName: true },
       }),
-      tx
+      directDb
         .select({
           id: projectMembers.id,
           userId: projectMembers.userId,
@@ -62,7 +68,7 @@ export async function GET(
         .from(projectMembers)
         .leftJoin(users, eq(users.id, projectMembers.userId))
         .where(eq(projectMembers.projectId, projectId)),
-      tx.query.projectInvitations.findMany({
+      directDb.query.projectInvitations.findMany({
         where: eq(projectInvitations.projectId, projectId),
         columns: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
       }),

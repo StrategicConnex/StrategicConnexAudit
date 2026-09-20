@@ -32,6 +32,27 @@ const mockTxQuery = {
   projectInvitations: { findMany: mockTxInvitationsFindMany },
 };
 
+// directDb: conexiones de servicio usadas dentro del flujo para leer
+// identidades del equipo (users de otros miembros no son visibles por RLS).
+const mockDirectDb = {
+  query: {
+    users: { findFirst: vi.fn() },
+    projects: { findFirst: vi.fn() },
+    projectInvitations: { findMany: vi.fn(async () => []) },
+  },
+  select: () => ({
+    from: () => ({
+      leftJoin: () => ({
+        where: async () => [],
+      }),
+    }),
+  }),
+};
+
+vi.mock("@/shared/db", () => ({
+  directDb: mockDirectDb,
+}));
+
 vi.mock("@/shared/db/rls", () => ({
   withRLS: vi.fn(async (_userId: string, cb: (tx: unknown) => Promise<unknown>) =>
     cb({
@@ -86,8 +107,8 @@ describe("members API — equipo real (A-2)", () => {
   });
 
   it("GET lista owner + miembros reales", async () => {
-    mockTxQuery.projects.findFirst.mockResolvedValue({ id: "p1", ownerId: "u-owner", name: "Sitio" });
-    mockTxQuery.users.findFirst.mockResolvedValue({
+    mockTxProjectsFindFirst.mockResolvedValue({ id: "p1", ownerId: "u-owner", name: "Sitio" });
+    mockDirectDb.query.users.findFirst.mockResolvedValue({
       id: "u-owner",
       email: "owner@x.com",
       fullName: "Owner",
