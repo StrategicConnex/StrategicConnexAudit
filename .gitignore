@@ -82,3 +82,6 @@ next-env.d.ts
 .serena/
 .portal-secret-tmp
 .e2e-*
+.unblock-*
+.mig-*
+.portal-*
