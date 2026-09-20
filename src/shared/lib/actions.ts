@@ -32,8 +32,7 @@ export const DEV_BYPASS_USER_ID = '00000000-0000-0000-0000-000000000001';
 async function handleDevBypass<Schema extends z.ZodTypeAny, T>(
   zodSchema: Schema,
   formData: z.infer<Schema> | FormData,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- directDb lazy proxy has complex type
-  action: (data: z.infer<Schema>, context: { user: User; tx: any }) => Promise<T>
+  action: (data: z.infer<Schema>, context: { user: User; tx: DbTransaction }) => Promise<T>
 ): Promise<ActionState<T>> {
   try {
     // Parsear datos de entrada
@@ -64,7 +63,7 @@ async function handleDevBypass<Schema extends z.ZodTypeAny, T>(
     } as User;
 
     // Ejecutar usando directDb que bypassea RLS
-    const data = await action(result.data, { user: devUser, tx: directDb });
+    const data = await action(result.data, { user: devUser, tx: directDb as unknown as DbTransaction });
 
     return { data };
   } catch (error: unknown) {

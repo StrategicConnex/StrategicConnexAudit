@@ -111,10 +111,10 @@ async function runLocalAudit(projectId: string, auditId: string, userId: string)
     await directDb.update(audits).set({ status: "completed", completedAt: new Date() }).where(eq(audits.id, auditId));
     logger.info("LocalAudit completada", { auditId });
   } catch (err: unknown) {
-    const auditErr = err as { message?: string };
-    logger.error("LocalAudit error", { auditId, error: auditErr });
+    const auditErrMsg = err instanceof Error ? err.message : String(err);
+    logger.error("LocalAudit error", { auditId, error: auditErrMsg });
     try {
-      await directDb.update(audits).set({ status: "failed", errorMessage: auditErr.message || "Error", completedAt: new Date() }).where(eq(audits.id, auditId));
+      await directDb.update(audits).set({ status: "failed", errorMessage: auditErrMsg || "Error", completedAt: new Date() }).where(eq(audits.id, auditId));
     } catch (dbErr) { logger.error("LocalAudit fallback error", { error: dbErr }); }
   }
 }
@@ -172,8 +172,8 @@ export const startAuditAction = async (data: z.infer<typeof AuditSchema>): Promi
       });
       return { data: { success: true, auditId: result.data.auditId } };
     } catch (triggerError: unknown) {
-      const te = triggerError as { message?: string };
-      logger.warn("Trigger.dev no disponible, usando fallback local", { error: te?.message });
+      const teMsg = triggerError instanceof Error ? triggerError.message : String(triggerError);
+      logger.warn("Trigger.dev no disponible, usando fallback local", { error: teMsg });
       runLocalAudit(result.data.projectId!, result.data.auditId!, result.data.userId!)
         .catch((e: unknown) => logger.error("Audit fallback error", { error: e }));
       return { data: { success: true, auditId: result.data.auditId } };
@@ -224,7 +224,7 @@ export const getAuditStatus = authenticatedAction(
         .limit(1);
       pagesScanned = Number(row?.value ?? 0);
     } catch (e: unknown) {
-      logger.warn("pagesScanned no disponible", { auditId, error: (e as { message?: string })?.message });
+      logger.warn("pagesScanned no disponible", { auditId, error: e instanceof Error ? e.message : String(e) });
     }
 
     return { success: true, status: record.audit.status, errorMessage: record.audit.errorMessage, pagesScanned };

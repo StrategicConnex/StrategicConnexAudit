@@ -87,11 +87,11 @@ export const createProject = authenticatedAction(
       revalidatePath('/');
       return { success: true, message: "Proyecto creado correctamente" };
     } catch (error) {
-      const err = error as { message?: string };
+      const errMsg = error instanceof Error ? error.message : String(error);
       // Capturamos el error personalizado de Postgres (LIMIT_EXCEEDED)
-      if (err.message?.includes('LIMIT_EXCEEDED')) {
+      if (errMsg?.includes('LIMIT_EXCEEDED')) {
         // Extraemos el mensaje amigable que pusimos en el RAISE EXCEPTION
-        const cleanMessage = err.message.split('LIMIT_EXCEEDED: ')[1] || "Límite de proyectos alcanzado.";
+        const cleanMessage = errMsg.split('LIMIT_EXCEEDED: ')[1] || "Límite de proyectos alcanzado.";
         return { 
           error: cleanMessage + " 🚀 Mejora tu plan para seguir creciendo." 
         };

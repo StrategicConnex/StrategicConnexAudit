@@ -65,8 +65,8 @@ export async function GET(request: Request) {
         statusCode = response.status;
         isUp = response.ok || (response.status >= 200 && response.status < 400);
       } catch (err) {
-        const fetchErr = err as { message?: string };
-        error = fetchErr.message || 'Unknown error';
+        const fetchErrMsg = err instanceof Error ? err.message : String(err);
+        error = fetchErrMsg || 'Unknown error';
       }
 
       const endTime = performance.now();
@@ -97,8 +97,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, results });
   } catch (error) {
-    const err = error as { message?: string };
+    const errMsg = error instanceof Error ? error.message : String(error);
     logger.error('Uptime cron error:', error);
-    return NextResponse.json({ error: err.message || 'Cron error' }, { status: 500 });
+    return NextResponse.json({ error: errMsg || 'Cron error' }, { status: 500 });
   }
 }

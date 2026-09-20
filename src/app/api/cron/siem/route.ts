@@ -35,12 +35,12 @@ export async function GET(request: Request) {
       nodeEnv: process.env.NODE_ENV || "development",
     });
   } catch (error: unknown) {
-    const cronErr = error as { message?: string };
-    logger.error("GET /api/cron/siem failure:", { error: getErrorMessage(cronErr) })
+    const cronErrMsg = error instanceof Error ? error.message : String(error);
+    logger.error("GET /api/cron/siem failure:", { error: cronErrMsg })
     return NextResponse.json({
       success: false,
       error: "SIEM cron error",
-      message: cronErr.message || "Unknown error",
+      message: cronErrMsg || "Unknown error",
     }, { status: 500 });
   }
 }

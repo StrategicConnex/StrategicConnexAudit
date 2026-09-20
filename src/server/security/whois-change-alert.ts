@@ -134,10 +134,10 @@ async function sendWhoisAlerts(
           await persistDelivery(pattern, target.name, "failed", res.status, errText.slice(0, 500));
         }
       } catch (err: unknown) {
-        const wErr = err as { message?: string };
-        errors.push(`[${target.name}] ${wErr.message || String(err)}`);
+        const wErrMsg = err instanceof Error ? err.message : String(err);
+        errors.push(`[${target.name}] ${wErrMsg || String(err)}`);
         failed++;
-        await persistDelivery(pattern, target.name, "failed", null, (wErr.message || "Unknown error").slice(0, 500));
+        await persistDelivery(pattern, target.name, "failed", null, (wErrMsg || "Unknown error").slice(0, 500));
       }
     }
   }
@@ -209,9 +209,9 @@ export async function sendWhoisChangeAlerts(
 
     logger.info(`[WHOIS Change Alert] Enviadas: ${sent}, Fallidas: ${failed} para ${domain}`);
   } catch (err: unknown) {
-    const wErr = err as { message?: string };
-    result.errors.push(`WHOIS change alert error: ${wErr.message || String(err)}`);
-    logger.error(`[WHOIS Change Alert] Error:`, wErr.message || err);
+    const wErrMsg = err instanceof Error ? err.message : String(err);
+    result.errors.push(`WHOIS change alert error: ${wErrMsg || String(err)}`);
+    logger.error(`[WHOIS Change Alert] Error:`, wErrMsg || err);
   }
 
   return result;

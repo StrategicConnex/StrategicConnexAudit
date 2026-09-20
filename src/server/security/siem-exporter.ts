@@ -345,7 +345,7 @@ async function sendAlerts(patterns: SiemPattern[]): Promise<{ sent: number; fail
         clearTimeout(timeout);
         if (res.ok) { sent++; await persistDelivery(pattern, target.name, "success", res.status, null); }
         else { const errText = await res.text().catch(() => "unknown"); errors.push(`[${target.name}] ${res.status} \u2192 ${errText.slice(0, 200)}`); failed++; await persistDelivery(pattern, target.name, "failed", res.status, errText.slice(0, 500)); }
-      } catch (err: unknown) { const siemErr = err as { message?: string }; errors.push(`[${target.name}] ${siemErr.message || String(err)}`); failed++; await persistDelivery(pattern, target.name, "failed", null, (siemErr.message || "Unknown error").slice(0, 500)); }
+      } catch (err: unknown) { const siemErrMsg = err instanceof Error ? err.message : String(err); errors.push(`[${target.name}] ${siemErrMsg || String(err)}`); failed++; await persistDelivery(pattern, target.name, "failed", null, (siemErrMsg || "Unknown error").slice(0, 500)); }
     }
   }
   return { sent, failed, errors };
@@ -368,7 +368,7 @@ export async function sendTestAlert(): Promise<SiemTestResult> {
       clearTimeout(timeout);
       if (res.ok) details.push({ name: target.name, status: "ok", message: `${res.status} OK` });
       else { const errText = await res.text().catch(() => "unknown"); details.push({ name: target.name, status: "error", message: `${res.status}: ${errText.slice(0, 200)}` }); }
-    } catch (err: unknown) { details.push({ name: target.name, status: "error", message: (err as { message?: string }).message || "Unknown error" }); }
+    } catch (err: unknown) { details.push({ name: target.name, status: "error", message: (err instanceof Error ? err.message : String(err)) || "Unknown error" }); }
   }
   return { targetsAttempted: webhookTargets.length, success: details.every(d => d.status === "ok"), details };
 }
@@ -425,8 +425,8 @@ export async function runSiemExport(): Promise<SiemResult> {
     if (due) { heartbeat = await sendHeartbeat(); heartbeat.lastHeartbeatAgoMinutes = lastHeartbeatAgoMinutes; if (!heartbeat.sent && heartbeat.reason !== "no_webhooks") errors.push("Heartbeat no enviado"); }
     return { scannedWindowMinutes: maxWindow, patternsDetected: patterns, heartbeat, alertsSent, alertsFailed, errors };
   } catch (err: unknown) {
-    const siemErr = err as { message?: string }; errors.push(`SIEM export error: ${siemErr.message || String(err)}`);
-    logSecurityEvent("invalid_input", { path: "/api/security/siem/run", method: "POST", metadata: { action: "siem_export_failed", error: siemErr.message } });
+    const siemErrMsg = err instanceof Error ? err.message : String(err); errors.push(`SIEM export error: ${siemErrMsg || String(err)}`);
+    logSecurityEvent("invalid_input", { path: "/api/security/siem/run", method: "POST", metadata: { action: "siem_export_failed", error: siemErrMsg } });
     return { scannedWindowMinutes: maxWindow, patternsDetected: [], heartbeat, alertsSent: 0, alertsFailed: 0, errors };
   }
 }

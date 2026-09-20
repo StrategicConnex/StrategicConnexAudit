@@ -199,7 +199,7 @@ async function persistResult(result: HealthCheckResult, triggerSource: string): 
 
     return inserted?.id || null;
   } catch (err) {
-    logger.error("AI Healthcheck: Failed to persist result", { error: err instanceof Error ? err.message : err });
+    logger.error("AI Healthcheck: Failed to persist result", { error: err instanceof Error ? err.message : String(err) });
     return null;
   }
 }
@@ -319,11 +319,11 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    const err = error as { message?: string };
+    const errMsg = error instanceof Error ? error.message : String(error);
     logger.error("AI Healthcheck: Fatal error", { error });
     return NextResponse.json({
       success: false,
-      error: `AI Healthcheck error: ${err.message || "Unknown"}`,
+      error: `AI Healthcheck error: ${errMsg || "Unknown"}`,
       durationMs: Date.now() - startTime,
       timestamp: new Date().toISOString(),
     }, { status: 500 });

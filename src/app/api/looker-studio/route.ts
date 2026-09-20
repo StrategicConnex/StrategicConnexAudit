@@ -365,11 +365,11 @@ export async function GET(req: NextRequest) {
     }, { headers });
 
   } catch (error) {
-    const err = error as { message?: string };
+    const errMsg = error instanceof Error ? error.message : String(error);
     logger.error('Error serving Looker Studio connector data:', error);
     return NextResponse.json({ 
       error: 'Internal Server Error', 
-      message: err?.message || 'Unknown error occurred occurred'
+      message: errMsg || 'Unknown error occurred occurred'
     }, { status: 500 });
   }
 }

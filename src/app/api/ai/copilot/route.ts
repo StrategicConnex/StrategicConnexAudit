@@ -76,12 +76,12 @@ export const POST = withRateLimit(
       });
 
     } catch (error) {
-      const err = error as { message?: string };
+      const errMsg = error instanceof Error ? error.message : String(error);
       logger.error('Error in Copilot endpoint:', error);
       return NextResponse.json({
         success: true,
         message: getNoApiKeyResponse('general-chat'),
-        error: err.message || 'Servicio no disponible',
+        error: errMsg || 'Servicio no disponible',
       });
     }
   }

@@ -170,10 +170,10 @@ async function sendExpiryAlerts(
           await persistDelivery(pattern, target.name, "failed", res.status, errText.slice(0, 500));
         }
       } catch (err: unknown) {
-        const expErr = err as { message?: string };
-        errors.push(`[${target.name}] ${expErr.message || String(err)}`);
+        const expErrMsg = err instanceof Error ? err.message : String(err);
+        errors.push(`[${target.name}] ${expErrMsg || String(err)}`);
         failed++;
-        await persistDelivery(pattern, target.name, "failed", null, (expErr.message || "Unknown error").slice(0, 500));
+        await persistDelivery(pattern, target.name, "failed", null, (expErrMsg || "Unknown error").slice(0, 500));
       }
     }
   }
@@ -248,9 +248,9 @@ export async function runApiKeyExpiryCheck(): Promise<ApiKeyExpiryResult> {
       })),
     };
   } catch (err: unknown) {
-    const expErr = err as { message?: string };
-    errors.push(`API Key expiry check error: ${expErr.message || String(err)}`);
-    logger.error("[ApiKeyExpiry] Fatal error:", expErr.message || err);
+    const expErrMsg = err instanceof Error ? err.message : String(err);
+    errors.push(`API Key expiry check error: ${expErrMsg || String(err)}`);
+    logger.error("[ApiKeyExpiry] Fatal error:", expErrMsg || err);
     return {
       expiringKeysFound: 0,
       alertsSent: 0,
