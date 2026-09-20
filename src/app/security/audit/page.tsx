@@ -349,8 +349,8 @@ export default function SecurityAuditDashboard() {
               <EmptyState icon={<ShieldAlert />} title="No hay eventos de seguridad registrados" description="Los eventos aparecerán aquí cuando ocurran rate limits, CSP violations u otros eventos de seguridad" />
             )}
             {!loading && logs.length > 0 && (
-              <div className="border border-border rounded-xl overflow-hidden bg-surface">
-                <table className="w-full">
+              <div className="border border-border rounded-xl overflow-hidden bg-surface overflow-x-auto">
+                <table className="w-full min-w-[640px]">
                   <thead>
                     <tr className="border-b border-border text-2xs uppercase tracking-widest text-muted-foreground font-semibold">
                       <th className="text-left py-3 px-4 w-44">Evento</th>

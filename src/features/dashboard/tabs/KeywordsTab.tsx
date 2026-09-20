@@ -151,7 +151,7 @@ export function KeywordsTab({
           )}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[560px] text-left border-collapse">
             <thead>
               <tr className="border-b border-border bg-muted/1 text-2xs font-bold uppercase text-muted-fg tracking-wider">
                 <th className="px-8 py-5">{t('colKeyword')}</th>

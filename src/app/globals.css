@@ -449,6 +449,16 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
+/* ─── Mobile (Semana 11) — sin scroll horizontal no deseado ────────────
+   El spec §8.2 exige "sin scroll horizontal no deseado": el canvas de la
+   red neuronal y algún chart pueden exceder el viewport; el clip en html
+   evita el pan lateral accidental. Los contenedores que SÍ necesitan
+   scroll horizontal (tablas anchas) lo declaran explícitamente con
+   overflow-x-auto + min-w en la tabla. */
+html {
+  overflow-x: clip;
+}
+
 /* Fallback de glassmorphism: si backdrop-filter no existe, la superficie
    sigue siendo legible (fondo opaco del token en lugar de translúcido). */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {

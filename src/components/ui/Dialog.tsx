@@ -38,8 +38,14 @@ export function DialogPopup({
   return (
     <Base.Popup
       className={cn(
-        'glass-card fixed left-1/2 top-1/2 z-[101] w-full max-w-md -translate-x-1/2 -translate-y-1/2',
-        'rounded-2xl p-8 shadow-2xl outline-none transition-all duration-200',
+        // Desktop: card centrada. Mobile (<sm): full-screen — spec §8.2.
+        'glass-card fixed z-[101]',
+        // Mobile: ocupa toda la pantalla (inset-0) sin bordes redondeados
+        'inset-0 max-h-full w-full rounded-none p-5 overflow-y-auto',
+        // sm+: centrada con tamaño natural
+        'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2',
+        'sm:rounded-2xl sm:p-8 sm:shadow-2xl',
+        'outline-none transition-all duration-200',
         'data-[starting-style]:opacity-0 data-[starting-style]:scale-95',
         'data-[ending-style]:opacity-0 data-[ending-style]:scale-95',
         className,
