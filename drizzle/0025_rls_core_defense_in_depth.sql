@@ -171,9 +171,14 @@ $$;
 --> statement-breakpoint
 
 -- ¿El usuario actual es owner o miembro del proyecto?
+-- SECURITY DEFINER es OBLIGATORIO: sin él, la función corre como authenticated
+-- y su subquery sobre projects dispara projects_select_member_or_owner →
+-- recursión infinita (stack overflow) en toda query que la use. El owner
+-- (postgres) bypasea RLS y corta el ciclo. Detectado por E2E post-RLS.
 CREATE OR REPLACE FUNCTION public.user_has_project_access(p_project_id uuid)
 RETURNS boolean
 LANGUAGE sql STABLE
+SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT EXISTS (

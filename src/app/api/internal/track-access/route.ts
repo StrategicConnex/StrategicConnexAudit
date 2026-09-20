@@ -69,6 +69,8 @@ export async function POST(request: Request): Promise<Response> {
   } catch (err) {
     // La telemetría nunca debe romper la navegación
     logger.error("[track-access] fallo (no bloqueante):", { error: getErrorMessage(err) })
-    return NextResponse.json({ ok: false }, { status: 204 });
+    // 204 No Content: sin cuerpo (NextResponse.json + 204 lanza "Invalid
+    // response status code" y convierte el fallo silencioso en un 500 visible)
+    return new Response(null, { status: 204 });
   }
 }
