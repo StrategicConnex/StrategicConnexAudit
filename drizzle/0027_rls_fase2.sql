@@ -128,8 +128,8 @@ END $$;
 
 DROP POLICY IF EXISTS internal_links_fase2 ON internal_links;
 CREATE POLICY internal_links_fase2 ON internal_links FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM audits a WHERE a.id = internal_links.audit_id AND public.user_has_project_access(a.project_id)))
-  WITH CHECK (EXISTS (SELECT 1 FROM audits a WHERE a.id = internal_links.audit_id AND public.user_has_project_access(a.project_id)));
+  USING (EXISTS (SELECT 1 FROM crawl_results cr JOIN audits a ON a.id = cr.audit_id WHERE cr.id = internal_links.crawl_id AND public.user_has_project_access(a.project_id)))
+  WITH CHECK (EXISTS (SELECT 1 FROM crawl_results cr JOIN audits a ON a.id = cr.audit_id WHERE cr.id = internal_links.crawl_id AND public.user_has_project_access(a.project_id)));
 --> statement-breakpoint
 
 DROP POLICY IF EXISTS performance_results_fase2 ON performance_results;

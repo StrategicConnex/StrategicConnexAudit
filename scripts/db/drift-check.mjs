@@ -181,7 +181,11 @@ function defaultsEquivalent(tsCol, dbDefault) {
 
 // ── Main ────────────────────────────────────────────────────────────────
 const drizzle = parseSchemas();
-const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+// sslmode=disable (Postgres locales, p.ej. BD de prueba) → sin SSL; Supabase siempre exige SSL.
+const client = new pg.Client({
+  connectionString: dbUrl,
+  ssl: /sslmode=disable/.test(dbUrl) ? false : { rejectUnauthorized: false },
+});
 
 try {
   await client.connect();
