@@ -164,7 +164,11 @@ describe("DashboardHeader", () => {
   it("la campana abre el panel vacío de notificaciones", () => {
     renderHeader();
     fireEvent.click(screen.getByRole("button", { name: "Notificaciones" }));
-    expect(screen.getByText("Sin notificaciones nuevas")).toBeInTheDocument();
+    // Copia real del NotificationCenter (Semana 10): estado vacío con mensaje + ayuda.
+    expect(screen.getByText("Sin notificaciones")).toBeInTheDocument();
+    expect(
+      screen.getByText(/eventos de auditorías, alertas y análisis aparecerán aquí/i),
+    ).toBeInTheDocument();
     cleanup();
   });
 
