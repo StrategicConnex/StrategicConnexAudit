@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
-import { Globe, FileSearch, Siren, ShieldAlert, ShieldCheck, LockKeyhole } from "lucide-react";
+import { ShieldAlert, ShieldCheck, LockKeyhole } from "lucide-react";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageShellBar } from "@/components/ui/PageShell";
-import type { AuditLogEntry, ApiResponse, SiemAlertEntry, SiemAlertsApiResponse, Tab } from "./types";
+import type { AuditLogEntry, SiemAlertEntry, Tab } from "./types";
 import { EVENT_LABELS, formatDate, timeAgo, truncate } from "./helpers";
+import { useSecurityAudit } from "./hooks/use-security-audit";
 
-// ─── Unauthorized (sin sesión): candado honesto con acción, nunca "No autorizado" crudo ──
+// ─── Sub-components (extracted from inline, same file for co-location) ─────
 
 function UnauthorizedPanel() {
   return (
@@ -19,20 +19,13 @@ function UnauthorizedPanel() {
       <p className="text-xs text-muted-fg max-w-sm">Inicia sesión para ver eventos de seguridad y alertas SIEM.</p>
       <Link
         href="/login"
-        className="mt-2 text-2xs font-bold uppercase tracking-widest text-primary transition-colors inline-flex items-center gap-1.5 px-4 py-2 rounded-md border"
-        style={{ background: 'oklch(68% 0.14 230 / 0.08)', borderColor: 'oklch(68% 0.14 230 / 0.15)' }}
+        className="mt-2 text-2xs font-bold uppercase tracking-widest text-primary transition-colors inline-flex items-center gap-1.5 px-4 py-2 rounded-md border bg-primary/8 border-primary/15"
       >
         Iniciar sesión
       </Link>
     </div>
   );
 }
-
-
-
-
-
-// ─── Filters ──────────────────────────────────────────────────────────────────
 
 function Filters({
   eventTypes, filters, onChange,
@@ -49,9 +42,7 @@ function Filters({
         <select
           value={filters.eventType}
           onChange={e => onChange({ ...filters, eventType: e.target.value })}
-          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground 
-                     focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50
-                     transition-all duration-150 cursor-pointer"
+          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50 transition-all duration-150 cursor-pointer"
         >
           <option value="all">Todos</option>
           {eventTypes.map(t => (
@@ -66,9 +57,7 @@ function Filters({
           placeholder="Filtrar por IP…"
           value={filters.ip}
           onChange={e => onChange({ ...filters, ip: e.target.value })}
-          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground
-                     focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50
-                     transition-all duration-150"
+          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50 transition-all duration-150"
         />
       </div>
       <div className="flex flex-col gap-1 min-w-32">
@@ -78,9 +67,7 @@ function Filters({
           value={filters.from}
           max={today}
           onChange={e => onChange({ ...filters, from: e.target.value })}
-          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground
-                     focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50
-                     transition-all duration-150"
+          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50 transition-all duration-150"
         />
       </div>
       <div className="flex flex-col gap-1 min-w-32">
@@ -90,16 +77,13 @@ function Filters({
           value={filters.to}
           max={today}
           onChange={e => onChange({ ...filters, to: e.target.value })}
-          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground
-                     focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50
-                     transition-all duration-150"
+          className="bg-card border border-border rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-chart-success/50 focus:border-chartreuse/50 transition-all duration-150"
         />
       </div>
       {(filters.eventType !== "all" || filters.ip || filters.from || filters.to) && (
         <button
           onClick={() => onChange({ eventType: "all", ip: "", from: "", to: "" })}
-          className="px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors duration-150
-                     border border-border hover:border-foreground/20 rounded-md"
+          className="px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors duration-150 border border-border hover:border-foreground/20 rounded-md"
         >
           Limpiar
         </button>
@@ -108,1115 +92,211 @@ function Filters({
   );
 }
 
-// ─── Row ──────────────────────────────────────────────────────────────────────
-
 function EventRow({ entry, isExpanded, onToggle }: {
   entry: AuditLogEntry;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const meta = EVENT_LABELS[entry.eventType] ?? EVENT_LABELS.invalid_input!;
-  const metadataKeys = Object.keys(entry.metadata);
-  const hasMetadata = metadataKeys.length > 0;
+  const meta = entry.metadata as Record<string, unknown> | undefined;
+  const label = EVENT_LABELS[entry.eventType]?.label || entry.eventType;
+  const color = EVENT_LABELS[entry.eventType]?.color || "text-muted-foreground";
 
   return (
-    <>
-      <tr
-        onClick={hasMetadata ? onToggle : undefined}
-        className={`group border-b border-border transition-colors duration-100
-          ${isExpanded ? "bg-surface-muted" : "hover:bg-surface-muted"}
-          ${hasMetadata ? "cursor-pointer" : ""}`}
-      >
-        <td className="py-3 px-4">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-medium border ${meta.color}`}>
-            <span className="text-sm">{meta.icon}</span>
-            {meta.label}
-          </span>
-        </td>
-        <td className="py-3 px-4 font-mono text-xs text-foreground">{entry.ip}</td>
-        <td className="py-3 px-4">
-          <span className="font-mono text-2xs text-muted-foreground bg-surface-muted px-2 py-0.5 rounded">
-            {entry.method}
-          </span>
-          <span className="ml-2 text-xs text-muted-foreground">{truncate(entry.path, 40)}</span>
-        </td>
-        <td className="py-3 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">
-          <span title={formatDate(entry.createdAt)}>{timeAgo(entry.createdAt)}</span>
-        </td>
-        <td className="py-3 px-4 text-right text-xs text-muted-foreground">
-          {hasMetadata && (
-            <span className={`inline-block transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
-              ▼
-            </span>
-          )}
-        </td>
-      </tr>
-      {isExpanded && hasMetadata && (
-        <tr className="bg-surface-muted border-b border-border">
-          <td colSpan={5} className="py-4 px-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {metadataKeys.map(k => {
-                const v = entry.metadata[k];
-                return (
-                  <div key={k} className="bg-card rounded-md px-3 py-2 border border-border">
-                    <div className="text-2xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">{k}</div>
-                    <div className="text-xs text-foreground font-mono break-all">
-                      {typeof v === "object" ? JSON.stringify(v) : String(v)}
-                    </div>
-                  </div>
-                );
-              })}
+    <tr className="border-b border-border/50 hover:bg-surface-muted/50 transition-colors">
+      <td className="py-3 px-4">
+        <span className={`text-xs font-semibold ${color}`}>{label}</span>
+      </td>
+      <td className="py-3 px-4">
+        <span className="text-xs font-mono text-muted-foreground">{entry.ip || "—"}</span>
+      </td>
+      <td className="py-3 px-4">
+        <span className="text-xs text-muted-foreground">{truncate(entry.path || "—", 40)}</span>
+      </td>
+      <td className="py-3 px-4">
+        <span className="text-xs text-muted-foreground" title={formatDate(entry.createdAt)}>
+          {timeAgo(entry.createdAt)}
+        </span>
+      </td>
+      <td className="py-3 px-4 text-center">
+        <button onClick={onToggle} className="text-muted-foreground hover:text-foreground transition-colors text-xs">
+          {isExpanded ? "▼" : "▶"}
+        </button>
+      </td>
+      {isExpanded && (
+        <tr>
+          <td colSpan={5} className="px-4 pb-3">
+            <div className="bg-surface-muted rounded-lg p-3 text-xs text-muted-foreground font-mono whitespace-pre-wrap">
+              {meta ? JSON.stringify(meta, null, 2) : "Sin metadatos"}
             </div>
           </td>
         </tr>
       )}
-    </>
+    </tr>
   );
 }
-
-// ─── Stats Bar ────────────────────────────────────────────────────────────────
 
 function StatsBar({ logs, total }: { logs: AuditLogEntry[]; total: number }) {
-  const counts = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const l of logs) {
-      map.set(l.eventType, (map.get(l.eventType) || 0) + 1);
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-  }, [logs]);
+  const byType = logs.reduce<Record<string, number>>((acc, l) => {
+    acc[l.eventType] = (acc[l.eventType] || 0) + 1;
+    return acc;
+  }, {});
+  const top = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   return (
-    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-      <span className="text-muted-foreground font-semibold">
-        {total} evento{total !== 1 ? "s" : ""}
-      </span>
-      <span className="text-muted-foreground">|</span>
-      {counts.slice(0, 5).map(([type, count]) => {
-        const m = EVENT_LABELS[type];
-        return (
-          <span key={type} className="flex items-center gap-1">
-            <span className="text-2xs">{m?.icon || "•"}</span>
-            <span className="text-foreground">{count}</span>
-            <span className="text-muted-foreground">{m?.label || type}</span>
+    <div className="flex flex-wrap gap-3">
+      {top.map(([action, count]) => (
+        <div key={action} className="px-3 py-1.5 bg-surface-muted border border-border rounded-lg">
+          <span className="text-2xs font-semibold text-muted-foreground">
+            {EVENT_LABELS[action]?.label || action}: {count}
           </span>
-        );
-      })}
-      {counts.length > 5 && <span className="text-muted-foreground">+{counts.length - 5} más</span>}
+        </div>
+      ))}
+      <div className="px-3 py-1.5 bg-surface-muted border border-border rounded-lg">
+        <span className="text-2xs font-semibold text-primary">Total: {total}</span>
+      </div>
     </div>
   );
 }
-
-// ─── Tab Header ────────────────────────────────────────────────────────────────
 
 function TabHeader({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
+  const tabs: { id: Tab; label: string; icon: string }[] = [
+    { id: "events", label: "Eventos", icon: "🛡️" },
+    { id: "siem", label: "SIEM", icon: "🔔" },
+    { id: "whois", label: "WHOIS", icon: "🔍" },
+    { id: "dns", label: "DNS", icon: "🌐" },
+  ];
+
   return (
-    <div className="flex gap-1 mb-4 border-b border-border">
-      <button
-        onClick={() => onChange("events")}
-        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] flex items-center gap-1.5 ${
-          active === "events"
-            ? "text-chartreuse border-chartreuse"
-            : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
-        }`}
-      >
-        <ShieldCheck aria-hidden="true" className="w-3.5 h-3.5" /> Eventos de Seguridad
-      </button>
-      <button
-        onClick={() => onChange("siem")}
-        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] flex items-center gap-1.5 ${
-          active === "siem"
-            ? "text-chartreuse border-chartreuse"
-            : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
-        }`}
-      >
-        <Siren aria-hidden="true" className="w-3.5 h-3.5" /> Alertas SIEM
-      </button>
-      <button
-        onClick={() => onChange("whois")}
-        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] flex items-center gap-1.5 ${
-          active === "whois"
-            ? "text-chartreuse border-chartreuse"
-            : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
-        }`}
-      >
-        <FileSearch aria-hidden="true" className="w-3.5 h-3.5" /> Alertas WHOIS
-      </button>
-      <button
-        onClick={() => onChange("dns")}
-        className={`px-4 py-2.5 text-xs font-medium transition-all duration-150 border-b-2 -mb-[1px] flex items-center gap-1.5 ${
-          active === "dns"
-            ? "text-chartreuse border-chartreuse"
-            : "text-muted-foreground border-transparent hover:text-foreground hover:border-foreground/20"
-        }`}
-      >
-        <Globe aria-hidden="true" className="w-3.5 h-3.5" /> Alertas DNS
-      </button>
+    <div className="flex gap-1 mb-6 border-b border-border">
+      {tabs.map(t => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-colors border-b-2 ${
+            active === t.id
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t.icon} {t.label}
+        </button>
+      ))}
     </div>
   );
 }
 
-// ─── SIEM Alert Card (desde siem_alert_logs) ──────────────────────────────────
+// ─── SIEM / WHOIS / DNS sections (kept inline for co-location) ──────────────
 
 const SEVERITY_COLORS: Record<string, { label: string; color: string; icon: string }> = {
-  critical: { label: "Critical", color: "text-destructive border-destructive/30 bg-destructive/10", icon: "🔴" },
-  warning:  { label: "Warning",  color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10", icon: "🟡" },
-  info:     { label: "Info",     color: "text-accent-blue border-accent-blue/30 bg-accent-blue/10", icon: "🔵" },
-};
-
-const TARGET_BADGES: Record<string, { label: string; color: string }> = {
-  Slack:      { label: "Slack",      color: "text-accent-purple border-accent-purple/30 bg-accent-purple/10" },
-  PagerDuty:  { label: "PagerDuty",  color: "text-chart-success border-chart-success/30 bg-chart-success/10" },
-  Splunk:     { label: "Splunk",     color: "text-accent-blue border-accent-blue/30 bg-accent-blue/10" },
-  Email:      { label: "Email",      color: "text-destructive border-destructive/30 bg-destructive/10" },
+  critical: { label: "Crítico", color: "text-red-400 bg-red-500/10 border-red-500/20", icon: "🔴" },
+  high: { label: "Alto", color: "text-orange-400 bg-orange-500/10 border-orange-500/20", icon: "🟠" },
+  medium: { label: "Medio", color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20", icon: "🟡" },
+  low: { label: "Bajo", color: "text-blue-400 bg-blue-500/10 border-blue-500/20", icon: "🔵" },
 };
 
 function SiemCard({ entry }: { entry: SiemAlertEntry }) {
-  const isHeartbeat = entry.ruleEventType === "heartbeat";
-  const isFailed = entry.status === "failed";
-
-  // Heartbeat has a unique glowing/pulsing style
-  if (isHeartbeat) {
-    const metadata = entry.metadata ?? {};
-    const uptime = typeof metadata.uptime === "string" ? metadata.uptime : "—";
-    const nodeEnv = typeof metadata.nodeEnv === "string" ? metadata.nodeEnv : "—";
-    return (
-      <div className={`rounded-lg border px-5 py-4 transition-all duration-300 ${
-        isFailed
-          ? "bg-destructive/10 border-destructive/30"
-          : "bg-chartreuse/10 border-chartreuse/20 hover:border-chartreuse/40 hover:bg-chartreuse/15"
-      }`}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            {/* Header row */}
-            <div className="flex items-center gap-2.5 mb-2 flex-wrap">
-              {/* Animated pulse dot */}
-              {!isFailed && (
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-success opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-chartreuse" />
-                </span>
-              )}
-              {isFailed && (
-                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-chart-danger" />
-              )}
-              <span className={`text-sm font-medium ${isFailed ? "text-destructive" : "text-chartreuse"} truncate`}>
-                💓 {isFailed ? "Heartbeat Failed" : "Heartbeat OK"}
-              </span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-medium border ${
-                isFailed
-                  ? "text-destructive border-destructive/30 bg-destructive/10"
-                  : "text-chartreuse border-chartreuse/30 bg-chartreuse/10"
-              }`}>
-                {entry.target}
-              </span>
-              {isFailed ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-destructive border-destructive/30 bg-destructive/10">
-                  ✗ Failed
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
-                  ✓ Delivered
-                </span>
-              )}
-            </div>
-
-            {/* Heartbeat details — uptime + env */}
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
-              <span className="text-muted-foreground">
-                Uptime: <span className="text-foreground font-mono">{uptime}</span>
-              </span>
-              <span className="text-muted-foreground">
-                Env: <span className="text-foreground font-mono">{nodeEnv}</span>
-              </span>
-              {entry.responseCode != null && (
-                <span className="text-muted-foreground">
-                  HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-destructive" : "text-chartreuse"}`}>{entry.responseCode}</span>
-                </span>
-              )}
-            </div>
-
-            {/* Error message */}
-            {isFailed && entry.errorMessage && (
-              <p className="text-xs text-destructive font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
-                {entry.errorMessage}
-              </p>
-            )}
-          </div>
-
-          {/* Time */}
-          <div className="shrink-0 text-right">
-            <p className="text-xs text-muted-foreground font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
-              {timeAgo(entry.createdAt)}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Regular alert card
-  const sev = SEVERITY_COLORS[entry.severity] ?? SEVERITY_COLORS.info!;
-  const targetBadge = TARGET_BADGES[entry.target] || { label: entry.target, color: "text-muted-foreground border-border/60 bg-muted/60" };
-
+  const sev = SEVERITY_COLORS[entry.severity] ?? { label: entry.severity, color: 'text-gray-400 bg-gray-500/10 border-gray-500/20', icon: '⚪' };
   return (
-    <div className={`rounded-lg border px-5 py-4 transition-colors duration-150 ${
-      isFailed
-        ? "bg-destructive/10 border-destructive/30 hover:bg-destructive/15"
-        : "bg-card border-border hover:bg-surface-muted"
-    }`}>
-      <div className="flex items-start justify-between gap-4">
+    <div className="border border-border rounded-xl p-4 bg-surface hover:bg-surface-muted/50 transition-colors">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          {/* Header row */}
-          <div className="flex items-center gap-2.5 mb-2 flex-wrap">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-medium border ${sev.color}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`px-2 py-0.5 text-2xs font-bold rounded-full border ${sev.color}`}>
               {sev.icon} {sev.label}
             </span>
-            <span className="text-sm font-medium text-foreground truncate">
-              {entry.label}
-            </span>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-medium border ${targetBadge.color}`}>
-              {targetBadge.label}
-            </span>
-            {isFailed && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-destructive border-destructive/30 bg-destructive/10">
-                ✗ Failed
-              </span>
-            )}
-            {entry.status === "success" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
-                ✓ Delivered
-              </span>
-            )}
+            <span className="text-2xs text-muted-foreground">{timeAgo(entry.createdAt)}</span>
           </div>
-
-          {/* Details row */}
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
-            <span className="text-muted-foreground">
-              Tipo: <span className="text-foreground font-mono">{entry.ruleEventType}</span>
-            </span>
-            <span className="text-muted-foreground">
-              Eventos: <span className="text-foreground font-semibold">{entry.count}</span>
-            </span>
-            <span className="text-muted-foreground">
-              Ventana: <span className="text-foreground">{entry.windowMinutes} min</span>
-            </span>
-            <span className="text-muted-foreground">
-              IP: <span className="text-foreground font-mono">{entry.ip}</span>
-            </span>
-            {entry.responseCode != null && (
-              <span className="text-muted-foreground">
-                HTTP: <span className={`font-mono ${entry.responseCode >= 400 ? "text-destructive" : "text-chartreuse"}`}>{entry.responseCode}</span>
-              </span>
-            )}
-          </div>
-
-          {/* Error message */}
-          {isFailed && entry.errorMessage && (
-            <p className="text-xs text-destructive font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
-              {entry.errorMessage}
-            </p>
-          )}
-        </div>
-
-        {/* Time */}
-        <div className="shrink-0 text-right">
-          <p className="text-xs text-muted-foreground font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
-            {timeAgo(entry.createdAt)}
-          </p>
+          <p className="text-sm font-semibold text-foreground truncate">{entry.label || entry.ruleEventType}</p>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{entry.errorMessage || entry.target}</p>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Test Webhook Result Types ───────────────────────────────────────────────
-
-interface TestWebhookDetail {
-  name: string;
-  status: "ok" | "error";
-  message: string;
-}
-
-interface TestWebhookResponse {
-  targetsAttempted: number;
-  success: boolean;
-  details: TestWebhookDetail[];
-  timestamp: string;
-}
-
-// ─── WHOIS Alert Metadata Types ──────────────────────────────────────────────
-
-interface WhoisChangeMetadata {
-  domain: string;
-  field: string;
-  label: string;
-  severity: string;
-  previousValue: string;
-  currentValue: string;
-  detectedAt: string;
-  emoji: string;
-}
-
-// ─── DNS Alert Metadata Types ───────────────────────────────────────────────
-
-interface DnsChangeMetadata {
-  domain: string;
-  recordType: string;
-  type: string;
-  typeLabel: string;
-  severity: string;
-  previousValue: string;
-  currentValue: string;
-  detectedAt: string;
-  emoji: string;
-  typeEmoji: string;
-}
-
-const CHANGE_TYPE_COLORS: Record<string, { label: string; color: string }> = {
-  added:   { label: "Añadido", color: "text-chartreuse border-chartreuse/30 bg-chartreuse/10" },
-  changed: { label: "Modificado", color: "text-chart-warning border-chart-warning/30 bg-chart-warning/10" },
-  removed: { label: "Eliminado", color: "text-destructive border-destructive/30 bg-destructive/10" },
-};
-
-// ─── DNS Alerts Section ────────────────────────────────────────────────────
-
-function DnsAlertsSection({
-  alerts, loading, error, unauthorized,
-}: {
-  alerts: SiemAlertEntry[];
-  loading: boolean;
-  error: string | null;
-  unauthorized: boolean;
-}) {
-  if (loading) {
-    return <SkeletonList count={4} />;
-  }
-
-  if (unauthorized) {
-    return <UnauthorizedPanel />;
-  }
-
-  if (error) {
-    return (
-      <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
-        {error}
-      </div>
-    );
-  }
-
-  if (alerts.length === 0) {
-    return (
-<EmptyState
-          icon={<Globe />}
-          title="No hay alertas DNS registradas"
-          description="Las alertas de cambios DNS aparecerán aquí cuando el sistema detecte modificaciones en registros A, AAAA, MX, NS, TXT u otros tipos de los dominios auditados."
-        />
-    );
-  }
-
-  const totalChanges = alerts.reduce((sum, a) => {
-    const meta = a.metadata?.metadataSamples;
-    return sum + (Array.isArray(meta) ? meta.length : 1);
-  }, 0);
-
-  return (
-    <div className="space-y-3">
-      {/* Summary bar */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
-        <span className="text-muted-foreground font-semibold">{alerts.length} alertas</span>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-muted-foreground">{totalChanges} cambios detectados</span>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-muted-foreground">
-          {alerts.filter(a => a.status === "success").length} entregados
-        </span>
-        {alerts.filter(a => a.status === "failed").length > 0 && (
-          <>
-            <span className="text-muted-foreground">·</span>
-            <span className="text-destructive">
-              {alerts.filter(a => a.status === "failed").length} fallidos
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Alert cards */}
-      {alerts.map(entry => {
-        const rawMeta = entry.metadata as Record<string, unknown>;
-        const samples: DnsChangeMetadata[] = Array.isArray(rawMeta.metadataSamples) ? rawMeta.metadataSamples as DnsChangeMetadata[] : [];
-        const isFailed = entry.status === "failed";
-        const domain = entry.ip;
-
-        return (
-          <div
-            key={entry.id}
-            className={`rounded-lg border px-5 py-4 transition-colors duration-150 ${
-              isFailed
-                ? "bg-destructive/10 border-destructive/30"
-                : "bg-card border-border hover:bg-surface-muted"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-                <span className="text-lg shrink-0">🌐</span>
-                <span className="text-sm font-semibold text-foreground font-mono truncate">
-                  {domain}
-                </span>
-                {/* Delivery channel badge */}
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border ${
-                  entry.target === "Slack"
-                    ? "text-accent-purple border-accent-purple/30 bg-accent-purple/10"
-                    : entry.target === "PagerDuty"
-                      ? "text-chart-success border-chart-success/30 bg-chart-success/10"
-                      : entry.target === "Splunk"
-                        ? "text-accent-blue border-accent-blue/30 bg-accent-blue/10"
-                        : entry.target === "Email"
-                          ? "text-destructive border-destructive/30 bg-destructive/10"
-                          : "text-muted-foreground border-border/60 bg-muted/60"
-                }`}>
-                  {entry.target === "Slack" ? "💬" : entry.target === "PagerDuty" ? "🚨" : entry.target === "Splunk" ? "📊" : entry.target === "Email" ? "📧" : "🔗"} {entry.target}
-                </span>
-                {/* Status badge */}
-                {isFailed ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-destructive border-destructive/30 bg-destructive/10">
-                    ✗ Failed
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
-                    ✓ Delivered
-                  </span>
-                )}
-              </div>
-              {/* Time */}
-              <div className="shrink-0 text-right">
-                <p className="text-xs text-muted-foreground font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
-                  {timeAgo(entry.createdAt)}
-                </p>
-              </div>
-            </div>
-
-            {/* Changes list */}
-            {samples.length > 0 ? (
-              <div className="space-y-2 ml-1">
-                {samples.map((s, i) => {
-                  const ctColor = CHANGE_TYPE_COLORS[s.type];
-                  return (
-                    <div
-                      key={i}
-                      className="flex items-start gap-3 bg-surface-muted rounded-lg px-3 py-2.5 border border-border"
-                    >
-                      <span className="text-base shrink-0 mt-0.5">
-                        {s.emoji || "📋"}
-                      </span>
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xs font-semibold text-foreground uppercase tracking-wide">
-                            {s.recordType}
-                          </span>
-                          {/* Change type badge */}
-                          {ctColor && (
-                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-2xs font-medium border ${ctColor.color}`}>
-                              {s.typeEmoji || "•"} {ctColor.label}
-                            </span>
-                          )}
-                          {/* Severity badge */}
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium border ${
-                            s.severity === "critical"
-                              ? "text-destructive border-destructive/30 bg-destructive/10"
-                              : s.severity === "warning"
-                                ? "text-chart-warning border-chart-warning/30 bg-chart-warning/10"
-                                : "text-accent-blue border-accent-blue/30 bg-accent-blue/10"
-                          }`}>
-                            {s.severity}
-                          </span>
-                        </div>
-                        <DiffBadge prev={s.previousValue} curr={s.currentValue} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground italic ml-1">
-                Detalles de cambio no disponibles (datos pre-migración)
-              </p>
-            )}
-
-            {/* Error message */}
-            {isFailed && entry.errorMessage && (
-              <p className="text-xs text-destructive font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
-                {entry.errorMessage}
-              </p>
-            )}
-
-            {/* Footer: count + window */}
-            <div className="mt-2 flex items-center gap-3 text-2xs text-muted-foreground">
-              <span>{entry.count} cambio{entry.count !== 1 ? "s" : ""}</span>
-              <span>ventana: {entry.windowMinutes} min</span>
-              {entry.responseCode != null && (
-                <span>HTTP {entry.responseCode}</span>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Whois Alerts Section ────────────────────────────────────────────────────
-
-function DiffBadge({ prev, curr }: { prev: string; curr: string }) {
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="font-mono text-destructive line-through bg-destructive/10 px-2 py-0.5 rounded border border-destructive/30 max-w-[200px] truncate" title={prev}>
-        {prev || "(vacío)"}
-      </span>
-      <span className="text-muted-foreground text-2xs">→</span>
-      <span className="font-mono text-chartreuse bg-chartreuse/30 px-2 py-0.5 rounded border border-chartreuse/30 max-w-[200px] truncate" title={curr}>
-        {curr || "(vacío)"}
-      </span>
-    </div>
-  );
-}
-
-function WhoisAlertsSection({
-  alerts, loading, error, unauthorized,
-}: {
-  alerts: SiemAlertEntry[];
-  loading: boolean;
-  error: string | null;
-  unauthorized: boolean;
-}) {
-  if (loading) {
-    return <SkeletonList count={4} />;
-  }
-
-  if (unauthorized) {
-    return <UnauthorizedPanel />;
-  }
-
-  if (error) {
-    return (
-      <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
-        {error}
-      </div>
-    );
-  }
-
-  if (alerts.length === 0) {
-    return (
-<EmptyState
-          icon={<FileSearch />}
-          title="No hay alertas WHOIS registradas"
-          description="Las alertas de cambios WHOIS aparecerán aquí cuando el sistema detecte modificaciones en registrador, expiración, nameservers u organización registrante de los dominios auditados."
-        />
-    );
-  }
-
-  const totalChanges = alerts.reduce((sum, a) => {
-    const meta = a.metadata?.metadataSamples;
-    return sum + (Array.isArray(meta) ? meta.length : 1);
-  }, 0);
-
-  return (
-    <div className="space-y-3">
-      {/* Summary bar */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
-        <span className="text-muted-foreground font-semibold">{alerts.length} alertas</span>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-muted-foreground">{totalChanges} cambios detectados</span>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-muted-foreground">
-          {alerts.filter(a => a.status === "success").length} entregados
-        </span>
-        {alerts.filter(a => a.status === "failed").length > 0 && (
-          <>
-            <span className="text-muted-foreground">·</span>
-            <span className="text-destructive">
-              {alerts.filter(a => a.status === "failed").length} fallidos
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Alert cards */}
-      {alerts.map(entry => {
-        const rawMeta = entry.metadata as Record<string, unknown>;
-        const samples: WhoisChangeMetadata[] = Array.isArray(rawMeta.metadataSamples) ? rawMeta.metadataSamples as WhoisChangeMetadata[] : [];
-        const isFailed = entry.status === "failed";
-        const domain = entry.ip;
-
-        return (
-          <div
-            key={entry.id}
-            className={`rounded-lg border px-5 py-4 transition-colors duration-150 ${
-              isFailed
-                ? "bg-destructive/10 border-destructive/30"
-                : "bg-card border-border hover:bg-surface-muted"
-            }`}
-          >
-            {/* Header row */}
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-                <span className="text-lg shrink-0">🌐</span>
-                <span className="text-sm font-semibold text-foreground font-mono truncate">
-                  {domain}
-                </span>
-                {/* Delivery channel badge */}
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border ${
-                  entry.target === "Slack"
-                    ? "text-accent-purple border-accent-purple/30 bg-accent-purple/10"
-                    : entry.target === "PagerDuty"
-                      ? "text-chart-success border-chart-success/30 bg-chart-success/10"
-                      : entry.target === "Splunk"
-                        ? "text-accent-blue border-accent-blue/30 bg-accent-blue/10"
-                        : entry.target === "Email"
-                          ? "text-destructive border-destructive/30 bg-destructive/10"
-                          : "text-muted-foreground border-border/60 bg-muted/60"
-                }`}>
-                  {entry.target === "Slack" ? "💬" : entry.target === "PagerDuty" ? "🚨" : entry.target === "Splunk" ? "📊" : entry.target === "Email" ? "📧" : "🔗"} {entry.target}
-                </span>
-                {/* Status badge */}
-                {isFailed ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-destructive border-destructive/30 bg-destructive/10">
-                    ✗ Failed
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border text-chartreuse border-chartreuse/30 bg-chartreuse/10">
-                    ✓ Delivered
-                  </span>
-                )}
-              </div>
-              {/* Time */}
-              <div className="shrink-0 text-right">
-                <p className="text-xs text-muted-foreground font-mono whitespace-nowrap" title={formatDate(entry.createdAt)}>
-                  {timeAgo(entry.createdAt)}
-                </p>
-              </div>
-            </div>
-
-            {/* Changes list */}
-            {samples.length > 0 ? (
-              <div className="space-y-2 ml-1">
-                {samples.map((s, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-3 bg-surface-muted rounded-lg px-3 py-2.5 border border-border"
-                  >
-                    <span className="text-base shrink-0 mt-0.5">
-                      {s.emoji || "📋"}
-                    </span>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xs font-semibold text-foreground uppercase tracking-wide">
-                          {s.label}
-                        </span>
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium border ${
-                          s.severity === "critical"
-                            ? "text-destructive border-destructive/30 bg-destructive/10"
-                            : s.severity === "warning"
-                              ? "text-chart-warning border-chart-warning/30 bg-chart-warning/10"
-                              : "text-accent-blue border-accent-blue/30 bg-accent-blue/10"
-                        }`}>
-                          {s.severity}
-                        </span>
-                      </div>
-                      <DiffBadge prev={s.previousValue} curr={s.currentValue} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground italic ml-1">
-                Detalles de cambio no disponibles (datos pre-migración)
-              </p>
-            )}
-
-            {/* Error message */}
-            {isFailed && entry.errorMessage && (
-              <p className="text-xs text-destructive font-mono mt-2 break-all bg-destructive/10 rounded px-2 py-1 border border-destructive/30">
-                {entry.errorMessage}
-              </p>
-            )}
-
-            {/* Footer: count + window */}
-            <div className="mt-2 flex items-center gap-3 text-2xs text-muted-foreground">
-              <span>{entry.count} cambio{entry.count !== 1 ? "s" : ""}</span>
-              <span>ventana: {entry.windowMinutes} min</span>
-              {entry.responseCode != null && (
-                <span>HTTP {entry.responseCode}</span>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── SIEM Webhook Test Toast ──────────────────────────────────────────────────
-
-const TARGET_ICONS: Record<string, string> = {
-  Slack: "💬",
-  PagerDuty: "🚨",
-  Splunk: "📊",
-};
-
-function TestToast({ result, onDismiss }: { result: TestWebhookResponse; onDismiss: () => void }) {
-  const errorCount = result.details.filter(d => d.status === "error").length;
-  const allOk = errorCount === 0;
-
-  return (
-    <div className={`fixed top-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] rounded-xl border shadow-2xl 
-      ${allOk ? "bg-popover border-chartreuse/30" : "bg-popover border-destructive/30"} 
-      animate-in slide-in-from-right-4 duration-300`}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{allOk ? "✅" : "⚠️"}</span>
-          <span className="text-sm font-medium text-foreground">Webhook Test</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-2xs text-muted-foreground">
-            {result.targetsAttempted} target{result.targetsAttempted !== 1 ? "s" : ""}
-            {!allOk && <span className="text-destructive ml-1">({errorCount} fail{errorCount !== 1 ? "s" : ""})</span>}
-          </span>
-          <button
-            onClick={onDismiss}
-            className="text-muted-foreground hover:text-foreground transition-colors text-sm leading-none"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
-
-      {/* Details */}
-      <div className="px-5 py-3 space-y-2">
-        {result.details.map(d => (
-          <div
-            key={d.name}
-            className={`flex items-start gap-3 rounded-lg px-3 py-2.5 text-xs border ${
-              d.status === "ok"
-                ? "bg-chartreuse/5 border-chartreuse/20"
-                : "bg-destructive/5 border-destructive/20"
-            }`}
-          >
-            <span className="text-base shrink-0 mt-0.5">{TARGET_ICONS[d.name] || "🔗"}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-semibold text-foreground">{d.name}</span>
-                <span className={`px-1.5 py-0.5 rounded text-2xs font-medium ${
-                  d.status === "ok"
-                    ? "text-chartreuse bg-chartreuse/10"
-                    : "text-destructive bg-destructive/10"
-                }`}>
-                  {d.status === "ok" ? "✓ OK" : "✗ FAIL"}
-                </span>
-              </div>
-              <p className="text-muted-foreground font-mono break-all">{d.message}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Timestamp */}
-      <div className="px-5 py-2 border-t border-border">
-        <p className="text-2xs text-muted-foreground font-mono">
-          {new Date(result.timestamp).toLocaleTimeString("es-ES")}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ─── SIEM Section ──────────────────────────────────────────────────────────────
-
-function SiemSection({
-  alerts, loading, error, breakdown, unauthorized,
-}: {
+function SiemSection({ alerts, loading, error, breakdown, unauthorized }: {
   alerts: SiemAlertEntry[];
   loading: boolean;
   error: string | null;
   breakdown: { success: number; failed: number };
   unauthorized: boolean;
 }) {
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<TestWebhookResponse | null>(null);
-
-  const handleTestWebhooks = useCallback(async () => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const res = await fetch("/api/security/siem/test");
-      const data: TestWebhookResponse & { error?: string } = await res.json();
-      if (!res.ok || data.error) {
-        setTestResult({
-          targetsAttempted: 0,
-          success: false,
-          details: [{ name: "Error", status: "error", message: data.error || `HTTP ${res.status}` }],
-          timestamp: new Date().toISOString(),
-        });
-      } else {
-        setTestResult(data);
-      }
-    } catch {
-      setTestResult({
-        targetsAttempted: 0,
-        success: false,
-        details: [{ name: "Error", status: "error", message: "Error de conexión" }],
-        timestamp: new Date().toISOString(),
-      });
-    } finally {
-      setTesting(false);
-    }
-  }, []);
-
-  // Common test button
-  const testButton = (
-    <button
-      onClick={handleTestWebhooks}
-      disabled={testing}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-2xs font-medium 
-                 text-foreground bg-card border border-border 
-                 rounded-md hover:bg-surface-muted hover:text-foreground disabled:opacity-50
-                 transition-all duration-150 active:scale-[0.97]"
-    >
-      {testing ? (
-        <>
-          <span className="inline-block w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
-          Probando…
-        </>
-      ) : (
-        <>
-          <span>🧪</span>
-          Test Webhooks
-        </>
-      )}
-    </button>
-  );
-
-  // Toast
-  const toast = testResult && (
-    <TestToast result={testResult} onDismiss={() => setTestResult(null)} />
-  );
-
-  if (loading) {
-    return (
-      <>
-        {toast}
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-surface-muted rounded-lg animate-pulse" />
-          ))}
-        </div>
-      </>
-    );
-  }
-
-  if (unauthorized) {
-    return <UnauthorizedPanel />;
-  }
-
-  if (error) {
-    return (
-      <>
-        {toast}
-        <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
-          {error}
-        </div>
-      </>
-    );
-  }
-
-  if (alerts.length === 0) {
-    return (
-      <>
-        {toast}
-        <EmptyState
-          icon={<Siren />}
-          title="No hay alertas SIEM registradas"
-          description="Las alertas aparecerán aquí cuando el SIEM exporter detecte patrones sospechosos y envíe notificaciones a los webhooks configurados. Los datos se persisten en la tabla siem_alert_logs."
-          action={testButton}
-        />
-      </>
-    );
-  }
+  if (unauthorized) return <UnauthorizedPanel />;
+  if (loading) return <SkeletonList count={5} />;
+  if (error) return <div className="p-4 text-sm text-destructive">{error}</div>;
+  if (alerts.length === 0) return <EmptyState icon={<ShieldAlert />} title="No hay alertas SIEM" description="Las alertas SIEM aparecerán cuando se detecten eventos de seguridad" />;
 
   return (
-    <>
-      {toast}
-      <div className="space-y-3">
-        {/* Summary bar + test button */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="text-muted-foreground font-semibold">{alerts.length} envíos</span>
-            {breakdown.success > 0 && (
-              <span className="text-chartreuse">{breakdown.success} entregados</span>
-            )}
-            {breakdown.failed > 0 && (
-              <span className="text-destructive">{breakdown.failed} fallidos</span>
-            )}
-          </div>
-          {testButton}
+    <div>
+      <div className="flex gap-3 mb-4">
+        <div className="px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-xs font-semibold text-green-400">
+          ✅ Exitosas: {breakdown.success}
         </div>
-
-        {/* Alert cards */}
-        {alerts.map(entry => (
-          <SiemCard key={entry.id} entry={entry} />
-        ))}
+        <div className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs font-semibold text-red-400">
+          ❌ Fallidas: {breakdown.failed}
+        </div>
       </div>
-    </>
+      <div className="space-y-3">
+        {alerts.map(alert => <SiemCard key={alert.id} entry={alert} />)}
+      </div>
+    </div>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+const TARGET_BADGES: Record<string, { label: string; color: string }> = {
+  whois_change_detected: { label: "WHOIS", color: "text-purple-400 bg-purple-500/10 border-purple-500/20" },
+  dns_change_detected: { label: "DNS", color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20" },
+};
+
+function WhoisAlertsSection({ alerts, loading, error, unauthorized }: {
+  alerts: SiemAlertEntry[];
+  loading: boolean;
+  error: string | null;
+  unauthorized: boolean;
+}) {
+  if (unauthorized) return <UnauthorizedPanel />;
+  if (loading) return <SkeletonList count={5} />;
+  if (error) return <div className="p-4 text-sm text-destructive">{error}</div>;
+  if (alerts.length === 0) return <EmptyState icon={<ShieldAlert />} title="No hay cambios WHOIS detectados" description="Los cambios en registros WHOIS aparecerán aquí" />;
+
+  return (
+    <div className="space-y-3">
+      {alerts.map(alert => <SiemCard key={alert.id} entry={alert} />)}
+    </div>
+  );
+}
+
+function DnsAlertsSection({ alerts, loading, error, unauthorized }: {
+  alerts: SiemAlertEntry[];
+  loading: boolean;
+  error: string | null;
+  unauthorized: boolean;
+}) {
+  if (unauthorized) return <UnauthorizedPanel />;
+  if (loading) return <SkeletonList count={5} />;
+  if (error) return <div className="p-4 text-sm text-destructive">{error}</div>;
+  if (alerts.length === 0) return <EmptyState icon={<ShieldAlert />} title="No hay cambios DNS detectados" description="Los cambios en registros DNS aparecerán aquí" />;
+
+  return (
+    <div className="space-y-3">
+      {alerts.map(alert => <SiemCard key={alert.id} entry={alert} />)}
+    </div>
+  );
+}
+
+// ─── Main Component (thin orchestrator) ─────────────────────────────────────
 
 export default function SecurityAuditDashboard() {
-  const [tab, setTab] = useState<Tab>("events");
-  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
-  const [total, setTotal] = useState(0);
-  const [eventTypes, setEventTypes] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [unauthorized, setUnauthorized] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [filters, setFilters] = useState({ eventType: "all", ip: "", from: "", to: "" });
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // ─── SIEM tab state (from siem_alert_logs) ─────────────────────────────────
-  const [siemAlerts, setSiemAlerts] = useState<SiemAlertEntry[]>([]);
-  const [siemBreakdown, setSiemBreakdown] = useState<{ success: number; failed: number }>({ success: 0, failed: 0 });
-  // ─── WHOIS tab state (filtered siem_alert_logs) ────────────────────────────
-  const [whoisAlerts, setWhoisAlerts] = useState<SiemAlertEntry[]>([]);
-  // ─── DNS tab state (filtered siem_alert_logs) ─────────────────────────────
-  const [dnsAlerts, setDnsAlerts] = useState<SiemAlertEntry[]>([]);
-
-  const fetchLogs = useCallback(async (f: typeof filters, activeTab?: Tab) => {
-    const t = activeTab ?? tab;
-    setLoading(true);
-    setError(null);
-    setUnauthorized(false);
-    try {
-      if (t === "siem") {
-        // 🔄 SIEM tab: consulta tabla independiente siem_alert_logs
-        const params = new URLSearchParams();
-        if (f.ip) params.set("ip", f.ip);
-        if (f.from) params.set("from", f.from);
-        if (f.to) params.set("to", f.to);
-        params.set("limit", "100");
-
-        const res = await fetch(`/api/security/siem-alerts?${params}`);
-        const data: SiemAlertsApiResponse = await res.json();
-        if (!data.success) {
-          if (res.status === 401) setUnauthorized(true);
-          else setError(data.error || "Error al cargar");
-        } else {
-          setSiemAlerts(data.alerts);
-          setSiemBreakdown(data.breakdown);
-        }
-      } else if (t === "whois") {
-        // 🔍 WHOIS tab: filtrado por whois_change_detected
-        const params = new URLSearchParams();
-        params.set("ruleEventType", "whois_change_detected");
-        if (f.ip) params.set("ip", f.ip);
-        if (f.from) params.set("from", f.from);
-        if (f.to) params.set("to", f.to);
-        params.set("limit", "100");
-
-        const res = await fetch(`/api/security/siem-alerts?${params}`);
-        const data: SiemAlertsApiResponse = await res.json();
-        if (!data.success) {
-          if (res.status === 401) setUnauthorized(true);
-          else setError(data.error || "Error al cargar");
-        } else {
-          setWhoisAlerts(data.alerts);
-        }
-      } else if (t === "dns") {
-        // 🌐 DNS tab: filtrado por dns_change_detected
-        const params = new URLSearchParams();
-        params.set("ruleEventType", "dns_change_detected");
-        if (f.ip) params.set("ip", f.ip);
-        if (f.from) params.set("from", f.from);
-        if (f.to) params.set("to", f.to);
-        params.set("limit", "100");
-
-        const res = await fetch(`/api/security/siem-alerts?${params}`);
-        const data: SiemAlertsApiResponse = await res.json();
-        if (!data.success) {
-          if (res.status === 401) setUnauthorized(true);
-          else setError(data.error || "Error al cargar");
-        } else {
-          setDnsAlerts(data.alerts);
-        }
-      } else {
-        // 🛡️ Events tab: consulta security_audit_logs
-        const params = new URLSearchParams();
-        if (f.eventType !== "all") params.set("eventType", f.eventType);
-        if (f.ip) params.set("ip", f.ip);
-        if (f.from) params.set("from", f.from);
-        if (f.to) params.set("to", f.to);
-        params.set("limit", "100");
-
-        const res = await fetch(`/api/security/audit-logs?${params}`);
-        const data: ApiResponse = await res.json();
-        if (!data.success) {
-          if (res.status === 401) setUnauthorized(true);
-          else setError(data.error || "Error al cargar");
-        } else {
-          setLogs(data.logs);
-          setTotal(data.total);
-          if (data.eventTypes.length > 0) setEventTypes(data.eventTypes);
-        }
-      }
-    } catch {
-      setError("Error de conexión");
-    } finally {
-      setLoading(false);
-    }
-  }, [tab]);
-
-  const handleTabChange = useCallback((t: Tab) => {
-    setTab(t);
-    setExpandedId(null);
-    fetchLogs(filters, t);
-  }, [fetchLogs, filters]);
-
-  // Initial load
-  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect -- Mount once pattern
-  useEffect(() => { fetchLogs(filters, tab); }, []);
-
-  // Auto-refresh (pausado con la pestaña oculta)
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const interval = setInterval(() => {
-      if (!document.hidden) fetchLogs(filters, tab);
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [autoRefresh, filters, tab, fetchLogs]);
-
-  const handleFilterChange = useCallback((f: typeof filters) => {
-    setFilters(f);
-    setExpandedId(null);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const isIpOnlyChange = f.ip !== filters.ip && f.eventType === filters.eventType && f.from === filters.from && f.to === filters.to;
-    if (isIpOnlyChange && f.ip) {
-      debounceRef.current = setTimeout(() => fetchLogs(f, tab), 300);
-      return;
-    }
-    fetchLogs(f, tab);
-  }, [fetchLogs, filters, tab]);
-
-  useEffect(() => {
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, []);
+  const {
+    tab, logs, total, eventTypes, loading, error, unauthorized,
+    expandedId, filters, autoRefresh,
+    siemAlerts, siemBreakdown, whoisAlerts, dnsAlerts,
+    setTab, setExpandedId, setAutoRefresh, handleFilterChange, refresh,
+  } = useSecurityAudit();
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-chartreuse/20">
       <PageShellBar />
-      {/* Header */}
       <header className="border-b border-border bg-surface">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between mb-3">
@@ -1235,18 +315,14 @@ export default function SecurityAuditDashboard() {
                   type="checkbox"
                   checked={autoRefresh}
                   onChange={e => setAutoRefresh(e.target.checked)}
-                  className="rounded border-border bg-popover text-chartreuse 
-                             focus:ring-chart-success/30 focus:ring-offset-0
-                             accent-chart-success"
+                  className="rounded border-border bg-popover text-chartreuse focus:ring-chart-success/30 focus:ring-offset-0 accent-chart-success"
                 />
                 Auto-actualizar (15s)
               </label>
               <button
-                onClick={() => fetchLogs(filters, tab)}
+                onClick={refresh}
                 disabled={loading}
-                className="px-4 py-2 text-xs font-medium text-foreground bg-card border border-border 
-                           rounded-md hover:bg-surface-muted hover:text-foreground disabled:opacity-50 
-                           transition-all duration-150 active:scale-[0.97]"
+                className="px-4 py-2 text-xs font-medium text-foreground bg-card border border-border rounded-md hover:bg-surface-muted hover:text-foreground disabled:opacity-50 transition-all duration-150 active:scale-[0.97]"
               >
                 {loading ? "Cargando…" : "↻ Actualizar"}
               </button>
@@ -1257,47 +333,21 @@ export default function SecurityAuditDashboard() {
       </header>
 
       <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-6 py-6">
-        <TabHeader active={tab} onChange={handleTabChange} />
+        <TabHeader active={tab} onChange={setTab} />
 
-        {/* Security Events Tab */}
         {tab === "events" && (
           <>
-            {/* Stats */}
             {!loading && logs.length > 0 && (
-              <div className="mb-4 px-1">
-                <StatsBar logs={logs} total={total} />
-              </div>
+              <div className="mb-4 px-1"><StatsBar logs={logs} total={total} /></div>
             )}
-
-            {/* Error */}
             {error && !unauthorized && (
-              <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
-                {error}
-              </div>
+              <div className="mb-4 px-5 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">{error}</div>
             )}
-
-            {/* Sin sesión */}
             {unauthorized && !loading && <UnauthorizedPanel />}
-
-            {/* Loading */}
-            {loading && (
-              <div className="space-y-2">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-14 bg-surface-muted rounded-lg animate-pulse" />
-                ))}
-              </div>
-            )}
-
-            {/* Empty */}
+            {loading && <SkeletonList count={8} />}
             {!loading && !error && !unauthorized && logs.length === 0 && (
-              <EmptyState
-                icon={<ShieldAlert />}
-                title="No hay eventos de seguridad registrados"
-                description="Los eventos aparecerán aquí cuando ocurran rate limits, CSP violations u otros eventos de seguridad"
-              />
+              <EmptyState icon={<ShieldAlert />} title="No hay eventos de seguridad registrados" description="Los eventos aparecerán aquí cuando ocurran rate limits, CSP violations u otros eventos de seguridad" />
             )}
-
-            {/* Table */}
             {!loading && logs.length > 0 && (
               <div className="border border-border rounded-xl overflow-hidden bg-surface">
                 <table className="w-full">
@@ -1323,8 +373,6 @@ export default function SecurityAuditDashboard() {
                 </table>
               </div>
             )}
-
-            {/* Footer */}
             {!loading && logs.length > 0 && (
               <div className="mt-4 text-center text-2xs text-muted-foreground">
                 Mostrando {logs.length} de {total} eventos
@@ -1333,20 +381,9 @@ export default function SecurityAuditDashboard() {
           </>
         )}
 
-        {/* SIEM Alerts Tab */}
-        {tab === "siem" && (
-          <SiemSection alerts={siemAlerts} loading={loading} error={error} breakdown={siemBreakdown} unauthorized={unauthorized} />
-        )}
-
-        {/* WHOIS Alerts Tab */}
-        {tab === "whois" && (
-          <WhoisAlertsSection alerts={whoisAlerts} loading={loading} error={error} unauthorized={unauthorized} />
-        )}
-
-        {/* DNS Alerts Tab */}
-        {tab === "dns" && (
-          <DnsAlertsSection alerts={dnsAlerts} loading={loading} error={error} unauthorized={unauthorized} />
-        )}
+        {tab === "siem" && <SiemSection alerts={siemAlerts} loading={loading} error={error} breakdown={siemBreakdown} unauthorized={unauthorized} />}
+        {tab === "whois" && <WhoisAlertsSection alerts={whoisAlerts} loading={loading} error={error} unauthorized={unauthorized} />}
+        {tab === "dns" && <DnsAlertsSection alerts={dnsAlerts} loading={loading} error={error} unauthorized={unauthorized} />}
       </main>
     </div>
   );
