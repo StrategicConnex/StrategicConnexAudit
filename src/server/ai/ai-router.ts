@@ -93,6 +93,12 @@ export interface AIRequestOptions {
    * Regenerar el mismo ámbito dentro del TTL es hit seguro.
    */
   cacheScope?: string;
+  /**
+   * Fuerza un modelo concreto (Sprint 4 #8: evals del pool). Bypasea la
+   * cadena de la task y el cache: mide al modelo real, sin contaminar la
+   * caché de producción ni dejar que un hit enmascare un modelo caído.
+   */
+  modelOverride?: string;
 }
 
 export interface AIResponse {
@@ -103,6 +109,8 @@ export interface AIResponse {
   fromCache?: boolean;
   /** Presente cuando el modelo decidió invocar funciones (tools). */
   toolCalls?: AIToolCall[];
+  /** Usage real del proveedor cuando lo reporta (Sprint 4: evals por modelo). */
+  usage?: AIUsageInfo;
   error?: string;
 }
 
@@ -348,6 +356,8 @@ async function callModel(
     tools?: OpenRouterToolDef[];
     toolChoice?: "auto" | "none";
     responseFormat?: AIResponseFormat;
+    /** Modelo alternativo al planificado (evals: un solo modelo por llamada). */
+    modelOverride?: string;
   }
 ): Promise<RawAssistantMessage> {
   const baseUrl = envSecrets.openRouterBaseUrl || "https://openrouter.ai/api/v1";
@@ -360,7 +370,7 @@ async function callModel(
   }
 
   const body: Record<string, unknown> = {
-    model: modelId,
+    model: opts?.modelOverride ?? modelId,
     messages,
     temperature,
     max_tokens: maxTokens,
@@ -513,7 +523,8 @@ export async function callAIWithFallback(
   // 1. Check cache (solo sin tools: los handlers devuelven estado mutable).
   // P1-3: clave semántica (mensajes completos + scope) en Redis/memoria.
   const cacheKey = buildSemanticKey(taskType, options.cacheScope ?? "", messages);
-  if (!useTools) {
+  // modelOverride: evals miden al modelo real — el cache los enmascararía.
+  if (!useTools && !options.modelOverride) {
     const cached = await getSemanticCache(cacheKey);
     if (cached) {
       const res = track({ modelUsed: cached.modelId, success: true, fromCache: true });
@@ -533,9 +544,12 @@ export async function callAIWithFallback(
     });
   }
 
-  // 3. Get model chain for this task type
-  const modelChain =
-    TASK_ROUTING[taskType] || TASK_ROUTING["general-chat"];
+  // 3. Get model chain for this task type. Con modelOverride (evals del
+  // pool, Sprint 4 #8) la cadena es de UN modelo y se salta el cache: cada
+  // fila de ai_usage queda atribuida al modelo real que se evalúa.
+  const modelChain: string[] = options.modelOverride
+    ? [options.modelOverride]
+    : TASK_ROUTING[taskType] || TASK_ROUTING["general-chat"];
 
   // 4. Try each model in chain (with circuit breaker protection)
   const errors: string[] = [];
@@ -588,8 +602,9 @@ export async function callAIWithFallback(
         }
       }
 
-      // Cache solo respuestas de contenido puro sin tools
-      if (!useTools && !toolCalls?.length) {
+      // Cache solo respuestas de contenido puro sin tools (nunca con
+      // modelOverride: las respuestas de eval no deben servir a producción).
+      if (!useTools && !toolCalls?.length && !options.modelOverride) {
         void setSemanticCache(cacheKey, message.content ?? "", modelId!, taskType);
       }
 
@@ -619,6 +634,7 @@ export async function callAIWithFallback(
         modelUsed: modelId!,
         latencyMs,
         ...(toolCalls?.length ? { toolCalls } : {}),
+        ...(message.usage ? { usage: message.usage } : {}),
       };
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
@@ -785,6 +801,7 @@ function finalizeSuccess(
     content,
     modelUsed: modelId,
     latencyMs,
+    ...(usage ? { usage } : {}),
   };
 }
 

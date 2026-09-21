@@ -58,7 +58,8 @@ export interface AnalysisResult {
 
 // ─── Prompts ────────────────────────────────────────────────────────────────
 
-const TRIAGE_SYSTEM = `Eres un analista senior de seguridad ofensiva (OSCP/OSWE) que revisa la evidencia
+/** Fuente única del system prompt del triage (lo reutiliza el eval del pool, Sprint 4 #8). */
+export const TRIAGE_SYSTEM = `Eres un analista senior de seguridad ofensiva (OSCP/OSWE) que revisa la evidencia
 de una evaluación NO destructiva automatizada contra un sitio autorizado.
 
 Tu trabajo: a partir SOLO de la evidencia proporcionada, producir el JSON final con las

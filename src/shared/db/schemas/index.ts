@@ -510,6 +510,7 @@ export * from "./technologies";
 export * from "./anomaly";
 export * from "./forecast";
 export * from "./exec-briefs";
+export * from "./ai-evals";
 export * from "./remediation";
 
 // ─── 41. Adversary Simulation (P3.3)
