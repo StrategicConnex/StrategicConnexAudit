@@ -33,7 +33,8 @@ export type AITaskType =
   | "general-chat"
   | "seo-report"
   | "adversary-analysis"
-  | "anomaly-narrative";
+  | "anomaly-narrative"
+  | "finding-triage";
 
 // ─── Tools / Structured Outputs (OpenRouter, estándar OpenAI) ────────────────
 
@@ -240,6 +241,13 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
     "nex-agi/nex-n2.5-pro:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   ],
+  // Cadena JSON-crítica: solo modelos con json_schema verificado en vivo
+  // (ver MODEL_CAPABILITIES). El router aleatorio openrouter/free queda
+  // FUERA — igual que seo-report y adversary-analysis.
+  "finding-triage": [
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  ],
 };
 
 /**
@@ -266,6 +274,9 @@ export const MODEL_TIMEOUTS: Record<AITaskType, number> = {
   "adversary-analysis": 60_000,
   // Texto libre corto (2-3 líneas): presupuesto de chat estándar.
   "anomaly-narrative": 20_000,
+  // Corre dentro de Trigger.dev (como adversary-analysis): triage de hasta 40
+  // findings en un JSON largo.
+  "finding-triage": 60_000,
 };
 
 // ─── Caché semántica (P1-3) ─────────────────────────────────────────────────
@@ -960,6 +971,18 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
     es:
       "Anomalía detectada, pero la narrativa IA está deshabilitada " +
       "(`OPENROUTER_API_KEY` no configurada). Revisa el detalle de la métrica.",
+  },
+  "finding-triage": {
+    en:
+      "## ⚠️ Finding Triage — AI Analysis Disabled\n\n" +
+      "The OpenRouter API key (`OPENROUTER_API_KEY`) is not configured.\n" +
+      "Findings were stored without AI triage (severity suggestion, MITRE mapping)\n" +
+      "and will appear with their raw detector classification.",
+    es:
+      "## ⚠️ Triage de Hallazgos — Análisis IA Deshabilitado\n\n" +
+      "La clave de OpenRouter (`OPENROUTER_API_KEY`) no está configurada.\n" +
+      "Los hallazgos se guardaron sin triage IA (severidad sugerida, mapeo MITRE)\n" +
+      "y aparecerán con la clasificación cruda del detector.",
   },
 };
 

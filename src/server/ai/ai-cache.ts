@@ -20,6 +20,9 @@ const TTL_BY_TASK: Record<AITaskType, number> = {
   "general-chat": 3600,
   "adversary-analysis": 3600,
   "anomaly-narrative": 3600,
+  // El triage es determinista por evidencia: si la evidencia no cambia,
+  // la respuesta tampoco. 6h equilibra frescura y llamadas.
+  "finding-triage": 6 * 3600,
 };
 
 export interface CacheHit {

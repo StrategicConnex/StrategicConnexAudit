@@ -1,10 +1,12 @@
-import { task } from "@trigger.dev/sdk";
+import { task, tasks } from "@trigger.dev/sdk";
 import { directDb } from "@/shared/db";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
 import { logger } from "@/lib/logger";
+import { invalidateCacheScope } from "@/server/ai/ai-cache";
+import type { triageAfterAudit } from "./finding-triage.trigger";
 
 logger.info("[Trigger Module] audit.trigger.ts cargado correctamente.");
 logger.info("[Trigger Module] DATABASE_URL presente:", !!process.env.DATABASE_URL);
@@ -182,6 +184,13 @@ export const runProjectAudit = task({
 
       const targetUrl = normalizeUrl(project.domain);
 
+      // CACHE: entra un scan nuevo → los resúmenes/analisis cacheados del
+      // proyecto (TTL 24h de seo-report, 6h de triage, etc.) quedan stale.
+      // Invalidación por scope (Sprint 2, idea #16), fire-and-forget: nunca
+      // bloquea ni rompe el scan.
+      void invalidateCacheScope("seo-report", `${projectId}:`).catch(() => {});
+      void invalidateCacheScope("finding-triage", `triage:${projectId}`).catch(() => {});
+
       // 3. Ejecutar análisis web
       logger.info(`[Worker] Analizando URL: ${targetUrl}`);
       const analysis = await analyzeUrl(targetUrl);
@@ -304,6 +313,22 @@ export const runProjectAudit = task({
         .where(eq(audits.id, auditId));
 
       logger.info(`[Worker] Auditoría ${auditId} finalizada con éxito.`);
+
+      // 7. Triage IA post-audit (Sprint 2): fire-and-forget — un fallo de IA
+      //    no puede fallar una auditoría ya completada. El sweep diario
+      //    recoge lo que aquí quede pendiente.
+      try {
+        await tasks.trigger<typeof triageAfterAudit>("triage-after-audit", {
+          projectId: payload.projectId,
+          userId: payload.userId ?? null,
+        });
+      } catch (triageErr) {
+        logger.warn(
+          `[Worker] No se pudo encolar el triage post-audit: ${
+            triageErr instanceof Error ? triageErr.message : String(triageErr)
+          }`
+        );
+      }
 
     } catch (err: unknown) {
       const error = err as Error;

@@ -448,6 +448,9 @@ export const AI_DAILY_QUOTAS = {
   "incident-brief": 50,
   "adversary-analysis": 10,
   "anomaly-narrative": 50,
+  // El triage corre en background (Trigger.dev) y por batch: cuota generosa
+  // pero acotada — el sweep diario usa userId null (sin cuota de usuario).
+  "finding-triage": 60,
 } as const;
 
 export type AiQuotaTask = keyof typeof AI_DAILY_QUOTAS;

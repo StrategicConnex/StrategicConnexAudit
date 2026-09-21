@@ -2,6 +2,7 @@ import {
   pgTable, uuid, text, integer, timestamp, pgEnum,
   jsonb, boolean, numeric, unique, index
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { users, projects } from "./index";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -86,8 +87,18 @@ export const intelligenceFindings = pgTable("intelligence_findings", {
   recommendation: text("recommendation"),
   evidence: jsonb("evidence").$type<Record<string, unknown>>().default({}),
   affectedAsset: text("affected_asset"),
+
+  /** Triage IA (Sprint 2): severidad/CVSS/MITRE/CWE/impacto/remediación. */
+  aiTriage: jsonb("ai_triage").$type<Record<string, unknown>>(),
+  /** Momento del triage; null = pendiente de clasificar. */
+  aiTriageAt: timestamp("ai_triage_at", { withTimezone: true }),
+
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
+  // Índice parcial del sweep: localiza rápido los pendientes de triage.
+  index("idx_intel_findings_triage_pending")
+    .on(t.projectId)
+    .where(sql`ai_triage IS NULL`),
   index("idx_intel_findings_project_severity").on(t.projectId, t.severity),
   index("idx_intel_findings_investigation_severity").on(t.investigationId, t.severity),
   index("idx_intel_findings_investigation_created").on(t.investigationId, t.createdAt),
