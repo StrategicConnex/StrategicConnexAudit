@@ -48,7 +48,7 @@ vi.mock("@/lib/logger", () => ({
 
 import { listActions, proposeAction, approveAction, executeAction } from "./service";
 import { encryptField } from "@/server/lib/field-crypto";
-import { decryptConfig, executeConnector } from "./connectors";
+import { executeConnector } from "./connectors";
 
 beforeEach(() => {
   vi.clearAllMocks();

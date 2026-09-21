@@ -21,7 +21,6 @@ import {
   EVAL_MODELS,
   EVAL_PASS_THRESHOLD,
 } from "@/server/ai/eval-runner";
-import { TASK_ROUTING } from "@/server/ai/ai-router";
 import type { GoldenCase } from "@/server/ai/eval/triage-scorer";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";

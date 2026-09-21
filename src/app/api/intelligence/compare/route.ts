@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
 import { withRLS } from "@/shared/db/rls";
 import {

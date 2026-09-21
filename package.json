@@ -44,7 +44,7 @@
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.14.0",
-    "mermaid": "^11.16.0",
+    "mermaid": "^11.16.1",
     "next": "16.3.3",
     "next-intl": "^4.13.4",
     "pg": "^8.20.0",
@@ -78,8 +78,8 @@
     "@types/three": "^0.184.1",
     "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^6.0.1",
-    "@vitest/coverage-v8": "^4.1.10",
-    "@vitest/ui": "^4.1.5",
+    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/ui": "^4.1.11",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
@@ -90,19 +90,6 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5",
-    "vitest": "^4.1.5"
-  },
-    "pnpm": {
-      "onlyBuiltDependencies": [
-        "sharp",
-        "unrs-resolver",
-        "@scarf/scarf",
-        "esbuild",
-        "protobufjs",
-        "core-js",
-        "@biomejs/biome",
-        "es5-ext",
-        "msw"
-      ]
-    }
+    "vitest": "^4.1.11"
+  }
 }

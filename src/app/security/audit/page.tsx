@@ -243,11 +243,6 @@ function SiemSection({ alerts, loading, error, breakdown, unauthorized }: {
   );
 }
 
-const TARGET_BADGES: Record<string, { label: string; color: string }> = {
-  whois_change_detected: { label: "WHOIS", color: "text-purple-400 bg-purple-500/10 border-purple-500/20" },
-  dns_change_detected: { label: "DNS", color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20" },
-};
-
 function WhoisAlertsSection({ alerts, loading, error, unauthorized }: {
   alerts: SiemAlertEntry[];
   loading: boolean;

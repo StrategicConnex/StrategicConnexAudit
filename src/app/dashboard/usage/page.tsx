@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/shared/lib/auth";
 
 export default async function UsagePage() {
-  const user = await getCurrentUser();
+  await getCurrentUser();
   
   return (
     <div className="container mx-auto py-8">

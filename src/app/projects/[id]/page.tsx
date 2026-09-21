@@ -189,7 +189,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, warningIssuesCount, currentUptimeStatus, vitalsAverages, rumStats, latestCompletedAudit } = data;
+  const { project, projectAudits, healthScore, pagesCrawled, criticalIssuesCount, currentUptimeStatus, vitalsAverages, rumStats, latestCompletedAudit } = data;
 
   // ── Scores por categoría (Semana 6 — misma fórmula y umbrales que el UI) ──
   const healthNumeric = healthScore === '--' ? null : Number.parseInt(healthScore, 10);

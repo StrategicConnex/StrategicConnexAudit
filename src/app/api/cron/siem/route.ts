@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { runSiemExport } from "@/server/security/siem-exporter";
 import { isCronAuthorized } from "@/server/auth/cron";
 import { logger } from "@/lib/logger";
-import { getErrorMessage } from "@/shared/lib/errors";
 
 export const maxDuration = 120; // 2 minutes timeout
 export const dynamic = "force-dynamic";

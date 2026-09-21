@@ -9,7 +9,7 @@ vi.mock("@upstash/redis", () => {
   return {
     Redis: class MockRedis {
       constructor() {
-        return mockRedisInstance as any;
+        return mockRedisInstance as never;
       }
     },
   };

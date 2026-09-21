@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import React from "react";
 
 vi.mock("@react-pdf/renderer", () => {
-  const noop = () => null;
   const el = (type: string) =>
     React.forwardRef(function MockEl(props: Record<string, unknown>, _ref: unknown) {
       return React.createElement(type, props as React.HTMLAttributes<HTMLElement>);

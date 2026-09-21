@@ -51,41 +51,6 @@ export const TriageBatchSchema = z.object({
 });
 export type TriageBatch = z.infer<typeof TriageBatchSchema>;
 
-// ─── JSON Schema para response_format (json_schema nativo) ──────────────────
-
-const TRIAGE_JSON_SCHEMA = {
-  type: "object",
-  properties: {
-    triage: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          findingId: { type: "string" },
-          severity: { type: "string", enum: ["info", "low", "medium", "high", "critical"] },
-          cvssScore: { type: "number" },
-          mitreId: { type: ["string", "null"] },
-          cweId: { type: ["string", "null"] },
-          businessImpact: { type: "string" },
-          remediation: { type: "array", items: { type: "string" } },
-        },
-        required: [
-          "findingId",
-          "severity",
-          "cvssScore",
-          "mitreId",
-          "cweId",
-          "businessImpact",
-          "remediation",
-        ],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["triage"],
-  additionalProperties: false,
-} as const;
-
 // ─── Prompt ──────────────────────────────────────────────────────────────────
 
 function buildTriagePrompt(items: Array<{ id: string; title: string; description: string; severity: string; affectedAsset: string | null }>): string {

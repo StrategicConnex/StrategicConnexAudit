@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { logger } from '@/lib/logger';
 
 export interface MonitoringSchedule {
   enabled: boolean;

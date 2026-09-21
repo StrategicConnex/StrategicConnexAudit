@@ -171,7 +171,7 @@ function defaultsEquivalent(tsCol, dbDefault) {
   if (/\.defaultRandom\(\)/.test(tsCol.snippet)) return /gen_random_uuid\(\)/.test(dbDefault);
   const m = tsCol.snippet.match(/\.default\(([\s\S]{1,120}?)\)[,}\n]/);
   if (!m) return true; // no extraíble → modo tolerante
-  let arg = m[1].trim().replace(/^["'`]|["'`]$/g, "");
+  const arg = m[1].trim().replace(/^["'`]|["'`]$/g, "");
   const d = String(dbDefault);
   if (/^now\(\)$/i.test(arg)) return /now\(\)|current_timestamp/i.test(d);
   if (arg === "true" || arg === "false") return d === arg;
