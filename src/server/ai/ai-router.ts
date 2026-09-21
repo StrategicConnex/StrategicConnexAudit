@@ -452,6 +452,8 @@ export async function callAIWithFallback(
 
   // Telemetría P0-1: una fila en ai_usage por llamada, fire-and-forget.
   // Sprint 1: prompt_version (#18) + tokens/coste (#17) viajan en cada fila.
+  // Sprint 2: se registra TAMBIÉN con userId null (sweeps/crons) — sin la
+  // atribución de cuota, pero visible en el dashboard de coste (/ai/health).
   const pVersion = promptVersion(messages);
   const track = (partial: {
     modelUsed: string;
@@ -461,9 +463,9 @@ export async function callAIWithFallback(
     usage?: AIUsageInfo | null;
   }): AIResponse & { error?: string } => {
     const latencyMs = Date.now() - startTime;
-    if (options.userId) {
+    {
       void recordAiUsage({
-        userId: options.userId,
+        userId: options.userId ?? null,
         taskType,
         modelUsed: partial.modelUsed,
         latencyMs,
@@ -574,9 +576,9 @@ export async function callAIWithFallback(
           `[attempt ${i + 1}/${modelChain.length}]`
       );
 
-      if (options.userId) {
+      {
         void recordAiUsage({
-          userId: options.userId,
+          userId: options.userId ?? null,
           taskType,
           modelUsed: modelId!,
           latencyMs,
@@ -618,9 +620,9 @@ export async function callAIWithFallback(
         timeoutMs: 30_000,
       });
       const latencyMs = Date.now() - startTime;
-      if (options.userId) {
+      {
         void recordAiUsage({
-          userId: options.userId,
+          userId: options.userId ?? null,
           taskType,
           modelUsed: alt.modelUsed,
           latencyMs,

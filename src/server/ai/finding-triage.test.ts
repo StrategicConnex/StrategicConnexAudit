@@ -134,7 +134,7 @@ describe("runFindingTriage", () => {
     expect(setPayloads).toHaveLength(1);
     const payload = setPayloads[0]! as { aiTriage: Record<string, unknown> };
     expect(payload.aiTriage).toMatchObject({ severity: "critical", mitreId: "T1190", cweId: "CWE-89" });
-    expect(payload.aiTriage.promptVersion).toBe(1);
+    expect(payload.aiTriage.promptVersion).toBe(2); // v2: json_object (matriz en vivo)
     expect(r.updated).toBe(1);
   });
 

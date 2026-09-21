@@ -26,7 +26,7 @@ import { getNoApiKeyResponse } from "./ai-router";
  * timeouts, key ausente en su momento).
  */
 
-export const FINDING_TRIAGE_PROMPT_VERSION = 1;
+export const FINDING_TRIAGE_PROMPT_VERSION = 2; // v2: json_object tras matriz en vivo 2026-09-20
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -157,12 +157,20 @@ export async function runFindingTriage(
     return { processed: 0, failed: 0, modelUsed: null, updated: 0 };
   }
 
-  // 2. Llamada IA con json_schema nativo (cadena JSON-crítica).
+  // 2. Llamada IA (cadena JSON-crítica).
+  // Matriz en vivo 2026-09-20 (producción): `json_schema` estricto con
+  // require_parameters → 404 "No endpoints found" en TODOS los :free; y
+  // nemotron-ultra 404 directo con json_schema. Con `json_object`:
+  // nemotron-ultra devuelve JSON parseable 100%. La validación Zod estricta
+  // es la barrera real de calidad (defensa en profundidad tras json_object).
   const system =
     `Eres un analista de ciberseguridad senior. Clasificas hallazgos con severidad calibrada, ` +
     `CVSS estimado, mapeo MITRE ATT&CK/CWE e impacto de negocio claro. Respondes ÚNICAMENTE con JSON ` +
     `que cumpla el schema; nunca inventas ids que no te hayan dado.`;
-  const user = buildTriagePrompt(pending);
+  const user =
+    buildTriagePrompt(pending) +
+    `\nFORMATO EXACTO de respuesta (JSON único, sin markdown):
+{"triage":[{"findingId":"…","severity":"high","cvssScore":8.6,"mitreId":"T1190","cweId":"CWE-79","businessImpact":"…","remediation":["…"]}]}`;
 
   let res;
   try {
@@ -174,11 +182,7 @@ export async function runFindingTriage(
       ],
       temperature: 0.2,
       maxTokens: 8000,
-      responseFormat: {
-        type: "json_schema",
-        name: "finding_triage",
-        schema: TRIAGE_JSON_SCHEMA as unknown as Record<string, unknown>,
-      },
+      responseFormat: { type: "json_object" },
       userId: opts.userId ?? null,
       cacheScope: `triage:${projectId}`,
     });
