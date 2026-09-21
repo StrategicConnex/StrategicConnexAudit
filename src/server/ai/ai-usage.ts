@@ -21,6 +21,10 @@ export interface AiUsageEntry {
   latencyMs?: number | null;
   success: boolean;
   fromCache?: boolean;
+  /** Coste estimado USD de la llamada (Sprint 1, #17; 0 para :free). */
+  costUsd?: number | null;
+  /** Hash de versión del prompt (Sprint 1, #18). */
+  promptVersion?: string | null;
 }
 
 type InsertableDb = {
@@ -46,6 +50,8 @@ export async function recordAiUsage(
         latencyMs: entry.latencyMs ?? null,
         success: entry.success,
         fromCache: entry.fromCache ?? false,
+        costUsd: entry.costUsd ?? null,
+        promptVersion: entry.promptVersion ?? null,
       });
       return;
     }
@@ -60,6 +66,8 @@ export async function recordAiUsage(
       latencyMs: entry.latencyMs ?? null,
       success: entry.success,
       fromCache: entry.fromCache ?? false,
+      costUsd: entry.costUsd ?? null,
+      promptVersion: entry.promptVersion ?? null,
     });
   } catch {
     // Silencio deliberado: la telemetría nunca rompe la respuesta al usuario.

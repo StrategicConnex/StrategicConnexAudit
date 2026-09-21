@@ -23,6 +23,8 @@ export interface ProviderTextRequest {
 export interface ProviderTextResult {
   content: string | null;
   modelUsed: string;
+  /** Usage del proveedor (Sprint 1, idea #17); null si no lo reporta. */
+  usage?: { tokensIn: number | null; tokensOut: number | null } | null;
 }
 
 /** Modelo barato por defecto; sobreescribible con ANTHROPIC_MODEL. */
@@ -99,5 +101,11 @@ export async function callAnthropicText(req: ProviderTextRequest): Promise<Provi
   if (!text) {
     throw new Error(`Respuesta vacía de Anthropic (${req.model})`);
   }
-  return { content: text, modelUsed: `anthropic/${req.model}` };
+  const usage = data?.usage
+    ? {
+        tokensIn: typeof data.usage.input_tokens === "number" ? data.usage.input_tokens : null,
+        tokensOut: typeof data.usage.output_tokens === "number" ? data.usage.output_tokens : null,
+      }
+    : null;
+  return { content: text, modelUsed: `anthropic/${req.model}`, usage };
 }

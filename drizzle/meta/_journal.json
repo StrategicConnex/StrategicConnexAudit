@@ -239,6 +239,13 @@
       "when": 1788720001006,
       "tag": "0033_dated_parity",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1788720002006,
+      "tag": "0034_ai_cost_and_prompt_version",
+      "breakpoints": true
     }
   ]
 }

@@ -13,7 +13,7 @@
  */
 
 import {
-  pgTable, uuid, text, timestamp, integer, boolean,
+  pgTable, uuid, text, timestamp, integer, boolean, doublePrecision,
   jsonb, index
 } from "drizzle-orm/pg-core";
 import { projects } from "./index";
@@ -98,10 +98,17 @@ export const aiUsage = pgTable("ai_usage", {
   /** true = servido desde caché (no consumió cuota del proveedor) */
   fromCache: boolean("from_cache").notNull().default(false),
 
+  /** Coste estimado USD de la llamada (Sprint 1 #17; 0/nulo para :free). */
+  costUsd: doublePrecision("cost_usd"),
+
+  /** Hash de versión del prompt (Sprint 1 #18; evals reproducibles). */
+  promptVersion: text("prompt_version"),
+
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
   index("idx_ai_usage_user_created").on(t.userId, t.createdAt),
   index("idx_ai_usage_task_created").on(t.taskType, t.createdAt),
+  index("idx_ai_usage_prompt_version").on(t.promptVersion),
 ]);
 
 /**

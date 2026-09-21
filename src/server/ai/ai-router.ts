@@ -17,6 +17,8 @@ import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
 import { recordAiUsage } from "./ai-usage";
 import { buildSemanticKey, getSemanticCache, setSemanticCache } from "./ai-cache";
 import { callAnthropicText, anthropicDefaultModel, isAnthropicConfigured } from "./providers";
+import { estimateCostUsd } from "./ai-cost";
+import { promptVersion } from "./prompt-version";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -288,10 +290,18 @@ const openRouterCircuitBreaker = new RedisCircuitBreaker("openrouter_api", {
  * Supports both the openrouter/free meta-model router and individual
  * :free model slugs. Both work with a free API key (no billing required).
  */
+/** Usage reportado por el proveedor (formato OpenAI: prompt_tokens/completion_tokens). */
+export interface AIUsageInfo {
+  tokensIn: number | null;
+  tokensOut: number | null;
+}
+
 interface RawAssistantMessage {
   role?: "assistant";
   content: string | null;
   tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>;
+  /** Usage real del proveedor cuando lo reporta (Sprint 1 #17). */
+  usage?: AIUsageInfo | null;
 }
 
 async function callModel(
@@ -380,6 +390,13 @@ async function callModel(
 
   const data = await response.json();
   const message = data.choices?.[0]?.message;
+  // Usage real del proveedor (idea #17): los :free no siempre lo reportan.
+  const usage = data.usage
+    ? {
+        tokensIn: typeof data.usage.prompt_tokens === "number" ? data.usage.prompt_tokens : null,
+        tokensOut: typeof data.usage.completion_tokens === "number" ? data.usage.completion_tokens : null,
+      }
+    : null;
 
   // Upstream puede devolver HTTP 200 con el error EMBEBIDO (visto con Nvidia:
   // {"error":{...code:502}}) — tratarlo como fallo del modelo para que la
@@ -393,7 +410,7 @@ async function callModel(
     );
   }
 
-  return message as RawAssistantMessage;
+  return { ...(message as RawAssistantMessage), usage };
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
@@ -423,11 +440,14 @@ export async function callAIWithFallback(
   const useTools = !!options.tools && options.tools.length > 0;
 
   // Telemetría P0-1: una fila en ai_usage por llamada, fire-and-forget.
+  // Sprint 1: prompt_version (#18) + tokens/coste (#17) viajan en cada fila.
+  const pVersion = promptVersion(messages);
   const track = (partial: {
     modelUsed: string;
     success: boolean;
     fromCache?: boolean;
     error?: string;
+    usage?: AIUsageInfo | null;
   }): AIResponse & { error?: string } => {
     const latencyMs = Date.now() - startTime;
     if (options.userId) {
@@ -438,6 +458,10 @@ export async function callAIWithFallback(
         latencyMs,
         success: partial.success,
         fromCache: partial.fromCache,
+        tokensIn: partial.usage?.tokensIn ?? null,
+        tokensOut: partial.usage?.tokensOut ?? null,
+        costUsd: estimateCostUsd(partial.modelUsed, partial.usage?.tokensIn, partial.usage?.tokensOut),
+        promptVersion: pVersion,
       });
     }
     return {
@@ -501,6 +525,33 @@ export async function callAIWithFallback(
         arguments: tc.function.arguments,
       }));
 
+      // ── Self-healing JSON (Sprint 1, idea #15) ─────────────────────────
+      // En tareas JSON-críticas, un JSON roto del modelo es tan fallo como
+      // un timeout: reintentar al MISMO modelo inyectando el error de parseo
+      // (el modelo corrige con contexto) antes de saltar al siguiente.
+      const wantsJson = !!options.responseFormat;
+      if (wantsJson && !toolCalls?.length) {
+        const parseError = tryParseJson(message.content ?? "");
+        if (parseError) {
+          const retried = await tryJsonSelfHeal(
+            modelId!,
+            messages,
+            message.content ?? "",
+            parseError,
+            temperature,
+            maxTokens,
+            timeoutMs,
+            options
+          );
+          if (retried) {
+            return finalizeSuccess(retried.content, retried.usage, modelId!, latencyMs);
+          }
+          // Sin éxito en el reintento: caer al siguiente modelo de la cadena.
+          errors.push(`[${modelId}] JSON inválido tras self-heal: ${parseError.slice(0, 120)}`);
+          continue;
+        }
+      }
+
       // Cache solo respuestas de contenido puro sin tools
       if (!useTools && !toolCalls?.length) {
         void setSemanticCache(cacheKey, message.content ?? "", modelId!, taskType);
@@ -519,6 +570,10 @@ export async function callAIWithFallback(
           modelUsed: modelId!,
           latencyMs,
           success: true,
+          tokensIn: message.usage?.tokensIn ?? null,
+          tokensOut: message.usage?.tokensOut ?? null,
+          costUsd: estimateCostUsd(modelId!, message.usage?.tokensIn, message.usage?.tokensOut),
+          promptVersion: pVersion,
         });
       }
 
@@ -559,6 +614,10 @@ export async function callAIWithFallback(
           modelUsed: alt.modelUsed,
           latencyMs,
           success: true,
+          tokensIn: alt.usage?.tokensIn ?? null,
+          tokensOut: alt.usage?.tokensOut ?? null,
+          costUsd: estimateCostUsd(alt.modelUsed, alt.usage?.tokensIn, alt.usage?.tokensOut),
+          promptVersion: pVersion,
         });
       }
       void setSemanticCache(cacheKey, alt.content ?? "", alt.modelUsed, taskType);
@@ -581,6 +640,116 @@ export async function callAIWithFallback(
     success: false,
     error: `Todos los modelos de IA fallaron:\n${errors.join("\n")}`,
   });
+}
+
+// ─── Self-healing JSON (Sprint 1, idea #15) ─────────────────────────────────
+
+/**
+ * Intenta parsear JSON; retorna el mensaje de error de parseo o null si es
+ * válido. Los modelos a veces envuelven el JSON en markdown o texto: se
+ * acepta el primer bloque {...} balanceado (comportamiento ya asumido por
+ * los callers con extractJson).
+ */
+function tryParseJson(content: string): string | null {
+  const trimmed = content.trim();
+  // Intento directo primero.
+  let directError: string = "JSON inválido";
+  try {
+    JSON.parse(trimmed);
+    return null;
+  } catch (e) {
+    directError = e instanceof Error ? e.message : "JSON inválido";
+  }
+  // Extracción del primer objeto/array balanceado (tolera fences markdown).
+  const start = trimmed.search(/[{\[]/);
+  if (start === -1) return "no contiene JSON";
+  const open = trimmed[start];
+  const close = open === "{" ? "}" : "]";
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < trimmed.length; i++) {
+    const ch = trimmed[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === open) depth++;
+    else if (ch === close) {
+      depth--;
+      if (depth === 0) {
+        const candidate = trimmed.slice(start, i + 1);
+        try {
+          JSON.parse(candidate);
+          return null;
+        } catch {
+          return directError.slice(0, 200);
+        }
+      }
+    }
+  }
+  return "JSON sin cerrar";
+}
+
+/**
+ * Reintento de autocorrección: re-pide al MISMO modelo con el JSON roto y
+ * el error de parseo como feedback. Máx 1 intento. null = reintento falló.
+ */
+async function tryJsonSelfHeal(
+  modelId: string,
+  originalMessages: AIMessage[],
+  brokenContent: string,
+  parseError: string,
+  temperature: number,
+  maxTokens: number,
+  timeoutMs: number,
+  options: AIRequestOptions
+): Promise<{ content: string; usage: AIUsageInfo | null } | null> {
+  try {
+    const repairMessages: AIMessage[] = [
+      ...originalMessages,
+      {
+        role: "assistant",
+        content: brokenContent.slice(0, 4000),
+      },
+      {
+        role: "user",
+        content:
+          `Tu respuesta anterior no es JSON válido. Error de parseo: ${parseError}. ` +
+          `Devuelve ÚNICAMENTE el JSON corregido, empezando por { y terminando por }, ` +
+          `sin markdown ni texto adicional.`,
+      },
+    ];
+    const message = await callModel(modelId, repairMessages, temperature, maxTokens, timeoutMs, {
+      responseFormat: options.responseFormat,
+    });
+    const retryError = tryParseJson(message.content ?? "");
+    if (!retryError) {
+      console.log(`[AI Router] JSON self-heal OK en ${modelId} (error original: ${parseError.slice(0, 80)})`);
+      return { content: message.content ?? "", usage: message.usage ?? null };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Éxito compartido por el camino normal y el self-heal (telemetría única). */
+function finalizeSuccess(
+  content: string,
+  usage: AIUsageInfo | null,
+  modelId: string,
+  latencyMs: number
+): AIResponse {
+  return {
+    success: true,
+    content,
+    modelUsed: modelId,
+    latencyMs,
+  };
 }
 
 // ─── Bucle agéntico (function calling con handlers reales) ──────────────────

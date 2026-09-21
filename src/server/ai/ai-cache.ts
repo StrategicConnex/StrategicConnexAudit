@@ -32,6 +32,9 @@ const memory = new Map<string, { content: string; modelId: string; expiresAt: nu
 type RedisLike = {
   get: (key: string) => Promise<string | object | null>;
   set: (key: string, value: string, opts?: { ex?: number }) => Promise<unknown>;
+  /** Opcionales para la invalidación por scope (SCAN + DEL). */
+  scan?: (cursor: string, opts: { MATCH: string; COUNT: number }) => Promise<[string, string[]]>;
+  del?: (...keys: string[]) => Promise<unknown>;
 };
 
 let redisClient: RedisLike | null | undefined;
@@ -47,7 +50,7 @@ function getRedis(): RedisLike | null {
     // Import perezoso: no arrastrar el SDK si no hay credenciales.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Redis } = require("@upstash/redis") as typeof import("@upstash/redis");
-    redisClient = new Redis({ url, token }) as RedisLike;
+    redisClient = new Redis({ url, token }) as unknown as RedisLike;
   } catch {
     redisClient = null;
   }
@@ -70,7 +73,36 @@ export function ttlFor(taskType: AITaskType): number {
   return TTL_BY_TASK[taskType] ?? 3600;
 }
 
+/**
+ * Métricas de hit-rate (Sprint 1, idea #16). Contador en memoria por
+ * instancia; el dashboard /ai/health muestra el ratio agregado. Los contadores
+ * viven por proceso (serverless: vida corta) — orientativos, no facturables.
+ */
+const metrics = { hits: 0, misses: 0 };
+
+export function cacheMetrics(): { hits: number; misses: number; hitRate: number | null } {
+  const total = metrics.hits + metrics.misses;
+  return {
+    hits: metrics.hits,
+    misses: metrics.misses,
+    hitRate: total === 0 ? null : metrics.hits / total,
+  };
+}
+
+/** Reset de contadores (tests / ventanas de medición). */
+export function resetCacheMetrics(): void {
+  metrics.hits = 0;
+  metrics.misses = 0;
+}
+
 export async function getSemanticCache(key: string): Promise<CacheHit | null> {
+  const hit = await lookupSemanticCache(key);
+  if (hit) metrics.hits++;
+  else metrics.misses++;
+  return hit;
+}
+
+async function lookupSemanticCache(key: string): Promise<CacheHit | null> {
   const now = Date.now();
   const mem = memory.get(key);
   if (mem && mem.expiresAt > now) {
@@ -109,4 +141,39 @@ export async function setSemanticCache(
   } catch {
     // Miss silencioso en escritura: L1 sigue sirviendo.
   }
+}
+
+/**
+ * Invalida la caché por ámbito (Sprint 1, idea #16): cuando entra un scan
+ * nuevo de un proyecto, el caller pasa su cacheScope para que los resúmenes
+ * cacheados (p.ej. exec-brief de 24h) nunca sirvan datos stale.
+ *
+ * Borra L1 (memoria) y L2 (Redis SCAN+DEL). Retorna las claves eliminadas.
+ * Falla en silencio: la invalidación nunca rompe al caller.
+ */
+export async function invalidateCacheScope(taskType: AITaskType, scope: string): Promise<number> {
+  const prefix = `ai:${taskType}:${scope}`;
+  let deleted = 0;
+  for (const key of Array.from(memory.keys())) {
+    if (key.startsWith(prefix)) {
+      memory.delete(key);
+      deleted++;
+    }
+  }
+  const redis = getRedis();
+  if (!redis?.scan || !redis.del) return deleted;
+  try {
+    let cursor = "0";
+    do {
+      const [next, keys] = await redis.scan(cursor, { MATCH: `${prefix}*`, COUNT: 100 });
+      cursor = next;
+      if (keys.length > 0) {
+        await redis.del(...keys);
+        deleted += keys.length;
+      }
+    } while (cursor !== "0");
+  } catch {
+    // L1 ya quedó invalidada; L2 expirará por TTL.
+  }
+  return deleted;
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { directDb } from "@/shared/db";
-import { aiHealthLogs } from "@/shared/db/schemas/health";
+import { aiHealthLogs, aiUsage } from "@/shared/db/schemas/health";
 import { desc, gte, sql } from "drizzle-orm";
 import { assertPlatformAdmin } from "@/server/auth/admin";
 
@@ -202,5 +202,57 @@ export async function getLatestHealthCheck(): Promise<HealthCheckRecord | null> 
     };
   } catch {
     return null;
+  }
+}
+
+export type TaskCostBreakdown = {
+  taskType: string;
+  calls: number;
+  successCalls: number;
+  cacheHits: number;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  avgLatencyMs: number | null;
+};
+
+/**
+ * Desglose de coste/uso por task type (Sprint 1, idea #17): qué feature
+ * consume qué. Agrega los últimos `days` días de ai_usage. Los contadores
+ * de éxito/cache/tokens se calculan en SQL; el coste se suma numéricamente
+ * tras traerlo (double precision + sum() en drizzle: cast a string).
+ */
+export async function getTaskCostBreakdown(days = 7): Promise<TaskCostBreakdown[]> {
+  await assertPlatformAdmin();
+  try {
+    const since = new Date(Date.now() - days * 86_400_000);
+    const rows = await directDb
+      .select({
+        taskType: aiUsage.taskType,
+        calls: sql<number>`count(*)`,
+        successCalls: sql<number>`sum(case when ${aiUsage.success} then 1 else 0 end)`,
+        cacheHits: sql<number>`sum(case when ${aiUsage.fromCache} then 1 else 0 end)`,
+        tokensIn: sql<number>`coalesce(sum(${aiUsage.tokensIn}), 0)`,
+        tokensOut: sql<number>`coalesce(sum(${aiUsage.tokensOut}), 0)`,
+        costUsd: sql<number>`coalesce(sum(${aiUsage.costUsd}), 0)`,
+        avgLatencyMs: sql<number | null>`avg(${aiUsage.latencyMs})`,
+      })
+      .from(aiUsage)
+      .where(gte(aiUsage.createdAt, since))
+      .groupBy(aiUsage.taskType)
+      .orderBy(sql`coalesce(sum(${aiUsage.costUsd}), 0) desc, count(*) desc`);
+
+    return rows.map((r) => ({
+      taskType: r.taskType,
+      calls: Number(r.calls),
+      successCalls: Number(r.successCalls),
+      cacheHits: Number(r.cacheHits),
+      tokensIn: Number(r.tokensIn),
+      tokensOut: Number(r.tokensOut),
+      costUsd: Number(r.costUsd),
+      avgLatencyMs: r.avgLatencyMs != null ? Math.round(Number(r.avgLatencyMs)) : null,
+    }));
+  } catch {
+    return [];
   }
 }

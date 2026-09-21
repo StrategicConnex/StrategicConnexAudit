@@ -8,7 +8,7 @@ import {
   Legend, PieChart, Pie, Cell,
 } from "recharts";
 import { useChartColors } from "@/shared/design-system";
-import type { HealthCheckRecord, DailyAggregate, ModelHealthSummary } from "./actions";
+import type { HealthCheckRecord, DailyAggregate, ModelHealthSummary, TaskCostBreakdown } from "./actions";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +17,7 @@ interface Props {
   daily: DailyAggregate[];
   models: ModelHealthSummary[];
   latest: HealthCheckRecord | null;
+  taskCosts: TaskCostBreakdown[];
 }
 
 // ─── Colors — theme-aware (tokens CSS leídos vía useChartColors) ───────────────
@@ -492,9 +493,80 @@ function FailureList({ recent }: { recent: HealthCheckRecord[] }) {
   );
 }
 
+// ─── Task Cost Breakdown (Sprint 1, idea #17) ───────────────────────────────
+
+function fmtUsd(n: number): string {
+  if (n === 0) return "$0";
+  if (n < 0.01) return `$${n.toFixed(4)}`;
+  return `$${n.toFixed(2)}`;
+}
+
+function TaskCostTable({ taskCosts }: { taskCosts: TaskCostBreakdown[] }) {
+  if (taskCosts.length === 0) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-6 flex items-center justify-center text-muted-foreground text-sm">
+        <div className="text-center">
+          <span className="text-2xl block mb-2">💰</span>
+          Sin uso de IA registrado en los últimos 7 días
+        </div>
+      </div>
+    );
+  }
+  const totalCost = taskCosts.reduce((acc, t) => acc + t.costUsd, 0);
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <h3 className="text-sm font-bold text-foreground">Coste por Feature (7 días)</h3>
+        <span className="text-2xs text-muted-foreground">total estimado {fmtUsd(totalCost)}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="text-left p-3 font-semibold">Task</th>
+              <th className="text-right p-3 font-semibold">Llamadas</th>
+              <th className="text-right p-3 font-semibold">Éxito</th>
+              <th className="text-right p-3 font-semibold">Cache</th>
+              <th className="text-right p-3 font-semibold">Tokens in</th>
+              <th className="text-right p-3 font-semibold">Tokens out</th>
+              <th className="text-right p-3 font-semibold">Coste est.</th>
+              <th className="text-right p-3 font-semibold">Latencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {taskCosts.map((t) => {
+              const hitRate = t.calls > 0 ? ((t.cacheHits / t.calls) * 100).toFixed(0) : "0";
+              return (
+                <tr key={t.taskType} className="border-b border-border hover:bg-surface-muted transition-colors">
+                  <td className="p-3 font-mono text-2xs">{t.taskType}</td>
+                  <td className="p-3 text-right">{t.calls}</td>
+                  <td className="p-3 text-right text-chartreuse">
+                    {t.calls > 0 ? `${((t.successCalls / t.calls) * 100).toFixed(0)}%` : "—"}
+                  </td>
+                  <td className="p-3 text-right text-muted-foreground" title="hit-rate de caché">
+                    {hitRate}%
+                  </td>
+                  <td className="p-3 text-right">{t.tokensIn.toLocaleString("es")}</td>
+                  <td className="p-3 text-right">{t.tokensOut.toLocaleString("es")}</td>
+                  <td className={`p-3 text-right font-medium ${t.costUsd > 0 ? "text-chart-warning" : "text-muted-foreground"}`}>
+                    {fmtUsd(t.costUsd)}
+                  </td>
+                  <td className="p-3 text-right">
+                    {t.avgLatencyMs != null ? <>{t.avgLatencyMs}<span className="text-muted-foreground">ms</span></> : "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 
-export function AiHealthDashboardClient({ recent, daily, models, latest }: Props) {
+export function AiHealthDashboardClient({ recent, daily, models, latest, taskCosts }: Props) {
   const colors = useChartColors();
 
   const failRate = latest && latest.modelsTotal > 0
@@ -581,6 +653,9 @@ export function AiHealthDashboardClient({ recent, daily, models, latest }: Props
 
       {/* Recent Checks Table */}
       <RecentChecksTable recent={recent} />
+
+      {/* Task Cost Breakdown (Sprint 1, idea #17) */}
+      <TaskCostTable taskCosts={taskCosts} />
     </div>
   );
 }
