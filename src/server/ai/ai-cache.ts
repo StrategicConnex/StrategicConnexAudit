@@ -23,6 +23,14 @@ const TTL_BY_TASK: Record<AITaskType, number> = {
   // El triage es determinista por evidencia: si la evidencia no cambia,
   // la respuesta tampoco. 6h equilibra frescura y llamadas.
   "finding-triage": 6 * 3600,
+  // Resumen ejecutivo: invariante mientras no cambie la auditoría de origen
+  // (el scope incluye su fecha), pero se pide tras cada fallo de trigger →
+  // ventana generosa de 24h.
+  "exec-brief": 24 * 3600,
+  // Narración de alertas: el evento que narra es efímero (timestamp dentro
+  // de los mensajes) → cada alerta es única de facto; TTL bajo solo anti-
+  // reintentos duplicados del dispatcher.
+  "narrated-alert": 5 * 60,
 };
 
 export interface CacheHit {

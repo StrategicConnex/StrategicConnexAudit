@@ -34,7 +34,9 @@ export type AITaskType =
   | "seo-report"
   | "adversary-analysis"
   | "anomaly-narrative"
-  | "finding-triage";
+  | "finding-triage"
+  | "exec-brief"
+  | "narrated-alert";
 
 // ─── Tools / Structured Outputs (OpenRouter, estándar OpenAI) ────────────────
 
@@ -248,6 +250,23 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
     "nvidia/nemotron-3-ultra-550b-a55b:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   ],
+  // Resumen ejecutivo: salida JSON (headline/summary/topRisks/nextSteps)
+  // consumida con json_object (mismo criterio del triage del Sprint 2:
+  // json_schema estricto sin proveedores :free hoy). Misma cadena verificada
+  // en vivo que finding-triage. Corre en Trigger.dev (post-audit).
+  "exec-brief": [
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  ],
+  // Narración de alertas: texto libre corto (2-4 frases en español),
+  // identidad del modelo irrelevante → cadena con router, igual que
+  // anomaly-narrative. Corre en Trigger.dev (dispatch-webhook-task).
+  "narrated-alert": [
+    FREE_META_MODEL,
+    "cohere/north-mini-code:free",
+    "nex-agi/nex-n2.5-pro:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  ],
 };
 
 /**
@@ -277,6 +296,10 @@ export const MODEL_TIMEOUTS: Record<AITaskType, number> = {
   // Corre dentro de Trigger.dev (como adversary-analysis): triage de hasta 40
   // findings en un JSON largo.
   "finding-triage": 60_000,
+  // Trigger.dev (post-audit): JSON ejecutivo completo en una generación.
+  "exec-brief": 60_000,
+  // Trigger.dev (dispatch-webhook): narración de 2-4 frases, presupuesto de chat.
+  "narrated-alert": 20_000,
 };
 
 // ─── Caché semántica (P1-3) ─────────────────────────────────────────────────
@@ -985,6 +1008,25 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
       "La clave de OpenRouter (`OPENROUTER_API_KEY`) no está configurada.\n" +
       "Los hallazgos se guardaron sin triage IA (severidad sugerida, mapeo MITRE)\n" +
       "y aparecerán con la clasificación cruda del detector.",
+  },
+  "exec-brief": {
+    en:
+      "## ⚠️ Executive Brief — AI Disabled\n\n" +
+      "The OpenRouter API key (`OPENROUTER_API_KEY`) is not configured.\n" +
+      "Review the latest audit results directly in the technical findings section.",
+    es:
+      "## ⚠️ Resumen Ejecutivo — IA Deshabilitada\n\n" +
+      "La clave de OpenRouter (`OPENROUTER_API_KEY`) no está configurada.\n" +
+      "Consulte los resultados de la última auditoría directamente en la sección\n" +
+      "de hallazgos técnicos.",
+  },
+  "narrated-alert": {
+    en:
+      "New alert on your project. Open the dashboard to review the details " +
+      "and recommended actions.",
+    es:
+      "Nueva alerta en su proyecto. Abra el panel para revisar los detalles " +
+      "y las acciones recomendadas.",
   },
 };
 

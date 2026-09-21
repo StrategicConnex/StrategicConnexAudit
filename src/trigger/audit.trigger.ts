@@ -7,6 +7,7 @@ import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/eg
 import { logger } from "@/lib/logger";
 import { invalidateCacheScope } from "@/server/ai/ai-cache";
 import type { triageAfterAudit } from "./finding-triage.trigger";
+import type { execBriefAfterAudit } from "./exec-brief.trigger";
 
 logger.info("[Trigger Module] audit.trigger.ts cargado correctamente.");
 logger.info("[Trigger Module] DATABASE_URL presente:", !!process.env.DATABASE_URL);
@@ -326,6 +327,22 @@ export const runProjectAudit = task({
         logger.warn(
           `[Worker] No se pudo encolar el triage post-audit: ${
             triageErr instanceof Error ? triageErr.message : String(triageErr)
+          }`
+        );
+      }
+
+      // 8. Resumen ejecutivo post-audit (Sprint 3): fire-and-forget igual que
+      //    el triage. La IA redacta el briefing no técnico que verá el cliente
+      //    en el portal; la auditoría ya está completada y no depende de esto.
+      try {
+        await tasks.trigger<typeof execBriefAfterAudit>("exec-brief-after-audit", {
+          projectId: payload.projectId,
+          userId: payload.userId ?? null,
+        });
+      } catch (briefErr) {
+        logger.warn(
+          `[Worker] No se pudo encolar el resumen ejecutivo post-audit: ${
+            briefErr instanceof Error ? briefErr.message : String(briefErr)
           }`
         );
       }

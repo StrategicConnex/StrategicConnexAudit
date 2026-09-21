@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Activity } from "lucide-react";
 import { directDb } from "@/shared/db";
-import { projects, uptimeLogs, audits, issues, aiReportJobs } from "@/shared/db/schemas";
-import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { projects, uptimeLogs, audits, issues, aiReportJobs, execBriefs } from "@/shared/db/schemas";
+import { and, count, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { verifyPortalToken } from "@/server/lib/portal-tokens";
 import { ClientScoreCard } from "@/components/ClientScoreCard";
 import { TrendChart, type TrendPoint } from "@/components/TrendChart";
@@ -11,6 +11,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { AuditStatusBadge } from "@/components/ui/AuditStatusBadge";
 import { Card } from "@/components/ui/Card";
 import { PortalPdfButton } from "./components/PortalPdfButton";
+import { ExecBriefSection } from "./components/ExecBriefSection";
 import { healthScoreFor } from "@/components/issue-impact";
 import { CATEGORY_LABELS } from "@/components/IssueList";
 
@@ -152,6 +153,18 @@ export default async function ClientPortalPage({
     columns: { id: true, createdAt: true, isFallback: true },
   });
 
+  // Resumen ejecutivo IA (Sprint 3): fila viva del proyecto (replaced_at IS
+  // NULL). Sin brief → la sección no se renderiza.
+  const [brief] = await directDb
+    .select({
+      content: execBriefs.content,
+      isFallback: execBriefs.isFallback,
+      createdAt: execBriefs.createdAt,
+    })
+    .from(execBriefs)
+    .where(and(eq(execBriefs.projectId, project.id), isNull(execBriefs.replacedAt)))
+    .limit(1);
+
   return (
     <div className="min-h-dvh w-full bg-background text-foreground">
       <div id="portal-export-content" className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16 space-y-8">
@@ -172,6 +185,12 @@ export default async function ClientPortalPage({
           overallLabel={`Salud SEO de ${brandName}`}
           categories={catScores}
           accent={accent}
+        />
+
+        <ExecBriefSection
+          content={brief?.content ?? null}
+          isFallback={brief?.isFallback ?? false}
+          updatedAt={brief?.createdAt ?? null}
         />
 
         <Card className="p-6 sm:p-8">
