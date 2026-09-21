@@ -5,15 +5,9 @@ import { directDb } from "@/shared/db";
 import { projectInvitations, projectMembers, teamAuditLogs } from "@/shared/db/schemas";
 import { logger } from "@/lib/logger";
 import type { ProjectRole } from "@/server/auth/rbac";
+import { appUrl } from "@/shared/lib/app-url";
 
 const INVITE_TTL_DAYS = 7;
-
-function appUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
-  );
-}
 
 /**
  * Envía la invitación por email vía Resend directo. Si no hay RESEND_API_KEY,

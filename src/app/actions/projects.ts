@@ -9,6 +9,7 @@ import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { requireProjectPermission } from "@/server/lib/project-access";
 import { validateSafeUrl } from "@/server/intelligence/security/egress-guard";
+import { appUrl } from "@/shared/lib/app-url";
 
 const CreateProjectSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
@@ -197,12 +198,11 @@ export const createPortalLink = authenticatedAction(
   DeactivateSchema,
   async ({ projectId }, { user }) => {
     const denied = await requireProjectPermission(user.id, projectId, "project:update");
-    if (denied) return { error: denied };
-    const { signPortalToken } = await import("@/server/lib/portal-tokens");
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    return { success: true as const, url: `${appUrl}/p/${signPortalToken(projectId)}` };
+    if (denied) return { error: denied };    const { signPortalToken } = await import("@/server/lib/portal-tokens");
+    // appUrl() prefiere el dominio estable de producción: VERCEL_URL puede
+    // tener Vercel Authentication (SSO) y mostraría login al cliente.
+    const url = `${appUrl()}/p/${signPortalToken(projectId)}`;
+    return { success: true as const, url };
   }
 );
 
