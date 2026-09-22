@@ -1,29 +1,37 @@
-allowBuilds:
-  '@parcel/watcher': set this to true or false
-  '@scarf/scarf': set this to true or false
-  '@swc/core': set this to true or false
-  '@tree-sitter-grammars/tree-sitter-yaml': set this to true or false
-  core-js: set this to true or false
-  core-js-pure: set this to true or false
-  esbuild: set this to true or false
-  msw: set this to true or false
-  tree-sitter: set this to true or false
-  tree-sitter-json: set this to true or false
-  unrs-resolver: set this to true or false
-
 # Ajustes de pnpm (v10+ los lee de aquí, no de package.json#pnpm).
-# Vercel usa pnpm 10.x: también soporta pnpm-workspace.yaml.
+#
+# Compatibilidad:
+#   - pnpm 10 (Vercel): usa `onlyBuiltDependencies` (allowlist; lo no listado
+#     solo avisa, no falla).
+#   - pnpm 11/12 (CI / local): usa `allowBuilds`; lo NO aprobado es ERROR duro
+#     en install (ERR_PNPM_IGNORED_BUILDS).
+#
+# Ambas secciones deben mantenerse sincronizadas.
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@scarf/scarf': false # telemetría de instalación: no la aprobamos
+  '@swc/core': true
+  '@tree-sitter-grammars/tree-sitter-yaml': true
+  core-js: true
+  core-js-pure: true
+  esbuild: true
+  msw: true
+  tree-sitter: true
+  tree-sitter-json: true
+  unrs-resolver: true
 
 onlyBuiltDependencies:
-  - sharp
-  - unrs-resolver
-  - '@scarf/scarf'
-  - esbuild
-  - protobufjs
+  - '@parcel/watcher'
+  - '@swc/core'
+  - '@tree-sitter-grammars/tree-sitter-yaml'
   - core-js
-  - '@biomejs/biome'
-  - es5-ext
+  - core-js-pure
+  - esbuild
   - msw
+  - tree-sitter
+  - tree-sitter-json
+  - unrs-resolver
 
 # Parcheo de vulnerabilidades en dependencias transitivas (audit 2026-09-21).
 # Los rangos evitan tocar líneas no vulnerables (ej. brace-expansion@1.x de
