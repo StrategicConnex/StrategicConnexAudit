@@ -308,6 +308,39 @@ describe("keywords server actions", () => {
       expect(data.targets).toBe(1);
       expect(data.imported).toBe(0);
     });
+
+    it("resolves the existing target when the insert conflicts", async () => {
+      mockRequirePermission.mockResolvedValue(null);
+      txState.insertReturning = [];
+      txState.keywordTargetFindFirst = { id: KEYWORD_ID, projectId: PROJECT_ID, keyword: "seo" };
+
+      const result = await importKeywordCsv({
+        projectId: PROJECT_ID,
+        rows: [{ keyword: "seo", position: 7 }],
+      });
+
+      const data = result.data as { success: true; targets: number; imported: number };
+      expect(data.success).toBe(true);
+      expect(data.targets).toBe(1);
+      expect(data.imported).toBe(1);
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/");
+    });
+
+    it("skips rows that cannot resolve any target id", async () => {
+      mockRequirePermission.mockResolvedValue(null);
+      txState.insertReturning = [];
+      txState.keywordTargetFindFirst = null;
+
+      const result = await importKeywordCsv({
+        projectId: PROJECT_ID,
+        rows: [{ keyword: "ghost", position: 4 }],
+      });
+
+      const data = result.data as { success: true; targets: number; imported: number };
+      expect(data.success).toBe(true);
+      expect(data.targets).toBe(0);
+      expect(data.imported).toBe(0);
+    });
   });
 
   // ── addCompetitor ────────────────────────────────────────────────────────

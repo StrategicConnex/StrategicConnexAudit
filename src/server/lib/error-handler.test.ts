@@ -15,6 +15,7 @@ vi.mock("@/shared/lib/logger", () => ({
 
 import { handleApiError, withErrorHandler } from "./error-handler";
 import { AppError, NotFoundError, RateLimitError, ValidationError } from "./app-error";
+import { logger } from "@/shared/lib/logger";
 
 describe("handleApiError", () => {
   beforeEach(() => {
@@ -64,6 +65,35 @@ describe("handleApiError", () => {
   it("no Retry-After header for non-rate-limit errors", () => {
     const result = handleApiError(new AppError("x", "INTERNAL_ERROR", 500));
     expect(result.headers).toEqual({});
+  });
+
+  it("logs the error via logger.error with structured metadata", async () => {
+    handleApiError(new ValidationError("bad", { field: "x" }));
+    await vi.waitFor(() => {
+      expect(logger.error).toHaveBeenCalledTimes(1);
+    });
+    const arg = vi.mocked(logger.error).mock.calls[0]![0] as {
+      action: string;
+      metadata: { code: string; status: number };
+    };
+    expect(arg.action).toBe("API_ERROR_VALIDATION_ERROR");
+    expect(arg.metadata.code).toBe("VALIDATION_ERROR");
+    expect(arg.metadata.status).toBe(400);
+  });
+
+  it("falls back to console.error when logger.error rejects", async () => {
+    vi.mocked(logger.error).mockRejectedValueOnce(new Error("logger down"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    handleApiError(new AppError("boom", "INTERNAL_ERROR", 500));
+
+    await vi.waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[handleApiError] INTERNAL_ERROR 500:",
+        "boom",
+      );
+    });
+    consoleSpy.mockRestore();
   });
 });
 

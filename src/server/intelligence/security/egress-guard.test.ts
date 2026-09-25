@@ -183,7 +183,16 @@ describe("EgressGuard - SSRF and Private Network Protection Suite", () => {
   });
 
   describe("validateSafeUrl()", () => {
+    let networkReachable = false;
+
+    beforeAll(async () => {
+      networkReachable = await networkReachablePromise;
+    });
+
     it("should accept valid public URLs", async () => {
+      // DNS real (lookup de google.com) — mismo guard que los tests de red: si no
+      // hay resolución el lookup cuelga hasta el timeout del resolver (RSK-06).
+      if (!networkReachable) return;
       const url = "https://google.com";
       const res = await validateSafeUrl(url);
       expect(res).toBe(url);

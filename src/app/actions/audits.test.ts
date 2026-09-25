@@ -13,11 +13,17 @@ const { txState, ddState, selectCallCount } = vi.hoisted(() => ({
     recentAudits: null as null | unknown[],
     insertAudit: null as null | unknown[],
     selectJoin: null as null | unknown[],
+    throwOnWhereLimit: false,
   },
   ddState: {
     updateResult: null as null | unknown[],
     selectResult: null as null | unknown[],
     insertResult: null as null | unknown[],
+    localSelectResult: undefined as unknown[] | null | undefined,
+    updateCall: 0,
+    updateThrowOnCall: null as null | number,
+    updatedPayloads: [] as unknown[],
+    insertedPayloads: [] as unknown[],
   },
   selectCallCount: { count: 0 },
 }));
@@ -85,18 +91,37 @@ vi.mock("@/shared/db/rls", () => ({ withRLS: mockWithRLS }));
 vi.mock("@/shared/db", () => ({
   directDb: {
     update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: vi.fn(async () => ddState.updateResult ?? []),
-        returning: vi.fn(async () => ddState.updateResult ?? []),
-      })),
+      set: vi.fn((payload: unknown) => {
+        ddState.updatedPayloads.push(payload);
+        return {
+          where: vi.fn(() => {
+            ddState.updateCall += 1;
+            const result = (async () => {
+              if (ddState.updateThrowOnCall === ddState.updateCall) {
+                throw new Error("db write failed");
+              }
+              return ddState.updateResult ?? [];
+            })();
+            // A call chain `.set().where().returning()` needs a thenable that
+            // also exposes `.returning()`; `.set().where()` just needs await.
+            return Object.assign(result, { returning: vi.fn(() => result) });
+          }),
+        };
+      }),
     })),
     select: vi.fn(() => {
       const callIndex = selectCallCount.count++;
       const isAuditQuery = callIndex % 2 === 1;
       const whereResult = {
-        limit: vi.fn(async () => isAuditQuery
-          ? (txState.recentAudits ?? [])
-          : (txState.projectsFind ?? ddState.selectResult ?? [])),
+        limit: vi.fn(async () => {
+          if (txState.throwOnWhereLimit) throw new Error("count query failed");
+          if (ddState.localSelectResult !== undefined && callIndex >= 2) {
+            return ddState.localSelectResult;
+          }
+          return isAuditQuery
+            ? (txState.recentAudits ?? [])
+            : (txState.projectsFind ?? ddState.selectResult ?? []);
+        }),
         innerJoin: vi.fn(() => ({
           where: vi.fn(() => ({
             limit: vi.fn(async () => txState.selectJoin ?? ddState.selectResult ?? []),
@@ -111,12 +136,15 @@ vi.mock("@/shared/db", () => ({
       };
     }),
     insert: vi.fn(() => ({
-      values: vi.fn(() => ({
-        returning: vi.fn(async () => txState.insertAudit ?? ddState.insertResult ?? []),
-        onConflictDoNothing: vi.fn(() => ({
+      values: vi.fn((payload: unknown) => {
+        ddState.insertedPayloads.push(payload);
+        return {
           returning: vi.fn(async () => txState.insertAudit ?? ddState.insertResult ?? []),
-        })),
-      })),
+          onConflictDoNothing: vi.fn(() => ({
+            returning: vi.fn(async () => txState.insertAudit ?? ddState.insertResult ?? []),
+          })),
+        };
+      }),
     })),
   },
 }));
@@ -164,14 +192,21 @@ describe("audits server actions", () => {
     txState.recentAudits = null;
     txState.insertAudit = null;
     txState.selectJoin = null;
+    txState.throwOnWhereLimit = false;
     ddState.updateResult = null;
     ddState.selectResult = null;
     ddState.insertResult = null;
+    ddState.localSelectResult = undefined;
+    ddState.updateCall = 0;
+    ddState.updateThrowOnCall = null;
+    ddState.updatedPayloads = [];
+    ddState.insertedPayloads = [];
     selectCallCount.count = 0;
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   // ── triggerAudit ─────────────────────────────────────────────────────────
@@ -298,6 +333,24 @@ describe("audits server actions", () => {
       const result = await getAuditStatus({ auditId: AUDIT_ID });
       expect(result.data?.success).toBe(true);
       expect(typeof result.data?.pagesScanned).toBe("number");
+    });
+
+    it("keeps polling alive when the pagesScanned count query fails", async () => {
+      txState.selectJoin = [{
+        audit: { id: AUDIT_ID, status: "running", errorMessage: null, startedAt: new Date() },
+        project: { id: PROJECT_ID, ownerId: DEV_BYPASS_USER_ID },
+      }];
+      txState.throwOnWhereLimit = true;
+
+      const result = await getAuditStatus({ auditId: AUDIT_ID });
+
+      expect(result.data?.success).toBe(true);
+      expect(result.data?.status).toBe("running");
+      expect(result.data?.pagesScanned).toBe(0);
+      expect(mockLoggerWarn).toHaveBeenCalledWith(
+        "pagesScanned no disponible",
+        expect.objectContaining({ auditId: AUDIT_ID })
+      );
     });
   });
 
@@ -446,6 +499,12 @@ describe("audits server actions", () => {
         expect.stringContaining("Trigger.dev"),
         expect.anything()
       );
+      // runLocalAudit corre en background: el owner no coincide con el usuario
+      // dev, así que el fallback falla por "Acceso denegado". Esperamos a que
+      // termine para no arrastrar estado al siguiente test.
+      await vi.waitFor(() =>
+        expect(mockLoggerError).toHaveBeenCalledWith("LocalAudit error", expect.anything())
+      );
     });
 
     it("returns error when triggerAudit fails (no task trigger)", async () => {
@@ -465,6 +524,250 @@ describe("audits server actions", () => {
       const result = await startAuditAction({ projectId: PROJECT_ID });
       expect(result.data?.success).toBe(false);
       expect(mockTasksTrigger).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── runLocalAudit + analyzeUrl (fallback local de startAuditAction) ────────
+
+  describe("startAuditAction local fallback (runLocalAudit)", () => {
+    const armFallback = () => {
+      txState.projectsFind = [{ id: PROJECT_ID, ownerId: DEV_BYPASS_USER_ID, domain: "https://acme.com" }];
+      txState.recentAudits = [];
+      txState.insertAudit = [{ id: AUDIT_ID }];
+      ddState.updateResult = [{ id: AUDIT_ID }];
+      mockTasksTrigger.mockRejectedValue(new Error("Trigger.dev offline"));
+    };
+
+    const stubFetch = (response: () => Response) => {
+      const fetchMock = vi.fn(async () => response());
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    };
+
+    const waitForCompletion = async () => {
+      await vi.waitFor(() =>
+        expect(mockLoggerInfo).toHaveBeenCalledWith("LocalAudit completada", { auditId: AUDIT_ID })
+      );
+    };
+
+    const issueTitles = () =>
+      ddState.insertedPayloads
+        .filter((p): p is Array<{ title: string }> => Array.isArray(p))
+        .flat()
+        .map((issue) => issue.title);
+
+    const updateStatuses = () =>
+      ddState.updatedPayloads.map((payload) => (payload as { status?: string }).status);
+
+    it("analyzes healthy HTML and marks the audit completed", async () => {
+      armFallback();
+      const words = Array.from({ length: 320 }, (_, i) => `word${i}`).join(" ");
+      const fetchMock = stubFetch(
+        () =>
+          new Response(
+            `<html><head><title>My Site</title>` +
+              `<meta name="description" content="A reasonable meta description for the landing page."></head>` +
+              `<body><h1>Main</h1><h2>One</h2><h2>Two</h2><p>${words}</p></body></html>`,
+            { status: 200, headers: { "content-type": "text/html; charset=utf-8" } }
+          )
+      );
+
+      const result = await startAuditAction({ projectId: PROJECT_ID });
+      expect(result.data?.success).toBe(true);
+
+      await waitForCompletion();
+
+      expect(mockValidateSafeUrl).toHaveBeenCalledWith("https://acme.com");
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://acme.com",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "User-Agent": expect.stringContaining("StrategicAuditBot"),
+          }),
+        })
+      );
+      expect(issueTitles()).toEqual([]);
+      expect(updateStatuses()).toEqual(expect.arrayContaining(["running", "completed"]));
+    });
+
+    it("records meta/seo issues when the response is not ok", async () => {
+      armFallback();
+      stubFetch(
+        () => new Response("boom", { status: 500, headers: { "content-type": "text/plain" } })
+      );
+
+      await startAuditAction({ projectId: PROJECT_ID });
+      await waitForCompletion();
+
+      expect(issueTitles()).toEqual(
+        expect.arrayContaining(["Falta Title Tag", "Falta Meta Description", "Falta H1"])
+      );
+      expect(updateStatuses()).toContain("completed");
+    });
+
+    it("skips HTML parsing for non-html content types", async () => {
+      armFallback();
+      stubFetch(
+        () =>
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          })
+      );
+
+      await startAuditAction({ projectId: PROJECT_ID });
+      await waitForCompletion();
+
+      expect(issueTitles()).toEqual(
+        expect.arrayContaining(["Falta Title Tag", "Falta Meta Description", "Falta H1"])
+      );
+    });
+
+    it("flags long title, long meta, multiple h1 and thin content", async () => {
+      armFallback();
+      const longTitle = "T".repeat(70);
+      const longMeta = "M".repeat(170);
+      stubFetch(
+        () =>
+          new Response(
+            `<html><head><title>${longTitle}</title>` +
+              `<meta content="${longMeta}" name="description"></head>` +
+              `<body><h1>First</h1><h1>Second</h1><p>${"palabra ".repeat(40).trim()}</p></body></html>`,
+            { status: 200, headers: { "content-type": "text/html" } }
+          )
+      );
+
+      await startAuditAction({ projectId: PROJECT_ID });
+      await waitForCompletion();
+
+      expect(issueTitles()).toEqual(
+        expect.arrayContaining([
+          "Titulo muy largo",
+          "Meta description muy larga",
+          "Multiples H1",
+          "Thin Content",
+        ])
+      );
+    });
+
+    it("marks the audit failed when the crawl fetch throws", async () => {
+      armFallback();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => {
+          throw new Error("ECONNREFUSED");
+        })
+      );
+
+      await startAuditAction({ projectId: PROJECT_ID });
+
+      await vi.waitFor(() =>
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          "LocalAudit error",
+          expect.objectContaining({ error: expect.stringContaining("ECONNREFUSED") })
+        )
+      );
+      expect(updateStatuses()).toContain("failed");
+      expect(mockLoggerInfo).not.toHaveBeenCalledWith(
+        "LocalAudit completada",
+        expect.anything()
+      );
+    });
+
+    it("logs fallback error when writing the failure status also fails", async () => {
+      armFallback();
+      ddState.updateThrowOnCall = 2;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => {
+          throw new Error("net down");
+        })
+      );
+
+      await startAuditAction({ projectId: PROJECT_ID });
+
+      await vi.waitFor(() =>
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          "LocalAudit fallback error",
+          expect.objectContaining({ error: expect.any(Error) })
+        )
+      );
+    });
+
+    it("aborts the local run when the audit row cannot be claimed", async () => {
+      armFallback();
+      ddState.updateResult = [];
+      const fetchMock = stubFetch(
+        () => new Response("x", { status: 200, headers: { "content-type": "text/html" } })
+      );
+
+      await startAuditAction({ projectId: PROJECT_ID });
+
+      await vi.waitFor(() =>
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          "LocalAudit error",
+          expect.objectContaining({ error: expect.stringContaining("no encontrada") })
+        )
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("aborts the local run when the project no longer exists", async () => {
+      armFallback();
+      ddState.localSelectResult = [];
+      const fetchMock = stubFetch(
+        () => new Response("x", { status: 200, headers: { "content-type": "text/html" } })
+      );
+
+      await startAuditAction({ projectId: PROJECT_ID });
+
+      await vi.waitFor(() =>
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          "LocalAudit error",
+          expect.objectContaining({ error: expect.stringContaining("no encontrado") })
+        )
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("aborts the local run when the caller does not own the project", async () => {
+      armFallback();
+      ddState.localSelectResult = [
+        { id: PROJECT_ID, ownerId: OTHER_USER, domain: "https://evil.example" },
+      ];
+      const fetchMock = stubFetch(
+        () => new Response("x", { status: 200, headers: { "content-type": "text/html" } })
+      );
+
+      await startAuditAction({ projectId: PROJECT_ID });
+
+      await vi.waitFor(() =>
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          "LocalAudit error",
+          expect.objectContaining({ error: expect.stringContaining("Acceso denegado") })
+        )
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("logs Audit fallback error when the local run rejects before its try block", async () => {
+      armFallback();
+      mockLoggerInfo.mockImplementationOnce(() => {
+        throw new Error("logger unavailable");
+      });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response("x", { status: 200, headers: { "content-type": "text/html" } }))
+      );
+
+      await startAuditAction({ projectId: PROJECT_ID });
+
+      await vi.waitFor(() =>
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          "Audit fallback error",
+          expect.objectContaining({ error: expect.any(Error) })
+        )
+      );
     });
   });
 });
