@@ -3,8 +3,8 @@ layout: default
 title: Test Coverage Matrix
 nav_order: 4.1
 permalink: /docs/testing/test-coverage-matrix
-version: 1.4
-fecha: 2026-08-08
+version: 1.7
+fecha: 2026-09-24
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -22,18 +22,27 @@ estado: Aprobado
 
 ---
 
-> **⚠️ ACTUALIZACIÓN 2026-09-17 (Fase 0.1 del plan de mejoras).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Baseline real medido contra el código actual:
+> **⚠️ ACTUALIZACIÓN 2026-09-24 (Fases 1.4-1.5 y 2.1-4.6 del plan de mejoras).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Estado real medido contra el código actual:
 >
-> | Métrica | Valor 2026-09-17 | Nota |
+> | Métrica | Valor 2026-09-24 | Nota |
 > |---------|------------------|------|
-> | `pnpm test` | **92 archivos · 754 tests → 751 ✅ / 3 ❌** | 167s. Fallos: `project-events.test.ts` (timeout) y `MonitoringTab.test.tsx` (2, i18n de placeholders) |
-> | `pnpm test:coverage` | **Stmts 28.53% · Branch 21.62% · Funcs 24.61% · Lines 28.88%** | Supera los umbrales vigentes `28/20/22/28` |
-> | Umbrales CI | actualizados a `statements 28 · branches 20 · functions 22 · lines 28` | `vitest.config.ts` (ratchet) |
-> | `pnpm lint` | 6 errores · 72 warnings | Errores: `no-explicit-any` en `e2e/end-user-simulation.spec.ts` |
-> | `pnpm build` | ✅ **PASS** (Turbopack, 16.6s + TS 48s) | Bloqueante `keywords.ts:224` resuelto en Fase 0 |
+> | `pnpm test` | **163 archivos · 1534 tests → 1534 ✅ / 0 ❌** | 561s con `maxWorkers: 4`. Suite completa en verde |
+> | `pnpm test:coverage` | **Stmts 41.65% · Branch 32.2% · Funcs 36.89% · Lines 42.59%** | Objetivo de 40% statements alcanzado (desde 28.53% el 2026-09-17) |
+> | Umbrales CI | `statements 40 · branches 30 · functions 34 · lines 41` | `vitest.config.ts` (ratchet 2026-09-24) |
+> | `pnpm lint` | ✅ **0 errores · 0 warnings** (exit 0) | — |
+> | `pnpm test:contract` | ✅ **10/10** (exit 0) | — |
+> | `pnpm build` | ✅ **PASS** (exit 0) | Bloqueante `keywords.ts:224` resuelto en Fase 0 |
 > | `drizzle-kit check` | ✅ Everything's fine | — |
+> | `pnpm db:drift-check` | ✅ **69/69 tablas · sin drift duro** | 20 diffs adhesivas preexistentes (defaults/nullability) |
+> | `quality-gate` de este documento | ✅ **100/100** (`--min 80`) | v1.7 |
 >
-> Los conteos de rutas/triggers del cuerpo (42 rutas, 12 triggers) quedaron obsoletos: hoy son **55 route handlers** (50 privados + 5 públicos v1) y **18 triggers** (9 con test).
+> Trabajo de cobertura de Fases 1.4-1.5: +9 `trigger.test` y +24 suites (rutas `api-keys`, `ai/report`, `ai/healthcheck`, `forecast`, `billing/plans`, `intelligence/{drift,adversary/assessment,health}`, `actions/{audits,keywords}`, `lib/{email-validation,result}`, servicios `app-error`/`error-handler`/`seo-report-service`/`weekly-digest`/`remediation/service`, triggers `eval-weekly`/`exec-brief`/`finding-triage`).
+>
+> Trabajo de Fases 2.1-4.6: validación Zod lazy de env (Tarea 2.3: `envSchema` + `validateEnv()` en `src/env.ts`, sin parse en import para no romper el build de Vercel, +12 tests), Prettier 3.9.9 (Tarea 2.1: `.prettierrc`/`.prettierignore` + scripts `format`/`format:check`, sin `--write` masivo), índice `idx_audit_logs_created_at` (Tarea 3.1: `drizzle/2026-09-24_recommended_indexes.sql`; los otros 2 candidatos ya existían), integraciones Slack/Teams/AlertManager (Tareas 4.1-4.3, 24 tests) y RBAC completo (Tareas 4.4-4.6: matriz de permisos en código — sin tablas nuevas, por anti-drift —, `addMember`/`updateMemberRole`/`removeProjectMember` con protección de último owner, rutas `members/[userId]` y `audit-log`, 64 tests).
+>
+> Estabilidad de la suite: `maxWorkers: 4` en `vitest.config.ts` — con los ~7 forks por defecto la suite agotaba la RAM (~1 GB libre de 7.5 GB) y vitest reportaba 4 "Unhandled Errors" (exit 1) pese a tener todo en verde.
+>
+> Los conteos de rutas/triggers del cuerpo (42 rutas, 12 triggers) quedaron obsoletos: hoy son **60 route handlers** (55 privados + 5 públicos v1) y **21 triggers** (todos con test).
 
 ## 1. Scope y objetivos
 
@@ -384,6 +393,8 @@ flowchart LR
 | 1.3 | 2026-08-08 | Seguridad: gap SSRF IPv4-mapped IPv6 (`::ffff:`) cerrado en egress-guard (+2 tests) → **31/31**; suite de red resiliente (omite tests sin internet); **360/360 tests** | Aprobado |
 | 1.4 | 2026-08-08 | GOLDEN_RULES: +26 tests de controles de seguridad (cicd-helper 10, api-auth 8, safe-next 8) → **43 files · 391 tests** · suite determinista (guard de red en `assertPublicHostname`) | Aprobado |
 | 1.5 | 2026-08-08 | **RSK-02 batch**: +22 test files · +220 tests → **65 files · 611 tests** · umbrales de CI superados (Stmts 27.21% · Branch 20.67% · Funcs 22.83% · Lines 27.41%) · fix de bug real en `cookie-utils.getCookie` (regex `\s` en template literal) | Aprobado |
+| 1.6 | 2026-09-24 | **Plan de mejoras Fases 1.4-1.5**: +9 `trigger.test` (21/21 triggers con test) y +24 suites nuevas (rutas `api-keys`/`ai/report`/`ai/healthcheck`/`forecast`/`billing/plans`/`intelligence/{drift,adversary/assessment,health}`, `actions/{audits,keywords}`, `lib/{email-validation,result}`, servicios `app-error`/`error-handler`/`seo-report-service`/`weekly-digest`/`remediation/service`, triggers `eval-weekly`/`exec-brief`/`finding-triage`) → **155 files · 1443 tests ✅/0 ❌** · **Stmts 41.05% · Branch 31.75% · Funcs 36.39% · Lines 42%** · ratchet de umbrales a `40/30/34/41` · fix de timeout ambiental en `egress-guard.test.ts` (guard de red RSK-06) y `testTimeout: 15000` | Aprobado |
+| 1.7 | 2026-09-24 | **Plan de mejoras Fases 2.1-4.6**: validación Zod lazy de env (`envSchema` + `validateEnv()` en `src/env.ts`, sin parse en import, +12 tests), Prettier 3.9.9 (`.prettierrc`, `.prettierignore`, scripts `format`/`format:check`, sin `--write` masivo), índice `idx_audit_logs_created_at` (`drizzle/2026-09-24_recommended_indexes.sql`; los otros 2 candidatos del plan ya existían), integraciones Slack/Teams/AlertManager (`src/server/integrations/{slack,teams,shared}`, 24 tests) y RBAC completo (matriz de permisos en código sin tablas nuevas, `addMember`/`updateMemberRole`/`removeProjectMember` con protección de último owner, rutas `members/[userId]` y `audit-log`, 64 tests) → **163 files · 1534 tests ✅/0 ❌** · **Stmts 41.65% · Branch 32.2% · Funcs 36.89% · Lines 42.59%** · estabilidad: `maxWorkers: 4` (fix de "Unhandled Errors" por RAM agotada, exit 1 con todo en verde) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/testing/TEST-COVERAGE-MATRIX.md --min 80` → PASS
 
