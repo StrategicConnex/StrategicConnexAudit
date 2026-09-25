@@ -280,15 +280,15 @@ y leer con narrowing en vez de `as any`. Build + commit.
 
 ### Task 4.1: Borrar scaffolding vacío `src/modules/*`
 
-- [ ] **Step 1:** Confirmar vacío: `Get-ChildItem src/modules -Recurse -File | Measure-Object` → Count 0.
-- [ ] **Step 2:** `Remove-Item -Recurse -Force src/modules` y grep de referencias en docs: `rg "src/modules" AGENTS.md docs README.md DESIGN*.md` — actualizar menciones a "(planificado, no implementado)" o eliminar.
-- [ ] **Step 3:** `npx tsc --noEmit` → 0. Commit: `chore: remove empty DDD module scaffolding`.
+- [x] **Step 1:** Confirmar vacío: `Get-ChildItem src/modules -Recurse -File | Measure-Object` → Count 0. [VERIFIED 2026-09-25: 0 archivos / 153 dirs]
+- [x] **Step 2:** `Remove-Item -Recurse -Force src/modules` y grep de referencias en docs: `rg "src/modules" AGENTS.md docs README.md DESIGN*.md` — actualizar menciones a "(planificado, no implementado)" o eliminar. [HECHO 2026-09-25: dir eliminado; docs SYSTEM-MAP, PROJECT-INVENTORY, TECH-DEBT-REGISTER TD-04, TEST-COVERAGE-MATRIX actualizados]
+- [ ] **Step 3:** `npx tsc --noEmit` → 0. Commit: `chore: remove empty DDD module scaffolding`. [gates VERIFIED 2026-09-25: tsc ✅ · lint ✅ · vitest 167/1573 ✅ · build ✅ · grep de referencias a `src/modules` = 0; **commit pendiente de confirmación**]
 
 ### Task 4.2: Eliminar `createAdminClient` muerto
 
-- [ ] **Step 1:** Verificar 0 referencias: `rg "createAdminClient|supabase/admin" src scripts` → solo `admin.ts`.
-- [ ] **Step 2:** `git rm src/shared/lib/supabase/admin.ts`. Si `docs/database/SUPABASE-AUDIT.md` lo menciona como disponible, actualizar nota ("eliminado 2026-08; usar script setup-admin propio").
-- [ ] **Step 3:** `guard:secrets`: `pnpm guard:secrets` → PASS (menos superficie service-role). Commit: `chore(security): remove unused supabase admin client`.
+- [x] **Step 1:** Verificar 0 referencias: `rg "createAdminClient|supabase/admin" src scripts` → solo `admin.ts`. [DONE — commit `366f590`, grep 0 en src]
+- [x] **Step 2:** `git rm src/shared/lib/supabase/admin.ts`. Si `docs/database/SUPABASE-AUDIT.md` lo menciona como disponible, actualizar nota ("eliminado 2026-08; usar script setup-admin propio"). [DONE — archivo ausente]
+- [x] **Step 3:** `guard:secrets`: `pnpm guard:secrets` → PASS (menos superficie service-role). Commit: `chore(security): remove unused supabase admin client`. [DONE — guard:secrets exit 0 verificado 2026-09-25]
 
 ---
 
@@ -517,7 +517,7 @@ export function withPublicApi(handler: RouteHandler, opts?: WithPublicApiOptions
 - [ ] `npx vitest run` → 642+ tests PASS (incluye los añadidos por este plan)
 - [ ] `pnpm guard:secrets && pnpm guard:cdn` → PASS
 - [ ] `rg "catch \((error|err|e): any\)" src/` → 0 matches
-- [ ] `Get-ChildItem src/modules` → no existe
+- [x] `Get-ChildItem src/modules` → no existe [HECHO 2026-09-25]
 - [ ] Migraciones 0025 y 0026 aplicadas en producción + smoke SQL documentado en PR description
 
 ## Fuera de alcance (requieren decisión de producto, no incluir aquí)

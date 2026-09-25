@@ -106,8 +106,8 @@ flowchart TB
 | `/api/intelligence/history` | ✅ Sesión (`authenticate` en `withRateLimit`) + owner-check RLS | ~~Alto — VULN-004~~ Resuelto |
 | `/api/intelligence/assets/graph` | ✅ Sesión + `withRLS` | ~~Alto — VULN-005~~ Resuelto |
 | `/api/public/v1/*` | API key hashed | Medio |
-| `/api/looker-studio` | ⚠️ Condicional (VULN-006) | Medio |
-| `/api/reports/pdf/progress` | 🔴 Ninguna (genId) | Medio — VULN-007 |
+| `/api/looker-studio` | ✅ API key fail-closed (solo `Bearer` + `timingSafeEqual`; VULN-006 remediado, route.test) | ~~Medio — VULN-006~~ Resuelto |
+| `/api/reports/pdf/progress` | ✅ Sesión + clave `pdf_progress:<userId>:<genId>` (VULN-007 remediado, route.test) | ~~Medio — VULN-007~~ Resuelto |
 | `/api/webhooks/cicd` | HMAC | Bajo (fallback dev en §14) |
 | Server Actions / Middleware | Sesión | Bajo |
 
@@ -240,4 +240,4 @@ Ver §3 — 1 bloque mermaid, 11 nodos, válido.
 
 ## 18. Resumen ejecutivo
 
-**15 amenazas registradas (STRIDE completo).** Los IDOR cross-tenant **THR-001/THR-002/THR-013 (VULN-004/005) fueron remediados en B02** (auth + owner-check + `withRLS`; verificado con tests/lint/build). El riesgo residual principal ahora es **THR-003 (XSS IA — VULN-001)**, seguido de VULN-002 (secret token en GET webhooks) y VULN-006/007 (auth condicional/SSE sin auth). El resto de la superficie está cubierta por controles existentes (RLS transaccional, egress-guard, sandbox sin shell, hashing de API keys, HMAC, gitleaks). **Acción prioritaria:** remediar VULN-001 (escapeHtml en AiCopilot) y revisar VULN-002/006/007 en B03.
+**15 amenazas registradas (STRIDE completo).** Los IDOR cross-tenant **THR-001/THR-002/THR-013 (VULN-004/005) fueron remediados en B02** (auth + owner-check + `withRLS`; verificado con tests/lint/build). **Todos los VULN priorizados quedaron remediados**: VULN-001 (escapeHtml en AiCopilot), VULN-002 (secret token enmascarado), VULN-006/007 (looker-studio fail-closed + SSE de PDF con sesión y clave namespaced) — v2.2/v2.4 del SECURITY-AUDIT-REPORT, y VULN-008/009 cerrados el 2026-09-24 (TSK-011/012). El resto de la superficie está cubierta por controles existentes (RLS transaccional, egress-guard, sandbox sin shell, hashing de API keys, HMAC, gitleaks).

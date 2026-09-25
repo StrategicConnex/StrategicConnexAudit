@@ -47,7 +47,7 @@ El `_journal.json` contiene **22 entradas (0000–0021)**. En disco hay **22 arc
 |---|---|
 | 0016 `_rls_policies.sql` | RLS `ENABLE` en `uptime_logs`, `anomaly_detections`, `project_members`; policies owner/member SELECT; grants `authenticated` |
 | 0019 `_supabase_best_practices_indexes.sql` | 10 índices nuevos (gaps de 0015/0004) — en journal idx 19 y reflejados en esquemas |
-| 0012 `_adversary_scenarios.sql` | `idx_adversary_mitre_id` **no único** — ver MAT-205 |
+| 0012 `_adversary_scenarios.sql` | `idx_adversary_mitre_id` **no único** — **dropeado en 0018:65** (ver MAT-205, cerrado) |
 
 ---
 
@@ -107,7 +107,7 @@ Inventario consolidado (índices DDL + únicos implícitos de `unique()`). Orige
 | 48 | `team_audit_logs` | `idx_team_audit_logs_project (project_id)` | btree | 0019 |
 | 49 | `domain_technologies` | `idx_domain_technologies_project (project_id)` | btree | 0019 |
 | 50 | `anomaly_detections` | `..._project_metric`, `..._severity_detected`, `..._detected_at`, `..._unresolved` | btree | 0011 |
-| 51 | `adversary_scenarios` | `idx_adversary_mitre_tactic`, `uniq (mitre_id)`; **`idx_adversary_mitre_id` no-único (MAT-205)** | btree | 0012/0018 |
+| 51 | `adversary_scenarios` | `idx_adversary_mitre_tactic`, `uniq (mitre_id)`; ~~`idx_adversary_mitre_id` no-único~~ **dropeado en 0018:65** | btree | 0012/0018 |
 | 52 | `adversary_runs` | `..._project_status`, `..._scenario`, `..._engagement` | btree | 0012/0017 |
 | 53 | `adversary_engagements` | `..._project_status`, `..._project_created` | btree | 0017 |
 | 54 | `adversary_task_nodes` | `..._engagement`, `..._engagement_parent`, `..._engagement_status`, `..._scenario`, `..._mitre` | btree | 0017 |
@@ -160,9 +160,9 @@ CREATE INDEX CONCURRENTLY idx_dns_proj_query_date ON dns_history(project_id, que
 | MAT-202 | `0001` y `0002` byte-idénticos (mismo SHA-256) | Confirma duplicación manual; inofensivo (idempotente) pero ruido — **el 0001 fue eliminado** |
 | MAT-203 | `0010_snapshot.json` malformed (2 tablas, sin enums, id texto) | **Resuelto** — snapshot eliminado; regenerado 0019; `check` pasa |
 | MAT-204 | Faltan 13 snapshots (0002, 0007–0009, 0011–0018) | No bloquean `check`/`generate`; no regenerables sin BD de referencia |
-| MAT-205 | `idx_adversary_mitre_id` (no único) en 0012, ausente del esquema Drizzle; en 0018 se crea el único | Drift esquema↔migración; el no-único es redundante si 0018 aplica |
+| MAT-205 | `idx_adversary_mitre_id` (no único) en 0012, ausente del esquema Drizzle; en 0018 se crea el único | **RESUELTO (TSK-007)** — `DROP INDEX IF EXISTS idx_adversary_mitre_id` en `0018_unique_mitre_id.sql:65`; en DB solo quedan `uniq_adversary_mitre_id` + `idx_adversary_mitre_tactic` (verificado en prod) |
 | MAT-206 | Triggers de cuota (`quota_enforcement`) creados por SQL manual, no en esquemas Drizzle | No se puede regenerar desde esquemas |
-| MAT-207 | `push_subscriptions.active` es `text` con valor `'true'` (no `boolean`) | Mismatch tipado; ver INDEX-201 en `DATA-DICTIONARY.md` |
+| MAT-207 | `push_subscriptions.active` es `text` con valor `'true'` (no `boolean`) | **RESUELTO (TSK-009)** — `0021_push_active_boolean.sql` migra a `boolean NOT NULL DEFAULT true` |
 | MAT-208 | `0002` con timestamp `1747404000000` (retrodata manual) | Indicio de creación manual |
 
 ---

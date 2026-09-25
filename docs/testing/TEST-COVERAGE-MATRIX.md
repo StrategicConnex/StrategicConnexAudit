@@ -3,8 +3,8 @@ layout: default
 title: Test Coverage Matrix
 nav_order: 4.1
 permalink: /docs/testing/test-coverage-matrix
-version: 1.7
-fecha: 2026-09-24
+version: 1.8
+fecha: 2026-09-25
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -22,19 +22,22 @@ estado: Aprobado
 
 ---
 
-> **⚠️ ACTUALIZACIÓN 2026-09-24 (Fases 1.4-1.5 y 2.1-4.6 del plan de mejoras).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Estado real medido contra el código actual:
+> **⚠️ ACTUALIZACIÓN 2026-09-25 (Quick wins de deuda técnica + B08/B09).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Estado real medido contra el código actual:
 >
-> | Métrica | Valor 2026-09-24 | Nota |
+> | Métrica | Valor 2026-09-25 | Nota |
 > |---------|------------------|------|
-> | `pnpm test` | **163 archivos · 1534 tests → 1534 ✅ / 0 ❌** | 561s con `maxWorkers: 4`. Suite completa en verde |
-> | `pnpm test:coverage` | **Stmts 41.65% · Branch 32.2% · Funcs 36.89% · Lines 42.59%** | Objetivo de 40% statements alcanzado (desde 28.53% el 2026-09-17) |
+> | `pnpm test` | **167 archivos · 1573 tests → 1573 ✅ / 0 ❌** (exit 0) | Suite completa en verde; +4 archivos/+39 tests sobre 2026-09-24 (163/1534) |
+> | `pnpm test:coverage` | **Stmts 42.66% · Branch 32.97% · Funcs 37.5% · Lines 43.69%** | Todos los umbrales cumplidos (40/30/34/41), exit 0 con `--coverage.reportOnFailure=true` |
 > | Umbrales CI | `statements 40 · branches 30 · functions 34 · lines 41` | `vitest.config.ts` (ratchet 2026-09-24) |
 > | `pnpm lint` | ✅ **0 errores · 0 warnings** (exit 0) | — |
+> | `tsc --noEmit` | ✅ **OK** (exit 0) | — |
 > | `pnpm test:contract` | ✅ **10/10** (exit 0) | — |
 > | `pnpm build` | ✅ **PASS** (exit 0) | Bloqueante `keywords.ts:224` resuelto en Fase 0 |
 > | `drizzle-kit check` | ✅ Everything's fine | — |
 > | `pnpm db:drift-check` | ✅ **69/69 tablas · sin drift duro** | 20 diffs adhesivas preexistentes (defaults/nullability) |
-> | `quality-gate` de este documento | ✅ **100/100** (`--min 80`) | v1.7 |
+> | `quality-gate` de este documento | ✅ **100/100** (`--min 80`) | v1.8 |
+>
+> **Quick wins 2026-09-25:** +4 suites de test — `looker-studio/route` (9: fail-closed + rate-limit + timingSafeEqual), `reports/pdf/progress/route` (7: 401 + clave namespaced), `intelligence/runs/route` (12: auth/scope/egress/tool-not-found) y `server/api/public-router` (11: apiKeyAuth + scopes + api_key_usage) — **39 tests** que cierran los huecos P1 de §12. `src/modules/*` eliminado (TD-04) y docs obsoletos reconciliados (SECURITY-AUDIT VULN-006..009, ENVIRONMENT CS-301/302, MAT-205/207, TD-09/11, RSK-09).
 >
 > Trabajo de cobertura de Fases 1.4-1.5: +9 `trigger.test` y +24 suites (rutas `api-keys`, `ai/report`, `ai/healthcheck`, `forecast`, `billing/plans`, `intelligence/{drift,adversary/assessment,health}`, `actions/{audits,keywords}`, `lib/{email-validation,result}`, servicios `app-error`/`error-handler`/`seo-report-service`/`weekly-digest`/`remediation/service`, triggers `eval-weekly`/`exec-brief`/`finding-triage`).
 >
@@ -279,10 +282,11 @@ VS BASELINE B00:    +1.21pp Stmts · +0.84pp Branch · +1.40pp Funcs · +1.25pp 
 | ✅ B06 | 12 triggers (siem, discovery, uptime) | `*.test.ts` — **hecho** (13 tests) | Trabajo asíncrono en prod cubierto parcialmente |
 | ✅ B06 | `/api/security/siem/run`, `/api/public/v1/intelligence` | route.test.ts — **hecho** (5 + 11 tests) | Superficie pública/servidor cubierta |
 | P1 | 3 triggers sin test restantes (api-key-expiry, cleanup, hello) | `*.test.ts` por trigger | Trabajo asíncrono en prod sin verificación |
-| P1 | `/api/intelligence/runs`, `/api/reports/pdf/progress` | route.test.ts | VULN-007 + flujo core |
+| ✅ QW | `/api/intelligence/runs`, `/api/reports/pdf/progress`, `/api/looker-studio` | route.test.ts — **hecho** (12 + 7 + 9 tests, 2026-09-25) | VULN-006/007 + flujo core |
+| ✅ QW | `src/server/api/public-router.test.ts` | unit — **hecho** (11 tests, 2026-09-25) | API key auth/scope/logging |
 | P1 | `src/server/ai/ai-router.ts` | unit de `callAIWithFallback` (fallback chain) | Fallos de IA en cascada |
 | P2 | 30 rutas restantes | route.test.ts básico (401/404/200) | Completar 42/42 |
-| P2 | `src/modules/*` (TSK-014) | iniciar módulos con unit tests | Estructura nueva |
+| ✅ | `src/modules/*` (TSK-014) | scaffold vacío **eliminado 2026-09-25** (decisión: retirar, no implementar) | Doble arquitectura cerrada |
 
 ---
 
@@ -358,12 +362,13 @@ flowchart LR
 ## 17. Plan de acción
 
 ```text
-1. TSK-014: crear src/modules/ + unit tests (estructura nueva)
+1. ✅ TSK-014: resolver `src/modules` — scaffold vacío ELIMINADO 2026-09-25 (retiro, no implementación)
 2. ✅ TSK-022: route.test.ts para security/siem/run (5) y public/v1/intelligence (11) — HECHO B06
 3. ✅ Trigger tests: 9/12 — siem (4), discovery (4), uptime (5), adversary (5), anomaly (5), monitoring (6), scheduled-scan (3), audit (6), webhook (7) = 45 — HECHO B06
-4. unit tests de ai-router (callAIWithFallback fallback chain)
-5. Re-ejecutar pnpm test:coverage tras cada cierre y actualizar §4.2
-6. Cuando Statements ≥ 25%: habilitar umbrales duros en CI (exit 1)
+4. ✅ Quick wins (2026-09-25): route.test looker-studio (9), pdf/progress (7), intelligence/runs (12) + public-router unit (11) = 39 tests — HECHO
+5. unit tests de ai-router (callAIWithFallback fallback chain)
+6. Re-ejecutar pnpm test:coverage tras cada cierre y actualizar §4.2
+7. Cuando Statements ≥ 25%: habilitar umbrales duros en CI (exit 1)
 ```
 
 ---

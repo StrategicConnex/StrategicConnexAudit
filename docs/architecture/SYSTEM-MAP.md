@@ -253,22 +253,20 @@ flowchart LR
 flowchart TB
     APP["src/app — App Router + proxy + route handlers"]
     FEAT["src/features/intelligence — estado/UI"]
-    MOD["src/modules (9) — audit · backlinks · competitors · cro<br/>integrations · keywords · performance · reporting · schema"]
     SRV["src/server — lógica de dominio (server-only)"]
     SH["src/shared — db · lib · config · data · hooks · utils"]
     TRIG["src/trigger — Trigger.dev tasks"]
 
     APP --> SRV
     FEAT --> SH
-    MOD --> SH
-    MOD --> SRV
     SRV --> SH
     TRIG --> SRV
     TRIG --> SH
 ```
 
 **Observaciones de estructura** [VERIFIED]:
-- `src/modules/` implementa arquitectura limpia (9 módulos de negocio) **sin archivos de test** [VERIFIED: 0 ficheros `*.test.ts` en `src/modules`]; la estrategia de testing actual cubre `src/server` (intelligence/security/core), `shared/lib`, `features/intelligence/lib` y utils.
+- `src/modules/` (9 módulos clean-arch vacíos) fue **eliminado el 2026-09-25** (TD-04/TSK-014: scaffold de 153 dirs con 0 archivos, nunca rastreado por git); la funcionalidad de negocio vive en `src/app/api`, `src/server` y `src/trigger`.
+- La estrategia de testing actual cubre `src/server` (intelligence/security/core), `shared/lib`, `features/intelligence/lib` y utils.
 - `src/features/intelligence/lib` contiene utilidades puras de rendering (`markdown.ts`, `severity.ts`) con sus tests.
 - `src/server/api/public-router.ts` media las llamadas de terceros a la API pública.
 
@@ -335,7 +333,7 @@ Este documento no repite el ERD: su foco es el **flujo** de datos entre capas, n
 | Contrato API | `tests/api-contract/` | [VERIFIED] |
 | Cobertura | Statements 13.72% (por debajo del umbral 25% — gap documentado en TEST-COVERAGE-MATRIX, no es regresión de esta sesión) | [VERIFIED] |
 
-**Casos representativos [VERIFIED]:** `scan-response.test.ts`, `executors.test.ts`, `egress-guard.test.ts`, `sandbox-executor.test.ts`, `pipeline-test.ts` (historia), `markdown.test.ts`/`severity.test.ts` (feature), `report-utils.test.ts` (UI). La cobertura unitaria se concentra en `src/server` y `shared/lib`; `src/modules/` no tiene tests (ver §5).
+**Casos representativos [VERIFIED]:** `scan-response.test.ts`, `executors.test.ts`, `egress-guard.test.ts`, `sandbox-executor.test.ts`, `pipeline-test.ts` (historia), `markdown.test.ts`/`severity.test.ts` (feature), `report-utils.test.ts` (UI). La cobertura unitaria se concentra en `src/server` y `shared/lib` (`src/modules/` fue eliminado 2026-09-25, ver §5).
 
 ---
 

@@ -22,8 +22,8 @@
 | B05 | Jobs y Trigger.dev | **completado** (2026-08-02) | Job Contract ×12 triggers (gate 100/100 c/u) | `docs/jobs/` |
 | B06 | Testing | **completado** (2026-08-02) | TEST-COVERAGE-MATRIX + tests P0 (5 route.test/trigger.test) + **6 trigger.test más → 9/12 triggers con test** · **359 tests / 40 files** | `docs/testing/`, `src/app/api/`, `src/trigger/` |
 | B07 | Performance | pendiente | Refresh PERFORMANCE_REPORT + CWV + bundle | `docs/improvements/` |
-| B08 | Observabilidad | pendiente | OBSERVABILITY-MATRIX + convención de IDs | `docs/observability/` |
-| B09 | i18n | pendiente | I18N-AUDIT + script de paridad de keys | `docs/i18n/` |
+| B08 | Observabilidad | ✅ completado (2026-09-25) | OBSERVABILITY-MATRIX + convención de IDs | `docs/observability/` |
+| B09 | i18n | ✅ completado (2026-09-25) | I18N-AUDIT + script de paridad de keys | `docs/i18n/` |
 | B10 | Final | **completado** (2026-08-02) | TRACEABILITY-MATRIX, RISK-REGISTER, TECH-DEBT-REGISTER, FINAL-REPORT §51, Quality Gate T10-04 27/27 | `docs/{traceability,risk,technical-debt,improvements}/` |
 
 ## Estado de artefactos
@@ -57,8 +57,8 @@
 | TEST-COVERAGE-MATRIX | **completado** (2026-08-02, gate 100/100) | `docs/testing/TEST-COVERAGE-MATRIX.md` | B06 |
 | Tests P0 de cobertura (5 nuevos) | **implementados** — route.test siem/run (5) + public/v1/intelligence (11) + trigger.test siem (4) / discovery (4) / uptime (5) → suite 359/359 PASS | `src/app/api/security/siem/run/route.test.ts`, `src/app/api/public/v1/intelligence/route.test.ts`, `src/trigger/{siem,discovery,uptime}.trigger.test.ts` | B06 |
 | Trigger tests P0 (6 nuevos) | **implementados** — adversary (5), anomaly (5), monitoring (6), scheduled-scan (3), audit (6), webhook (7) = **9/12 triggers con test (75%)** | `src/trigger/{adversary,anomaly,monitoring,scheduled-scan,audit,webhook}.trigger.test.ts` | B06 |
-| OBSERVABILITY-MATRIX | por crear | `docs/observability/OBSERVABILITY-MATRIX.md` | B08 |
-| I18N-AUDIT | por crear | `docs/i18n/I18N-AUDIT.md` | B09 |
+| OBSERVABILITY-MATRIX | creado (2026-09-25) | `docs/observability/OBSERVABILITY-MATRIX.md` | B08 |
+| I18N-AUDIT | creado (2026-09-25) | `docs/i18n/I18N-AUDIT.md` | B09 |
 | TRACEABILITY-MATRIX | completado (2026-08-02) | `docs/traceability/TRACEABILITY-MATRIX.md` | B10 |
 | RISK-REGISTER | completado (2026-08-02) | `docs/risk/RISK-REGISTER.md` | B10 |
 | TECH-DEBT-REGISTER | completado (2026-08-02) | `docs/technical-debt/TECH-DEBT-REGISTER.md` | B10 |
@@ -106,8 +106,8 @@
   - [x] T06-05 trigger.test adversary (5) · anomaly (5) · monitoring (6) — escenarios MITRE, anomalías, alertas High/Critical
   - [x] T06-06 trigger.test scheduled-scan (3) · audit (6) · webhook (7) — stub config, flujo crawl/ownership, HMAC + SSRF
 - [ ] **B07 — Performance** (refresh PERFORMANCE_REPORT + CWV + bundle)
-- [ ] **B08 — Observabilidad** (OBSERVABILITY-MATRIX + convención correlation IDs)
-- [ ] **B09 — i18n** (I18N-AUDIT + script paridad keys)
+- [x] **B08 — Observabilidad** (completado 2026-09-25: OBSERVABILITY-MATRIX 11 señales + convención correlation IDs)
+- [x] **B09 — i18n** (completado 2026-09-25: I18N-AUDIT paridad 0.00% + guard CI `i18n-parity.mjs`)
 - [x] **B10 — Final** (completado 2026-08-02; TRACEABILITY-MATRIX, RISK-REGISTER, TECH-DEBT-REGISTER, FINAL-REPORT §51, Quality Gate T10-04 27/27)
   - [x] T10-01 TRACEABILITY-MATRIX.md — 12 funcionalidades trazadas REQ→COMP→API→DB→JOB→TEST→DOC, gate 100/100
   - [x] T10-02 RISK-REGISTER.md (10 riesgos) + TECH-DEBT-REGISTER.md (12 deudas), gate 100/100 c/u

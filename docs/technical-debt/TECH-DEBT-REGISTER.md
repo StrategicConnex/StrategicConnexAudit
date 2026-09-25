@@ -71,17 +71,17 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 | TD-01 | Cobertura global bajo umbrales CI (Stmts 13.72% < 25%) | TESTING | Bloquea habilitar umbrales duros en CI | RSK-02 | L | P0 | route.test P0/P1 + trigger tests hasta ≥25% |
 | TD-02 | 12 triggers sin tests (0%) | TESTING | Trabajo asíncrono en prod sin verificación | RSK-02/07 | M | P0 | RESUELTO 2026-09-17: 9 trigger tests en verde (siem/uptime/adversary/anomaly/discovery/monitoring/scheduled-scan/audit/webhook) |
 | TD-03 | 36/42 rutas sin route.test | TESTING | Regresión silenciosa en endpoints | RSK-02 | L | P0 | route.test básico (401/404/200) + security/siem/run y public/v1 (P0) |
-| TD-04 | `src/modules/*` vacíos (9 dirs clean-arch, 0 archivos) | ARCHITECTURE | Doble arquitectura: legacy vs target | RSK-02 | L | P1 | TSK-014: iniciar módulos con unit tests |
+| TD-04 | `src/modules/*` vacíos (9 dirs clean-arch, 0 archivos) | ARCHITECTURE | Doble arquitectura: legacy vs target | RSK-02 | L | P1 | RESUELTO 2026-09-25: scaffold vacío eliminado (`Remove-Item src/modules`); funcionalidad vive en src/app, src/server, src/trigger |
 | TD-05 | `src/shared/db/run-migration.ts` legacy hardcodeado a 0001 | LEGACY | Riesgo de promoción incorrecta | RSK-05 | S | P1 | Deprecar — usar `drizzle-kit push` (documentado §7) |
 | TD-06 | `scheduled-scan.trigger.ts` stub no registrado | LEGACY | Feature no operativa silenciosa | RSK-07 | S | P1 | RESUELTO 2026-09-17: scheduled-scan-runner implementado + retry maxAttempts 3 |
 | TD-07 | PerformanceTab con datos estáticos (L28-39) | LEGACY | Dashboard no refleja datos reales | RSK-02 | M | P1 | TSK-015: consumir `performance_results` |
 | TD-08 | 12 snapshots Drizzle intermedios faltantes | INFRASTRUCTURE | Regeneración limitada de migraciones | — | M | P2 | Documentado; regenerables solo con BD de referencia |
-| TD-09 | i18n sin check automático de paridad de keys | GOVERNANCE | Keys huérfanas en en/es | — | S | P2 | I18N-AUDIT + script de paridad (TSK-019/B09) |
+| TD-09 | ~~i18n sin check automático de paridad de keys~~ | GOVERNANCE | Keys huérfanas en en/es | — | S | P2 | RESUELTO: `scripts/i18n-parity.mjs` + guard en CI (`ci.yml` "Guard i18n parity", `--max-divergence 0.02`) + `docs/i18n/I18N-AUDIT.md` (B09) |
 | TD-10 | `integrations`/`integration_sync_logs` sin escritor | ARCHITECTURE | Datos fantasma sin flujo | — | M | P2 | TSK-016: escritor de integraciones |
-| TD-11 | 2 tool-registries duplicados (`core/` y `registry/`) | DUPLICATION | Divergencia vs ADR-001 (Single Source of Truth) | RSK-09 | M | P1 | Consolidar en `core/tool-registry.ts` + test único |
+| TD-11 | 2 tool-registries duplicados (`core/` y `registry/`) | DUPLICATION | Divergencia vs ADR-001 (Single Source of Truth) | RSK-09 | M | P1 | RESUELTO 2026-09-25: `registry/tool-registry.ts` es **solo tipos** (C05, 37 líneas, sin datos de tools) y `core/tool-registry.ts` es el único registro runtime — sin divergencia posible; verificado por lectura de ambos archivos |
 | TD-12 | `src/server/db/supabase-live-test.mjs` suelto | INFRASTRUCTURE | Script manual fuera del runner | — | S | P2 | RESUELTO 2026-09-17: scripts movidos a scripts/manual/ (ignores de eslint actualizados) |
 
-> **12 deudas registradas** (9 OPEN, 3 RESUELTO 2026-09-17: TD-02, TD-06, TD-12) (≥8 requeridas por T10-02). 12 OPEN · 0 RESUELTO. [VERIFIED]
+> **12 deudas registradas** (6 OPEN, 6 RESUELTO: TD-02, TD-04, TD-06, TD-09, TD-11, TD-12 — TD-02/06/09/12 2026-09-17, TD-04/11 2026-09-25) (≥8 requeridas por T10-02). [VERIFIED]
 
 ---
 
@@ -110,7 +110,7 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 |-------|----------------------|------------|
 | TD-03 (rutas sin test) | auth/RLS sin verificación en 36 rutas | route.test de security primero |
 | TD-02 (triggers sin test) | jobs de seguridad (siem) sin verificación | trigger tests P0 |
-| TD-11 (2 registries) | divergencia de tools vs ADR-001 | consolidar + egress-guard test |
+| TD-11 (2 registries) | ~~divergencia de tools vs ADR-001~~ **CERRADO** — registry/ solo tipos, core/ único runtime | verificado 2026-09-25 |
 | TD-12 (script suelto) | acceso directo a DB sin gate | migrar o eliminar |
 
 ---
@@ -122,7 +122,7 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 | TD-01/02/03 | TEST-COVERAGE-MATRIX documenta los gaps | ✅ documentado |
 | TD-05 | `drizzle-kit check` verifica journal (no el script legacy) | ✅ |
 | TD-07 | PerformanceTab sin test (estático) | ❌ [GAP] |
-| TD-11 | `executors.test.ts` cubre un registry; falta el otro | 🟡 parcial |
+| TD-11 | `executors.test.ts` cubre un registry; falta el otro | ✅ cerrado (registry/ = tipos, sin runtime que testear) |
 
 **Cobertura global:** 29 files · 298 tests (295 OK + 3 ambientales) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX].
 
@@ -177,9 +177,9 @@ flowchart LR
 
 | Hipótesis | Verificación | Resultado |
 |-----------|--------------|-----------|
-| "El tool-registry es único (ADR-001)" | `find src -name "*tool-registry*"` → 2 archivos | **INCONSISTENCIA** — TD-11 documentada [VERIFIED] |
+| "El tool-registry es único (ADR-001)" | `find src -name "*tool-registry*"` → 2 archivos | **RECONCILIADO** — `registry/` solo tipos (C05) + `core/` único runtime; ADR-001 se cumple a nivel de datos (TD-11 RESUELTO 2026-09-25) [VERIFIED] |
 | "run-migration.ts está deprecado" | hardcodeado a 0001, no journal-aware | **CONFIRMADO** — TD-05 [VERIFIED] |
-| "Todos los módulos tienen tests" | `src/modules/*` = 0 archivos | **REFUTADO** — TD-04 [VERIFIED] |
+| "Todos los módulos tienen tests" | `src/modules/*` = 0 archivos (directorio **eliminado 2026-09-25**) | **RESUELTO** — TD-04 CERRADO (no había módulos que testear) [VERIFIED] |
 | "La deuda estaba registrada" | dispersa en MASTER-INDEX/plan, sin registro único | **REFUTADO** — este registro la centraliza [VERIFIED] |
 
 ---
@@ -187,7 +187,7 @@ flowchart LR
 ## 15. Unknowns y supuestos
 
 - [UNKNOWN] Esfuerzo exacto (S/M/L) de cada resolución — estimaciones de batch, calibrar al ejecutar.
-- [UNKNOWN] Costo de consolidar TD-11 (riesgo de regresión en tools del engine).
+- ~~[UNKNOWN] Costo de consolidar TD-11 (riesgo de regresión en tools del engine).~~ **CERRADO** — no hay consolidación que hacer: solo tipos vs runtime (TD-11 RESUELTO 2026-09-25).
 - [ASSUMPTION] Resolver P0 (TD-01/02/03) antes del push de CHANGE-001..003.
 - [RECOMMENDED] Registrar la deuda nueva en cada batch para mantener el registro vivo.
 

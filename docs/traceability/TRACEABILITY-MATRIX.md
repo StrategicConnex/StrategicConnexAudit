@@ -216,7 +216,7 @@ flowchart LR
 | Hipótesis | Verificación | Resultado |
 |-----------|--------------|-----------|
 | "Cada test citado existe" | `find src tests -name "*.test.ts(x)"` → los 15 citados presentes | **CONFIRMADO** [VERIFIED] |
-| "Tool-registry es único (ADR-001)" | `find src -name "*tool-registry*"` → **2 archivos** (`core/` y `registry/`) | **INCONSISTENCIA** — ADR-001 documentado pero 2 registries en disco (ver TECH-DEBT-REGISTER TD-11) |
+| "Tool-registry es único (ADR-001)" | `find src -name "*tool-registry*"` → **2 archivos** (`core/` y `registry/`) | **RECONCILIADO** — `registry/` = solo tipos (C05), `core/` = único runtime; ADR-001 cumple a nivel de datos (TD-11/RSK-09 cerrados 2026-09-25) |
 | "Benchmarking está cubierto" | sin test en `src/app/api/benchmarking/` | **REFUTADO** — GAP [VERIFIED] |
 | "42 rutas todas con test" | 6/42 con route.test | **REFUTADO** — gap 36 [VERIFIED] |
 

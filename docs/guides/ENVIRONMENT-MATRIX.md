@@ -106,7 +106,7 @@ flowchart LR
 | `BYPASS_EGRESS_GUARD_DEV` | egress-guard | ⬜ | ⬜ | 🔴 no | 🔴 no | 🔴 no | solo dev |
 | `ADVERSARY_SANDBOX_ENABLED` | adversary | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | feature flag |
 | `E2E_BASE_URL` | e2e | ⬜ | ✅ | ⬜ | ⬜ | ⬜ | Playwright |
-| `Bearer_API_KEY` | env.ts (legacy) | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | 🔴 renombrar a `BEARER_API_KEY` |
+| `BEARER_API_KEY` (alias legacy `Bearer_API_KEY`) | env-secrets.ts | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ✅ renombrado con alias (CS-302) |
 | `GEMINI_API_KEY` | env.ts (legacy) | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | legacy AI |
 | `XIAOMI_BASE_URL` | env.ts (legacy) | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | legacy, default apifreellm |
 
@@ -175,9 +175,9 @@ Ver §3 — 1 bloque mermaid, válido.
 
 ## 12. Cross-check / inconsistencias
 
-**DOCUMENTATION CONSISTENCY ISSUE** — `src/shared/hooks/useRealtimeMetrics.ts:12` lee `NEXT_PUBLIC_SUPABASE_ANON_KEY`; `.env.example` y env.ts declaran `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. **Resolver en B02/B03**: o renombrar el hook, o documentar la variante `ANON_KEY` como pública adicional. No es un leak (ambas públicas), pero rompe el realtime si solo se setea una. [VERIFIED]
+~~**DOCUMENTATION CONSISTENCY ISSUE** — `useRealtimeMetrics.ts:12` lee `NEXT_PUBLIC_SUPABASE_ANON_KEY`~~ **RESUELTO (CS-301, 2026-09)**: el hook ahora usa `createClient()` de `@/shared/lib/supabase/client` → `env.supabaseAnonKey` con fallback canónico `PUBLISHABLE_KEY || ANON_KEY` (`src/shared/config/env.ts:14-15`, cubierto por `env.test.ts`). [RESUELTO]
 
-**DOCUMENTATION CONSISTENCY ISSUE** — `Bearer_API_KEY` (camel-case) vs convención `SCREAMING_SNAKE`. Renombrar en B04 con alias de compatibilidad. [OBSERVED]
+~~**DOCUMENTATION CONSISTENCY ISSUE** — `Bearer_API_KEY` (camel-case) vs convención `SCREAMING_SNAKE`~~ **RESUELTO (CS-302, 2026-09)**: nombre canónico `BEARER_API_KEY` con alias legacy `Bearer_API_KEY` en `src/shared/config/env-secrets.ts:19-20` (+ tests en `env-secrets.test.ts`). [RESUELTO]
 
 **DOCUMENTATION CONSISTENCY ISSUE** — `NEXT_PUBLIC_DEV_BYPASS_AUTH` y `DB_ALLOW_INSECURE_SSL` documentadas como peligrosas: ambas tienen guard `NODE_ENV === 'development'` / warning en consola; matríz las marca 🔴 no en prod. [VERIFIED]
 
@@ -188,7 +188,7 @@ Ver §3 — 1 bloque mermaid, válido.
 | Item | Clasificación |
 |---|---|
 | ¿Existe un deploy STAGING dedicado en Vercel? | [ASSUMPTION] — no detectado; se mapea a Preview/alias |
-| ¿`LOOKER_STUDIO_API_KEY` definida en todos los entornos? | [UNKNOWN] — crítica por VULN-006 |
+| ¿`LOOKER_STUDIO_API_KEY` definida en todos los entornos? | [UNKNOWN] — sin embargo VULN-006 ya es **fail-closed** (401 si falta la env var), así que la ausencia solo deshabilita el endpoint, no lo abre |
 | ¿`SCAUDIT_WEBHOOK_SECRET` seteada en prod? | [ASSUMPTION] — requerida; fallback dev si falta |
 
 ---
@@ -200,7 +200,7 @@ Ver §3 — 1 bloque mermaid, válido.
 | Nombres de variables | [VERIFIED] grep `process.env.*` en `src/` + `.env.example` |
 | Ambientes Vercel | [VERIFIED] `vercel.json` + `docs/guides/deployment.md` |
 | Flujo deploy manual | [VERIFIED] `docs/guides/deployment.md` §6 — esperar al auto-deploy antes de `vercel --prod` |
-| Inconsistencia ANON_KEY | [VERIFIED] `useRealtimeMetrics.ts:12` |
+| Inconsistencia ANON_KEY | [RESUELTO] `useRealtimeMetrics.ts` → `env.supabaseAnonKey` con fallback (CS-301) |
 | Gitleaks en CI | [VERIFIED] `.github/workflows/ci.yml` (job `secret-scan`) |
 
 ---
@@ -218,4 +218,4 @@ Ver §3 — 1 bloque mermaid, válido.
 
 ## 16. Resumen ejecutivo
 
-**37 variables inventariadas por ambiente.** `NEXT_PUBLIC_*` (5) son públicas; el resto (32) son server-side y deben permanecer fuera del bundle cliente y del repo. La matriz deja 3 inconsistencias abiertas (ANON_KEY vs PUBLISHABLE_KEY, `Bearer_API_KEY`, STAGING no dedicado) y 2 riesgos operativos (`LOOKER_STUDIO_API_KEY` ausente → VULN-006; `SCAUDIT_WEBHOOK_SECRET` ausente → fallback dev). El CI ahora corre gitleaks (`secret-scan`) para blindar REQ-001/007 en cada push.
+**37 variables inventariadas por ambiente.** `NEXT_PUBLIC_*` (5) son públicas; el resto (32) son server-side y deben permanecer fuera del bundle cliente y del repo. De las 3 inconsistencias originales, **2 quedaron resueltas** (ANON_KEY → fallback canónico CS-301; `Bearer_API_KEY` → `BEARER_API_KEY` con alias CS-302); **queda 1 abierta** (STAGING no dedicado). Sobre riesgos operativos: `LOOKER_STUDIO_API_KEY` ausente ahora solo deshabilita el endpoint (VULN-006 fail-closed); `SCAUDIT_WEBHOOK_SECRET` ausente → fallback dev sigue [UNKNOWN]. El CI corre gitleaks (`secret-scan`) para blindar REQ-001/007 en cada push.

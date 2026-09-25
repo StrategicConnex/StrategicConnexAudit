@@ -2,12 +2,12 @@
 version: 2.4
 date: 2026-08-09
 author: Equipo SCAUDIT — Security Review
-status: Aprobado — VULN-001..007/010 remediados; restan VULN-008/009 (Low, mocks); v2.4 cierre de fugas a terceros (CDNs + Google Fonts + tiles)
+status: Aprobado — VULN-001..010 remediados (008/009 cerrados 2026-09-24, TSK-011/012); v2.4 cierre de fugas a terceros (CDNs + Google Fonts + tiles)
 ---
 
 # 🔐 SCAUDIT — Reporte de Auditoría de Seguridad (OWASP / DevSecOps)
 
-> **Fecha:** 2026-08-09 · **Versión:** 2.4 · **Autor:** Equipo SCAUDIT (skills `security-review` + `security-auditor`) · **Estado:** ✅ Aprobado — VULN-001..007 **remediados** · **v2.4:** cierre de fugas a terceros (VULN-010: tiles/markers self-hosted, web-vitals self-hosted, Google Fonts fuera de PDFs) · restan VULN-008/009 (Low, mocks)
+> **Fecha:** 2026-08-09 · **Versión:** 2.4 · **Autor:** Equipo SCAUDIT (skills `security-review` + `security-auditor`) · **Estado:** ✅ Aprobado — VULN-001..010 **remediados** · **v2.4:** cierre de fugas a terceros (VULN-010: tiles/markers self-hosted, web-vitals self-hosted, Google Fonts fuera de PDFs) · **2026-09-24:** VULN-008/009 cerrados (TSK-011/012: auth + RBAC + withRLS + route tests)
 > **Metodología:** OWASP Top 10 + Cheat Sheet Series · trazado de flujo de datos (UI → API → Admin SDK → DB) · adversarial analysis · reporte HIGH-confidence-only.
 > **Alcance de esta revisión:** commit `739e09d` (post-B01). Inventario de las 42 rutas de `src/app/api`, separación de cliente/servidor Supabase, y escaneo de secretos.
 
@@ -42,7 +42,7 @@ status: Aprobado — VULN-001..007/010 remediados; restan VULN-008/009 (Low, moc
 
 | OWASP | Área | Estado | Evidencia |
 |---|---|---|---|
-| A01 — Broken Access Control | IDOR / authz multi-tenant | 🟡 **solo mocks sin datos (Low)** | VULN-008 (members), VULN-009 (graph) |
+| A01 — Broken Access Control | IDOR / authz multi-tenant | ✅ **remediado** | VULN-008 (members: auth + RBAC + `withRLS`, route.test 9) · VULN-009 (graph: 401 sin sesión, route.test) |
 | A03 — Injection | SQLi vía `sql.raw` | ✅ [VERIFIED] | `windowHours` server-controlled (ver §7 research table) |
 | A05 — Broken Function Level Auth | Rutas sin autenticación | ✅ **remediado** | VULN-007 (pdf/progress) protegido con sesión |
 | A08 — Software & Data Integrity | Deserialización / secrets en bundle | ✅ [VERIFIED] | Service Role nunca en bundle cliente (§3.2) |
@@ -163,7 +163,7 @@ flowchart TB
 | Ruta | Método | Auth |
 |---|---|---|
 | `/api/public/v1/intelligence` | GET/POST | API key (hashed) + ownership en POST |
-| `/api/looker-studio` | GET | ⚠️ API key **solo si `LOOKER_STUDIO_API_KEY` está definida** (VULN-006) |
+| `/api/looker-studio` | GET | ✅ API key **fail-closed**: 401 si `LOOKER_STUDIO_API_KEY` falta, solo `Bearer` + `timingSafeEqual` (VULN-006 remediado; route.test 2026-09-25) |
 
 ### 6.4 Pública por diseño
 
@@ -180,9 +180,9 @@ flowchart TB
 |---|---|---|---|
 | `/api/intelligence/history` | GET | ~~IDOR cross-tenant vía directDb~~ **REMEDIADO** — auth + owner-check (VULN-004) | ~~High~~ Resuelto |
 | `/api/intelligence/assets/graph` | GET | ~~IDOR cross-tenant sin RLS~~ **REMEDIADO** — auth + `withRLS` (VULN-005) | ~~High~~ Resuelto |
-| `/api/reports/pdf/progress` | GET | SSE sin auth, genId adivinable (VULN-007) | Medium |
-| `/api/projects/[id]/members` | GET/POST | Mock, datos falsos, sin auth (VULN-008) | Low |
-| `/api/intelligence/graph` | GET | Mock traversal, sin auth, sin datos reales (VULN-009) | Low |
+| `/api/reports/pdf/progress` | GET | ~~SSE sin auth~~ **REMEDIADO** — sesión + clave `pdf_progress:<userId>:<genId>` (VULN-007, TSK-005) | ~~Medium~~ Resuelto |
+| `/api/projects/[id]/members` | GET/POST | ~~Mock sin auth~~ **REMEDIADO** — auth + RBAC + `withRLS` (VULN-008, TSK-011) | ~~Low~~ Resuelto |
+| `/api/intelligence/graph` | GET | ~~Mock sin auth~~ **REMEDIADO** — 401 sin sesión (VULN-009, TSK-012) | ~~Low~~ Resuelto |
 | `/api/webhooks/cicd` | POST | HMAC `verifyWebhookSignature` (correcto en prod; fallback dev) | — |
 
 ---
@@ -253,13 +253,13 @@ flowchart TB
 - **Impact:** Fuga de metadatos de generación (percent, step, errores); DoS leve por conexiones SSE abiertas.
 - **Fix aplicado (TSK-005, P0):** El GET exige sesión (`createClient().auth.getUser()` → 401 sin sesión). La clave Redis ahora es `pdf_progress:<userId>:<genId>` (namespaced por usuario) tanto en el POST (`reports/pdf/route.tsx`) como en el GET — un caller solo puede ver el progreso de sus propias generaciones.
 
-### VULN-008 — Endpoint de miembros sin auth (Low, mock) — NUEVO
+### VULN-008 — Endpoint de miembros sin auth (Low, mock) — REMEDIADO ✅
 
 - **Location:** `src/app/api/projects/[id]/members/route.ts`
 - **Confidence:** High (solo datos mock)
 - **Issue:** GET/POST sin autenticación; devuelve emails/roles hardcodeados y "crea" invitaciones sin verificar nada. Hoy son datos falsos, pero es superficie sin auth que deberá bloquearse al conectar DB. [VERIFIED, código leído]
 - **Impact:** Nulo hoy (mock); riesgo futuro si se conecta a datos reales sin auth.
-- **Fix:** Autenticar sesión + RBAC (`canPerformAction`) antes de implementar datos reales.
+- **Fix aplicado (TSK-011):** auth de sesión (`401` sin sesión) + RBAC + lectura real vía `withRLS` — verificado con `route.test.ts` (9 tests) el 2026-09-24.
 
 ### VULN-010 — Fugas de datos a terceros vía CDNs/recursos externos (Medium) — REMEDIADO ✅
 
@@ -417,4 +417,4 @@ Ver §3 (arquitectura) — 1 bloque mermaid, 11 nodos, válido.
 
 ## 18. Resumen ejecutivo
 
-**2 hallazgos (0 críticos, 0 high, 0 medium, 2 low).** La aplicación tiene una postura de seguridad sólida: RLS transaccional, egress-guard con CIDR matching, sandbox sin shell, hashing de API keys, CSP, `CRON_SECRET` en crons y separación cliente/servidor verificada (Service Role nunca en bundle). La **revisión v2.1** detectó dos IDOR cross-tenant HIGH (VULN-004/005) que fueron remediados. La **revisión v2.2** cierra el batch P0: VULN-001 (XSS IA → `escapeHtml` antes del render), VULN-002 (secret webhooks enmascarado + test), VULN-003 (`/intelligence` en middleware), VULN-006 (looker-studio fail-closed + `timingSafeEqual`), VULN-007 (progreso PDF namespaced por usuario con sesión). La **revisión v2.3** endurece el CSP: el nonce (antes generado pero **no aplicado**) ahora viaja en los headers del request, Next.js 16 lo aplica a todos sus scripts inline, se eliminó `'unsafe-inline'` de `script-src` (anulaba la validación por nonce), se añadió `'strict-dynamic'` y `object-src 'none'`, y `connect-src` se redujo a `'self'` + `*.supabase.co` (se eliminaron dominios muertos de LLM/SIEM que solo ampliaban la superficie de exfiltración); como los nonces exigen render dinámico, se eliminaron las 2 últimas páginas estáticas (`force-static`/`generateStaticParams`). **Restan solo 2 hallazgos Low** (VULN-008/009) que son endpoints mock sin datos reales — se protegen/eliminan al conectar datos reales (plan MODE C TSK-011/012). No se detectaron secretos reales en el repo (gitleaks es ahora barrera dura en CI).
+**0 hallazgos abiertos (0 críticos, 0 high, 0 medium, 0 low).** La aplicación tiene una postura de seguridad sólida: RLS transaccional, egress-guard con CIDR matching, sandbox sin shell, hashing de API keys, CSP, `CRON_SECRET` en crons y separación cliente/servidor verificada (Service Role nunca en bundle). La **revisión v2.1** detectó dos IDOR cross-tenant HIGH (VULN-004/005) que fueron remediados. La **revisión v2.2** cierra el batch P0: VULN-001 (XSS IA → `escapeHtml` antes del render), VULN-002 (secret webhooks enmascarado + test), VULN-003 (`/intelligence` en middleware), VULN-006 (looker-studio fail-closed + `timingSafeEqual`), VULN-007 (progreso PDF namespaced por usuario con sesión). La **revisión v2.3** endurece el CSP: el nonce (antes generado pero **no aplicado**) ahora viaja en los headers del request, Next.js 16 lo aplica a todos sus scripts inline, se eliminó `'unsafe-inline'` de `script-src` (anulaba la validación por nonce), se añadió `'strict-dynamic'` y `object-src 'none'`, y `connect-src` se redujo a `'self'` + `*.supabase.co` (se eliminaron dominios muertos de LLM/SIEM que solo ampliaban la superficie de exfiltración); como los nonces exigen render dinámico, se eliminaron las 2 últimas páginas estáticas (`force-static`/`generateStaticParams`). Los últimos 2 hallazgos Low (**VULN-008/009**) fueron cerrados el 2026-09-24 (TSK-011/012: auth + RBAC + `withRLS` + route tests). No se detectaron secretos reales en el repo (gitleaks es ahora barrera dura en CI).

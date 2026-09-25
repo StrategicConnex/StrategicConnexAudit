@@ -442,7 +442,7 @@ Acceso a datos (interfaces reales [VERIFIED]): `src/shared/db/index.ts` (`db`, `
 
 **45. `siem_alert_logs`** (`security-audit.ts:33`) — **sin FKs**; `rule_event_type`/`ip`/`label` NOT NULL; `severity` text NOT NULL default `warning`; `count`/`window_minutes` integer NOT NULL; `target`/`status` NOT NULL; `response_code` integer; `error_message` text; `metadata` jsonb; `detected_at`/`created_at` NOT NULL. Índices `idx_siem_logs_created`, `idx_siem_logs_severity_created`, `idx_siem_logs_rule_type_created` (0007).
 
-**46. `push_subscriptions`** (`push-subscriptions.ts:21`) — FK user CASCADE (nullable); **`endpoint` UNIQUE NOT NULL**; `subscription` jsonb NOT NULL; `user_agent` text; **`active` text NOT NULL default `'true'` (⚠ text, no boolean)**; created/updated_at. Índices `idx_push_subs_user`, `idx_push_subs_active` (0009).
+**46. `push_subscriptions`** (`push-subscriptions.ts:21`) — FK user CASCADE (nullable); **`endpoint` UNIQUE NOT NULL**; `subscription` jsonb NOT NULL; `user_agent` text; **`active` boolean NOT NULL default `true`** (antes `text 'true'`; migrado a boolean por `0021_push_active_boolean.sql`, TSK-009); created/updated_at. Índices `idx_push_subs_user`, `idx_push_subs_active` (0009).
 
 **47. `ai_health_logs`** (`health.ts:24`) — **sin FKs**; `checked_at` NOT NULL default now(); `overall_status` NOT NULL default `healthy`; `task_type` NOT NULL default `all`; `models_healthy/failed/total` integer NOT NULL default 0; `avg_latency_ms` integer; `model_results` jsonb (array tipado); `trigger_source` NOT NULL default `cron`; `metadata` jsonb. Índices `idx_ai_health_checked_at`, `idx_ai_health_overall_status`, `idx_ai_health_task_type_checked` (0008).
 
@@ -460,7 +460,7 @@ Acceso a datos (interfaces reales [VERIFIED]): `src/shared/db/index.ts` (`db`, `
 
 **52. `anomaly_detections`** (`anomaly.ts:26`) — FK project CASCADE NOT NULL + FK investigation **SET NULL**; `metric_type`/`severity` text `$type` (enums TS); `actual_value`/`expected_value` numeric(12,4) NOT NULL; `z_score` numeric(8,3) NOT NULL; `window_size_hours` default 24; `label` NOT NULL; `detail`; `detected_at`/`resolved_at`; `metadata`. Índices `idx_anomaly_project_metric`, `idx_anomaly_severity_detected`, `idx_anomaly_detected_at`, `idx_anomaly_unresolved` (0011). **RLS ENABLED** policy `anomaly_detections_select_member_or_owner` (0016).
 
-**53. `adversary_scenarios`** (`adversary.ts:18`) — catálogo MITRE (template); `mitre_id`/`mitre_tactic`/`mitre_technique`/`name`/`description` NOT NULL; `executor_type` default `manual`; `executor_command`; `severity` default `medium`; `prerequisites`/`tags` text[]; **UNIQUE `uniq_adversary_mitre_id`** (0018). Índice `idx_adversary_mitre_tactic` (0012). ⚠ En DB existe además `idx_adversary_mitre_id` NO único (0012) que el schema actual NO declara (ver §9).
+**53. `adversary_scenarios`** (`adversary.ts:18`) — catálogo MITRE (template); `mitre_id`/`mitre_tactic`/`mitre_technique`/`name`/`description` NOT NULL; `executor_type` default `manual`; `executor_command`; `severity` default `medium`; `prerequisites`/`tags` text[]; **UNIQUE `uniq_adversary_mitre_id`** (0018). Índice `idx_adversary_mitre_tactic` (0012). ~~`idx_adversary_mitre_id` NO único (0012)~~ **dropeado en 0018:65** (TSK-007, verificado en prod).
 
 **54. `adversary_runs`** (`adversary.ts:42`) — FK scenario CASCADE (nullable), FK project CASCADE NOT NULL, FK investigation **SET NULL**, FK engagement **SET NULL** (migración 0017); `status` default `pending`; `result` (`detected|missed|error`); `output`/`error`/`detected_by`; `score_impact`; `started_at`/`completed_at`. Índices `idx_adversary_runs_project_status`, `idx_adversary_runs_scenario` (0012), `idx_adversary_runs_engagement` (0017).
 
@@ -521,9 +521,9 @@ cambio de schema debe regenerar snapshot y migración en el mismo commit.
 | # | Hallazgo | Evidencia | Severidad |
 |---|----------|-----------|-----------|
 | 1 | **58 tablas reales vs 56 asumidas** en el plan (B03 T03-01) | conteo `pgTable(` por archivo [VERIFIED] | info |
-| 2 | `push_subscriptions.active` es `text` (default `'true'`), no `boolean` | `push-subscriptions.ts:37` | LOW |
+| 2 | ~~`push_subscriptions.active` es `text` (default `'true'`), no `boolean`~~ **RESUELTO (TSK-009)** — migrado a `boolean` por 0021 | `push-subscriptions.ts:37` → `0021_push_active_boolean.sql` | ~~LOW~~ cerrado |
 | 3 | `plugin_instances.project_id` es nullable (FK opcional) | `plugins.ts:50` | info |
-| 4 | `idx_adversary_mitre_id` NO único existe en DB (migración 0012) pero NO está declarado en el schema (que solo declara `uniq_adversary_mitre_id` 0018) | `drizzle/0012_adversary_scenarios.sql:20` vs `adversary.ts:37` | MEDIUM (drift schema↔DB) |
+| 4 | ~~`idx_adversary_mitre_id` NO único existe en DB (migración 0012) pero NO está declarado en el schema~~ **RESUELTO (TSK-007)** — `DROP INDEX IF EXISTS idx_adversary_mitre_id` en 0018:65; en prod solo quedan `uniq_adversary_mitre_id` + `idx_adversary_mitre_tactic` | `drizzle/0018_unique_mitre_id.sql:65` | ~~MEDIUM~~ cerrado |
 | 5 | `adversary_runs.engagement_id` FK declarada en schema pero su tabla fue creada después (0017); orden de migraciones invertido (0012 crea runs sin engagement, 0017 altera) | `0012_adversary_scenarios.sql` vs `0017_adversary_ptt.sql` | MEDIUM |
 | 6 | Triggers/funciones de quota (`check_project_quota`, `check_audit_quota`, `tr_check_*`) existen en SQL (0001/0002) pero NO están representados en los schemas Drizzle → `drizzle-kit push` no los gestiona | `drizzle/0002_quota_enforcement.sql` | MEDIUM |
 | 7 | `security_audit_logs`, `siem_alert_logs`, `ai_health_logs` sin FK → no escalan a proyecto/usuario (consultas de tenant vía proyecto requieren joins indirectos) | schemas `security-audit.ts`, `health.ts` | info |
@@ -538,7 +538,7 @@ si los triggers de quota están activos) **no es verificable desde el repo** →
 
 - Estado aplicado real de la DB (producción/preview) → [UNKNOWN].
 - `auth.users` (identidad Supabase) está fuera del repo → [UNKNOWN].
-- Existencia en DB de `idx_adversary_mitre_id` depende de que 0012 se haya aplicado → [UNKNOWN hasta aplicar/verificar].
+- Existencia en DB de `idx_adversary_mitre_id` → **[RESUELTO]**: dropeado en 0018:65 y verificado en prod (TSK-007).
 - Policies RLS no incluidas en `drizzle/` (si existen vía Supabase console) → [UNKNOWN].
 - `users.plan_id` sin `onDelete` → comportamiento de borrado de plan → [UNKNOWN] (NO ACTION en Postgres).
 - Datos semilla (`src/shared/db/seed.ts`) no documentados por tabla → [UNKNOWN] fuera de alcance.

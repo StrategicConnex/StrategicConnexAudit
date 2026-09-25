@@ -97,7 +97,7 @@ flowchart TB
 | 19 | `src/app` | OK [VERIFIED] | `src/app/` + `(Get-ChildItem src/app/api -Filter route.ts).Count = 42` | LOW | App Router; **42 route handlers** [VERIFIED]; grupos `(dashboard)`, `ai`, `auth`, `intelligence`, `projects`, `security`, `settings`, `swagger`, `docs`. |
 | 20 | `src/app/components` | OK con hallazgo [VERIFIED] | `src/app/components/` (34 archivos) + `components/tabs/` (10: IntelligenceTab, AdversaryTab, MonitoringTab, ReportsTab, SettingsTab, OverviewTab, KeywordsTab, MarketplaceTab, PerformanceTab, ProjectsTab) | MEDIUM | Duplicación de UI de inteligencia con `src/features/intelligence/components/IntelligenceShell.tsx` — ver DEPENDENCY-GRAPH §6 (hallazgo DUP-1). |
 | 21 | `src/features` | OK [VERIFIED] | `src/features/intelligence/` (components 12, hooks 5, stores, validators, lib/rendering) | MEDIUM | Feature-first para inteligencia; `lib/rendering/{markdown,severity}` compartidos con tabs y con tests (`markdown.test.ts`, `severity.test.ts`). |
-| 22 | `src/modules` | OK con gap [VERIFIED] | `src/modules/{audit,backlinks,competitors,cro,integrations,keywords,performance,reporting,schema}` (9 módulos) | HIGH | Clean architecture (domain/application/infrastructure/presentation) pero **0 archivos `*.test.ts`** [VERIFIED conteo] — gap prioritario para B04/B06. |
+| 22 | `src/modules` | ELIMINADO 2026-09-25 | (antes 9 módulos clean-arch vacíos) | — | Scaffold de 153 dirs con 0 archivos, nunca rastreado por git; **retirado** (TD-04/TSK-014 resuelto por retiro). La funcionalidad vive en `src/app/api`, `src/server`, `src/trigger`. |
 | 23 | `src/server` | OK [VERIFIED] | `src/server/` (intelligence, ai, security, reports, notifications, auth, db, api, lib) | MEDIUM | Engine **server-only**; `src/server/intelligence/{core,executors,registry,plugins,discovery,adversary,history,security,types,mitre,anomaly,enterprise}`; `supabase/admin.ts` (service role) sin uso en cliente. |
 | 24 | `src/shared` | OK [VERIFIED] | `src/shared/` (db, lib, config, utils, hooks, data) | MEDIUM | `db/` (schemas 12+index, `rls.ts` conRLS, index, seed, run-migration); `lib/` (ratelimit, circuit-breaker, audit-log, logger, api-keys, auth, cookie-utils, actions, supabase/*). Fan-in alto (madge): `schemas/index` 73, `db/index` 44, `supabase/server` 34. |
 | 25 | `src/trigger` | OK [VERIFIED] | `src/trigger/*.trigger.ts` (12 archivos) | MEDIUM | 12 tasks Trigger.dev: siem, uptime, cleanup, anomaly, discovery, adversary, scheduled-scan, monitoring, api-key-expiry, audit, webhook, hello. Ver SYSTEM-MAP flujo B. |
@@ -171,7 +171,7 @@ Detalle y controles completos: MAT-002 (ENTERPRISE-ARCHITECTURE §10) y `docs/se
 | Contract | `pnpm test:contract` | `tests/api-contract/contract.test.ts` | [VERIFIED] |
 | Docs gate | `node scripts/quality-gate.mjs --min 80` | 20 checks × 5 pts | [VERIFIED] |
 
-Casos cubiertos: executors DNS/network/TLS/email/OSINT, egress-guard, ratelimit, SIEM exporter, sandbox/adversary, proxy, markdown/severity, report-utils, math, rum (TEST-001 en ENTERPRISE-ARCHITECTURE §22). **Gap:** `src/modules/*` 0 tests; rutas sin `route.test.ts` (solo cron/siem, cron/uptime, adversary, webhooks tienen).
+Casos cubiertos: executors DNS/network/TLS/email/OSINT, egress-guard, ratelimit, SIEM exporter, sandbox/adversary, proxy, markdown/severity, report-utils, math, rum (TEST-001 en ENTERPRISE-ARCHITECTURE §22). **Gap:** rutas sin `route.test.ts` (solo cron/siem, cron/uptime, adversary, webhooks tienen). (`src/modules/*` 0 tests quedó sin efecto: directorio eliminado 2026-09-25.)
 
 ---
 
