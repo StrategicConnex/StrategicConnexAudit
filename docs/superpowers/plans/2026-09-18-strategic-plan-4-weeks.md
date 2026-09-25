@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Estado: COMPLETADO el 2026-09-24** — 18/18 tareas ejecutadas (76/76 pasos), verificadas con gates en verde: `vitest --coverage` 163/163 archivos · 1534/1534 tests · Stmts 41.65% (umbrales 40/30/34/41), `lint` 0, `tsc` 0, `build` 0, `test:contract` 10/10, `drizzle-kit check` OK, `db:drift-check` 69/69 sin drift duro, quality-gate del TEST-COVERAGE-MATRIX 100/100. Ejecución por subagentes con revisión inline; 8 commits temáticos en `main` (`de572cd..4110e07`). Desviaciones respecto a la redacción original anotadas en cada tarea.
+
 **Goal:** Fix 16 remaining tests, improve code quality/security, and deliver Slack/Teams Alerts + Granular RBAC features.
 
 **Architecture:** Bottom-up approach — fix foundation first (tests, error handling), then security/hygiene, then performance/coverage, then features.
@@ -31,7 +33,7 @@
 - Consumes: `txState` object (existing)
 - Produces: All 16 keyword tests pass
 
-- [ ] **Step 1: Update directDb mock in keywords.test.ts**
+- [x] **Step 1: Update directDb mock in keywords.test.ts**
 
 Replace the empty `directDb: {}` mock with a complete mock that handles all query patterns used by the keywords actions.
 
@@ -75,12 +77,12 @@ vi.mock("@/shared/db", () => ({
 }));
 ```
 
-- [ ] **Step 2: Run keywords tests**
+- [x] **Step 2: Run keywords tests**
 
 Run: `npx vitest run src/app/actions/keywords.test.ts`
 Expected: All 16 tests pass
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/app/actions/keywords.test.ts
@@ -98,7 +100,7 @@ git commit -m "fix: complete directDb mock for keywords tests"
 - Consumes: `txState` object (existing)
 - Produces: All 6 report tests pass
 
-- [ ] **Step 1: Update directDb mock in reports.test.ts**
+- [x] **Step 1: Update directDb mock in reports.test.ts**
 
 Replace the empty `directDb: {}` mock with a complete mock that handles all query patterns used by the reports actions.
 
@@ -120,12 +122,12 @@ vi.mock("@/shared/db", () => ({
 }));
 ```
 
-- [ ] **Step 2: Run reports tests**
+- [x] **Step 2: Run reports tests**
 
 Run: `npx vitest run src/app/actions/reports.test.ts`
 Expected: All 6 tests pass
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/app/actions/reports.test.ts
@@ -143,16 +145,16 @@ git commit -m "fix: complete directDb mock for reports tests"
 - Consumes: Mock data setup
 - Produces: All 8 SEO report tests pass
 
-- [ ] **Step 1: Fix mock data for project name**
+- [x] **Step 1: Fix mock data for project name**
 
 The tests expect `project.name` to appear in the report but the mock doesn't provide it. Update the mock to include `name: "TestProject"`.
 
-- [ ] **Step 2: Run seo-report-service tests**
+- [x] **Step 2: Run seo-report-service tests**
 
 Run: `npx vitest run src/server/ai/seo-report-service.test.ts`
 Expected: All 8 tests pass
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/server/ai/seo-report-service.test.ts
@@ -170,16 +172,16 @@ git commit -m "fix: correct mock data for seo-report-service tests"
 - Consumes: Mock data
 - Produces: All 24 PDF template tests pass
 
-- [ ] **Step 1: Fix undefined value in metadata test**
+- [x] **Step 1: Fix undefined value in metadata test**
 
 The test expects `document.title` to be defined but gets `undefined`. Check the mock and fix the assertion.
 
-- [ ] **Step 2: Run pdf-template tests**
+- [x] **Step 2: Run pdf-template tests**
 
 Run: `npx vitest run src/server/reports/pdf-template.test.tsx`
 Expected: All 24 tests pass
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/server/reports/pdf-template.test.tsx
@@ -197,16 +199,16 @@ git commit -m "fix: correct pdf-template test metadata assertion"
 - Consumes: Mock data
 - Produces: All 16 healthcheck tests pass
 
-- [ ] **Step 1: Fix model count assertion**
+- [x] **Step 1: Fix model count assertion**
 
 The test expects `modelsFailed` to be 2 but gets 3. Check the mock setup and fix the assertion.
 
-- [ ] **Step 2: Run healthcheck tests**
+- [x] **Step 2: Run healthcheck tests**
 
 Run: `npx vitest run src/app/api/ai/healthcheck/route.test.ts`
 Expected: All 16 tests pass
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/app/api/ai/healthcheck/route.test.ts
@@ -224,16 +226,16 @@ git commit -m "fix: correct healthcheck test model count assertion"
 - Consumes: Mock data
 - Produces: All 13 weekly digest tests pass
 
-- [ ] **Step 1: Fix error array assertion**
+- [x] **Step 1: Fix error array assertion**
 
 The test expects `errors` array to have length 1 but gets 0. Check the mock setup for `directDb` and fix the error handling.
 
-- [ ] **Step 2: Run weekly-digest tests**
+- [x] **Step 2: Run weekly-digest tests**
 
 Run: `npx vitest run src/server/security/weekly-digest.test.ts`
 Expected: All 13 tests pass
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/server/security/weekly-digest.test.ts
@@ -252,7 +254,7 @@ git commit -m "fix: correct weekly-digest test error array assertion"
 - Consumes: None
 - Produces: `Result<T,E>` type, `ok()`, `err()`, `unwrap()`, `map()`, `flatMap()` functions
 
-- [ ] **Step 1: Write failing tests for Result<T,E>**
+- [x] **Step 1: Write failing tests for Result<T,E>**
 
 ```typescript
 import { describe, it, expect } from "vitest";
@@ -303,12 +305,12 @@ describe("Result<T,E>", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run src/shared/lib/result.test.ts`
 Expected: FAIL with "Cannot find module"
 
-- [ ] **Step 3: Implement Result<T,E>**
+- [x] **Step 3: Implement Result<T,E>**
 
 ```typescript
 export type Result<T, E = Error> =
@@ -337,12 +339,12 @@ export function flatMap<T, U>(result: Result<T>, fn: (v: T) => Result<U>): Resul
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run src/shared/lib/result.test.ts`
 Expected: All 8 tests pass
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/shared/lib/result.ts src/shared/lib/result.test.ts
@@ -363,7 +365,7 @@ git commit -m "feat: add Result<T,E> type for error handling"
 - Consumes: Existing config
 - Produces: Strict linting enabled
 
-- [ ] **Step 1: Update ESLint config for strict mode**
+- [x] **Step 1: Update ESLint config for strict mode**
 
 ```javascript
 // eslint.config.mjs
@@ -386,21 +388,23 @@ export default [
 ];
 ```
 
-- [ ] **Step 2: Run lint to see current issues**
+- [x] **Step 2: Run lint to see current issues**
 
 Run: `npm run lint`
 Expected: List of lint errors
 
-- [ ] **Step 3: Fix lint errors (incremental)**
+- [x] **Step 3: Fix lint errors (incremental)**
 
 Fix 10-15 most critical errors per session.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add eslint.config.mjs
 git commit -m "chore: enable strict ESLint rules"
 ```
+
+> **Nota de ejecución:** las reglas estrictas ya estaban activas en `eslint.config.mjs` (`no-explicit-any`/`prefer-const` en error) y `pnpm lint` cerraba en 0 — no hubo que corregir errores. Lo nuevo de esta tarea fue **Prettier 3.9.9** (`.prettierrc` con la variante de mínima diferencia, `.prettierignore`, scripts `format`/`format:check`); NO se aplicó `--write` masivo (551 archivos) para no ensuciar el diff: se formatea por archivo al tocarlo.
 
 ---
 
@@ -415,7 +419,7 @@ git commit -m "chore: enable strict ESLint rules"
 - Consumes: Existing route handlers
 - Produces: Validated input on all routes
 
-- [ ] **Step 1: Create validation schemas**
+- [x] **Step 1: Create validation schemas**
 
 ```typescript
 // src/shared/schemas/api.ts
@@ -437,7 +441,7 @@ export const PaginationSchema = z.object({
 });
 ```
 
-- [ ] **Step 2: Add validation to monitoring route**
+- [x] **Step 2: Add validation to monitoring route**
 
 ```typescript
 // src/app/api/monitoring/route.ts
@@ -460,16 +464,16 @@ export async function GET(req: NextRequest) {
 }
 ```
 
-- [ ] **Step 3: Add validation to remediation route**
+- [x] **Step 3: Add validation to remediation route**
 
-- [ ] **Step 4: Add validation to intelligence route**
+- [x] **Step 4: Add validation to intelligence route**
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `npx vitest run src/app/api/monitoring src/app/api/remediation src/app/api/intelligence`
 Expected: All tests pass
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/shared/schemas/api.ts src/app/api/monitoring/route.ts src/app/api/remediation/route.ts src/app/api/intelligence/route.ts
@@ -488,7 +492,7 @@ git commit -m "feat: add Zod validation to API routes"
 - Consumes: `process.env`
 - Produces: Validated environment variables
 
-- [ ] **Step 1: Write failing test for env validation**
+- [x] **Step 1: Write failing test for env validation**
 
 ```typescript
 // src/env.test.ts
@@ -502,7 +506,7 @@ describe("env validation", () => {
 });
 ```
 
-- [ ] **Step 2: Implement env.ts**
+- [x] **Step 2: Implement env.ts**
 
 ```typescript
 // src/env.ts
@@ -522,24 +526,26 @@ const envSchema = z.object({
 export const env = envSchema.parse(process.env);
 ```
 
-- [ ] **Step 3: Import env.ts in layout.tsx**
+- [x] **Step 3: Import env.ts in layout.tsx**
 
 ```typescript
 // src/app/layout.tsx
 import "@/env"; // Validate env at startup
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `npx vitest run src/env.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/env.ts src/env.test.ts src/app/layout.tsx
 git commit -m "feat: add environment variable validation at startup"
 ```
+
+> **Nota de ejecución:** `import "@/env"` en `layout.tsx` ya existía. El `envSchema.parse(process.env)` en import del paso 2 **no se aplicó tal cual**: rompería `pnpm build` en Vercel/CI (sin secretos en fase de build, comentario deliberado en el archivo). Se implementó `validateEnv()` que valida bajo demanda en el runtime de servidor, con 12 tests reales en `src/env.test.ts` (no el stub del paso 1).
 
 ---
 
@@ -554,7 +560,7 @@ git commit -m "feat: add environment variable validation at startup"
 - Consumes: Existing schema
 - Produces: Optimized queries
 
-- [ ] **Step 1: Identify slow queries**
+- [x] **Step 1: Identify slow queries**
 
 ```sql
 -- Check for sequential scans
@@ -562,7 +568,7 @@ EXPLAIN ANALYZE SELECT * FROM intelligence_findings
 WHERE project_id = 'some-uuid' AND severity = 'critical';
 ```
 
-- [ ] **Step 2: Create migration for missing indexes**
+- [x] **Step 2: Create migration for missing indexes**
 
 ```sql
 -- src/shared/db/migrations/add-indexes.sql
@@ -576,16 +582,18 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_logs_created_at
 ON audit_logs(created_at DESC);
 ```
 
-- [ ] **Step 3: Apply migration**
+- [x] **Step 3: Apply migration**
 
 Run: `npx drizzle-kit push`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/shared/db/migrations/add-indexes.sql
 git commit -m "perf: add missing database indexes"
 ```
+
+> **Nota de ejecución:** el archivo se creó como `drizzle/2026-09-24_recommended_indexes.sql` (convención de migraciones manuales fechadas del repo, no `src/shared/db/migrations/`). De los 3 índices propuestos, **2 ya existían** (`idx_intel_findings_project_severity` en `intelligence.ts:102`; assets cubiertos por el unique `uniq_intel_asset_project_type_value`) y crearlos habría sido redundante — solo se añadió `idx_audit_logs_created_at` (el único que hacía seq scan, en `compliance/soc2-pack`). Step 3 aplicado con `create index if not exists` directo (91ms, 38 filas) en vez de `drizzle-kit push`, que empujaría todo el snapshot.
 
 ---
 
@@ -599,7 +607,7 @@ git commit -m "perf: add missing database indexes"
 - Consumes: Upstash Redis (already configured)
 - Produces: `cached()` function
 
-- [ ] **Step 1: Write failing tests for cache**
+- [x] **Step 1: Write failing tests for cache**
 
 ```typescript
 // src/shared/lib/cache.test.ts
@@ -629,7 +637,7 @@ describe("cached()", () => {
 });
 ```
 
-- [ ] **Step 2: Implement cache.ts**
+- [x] **Step 2: Implement cache.ts**
 
 ```typescript
 // src/shared/lib/cache.ts
@@ -653,12 +661,12 @@ export async function cached<T>(
 }
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `npx vitest run src/shared/lib/cache.test.ts`
 Expected: All tests pass
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/shared/lib/cache.ts src/shared/lib/cache.test.ts
@@ -678,7 +686,7 @@ git commit -m "feat: add Redis caching layer"
 - Consumes: Existing route handlers
 - Produces: 20 new tests
 
-- [ ] **Step 1: Create monitoring route test**
+- [x] **Step 1: Create monitoring route test**
 
 ```typescript
 // src/app/api/monitoring/route.test.ts
@@ -716,16 +724,16 @@ describe("GET /api/monitoring", () => {
 });
 ```
 
-- [ ] **Step 2: Create remediation route test**
+- [x] **Step 2: Create remediation route test**
 
-- [ ] **Step 3: Create intelligence route test**
+- [x] **Step 3: Create intelligence route test**
 
-- [ ] **Step 4: Run all new tests**
+- [x] **Step 4: Run all new tests**
 
 Run: `npx vitest run src/app/api/monitoring src/app/api/remediation src/app/api/intelligence`
 Expected: All tests pass
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/api/monitoring/route.test.ts src/app/api/remediation/route.test.ts src/app/api/intelligence/route.test.ts
@@ -748,7 +756,7 @@ git commit -m "test: add 20 API route tests"
 - Consumes: Slack Web API
 - Produces: `sendSlackAlert()` function
 
-- [ ] **Step 1: Write failing test for Slack client**
+- [x] **Step 1: Write failing test for Slack client**
 
 ```typescript
 // src/server/integrations/slack/client.test.ts
@@ -771,7 +779,7 @@ describe("Slack client", () => {
 });
 ```
 
-- [ ] **Step 2: Implement Slack client**
+- [x] **Step 2: Implement Slack client**
 
 ```typescript
 // src/server/integrations/slack/client.ts
@@ -802,12 +810,12 @@ export async function sendSlackAlert(
 }
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `npx vitest run src/server/integrations/slack/client.test.ts`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/server/integrations/slack/
@@ -828,13 +836,13 @@ git commit -m "feat: add Slack integration client"
 - Consumes: Teams Webhook
 - Produces: `sendTeamsAlert()` function
 
-- [ ] **Step 1: Write failing test for Teams client**
+- [x] **Step 1: Write failing test for Teams client**
 
-- [ ] **Step 2: Implement Teams client**
+- [x] **Step 2: Implement Teams client**
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ---
 
@@ -848,13 +856,13 @@ git commit -m "feat: add Slack integration client"
 - Consumes: Slack/Teams clients
 - Produces: `manageAlert()` function
 
-- [ ] **Step 1: Write failing test for Alert Manager**
+- [x] **Step 1: Write failing test for Alert Manager**
 
-- [ ] **Step 2: Implement Alert Manager**
+- [x] **Step 2: Implement Alert Manager**
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ---
 
@@ -868,7 +876,7 @@ git commit -m "feat: add Slack integration client"
 - Consumes: Existing schema
 - Produces: `project_members`, `role_permissions`, `audit_log_entries` tables
 
-- [ ] **Step 1: Create RBAC schema**
+- [x] **Step 1: Create RBAC schema**
 
 ```typescript
 // src/shared/db/schemas/rbac.ts
@@ -907,11 +915,13 @@ export const auditLogEntries = pgTable("audit_log_entries", {
 });
 ```
 
-- [ ] **Step 2: Create migration SQL**
+- [x] **Step 2: Create migration SQL**
 
-- [ ] **Step 3: Apply migration**
+- [x] **Step 3: Apply migration**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
+
+> **Nota de ejecución (desviación deliberada):** NO se creó `src/shared/db/schemas/rbac.ts` ni migración `add-rbac.sql`. Motivos: (1) `project_members` y `project_invitations` **ya existen** en `src/shared/db/schemas/teams.ts`, y la auditoría de equipo usa `team_audit_logs` (más `audit_logs` global), así que no hacía falta `audit_log_entries`; (2) la tabla `role_permissions` se reemplazó por una **matriz de permisos en código** (`checkPermission(role, permission, resource)` + `MIN_ROLE_BY_RESOURCE` en `src/server/auth/rbac.ts`) porque añadir un `pgTable` sin migración aplicada haría fallar el gate anti-drift de CI (`scripts/db/drift-check.mjs`, hoy 69/69 tablas sin drift duro). El comportamiento objetivo —permisos granulares por rol y recurso— está cubierto por 15 tests de matriz.
 
 ---
 
@@ -925,13 +935,13 @@ export const auditLogEntries = pgTable("audit_log_entries", {
 - Consumes: RBAC schema
 - Produces: `checkPermission()`, `getProjectRole()`, `addMember()`, `removeMember()` functions
 
-- [ ] **Step 1: Write failing tests for RBAC**
+- [x] **Step 1: Write failing tests for RBAC**
 
-- [ ] **Step 2: Implement RBAC service**
+- [x] **Step 2: Implement RBAC service**
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ---
 
@@ -946,15 +956,15 @@ export const auditLogEntries = pgTable("audit_log_entries", {
 - Consumes: RBAC service
 - Produces: CRUD endpoints for members and audit log
 
-- [ ] **Step 1: Create members list/invite endpoint**
+- [x] **Step 1: Create members list/invite endpoint**
 
-- [ ] **Step 2: Create member update/remove endpoint**
+- [x] **Step 2: Create member update/remove endpoint**
 
-- [ ] **Step 3: Create audit log endpoint**
+- [x] **Step 3: Create audit log endpoint**
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ---
 
@@ -967,3 +977,5 @@ Plan complete and saved to `docs/superpowers/plans/2026-09-18-strategic-plan-4-w
 **2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
 
 Which approach?
+
+> **Resuelto (2026-09-24):** opción **1 con revisión inline** — subagentes por área con alcances disjuntos (env, prettier, índices, integrations, RBAC) y verificación centralizada entre lotes. Resultado: 18/18 tareas, 8 commits temáticos empujados a `main` (`de572cd..4110e07`) y todos los gates en verde (ver nota de estado al inicio del plan).
