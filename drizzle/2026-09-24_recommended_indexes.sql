@@ -1,0 +1,38 @@
+-- ═══════════════════════════════════════════════════════════════════════
+-- Tarea 3.1 «Add Missing Database Indexes» — Plan 4 semanas (2026-09-18)
+-- docs/superpowers/plans/2026-09-18-strategic-plan-4-weeks.md (~línea 548)
+-- Fecha: 2026-09-24
+--
+-- Los 3 candidatos del plan fueron verificados contra los esquemas
+-- Drizzle (src/shared/db/schemas/*.ts) y las migraciones (drizzle/*.sql)
+-- ANTES de escribir este archivo. Solo se materializa el que faltaba:
+--
+--   1. intelligence_findings(project_id, severity) → YA EXISTE
+--      idx_intel_findings_project_severity (intelligence.ts:102;
+--      DDL 0003_outstanding_agent_brand.sql:118). No se duplica.
+--
+--   2. intelligence_assets(project_id, asset_type) → YA COBERTO
+--      uniq_intel_asset_project_type_value UNIQUE(project_id, asset_type,
+--      value) (intelligence.ts:122; DDL 0003:15) es un btree cuyas
+--      columnas iniciales son exactamente project_id + asset_type, así
+--      que toda igualdad sobre ambas (discovery/route.ts:48-64) ya lo
+--      usa. Un índice aparte sería redundante (INDEX-STRATEGY.md §5.1:
+--      «no crear índices especulativos»).
+--
+--   3. audit_logs(created_at DESC) → FALTABA ✔ (creado abajo)
+--      audit_logs solo tiene idx_audit_logs_project_created (project_id,
+--      created_at) y idx_audit_logs_user (user_id)
+--      (0015_core_fk_indexes.sql:49-54); ningún índice cubre un rango
+--      puro sobre created_at. Consulta real sin cobertura:
+--      gte(auditLogs.createdAt, since) en compliance/soc2-pack/route.ts:108-111.
+--
+-- Convención (igual que las migraciones fechadas 2026-08-25/26):
+-- create index if not exists ... SIN CONCURRENTLY, porque las migraciones
+-- se ejecutan dentro de una transacción y CREATE INDEX CONCURRENTLY no
+-- puede correr dentro de una. Para aplicar en vivo con carga, extraer el
+-- statement y ejecutarlo fuera de transacción (INDEX-STRATEGY.md §3.2).
+-- ═══════════════════════════════════════════════════════════════════════
+
+-- Timeline / rangos gte(created_at) sobre audit_logs (SOC2 CC8.1)
+create index if not exists idx_audit_logs_created_at
+  on public.audit_logs (created_at desc);
