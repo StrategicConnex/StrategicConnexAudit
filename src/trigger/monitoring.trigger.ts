@@ -34,6 +34,16 @@ export const evaluateMonitorsTask = schedules.task({
       .where(inArray(projects.id, projectIds));
     const projectsById = new Map(projectRows.map((p) => [p.id, p]));
 
+    const alertPayloads: Array<{
+      projectId: string;
+      scheduleId: string;
+      title: string;
+      message: string;
+      severity: "critical";
+      resolved: false;
+    }> = [];
+    const completedIds: string[] = [];
+
     for (const monitor of activeMonitors) {
       try {
         // 1. Simular la ejecución de una herramienta específica para el monitor
@@ -64,10 +74,10 @@ export const evaluateMonitorsTask = schedules.task({
 
         if (result.success && result.findings) {
           const criticalOrHigh = result.findings.filter(f => f.severity === "high" || f.severity === "critical");
-          
+
           if (criticalOrHigh.length > 0) {
-            // Generar una alerta de Drift de Seguridad
-            await db.insert(monitoringAlerts).values({
+            // Generar una alerta de Drift de Seguridad (se persiste al final en batch)
+            alertPayloads.push({
               projectId: monitor.projectId,
               scheduleId: monitor.id,
               title: "Deterioro de Postura de Seguridad (TLS)",
@@ -75,21 +85,34 @@ export const evaluateMonitorsTask = schedules.task({
               severity: "critical",
               resolved: false
             });
-            
+
             logger.warn(`Alerta generada para proyecto ${monitor.projectId} en objetivo ${domainTarget}`);
             // (Opcional) Notificar vía email / webhooks
           }
         }
 
-        // Actualizar lastRunAt
-        await db.update(monitoringSchedules)
-          .set({ lastRunAt: new Date(), updatedAt: new Date() })
-          .where(eq(monitoringSchedules.id, monitor.id));
+        completedIds.push(monitor.id);
 
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         logger.error(`Error evaluando monitor ${monitor.id}: ${errorMessage}`);
       }
+    }
+
+    // Flush batcheado: 2 queries fijas al final (antes 2 por monitor).
+    // Un fallo de persistencia no revierte la evaluación: se loguea y sigue.
+    try {
+      if (completedIds.length > 0) {
+        await db.update(monitoringSchedules)
+          .set({ lastRunAt: new Date(), updatedAt: new Date() })
+          .where(inArray(monitoringSchedules.id, completedIds));
+      }
+      if (alertPayloads.length > 0) {
+        await db.insert(monitoringAlerts).values(alertPayloads);
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logger.error(`Error persistiendo resultados de monitores: ${errorMessage}`);
     }
 
     return { evaluated: activeMonitors.length };

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { directDb } from "@/shared/db";
 import { intelligenceFindings } from "@/shared/db/schemas/intelligence";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { callAIWithFallback, type AITaskType } from "./ai-router";
 import { getNoApiKeyResponse } from "./ai-router";
 
@@ -192,29 +192,30 @@ export async function runFindingTriage(
     };
   }
 
-  // 4. Persistencia: solo ids conocidos, match exacto.
+  // 4. Persistencia: solo ids conocidos, match exacto — UN solo statement
+  //    (antes: 1 UPDATE por finding = hasta 40 roundtrips por llamada).
+  //    `AND f.ai_triage IS NULL` conserva la condición de carrera por fila:
+  //    otro proceso que haya clasificado el finding no se pisa.
   const byId = new Map(pending.map((p) => [p.id, p]));
   const now = new Date();
-  const updates = [] as Array<{ id: string; aiTriage: Record<string, unknown> }>;
+  const triageById: Record<string, Record<string, unknown>> = {};
   for (const item of batch.triage) {
     if (!byId.has(item.findingId)) continue; // el modelo inventó un id
     const { findingId, ...triage } = item;
-    updates.push({ id: findingId, aiTriage: { ...triage, promptVersion: FINDING_TRIAGE_PROMPT_VERSION } });
+    triageById[findingId] = { ...triage, promptVersion: FINDING_TRIAGE_PROMPT_VERSION };
   }
 
   let updated = 0;
-  for (const u of updates) {
-    const rows = await directDb
-      .update(intelligenceFindings)
-      .set({ aiTriage: u.aiTriage, aiTriageAt: now })
-      .where(
-        and(
-          eq(intelligenceFindings.id, u.id),
-          isNull(intelligenceFindings.aiTriage) // condición de carrera: otro proceso no lo pisa
-        )
-      )
-      .returning({ id: intelligenceFindings.id });
-    updated += rows.length;
+  const findingIds = Object.keys(triageById);
+  if (findingIds.length > 0) {
+    const result = await directDb.execute(sql`
+      UPDATE intelligence_findings AS f
+      SET ai_triage = v.triage, ai_triage_at = ${now}
+      FROM jsonb_each(${JSON.stringify(triageById)}::jsonb) AS v(key, triage)
+      WHERE f.id = v.key::uuid AND f.ai_triage IS NULL
+      RETURNING f.id
+    `);
+    updated = (result.rows ?? []).length;
   }
 
   return {

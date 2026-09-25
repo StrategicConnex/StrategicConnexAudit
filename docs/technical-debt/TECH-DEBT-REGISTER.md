@@ -74,14 +74,14 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 | TD-04 | `src/modules/*` vacíos (9 dirs clean-arch, 0 archivos) | ARCHITECTURE | Doble arquitectura: legacy vs target | RSK-02 | L | P1 | RESUELTO 2026-09-25: scaffold vacío eliminado (`Remove-Item src/modules`); funcionalidad vive en src/app, src/server, src/trigger |
 | TD-05 | `src/shared/db/run-migration.ts` legacy hardcodeado a 0001 | LEGACY | Riesgo de promoción incorrecta | RSK-05 | S | P1 | Deprecar — usar `drizzle-kit push` (documentado §7) |
 | TD-06 | `scheduled-scan.trigger.ts` stub no registrado | LEGACY | Feature no operativa silenciosa | RSK-07 | S | P1 | RESUELTO 2026-09-17: scheduled-scan-runner implementado + retry maxAttempts 3 |
-| TD-07 | PerformanceTab con datos estáticos (L28-39) | LEGACY | Dashboard no refleja datos reales | RSK-02 | M | P1 | TSK-015: consumir `performance_results` |
+| TD-07 | ~~PerformanceTab con datos estáticos (L28-39)~~ | LEGACY | Dashboard no refleja datos reales | RSK-02 | M | P1 | RESUELTO 2026-09-25: server action `getPerformanceSnapshot` (`src/app/actions/performance.ts`, 4 queries batcheadas: projects/vitals/audits/issues — sin N+1) + `PerformanceTab` consume el snapshot real (sparkline/donut/score/gauge/cards, empty states, badge RUM); 8 tests: `performance.test.ts` (4) + `PerformanceTab.test.tsx` (4) |
 | TD-08 | 12 snapshots Drizzle intermedios faltantes | INFRASTRUCTURE | Regeneración limitada de migraciones | — | M | P2 | Documentado; regenerables solo con BD de referencia |
 | TD-09 | ~~i18n sin check automático de paridad de keys~~ | GOVERNANCE | Keys huérfanas en en/es | — | S | P2 | RESUELTO: `scripts/i18n-parity.mjs` + guard en CI (`ci.yml` "Guard i18n parity", `--max-divergence 0.02`) + `docs/i18n/I18N-AUDIT.md` (B09) |
-| TD-10 | `integrations`/`integration_sync_logs` sin escritor | ARCHITECTURE | Datos fantasma sin flujo | — | M | P2 | TSK-016: escritor de integraciones |
+| TD-10 | ~~`integrations`/`integration_sync_logs` sin escritor~~ | ARCHITECTURE | Datos fantasma sin flujo | — | M | P2 | RESUELTO 2026-09-25: `integration-sync-sweep` (`src/trigger/integration-sync.trigger.ts`, cron diario 03:00 UTC, escritura vía `directDb` bypass RLS) inserta log `running`→`success`/`failed` por integración, cuenta filas nuevas desde `last_sync_at` (`recordsSynced`), actualiza `integrations.last_sync_at` y marca `expired` a las >48h sin sync; 8 tests (`integration-sync.trigger.test.ts`) |
 | TD-11 | 2 tool-registries duplicados (`core/` y `registry/`) | DUPLICATION | Divergencia vs ADR-001 (Single Source of Truth) | RSK-09 | M | P1 | RESUELTO 2026-09-25: `registry/tool-registry.ts` es **solo tipos** (C05, 37 líneas, sin datos de tools) y `core/tool-registry.ts` es el único registro runtime — sin divergencia posible; verificado por lectura de ambos archivos |
 | TD-12 | `src/server/db/supabase-live-test.mjs` suelto | INFRASTRUCTURE | Script manual fuera del runner | — | S | P2 | RESUELTO 2026-09-17: scripts movidos a scripts/manual/ (ignores de eslint actualizados) |
 
-> **12 deudas registradas** (6 OPEN, 6 RESUELTO: TD-02, TD-04, TD-06, TD-09, TD-11, TD-12 — TD-02/06/09/12 2026-09-17, TD-04/11 2026-09-25) (≥8 requeridas por T10-02). [VERIFIED]
+> **12 deudas registradas** (4 OPEN, 8 RESUELTO: TD-02, TD-04, TD-06, TD-07, TD-09, TD-10, TD-11, TD-12 — TD-02/06/09/12 2026-09-17, TD-04/07/10/11 2026-09-25) (≥8 requeridas por T10-02). [VERIFIED]
 
 ---
 
@@ -100,7 +100,7 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 | `/api/intelligence/runs`, `/api/reports/pdf/progress` | TD-03 (gap P1) |
 | `/api/intelligence/adversary` | TD-02 (trigger sin test) |
 | `/api/notifications/push-subscribe` | TD-01 (cobertura) |
-| `/api/benchmarking` | TD-03 + TD-07 (datos estáticos) |
+| `/api/benchmarking` | TD-03 |
 
 ---
 
@@ -121,10 +121,10 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 |-------|-------------------|--------|
 | TD-01/02/03 | TEST-COVERAGE-MATRIX documenta los gaps | ✅ documentado |
 | TD-05 | `drizzle-kit check` verifica journal (no el script legacy) | ✅ |
-| TD-07 | PerformanceTab sin test (estático) | ❌ [GAP] |
+| TD-07 | `performance.test.ts` (4) + `PerformanceTab.test.tsx` (4) | ✅ cerrado 2026-09-25 |
 | TD-11 | `executors.test.ts` cubre un registry; falta el otro | ✅ cerrado (registry/ = tipos, sin runtime que testear) |
 
-**Cobertura global:** 29 files · 298 tests (295 OK + 3 ambientales) · Stmts 13.72% [VERIFIED — TEST-COVERAGE-MATRIX].
+**Cobertura global:** 170 files · 1595 tests · Stmts 43.84% / Branch 34.15% / Funcs 38.60% / Lines 44.86% (vitest + coverage 2026-09-25) [VERIFIED — TEST-COVERAGE-MATRIX v1.9].
 
 ---
 
@@ -142,6 +142,7 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 
 - **Monitoring:** la deuda OPEN se revisa en cada batch; P0 debe resolverse antes del push de CHANGE-001..003. [RECOMMENDED]
 - **Runbook:** TD-05 tiene runbook de contingencia (nunca ejecutar el script legacy; usar `drizzle-kit push`). [VERIFIED]
+- **Higiene de migraciones:** las 5 migraciones fechadas que quedaron fuera del journal (`2026-08-25_admin_telemetry`, `2026-08-25_adversary_real`, `2026-08-25_mitre_real`, `2026-08-26_assessment_progress`, `2026-09-24_recommended_indexes`) se registraron en `drizzle/meta/_journal.json` (idx 38-42) y se aplicaron con `pnpm db:migrate` el 2026-09-25: ficheros byte-idénticos (todos idempotentes), ledger `drizzle.__drizzle_migrations` 43/43 en sync, `drizzle-kit check` PASS y `pnpm db:drift-check` PASS (0 drift duro). [VERIFIED — 2026-09-25]
 - **Recovery:** TD-08 documentado como no-bloqueante (drizzle-kit check PASS). [VERIFIED — MASTER-INDEX B03]
 
 ---

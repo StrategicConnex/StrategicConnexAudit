@@ -37,7 +37,7 @@ vi.mock("@/server/intelligence/core/dispatcher", () => ({
 const mockFindMany = vi.fn<() => Promise<unknown[]>>();
 const mockSelectWhere = vi.fn<() => Promise<unknown[]>>();
 const mockInsertValues = vi.fn<
-  (values: Record<string, unknown>) => Promise<unknown>
+  (values: Array<Record<string, unknown>>) => Promise<unknown>
 >();
 const mockUpdateSetWhere = vi.fn<() => Promise<unknown>>();
 
@@ -127,11 +127,12 @@ describe("Trigger: Monitor Evaluation", () => {
 
     expect(result.evaluated).toBe(1);
     expect(mockInsertValues).toHaveBeenCalledTimes(1);
-    const alertValues = mockInsertValues.mock.calls[0]![0] as Record<string, unknown>;
-    expect(alertValues.projectId).toBe("p1");
-    expect(alertValues.scheduleId).toBe("m1");
-    expect(alertValues.severity).toBe("critical");
-    expect(alertValues.resolved).toBe(false);
+    const alertBatch = mockInsertValues.mock.calls[0]![0];
+    expect(alertBatch).toHaveLength(1);
+    expect(alertBatch[0]!.projectId).toBe("p1");
+    expect(alertBatch[0]!.scheduleId).toBe("m1");
+    expect(alertBatch[0]!.severity).toBe("critical");
+    expect(alertBatch[0]!.resolved).toBe(false);
     expect(mockUpdateSetWhere).toHaveBeenCalledTimes(1);
   });
 
@@ -163,6 +164,30 @@ describe("Trigger: Monitor Evaluation", () => {
     expect(result.evaluated).toBe(1);
     expect(mockExecuteTool).not.toHaveBeenCalled();
     expect(mockInsertValues).not.toHaveBeenCalled();
+    expect(mockUpdateSetWhere).not.toHaveBeenCalled();
+  });
+
+  it("varios monitores con hallazgos → flush batcheado (1 update + 1 insert)", async () => {
+    const monitor2 = { id: "m2", projectId: "p2", enabled: true };
+    mockFindMany.mockResolvedValue([monitor, monitor2]);
+    mockSelectWhere.mockResolvedValue([
+      project,
+      { id: "p2", domain: "https://beta.com", ownerId: "u2" },
+    ]);
+    mockExecuteTool.mockResolvedValue({ success: true, findings: [{ severity: "critical" }] });
+
+    const { evaluateMonitorsTask } = await import("./monitoring.trigger");
+    const task = evaluateMonitorsTask as unknown as MonitorTaskConfig;
+    const result = await task.run(payload);
+
+    expect(result.evaluated).toBe(2);
+    expect(mockExecuteTool).toHaveBeenCalledTimes(2);
+    // 1 sola sentencia UPDATE con ambos ids + 1 solo INSERT con ambas alertas
+    expect(mockUpdateSetWhere).toHaveBeenCalledTimes(1);
+    expect(mockInsertValues).toHaveBeenCalledTimes(1);
+    const alertBatch = mockInsertValues.mock.calls[0]![0];
+    expect(alertBatch).toHaveLength(2);
+    expect(alertBatch.map((a) => a.projectId)).toEqual(["p1", "p2"]);
   });
 
   it("error en executeTool → se captura y el ciclo continúa", async () => {

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { db } from '@/shared/db';
-import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets, issues, crawlResults } from '@/shared/db/schemas';
-import { eq, desc, isNull, sql, and, count } from 'drizzle-orm';
+import { projects, keywordTargets, issues, crawlResults } from '@/shared/db/schemas';
+import { eq, isNull, sql, and, count, inArray } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
 import { logger } from "@/lib/logger";
+import type { DbTransaction } from '@/shared/lib/actions';
 
 interface ProjectData {
   id: string;
@@ -26,6 +26,163 @@ interface EnrichedProject {
 
 interface LookerStudioRow {
   values: (string | number | null)[];
+}
+
+interface RankedGscRow {
+  project_id: string;
+  date: string;
+  clicks: number | null;
+  impressions: number | null;
+  ctr: string | null;
+  position: string | null;
+}
+
+interface RankedGa4Row {
+  project_id: string;
+  date: string;
+  activeUsers: number | null;
+  conversions: number | null;
+  engagementRate: string | null;
+}
+
+interface LatestAuditRow {
+  project_id: string;
+  id: string;
+  status: string;
+}
+
+/**
+ * Enriquecimiento batcheado (fix N+1): 7 queries fijas sin importar cuántos
+ * proyectos haya (antes: 4-6 queries POR proyecto dentro de Promise.all).
+ * Nota: en raw sql de drizzle un array interpolado aporta sus propios
+ * paréntesis → escribir `IN ${ids}` (nunca `IN (${ids})`, que sería doble).
+ * Mismas semánticas que antes:
+ *  - GSC/GA4: top-30 filas por proyecto (ORDER BY date DESC, rn <= 30).
+ *  - Score: última auditoría del proyecto; solo si está completada
+ *    (igual que el `.find(a => a.status === 'completed')` sobre limit(1)).
+ */
+async function enrichProjects(
+  tx: DbTransaction,
+  activeProjects: ProjectData[]
+): Promise<EnrichedProject[]> {
+  const projectIds = activeProjects.map((p) => p.id);
+  if (projectIds.length === 0) return [];
+
+  const [gscResult, ga4Result, kwRows, latestAuditResult] = await Promise.all([
+    tx.execute(sql`
+      SELECT project_id, date, clicks, impressions, ctr, position
+      FROM (
+        SELECT project_id, date, clicks, impressions, ctr, position,
+               row_number() OVER (PARTITION BY project_id ORDER BY date DESC) AS rn
+        FROM integration_data_gsc
+        WHERE project_id IN ${projectIds}
+      ) ranked
+      WHERE rn <= 30
+      ORDER BY project_id, date DESC
+    `),
+    tx.execute(sql`
+      SELECT project_id, date,
+             active_users AS "activeUsers",
+             conversions,
+             engagement_rate AS "engagementRate"
+      FROM (
+        SELECT project_id, date, active_users, conversions, engagement_rate,
+               row_number() OVER (PARTITION BY project_id ORDER BY date DESC) AS rn
+        FROM integration_data_ga4
+        WHERE project_id IN ${projectIds}
+      ) ranked
+      WHERE rn <= 30
+      ORDER BY project_id, date DESC
+    `),
+    tx
+      .select({ projectId: keywordTargets.projectId, total: count() })
+      .from(keywordTargets)
+      .where(inArray(keywordTargets.projectId, projectIds))
+      .groupBy(keywordTargets.projectId),
+    tx.execute(sql`
+      SELECT DISTINCT ON (project_id) project_id, id, status
+      FROM audits
+      WHERE project_id IN ${projectIds}
+      ORDER BY project_id, created_at DESC
+    `),
+  ]);
+
+  const gscByProject = new Map<string, RankedGscRow[]>();
+  for (const row of (gscResult.rows ?? []) as unknown as RankedGscRow[]) {
+    const list = gscByProject.get(row.project_id);
+    if (list) list.push(row);
+    else gscByProject.set(row.project_id, [row]);
+  }
+
+  const ga4ByProject = new Map<string, RankedGa4Row[]>();
+  for (const row of (ga4Result.rows ?? []) as unknown as RankedGa4Row[]) {
+    const list = ga4ByProject.get(row.project_id);
+    if (list) list.push(row);
+    else ga4ByProject.set(row.project_id, [row]);
+  }
+
+  const kwByProject = new Map(kwRows.map((r) => [r.projectId, Number(r.total || 0)]));
+
+  const latestByProject = new Map(
+    ((latestAuditResult.rows ?? []) as unknown as LatestAuditRow[]).map((r) => [r.project_id, r])
+  );
+  const completedIds = [...latestByProject.values()]
+    .filter((r) => r.status === 'completed')
+    .map((r) => r.id);
+
+  const crawlById = new Map<string, number>();
+  const issuesById = new Map<string, { critical: number; warning: number }>();
+  if (completedIds.length > 0) {
+    const [crawlRows, issueRows] = await Promise.all([
+      tx
+        .select({ auditId: crawlResults.auditId, total: count() })
+        .from(crawlResults)
+        .where(inArray(crawlResults.auditId, completedIds))
+        .groupBy(crawlResults.auditId),
+      tx
+        .select({
+          auditId: issues.auditId,
+          criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
+          warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`),
+        })
+        .from(issues)
+        .where(inArray(issues.auditId, completedIds))
+        .groupBy(issues.auditId),
+    ]);
+    for (const row of crawlRows) {
+      if (row.auditId) crawlById.set(row.auditId, Number(row.total || 0));
+    }
+    for (const row of issueRows) {
+      if (!row.auditId) continue;
+      issuesById.set(row.auditId, {
+        critical: Number(row.criticalCount || 0),
+        warning: Number(row.warningCount || 0),
+      });
+    }
+  }
+
+  return activeProjects.map((project) => {
+    const latest = latestByProject.get(project.id);
+    const latestCompleted = latest && latest.status === 'completed' ? latest : undefined;
+    let score: number | null = null;
+    let crawledCount: number | null = null;
+    if (latestCompleted) {
+      crawledCount = crawlById.get(latestCompleted.id) ?? 0;
+      const stats = issuesById.get(latestCompleted.id);
+      score = Math.max(
+        0,
+        100 - (stats?.critical ?? 0) * 15 - (stats?.warning ?? 0) * 5
+      );
+    }
+    return {
+      project,
+      gscRecords: gscByProject.get(project.id) ?? [],
+      ga4Records: ga4ByProject.get(project.id) ?? [],
+      score,
+      crawledCount,
+      keywordsCount: kwByProject.get(project.id) ?? 0,
+    };
+  });
 }
 
 // Rate limiting store (in-memory for demo, use Redis in production)
@@ -165,129 +322,15 @@ export async function GET(req: NextRequest) {
       activeProjects = [];
     }
 
-    // 5. Generate rows with concurrent fetching
+    // 5. Enriquecimiento batcheado — queries fijas, sin N+1 por proyecto.
+    //    Sin proyectos (o sin sesión) → sin queries de enriquecimiento.
     const rows: LookerStudioRow[] = [];
     const today = new Date();
 
-    const enrichedProjects: EnrichedProject[] = user ? await withRLS(user.id, async (tx) => {
-      const promises = activeProjects.map(async (project) => {
-        const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
-          tx
-            .select()
-            .from(integrationDataGsc)
-            .where(eq(integrationDataGsc.projectId, project.id))
-            .orderBy(desc(integrationDataGsc.date))
-            .limit(30),
-          tx
-            .select()
-            .from(integrationDataGa4)
-            .where(eq(integrationDataGa4.projectId, project.id))
-            .orderBy(desc(integrationDataGa4.date))
-            .limit(30),
-          tx
-            .select()
-            .from(audits)
-            .where(eq(audits.projectId, project.id))
-            .orderBy(desc(audits.createdAt))
-            .limit(1),
-          tx
-            .select({ count: sql<number>`count(*)` })
-            .from(keywordTargets)
-            .where(eq(keywordTargets.projectId, project.id))
-        ]);
-
-        // A-1: score real = 100 - 15*críticas - 5*warnings (misma fórmula que
-        // la página de proyecto); null si no hay auditoría completada.
-        // crawled = páginas rastreadas reales; null si no hay auditoría.
-        const latestCompleted = latestAudits.find((a) => a.status === 'completed');
-        let score: number | null = null;
-        let crawledCount: number | null = null;
-        if (latestCompleted) {
-          const [crawlsCount] = await tx.select({ value: count() })
-            .from(crawlResults)
-            .where(eq(crawlResults.auditId, latestCompleted.id));
-          crawledCount = Number(crawlsCount?.value || 0);
-          const [issueStats] = await tx.select({
-            criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
-            warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`)
-          })
-            .from(issues)
-            .where(eq(issues.auditId, latestCompleted.id));
-          score = Math.max(
-            0,
-            100 - (Number(issueStats?.criticalCount || 0) * 15) - (Number(issueStats?.warningCount || 0) * 5)
-          );
-        }
-        const keywordsCount = Number(keywordsCountResult[0]?.count || 0);
-
-        return {
-          project,
-          gscRecords,
-          ga4Records,
-          score,
-          crawledCount,
-          keywordsCount
-        };
-      });
-      return await Promise.all(promises);
-    }) : await Promise.all(activeProjects.map(async (project) => {
-      // Fallback for public access (if allowed by DB config)
-      const [gscRecords, ga4Records, latestAudits, keywordsCountResult] = await Promise.all([
-        db
-          .select()
-          .from(integrationDataGsc)
-          .where(eq(integrationDataGsc.projectId, project.id))
-          .orderBy(desc(integrationDataGsc.date))
-          .limit(30),
-        db
-          .select()
-          .from(integrationDataGa4)
-          .where(eq(integrationDataGa4.projectId, project.id))
-          .orderBy(desc(integrationDataGa4.date))
-          .limit(30),
-        db
-          .select()
-          .from(audits)
-          .where(eq(audits.projectId, project.id))
-          .orderBy(desc(audits.createdAt))
-          .limit(1),
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(keywordTargets)
-          .where(eq(keywordTargets.projectId, project.id))
-      ]);
-
-      // A-1: misma fórmula real en la rama pública.
-      const latestCompleted = latestAudits.find((a) => a.status === 'completed');
-      let score: number | null = null;
-      let crawledCount: number | null = null;
-      if (latestCompleted) {
-        const [crawlsCount] = await db.select({ value: count() })
-          .from(crawlResults)
-          .where(eq(crawlResults.auditId, latestCompleted.id));
-        crawledCount = Number(crawlsCount?.value || 0);
-        const [issueStats] = await db.select({
-          criticalCount: count(sql`case when ${issues.severity} = 'critical' then 1 end`),
-          warningCount: count(sql`case when ${issues.severity} = 'warning' then 1 end`)
-        })
-          .from(issues)
-          .where(eq(issues.auditId, latestCompleted.id));
-        score = Math.max(
-          0,
-          100 - (Number(issueStats?.criticalCount || 0) * 15) - (Number(issueStats?.warningCount || 0) * 5)
-        );
-      }
-      const keywordsCount = Number(keywordsCountResult[0]?.count || 0);
-
-      return {
-        project,
-        gscRecords,
-        ga4Records,
-        score,
-        crawledCount,
-        keywordsCount
-      };
-    }));
+    const enrichedProjects: EnrichedProject[] =
+      user && activeProjects.length > 0
+        ? await withRLS(user.id, (tx) => enrichProjects(tx, activeProjects))
+        : [];
 
     for (const { project, gscRecords, ga4Records, score, crawledCount, keywordsCount } of enrichedProjects) {
       for (let i = 14; i >= 0; i--) {

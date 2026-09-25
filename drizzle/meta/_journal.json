@@ -267,6 +267,41 @@
       "when": 1789324800000,
       "tag": "0037_ai_eval_results",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790337600000,
+      "tag": "2026-08-25_admin_telemetry",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1790337601000,
+      "tag": "2026-08-25_adversary_real",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1790337602000,
+      "tag": "2026-08-25_mitre_real",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1790337603000,
+      "tag": "2026-08-26_assessment_progress",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1790337604000,
+      "tag": "2026-09-24_recommended_indexes",
+      "breakpoints": true
     }
   ]
 }

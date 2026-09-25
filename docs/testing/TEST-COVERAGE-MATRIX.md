@@ -3,7 +3,7 @@ layout: default
 title: Test Coverage Matrix
 nav_order: 4.1
 permalink: /docs/testing/test-coverage-matrix
-version: 1.8
+version: 1.9
 fecha: 2026-09-25
 autor: StrategicConnex Engineering
 estado: Aprobado
@@ -22,12 +22,12 @@ estado: Aprobado
 
 ---
 
-> **⚠️ ACTUALIZACIÓN 2026-09-25 (Quick wins de deuda técnica + B08/B09).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Estado real medido contra el código actual:
+> **⚠️ ACTUALIZACIÓN 2026-09-25 (lote Impacto runtime: TD-07, N+1, higiene de migraciones, TD-10 + Quick wins anteriores).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Estado real medido contra el código actual:
 >
 > | Métrica | Valor 2026-09-25 | Nota |
 > |---------|------------------|------|
-> | `pnpm test` | **167 archivos · 1573 tests → 1573 ✅ / 0 ❌** (exit 0) | Suite completa en verde; +4 archivos/+39 tests sobre 2026-09-24 (163/1534) |
-> | `pnpm test:coverage` | **Stmts 42.66% · Branch 32.97% · Funcs 37.5% · Lines 43.69%** | Todos los umbrales cumplidos (40/30/34/41), exit 0 con `--coverage.reportOnFailure=true` |
+> | `pnpm test` | **170 archivos · 1595 tests → 1595 ✅ / 0 ❌** (exit 0) | Suite completa en verde; +3 archivos/+22 tests sobre quick wins (167/1573) |
+> | `pnpm test:coverage` | **Stmts 43.84% · Branch 34.15% · Funcs 38.60% · Lines 44.86%** | Todos los umbrales cumplidos (40/30/34/41), exit 0 con `--coverage.reportOnFailure=true` |
 > | Umbrales CI | `statements 40 · branches 30 · functions 34 · lines 41` | `vitest.config.ts` (ratchet 2026-09-24) |
 > | `pnpm lint` | ✅ **0 errores · 0 warnings** (exit 0) | — |
 > | `tsc --noEmit` | ✅ **OK** (exit 0) | — |
@@ -35,9 +35,11 @@ estado: Aprobado
 > | `pnpm build` | ✅ **PASS** (exit 0) | Bloqueante `keywords.ts:224` resuelto en Fase 0 |
 > | `drizzle-kit check` | ✅ Everything's fine | — |
 > | `pnpm db:drift-check` | ✅ **69/69 tablas · sin drift duro** | 20 diffs adhesivas preexistentes (defaults/nullability) |
-> | `quality-gate` de este documento | ✅ **100/100** (`--min 80`) | v1.8 |
+> | `quality-gate` de este documento | ✅ **100/100** (`--min 80`) | v1.9 |
 >
 > **Quick wins 2026-09-25:** +4 suites de test — `looker-studio/route` (9: fail-closed + rate-limit + timingSafeEqual), `reports/pdf/progress/route` (7: 401 + clave namespaced), `intelligence/runs/route` (12: auth/scope/egress/tool-not-found) y `server/api/public-router` (11: apiKeyAuth + scopes + api_key_usage) — **39 tests** que cierran los huecos P1 de §12. `src/modules/*` eliminado (TD-04) y docs obsoletos reconciliados (SECURITY-AUDIT VULN-006..009, ENVIRONMENT CS-301/302, MAT-205/207, TD-09/11, RSK-09).
+>
+> **Lote Impacto runtime 2026-09-25:** +3 suites — `actions/performance` (4: server action con 4 queries batcheadas), `PerformanceTab.tsx` (4: render con snapshot real) y `integration-sync.trigger` (8: escritor TD-10, running→success/failed, expiración >48h) — **16 tests**; más **+6 tests de regresión** en suites existentes: `looker-studio/route` +2 (anti-`IN ((` con `PgDialect`), `uptime.trigger` +3 (transiciones up→down + batch 1 insert) y `monitoring.trigger` +1 (flush batcheado 1 update + 1 insert). Higiene de migraciones: las 5 migraciones fechadas quedaron en `_journal.json` (idx 38-42) y `pnpm db:migrate` las aplicó (ledger 43/43).
 >
 > Trabajo de cobertura de Fases 1.4-1.5: +9 `trigger.test` y +24 suites (rutas `api-keys`, `ai/report`, `ai/healthcheck`, `forecast`, `billing/plans`, `intelligence/{drift,adversary/assessment,health}`, `actions/{audits,keywords}`, `lib/{email-validation,result}`, servicios `app-error`/`error-handler`/`seo-report-service`/`weekly-digest`/`remediation/service`, triggers `eval-weekly`/`exec-brief`/`finding-triage`).
 >
@@ -45,7 +47,7 @@ estado: Aprobado
 >
 > Estabilidad de la suite: `maxWorkers: 4` en `vitest.config.ts` — con los ~7 forks por defecto la suite agotaba la RAM (~1 GB libre de 7.5 GB) y vitest reportaba 4 "Unhandled Errors" (exit 1) pese a tener todo en verde.
 >
-> Los conteos de rutas/triggers del cuerpo (42 rutas, 12 triggers) quedaron obsoletos: hoy son **60 route handlers** (55 privados + 5 públicos v1) y **21 triggers** (todos con test).
+> Los conteos de rutas/triggers del cuerpo (42 rutas, 12 triggers) quedaron obsoletos: hoy son **60 route handlers** (55 privados + 5 públicos v1) y **22 triggers** (todos con test).
 
 ## 1. Scope y objetivos
 
@@ -400,6 +402,8 @@ flowchart LR
 | 1.5 | 2026-08-08 | **RSK-02 batch**: +22 test files · +220 tests → **65 files · 611 tests** · umbrales de CI superados (Stmts 27.21% · Branch 20.67% · Funcs 22.83% · Lines 27.41%) · fix de bug real en `cookie-utils.getCookie` (regex `\s` en template literal) | Aprobado |
 | 1.6 | 2026-09-24 | **Plan de mejoras Fases 1.4-1.5**: +9 `trigger.test` (21/21 triggers con test) y +24 suites nuevas (rutas `api-keys`/`ai/report`/`ai/healthcheck`/`forecast`/`billing/plans`/`intelligence/{drift,adversary/assessment,health}`, `actions/{audits,keywords}`, `lib/{email-validation,result}`, servicios `app-error`/`error-handler`/`seo-report-service`/`weekly-digest`/`remediation/service`, triggers `eval-weekly`/`exec-brief`/`finding-triage`) → **155 files · 1443 tests ✅/0 ❌** · **Stmts 41.05% · Branch 31.75% · Funcs 36.39% · Lines 42%** · ratchet de umbrales a `40/30/34/41` · fix de timeout ambiental en `egress-guard.test.ts` (guard de red RSK-06) y `testTimeout: 15000` | Aprobado |
 | 1.7 | 2026-09-24 | **Plan de mejoras Fases 2.1-4.6**: validación Zod lazy de env (`envSchema` + `validateEnv()` en `src/env.ts`, sin parse en import, +12 tests), Prettier 3.9.9 (`.prettierrc`, `.prettierignore`, scripts `format`/`format:check`, sin `--write` masivo), índice `idx_audit_logs_created_at` (`drizzle/2026-09-24_recommended_indexes.sql`; los otros 2 candidatos del plan ya existían), integraciones Slack/Teams/AlertManager (`src/server/integrations/{slack,teams,shared}`, 24 tests) y RBAC completo (matriz de permisos en código sin tablas nuevas, `addMember`/`updateMemberRole`/`removeProjectMember` con protección de último owner, rutas `members/[userId]` y `audit-log`, 64 tests) → **163 files · 1534 tests ✅/0 ❌** · **Stmts 41.65% · Branch 32.2% · Funcs 36.89% · Lines 42.59%** · estabilidad: `maxWorkers: 4` (fix de "Unhandled Errors" por RAM agotada, exit 1 con todo en verde) | Aprobado |
+| 1.8 | 2026-09-25 | **Quick wins de deuda técnica**: +4 suites (+39 tests: `looker-studio/route` 9, `reports/pdf/progress/route` 7, `intelligence/runs/route` 12, `server/api/public-router` 11) → **167 files · 1573 tests ✅/0 ❌** · **Stmts 42.66% · Branch 32.97% · Funcs 37.5% · Lines 43.69%** · TD-04 (`src/modules/*` eliminado), TD-09/11 cerrados y docs reconciliados | Aprobado |
+| 1.9 | 2026-09-25 | **Lote Impacto runtime**: +3 suites (+16 tests: `actions/performance` 4, `PerformanceTab.tsx` 4, `integration-sync.trigger` 8) y +6 de regresión en suites existentes (looker-studio +2 anti-`IN ((`, uptime +3 transiciones/batch, monitoring +1 flush) → **170 files · 1595 tests ✅/0 ❌** · **Stmts 43.84% · Branch 34.15% · Funcs 38.60% · Lines 44.86%** · TD-07/TD-10 cerrados · higiene de migraciones: 5 `.sql` fechados registrados en `_journal.json` (idx 38-42), `db:migrate` OK (ledger 43/43), `drizzle-kit check` + drift-check PASS | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/testing/TEST-COVERAGE-MATRIX.md --min 80` → PASS
 

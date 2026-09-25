@@ -3,9 +3,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 /**
  * finding-triage.test.ts — Tests del triage automático (Sprint 2, idea #1).
  *
- * Mocks: `@/shared/db` (cadenas drizzle select/update) y `./ai-router`
- * (callAIWithFallback). El schema real de drizzle se usa para que and/eq/isNull
- * construyan condiciones sin conexión.
+ * Mocks: `@/shared/db` (cadena drizzle select + execute batcheado) y
+ * `./ai-router` (callAIWithFallback). El schema real de drizzle se usa para
+ * que and/eq/isNull construyan condiciones sin conexión. El payload batcheado
+ * se verifica extrayendo los params string del SQL construido (jsonb_each).
  */
 
 // ─── Estado del mock de BD ───────────────────────────────────────────────────
@@ -18,7 +19,7 @@ let pendingRows: Array<{
   affectedAsset: string | null;
 }> = [];
 let updateReturn: Array<{ id: string }> = [];
-const setPayloads: Array<Record<string, unknown>> = [];
+const executeCalls: unknown[] = [];
 
 vi.mock("@/shared/db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/db/schemas/index")>();
@@ -33,19 +34,33 @@ vi.mock("@/shared/db", async (importOriginal) => {
           }),
         }),
       })),
-      update: vi.fn(() => ({
-        set: (payload: Record<string, unknown>) => {
-          setPayloads.push(payload);
-          return {
-            where: () => ({
-              returning: async () => updateReturn,
-            }),
-          };
-        },
-      })),
+      execute: vi.fn(async (query: unknown) => {
+        executeCalls.push(query);
+        return { rows: updateReturn };
+      }),
     },
   };
 });
+
+/** Extrae los params string interpolados en un objeto SQL de drizzle. */
+function sqlStringParams(query: unknown): string[] {
+  const out: string[] = [];
+  const walk = (chunks: unknown): void => {
+    if (!Array.isArray(chunks)) return;
+    for (const c of chunks) {
+      if (typeof c === "string") {
+        out.push(c); // interpolación cruda de `${valor}`
+        continue;
+      }
+      if (c && typeof c === "object") {
+        const rec = c as { queryChunks?: unknown };
+        if (Array.isArray(rec.queryChunks)) walk(rec.queryChunks); // SQL anidado
+      }
+    }
+  };
+  walk((query as { queryChunks?: unknown }).queryChunks);
+  return out;
+}
 
 vi.mock("./ai-router", () => ({
   callAIWithFallback: vi.fn(),
@@ -86,7 +101,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   pendingRows = [];
   updateReturn = [];
-  setPayloads.length = 0;
+  executeCalls.length = 0;
 });
 
 describe("runFindingTriage", () => {
@@ -95,12 +110,12 @@ describe("runFindingTriage", () => {
     expect(r.processed).toBe(0);
     expect(r.updated).toBe(0);
     expect(mockAI).not.toHaveBeenCalled();
+    expect(executeCalls).toHaveLength(0);
   });
 
   it("triage válido actualiza findings e ignora ids inventados por el modelo", async () => {
     pendingRows = [F1, F2];
-    // Solo el finding con id conocido genera un update (el mock devuelve las
-    // filas que configured para ESE update).
+    // El UPDATE batcheado devuelve las filas realmente actualizadas.
     updateReturn = [{ id: F1.id }];
     mockAI.mockResolvedValueOnce(
       aiOk({
@@ -130,11 +145,14 @@ describe("runFindingTriage", () => {
     const r = await runFindingTriage("p1", { userId: "u1" });
     expect(r.success !== false).toBe(true);
     expect(r.modelUsed).toContain("nemotron");
-    // Solo el id conocido pasa el filtro byId → 1 update
-    expect(setPayloads).toHaveLength(1);
-    const payload = setPayloads[0]! as { aiTriage: Record<string, unknown> };
-    expect(payload.aiTriage).toMatchObject({ severity: "critical", mitreId: "T1190", cweId: "CWE-89" });
-    expect(payload.aiTriage.promptVersion).toBe(2); // v2: json_object (matriz en vivo)
+    // UN solo statement batcheado con el id conocido (el inventado se filtra)
+    expect(executeCalls).toHaveLength(1);
+    const jsonParam = sqlStringParams(executeCalls[0]).find((s) => s.startsWith("{"));
+    expect(jsonParam).toBeDefined();
+    const triageMap = JSON.parse(jsonParam!) as Record<string, Record<string, unknown>>;
+    expect(Object.keys(triageMap)).toEqual([F1.id]);
+    expect(triageMap[F1.id]).toMatchObject({ severity: "critical", mitreId: "T1190", cweId: "CWE-89" });
+    expect(triageMap[F1.id]!.promptVersion).toBe(2); // v2: json_object (matriz en vivo)
     expect(r.updated).toBe(1);
   });
 
@@ -204,8 +222,9 @@ describe("runFindingTriageSweep", () => {
   });
 
   it("agota pendientes en varios ciclos cuando hay progreso", async () => {
-    updateReturn = [{ id: F1.id }];
-    // Ciclo 1: 2 pendientes → 2 updates; ciclo 2: sin pendientes → stop.
+    // RETURNING del UPDATE batcheado confirma ambas filas → updated = 2
+    updateReturn = [{ id: F1.id }, { id: F2.id }];
+    // Ciclo 1: 2 pendientes → 1 UPDATE batch; ciclo 2: Zod falla → stop.
     pendingRows = [F1, F2];
     mockAI.mockImplementationOnce(async () =>
       aiOk({

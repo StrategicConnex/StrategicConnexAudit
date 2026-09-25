@@ -1,8 +1,16 @@
 import { schedules, wait } from "@trigger.dev/sdk";
 import { db } from "@/shared/db";
 import { projects, uptimeLogs } from "@/shared/db/schemas";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { validateSafeUrl, normalizeUrl, safeFetchFollow } from "@/server/intelligence/security/egress-guard";
+
+interface UptimeCheck {
+  projectId: string;
+  isUp: boolean;
+  statusCode: number;
+  responseTimeMs: number;
+  errorMessage: string | null;
+}
 
 export const uptimeMonitor = schedules.task({
   id: "uptime-monitor",
@@ -20,6 +28,9 @@ export const uptimeMonitor = schedules.task({
     console.log(`[Uptime] Monitoreando ${activeProjects.length} proyectos.`);
 
     // 2. Procesar cada proyecto (secuencial para evitar picos de carga en el plan Hobby)
+    const checks: UptimeCheck[] = [];
+    const domainById = new Map(activeProjects.map((p) => [p.id, p.domain]));
+
     for (const project of activeProjects) {
       const startTime = Date.now();
       let isUp = false;
@@ -49,48 +60,66 @@ export const uptimeMonitor = schedules.task({
         console.error(`[Uptime] Fallo en ${project.domain}:`, errorMessage);
       }
 
-
-      const responseTime = Date.now() - startTime;
-
-      // 3. Guardar log de uptime
-      await db.insert(uptimeLogs).values({
+      checks.push({
         projectId: project.id,
         isUp,
         statusCode,
-        responseTimeMs: responseTime,
+        responseTimeMs: Date.now() - startTime,
         errorMessage,
       });
-
-      // B-3: evento uptime.down SOLO en transición (up→down), no en cada ciclo caído.
-      // [0] es el check recién insertado; [1] el anterior.
-      if (!isUp) {
-        try {
-          const recent = await db
-            .select({ isUp: uptimeLogs.isUp })
-            .from(uptimeLogs)
-            .where(eq(uptimeLogs.projectId, project.id))
-            .orderBy(desc(uptimeLogs.checkedAt))
-            .limit(2);
-          const wasUp = recent.length > 1 ? (recent[1]?.isUp ?? true) : true;
-          if (wasUp) {
-            const { emitProjectEvent } = await import("@/server/lib/project-events");
-            await emitProjectEvent(project.id, "uptime.down", {
-              domain: project.domain,
-              statusCode,
-              responseTimeMs: responseTime,
-              errorMessage,
-            });
-          }
-        } catch {
-          // La notificación nunca rompe el monitoreo.
-        }
-      }
 
       // Breve espera para no saturar
       await wait.for({ seconds: 1 });
     }
 
-    return { 
+    // 3. Estado previo de los proyectos caídos — ANTES del insert batch,
+    //    para distinguir transición up→down de "sigue caído". 1 query fija
+    //    (antes: 1 select + 1 insert POR proyecto).
+    const downChecks = checks.filter((c) => !c.isUp);
+    const previousUp = new Map<string, boolean>();
+    let previousStateOk = downChecks.length === 0;
+    if (downChecks.length > 0) {
+      try {
+        const prevResult = await db.execute(sql`
+          SELECT DISTINCT ON (project_id) project_id, is_up
+          FROM uptime_logs
+          WHERE project_id IN ${downChecks.map((c) => c.projectId)}
+          ORDER BY project_id, checked_at DESC
+        `);
+        for (const row of (prevResult.rows ?? []) as Array<{ project_id: string; is_up: boolean }>) {
+          previousUp.set(row.project_id, row.is_up);
+        }
+        previousStateOk = true;
+      } catch {
+        // Sin estado previo no se emiten eventos down (evita falsos positivos).
+      }
+    }
+
+    // 4. Insert batcheado: UNA sola sentencia para todo el ciclo.
+    if (checks.length > 0) {
+      await db.insert(uptimeLogs).values(checks);
+    }
+
+    // B-3: evento uptime.down SOLO en transición (up→down), no en cada ciclo caído.
+    if (previousStateOk) {
+      for (const check of downChecks) {
+        const wasUp = previousUp.get(check.projectId) ?? true;
+        if (!wasUp) continue;
+        try {
+          const { emitProjectEvent } = await import("@/server/lib/project-events");
+          await emitProjectEvent(check.projectId, "uptime.down", {
+            domain: domainById.get(check.projectId),
+            statusCode: check.statusCode,
+            responseTimeMs: check.responseTimeMs,
+            errorMessage: check.errorMessage,
+          });
+        } catch {
+          // La notificación nunca rompe el monitoreo.
+        }
+      }
+    }
+
+    return {
       processed: activeProjects.length,
       timestamp: new Date().toISOString()
     };

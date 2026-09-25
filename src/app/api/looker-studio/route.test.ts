@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
+import { PgDialect } from "drizzle-orm/pg-core";
+import * as schemas from "@/shared/db/schemas";
 
 const mockGetUser = vi.fn(async () => ({ data: { user: null } }));
 const mockWithRLS = vi.fn(async (_userId: string, cb: (tx: unknown) => Promise<unknown>) => cb({}));
@@ -160,5 +162,183 @@ describe("GET /api/looker-studio — autenticación fail-closed (VULN-006)", () 
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res.headers.get("Access-Control-Allow-Methods")).toContain("GET");
+  });
+});
+
+function sqlText(query: unknown): string {
+  const chunks = (query as { queryChunks?: unknown[] }).queryChunks ?? [];
+  return chunks
+    .map((chunk) => {
+      if (typeof chunk === "string") return chunk;
+      const value = (chunk as { value?: unknown }).value;
+      if (Array.isArray(value)) return value.join("");
+      if (typeof value === "string") return value;
+      return "";
+    })
+    .join("");
+}
+
+function createBatchedTx(opts: {
+  projectRows: unknown[];
+  gscRows?: unknown[];
+  ga4Rows?: unknown[];
+  auditRows?: unknown[];
+  kwRows?: unknown[];
+  crawlRows?: unknown[];
+  issueRows?: unknown[];
+}) {
+  let calls = 0;
+  const executedRaw: unknown[] = [];
+  const tx = {
+    execute: async (query: unknown) => {
+      calls++;
+      executedRaw.push(query);
+      const text = sqlText(query);
+      if (text.includes("integration_data_gsc")) return { rows: opts.gscRows ?? [] };
+      if (text.includes("integration_data_ga4")) return { rows: opts.ga4Rows ?? [] };
+      if (text.includes("DISTINCT ON")) return { rows: opts.auditRows ?? [] };
+      return { rows: [] };
+    },
+    select: () => ({
+      from: (table: unknown) => {
+        const rowsFor = (): unknown[] => {
+          if (table === schemas.projects) return opts.projectRows;
+          if (table === schemas.keywordTargets) return opts.kwRows ?? [];
+          if (table === schemas.crawlResults) return opts.crawlRows ?? [];
+          if (table === schemas.issues) return opts.issueRows ?? [];
+          return [];
+        };
+        return {
+          where: () => {
+            calls++;
+            const result = rowsFor();
+            return {
+              groupBy: async () => result,
+              then: (
+                onFulfilled?: (value: unknown) => unknown,
+                onRejected?: (reason: unknown) => unknown
+              ) => Promise.resolve(result).then(onFulfilled, onRejected),
+            };
+          },
+        };
+      },
+    }),
+  };
+  return { tx, getCalls: () => calls, getExecutedRaw: () => executedRaw };
+}
+
+describe("GET /api/looker-studio — enriquecimiento batcheado (fix N+1)", () => {
+  let GET: typeof import("./route").GET;
+
+  beforeEach(async () => {
+    const mod = await import("./route");
+    GET = mod.GET;
+  });
+
+  afterEach(() => {
+    mockWithRLS.mockImplementation(async (_userId: string, cb: (tx: unknown) => Promise<unknown>) => cb({}));
+  });
+
+  it("2 proyectos → queries fijas (7) y salida idéntica: score/crawled/keywords/ métricas", async () => {
+    const now = new Date();
+    const todayTarget = new Date();
+    todayTarget.setDate(now.getDate());
+    const todayIso = todayTarget.toISOString().split("T")[0]!;
+
+    const { tx, getCalls, getExecutedRaw } = createBatchedTx({
+      projectRows: [
+        { id: "p1", name: "Alpha", domain: "a.com", ownerId: "user-1" },
+        { id: "p2", name: "Beta", domain: "b.com", ownerId: "user-1" },
+      ],
+      auditRows: [
+        { project_id: "p1", id: "aud-1", status: "completed" },
+        { project_id: "p2", id: "aud-2", status: "running" },
+      ],
+      crawlRows: [{ auditId: "aud-1", total: 7 }],
+      issueRows: [{ auditId: "aud-1", criticalCount: 1, warningCount: 2 }],
+      kwRows: [{ projectId: "p1", total: 5 }],
+      gscRows: [
+        { project_id: "p1", date: todayIso, clicks: 42, impressions: 1000, ctr: "0.0420", position: "8.50" },
+      ],
+      ga4Rows: [
+        { project_id: "p1", date: todayIso, activeUsers: 13, conversions: 4, engagementRate: "0.6100" },
+      ],
+    });
+
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: "user-1" } } });
+    mockWithRLS.mockImplementation((_userId, cb) => cb(tx));
+
+    try {
+      const res = await GET(
+        createRequest("http://localhost/api/looker-studio", {
+          Authorization: `Bearer ${KEY}`,
+          "x-forwarded-for": "10.1.0.8",
+        })
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+
+      // 2 proyectos × 15 días
+      expect(body.rows).toHaveLength(30);
+
+      const alphaRows = body.rows.filter((r: { values: unknown[] }) => r.values[1] === "Alpha");
+      const betaRows = body.rows.filter((r: { values: unknown[] }) => r.values[1] === "Beta");
+      expect(alphaRows).toHaveLength(15);
+      expect(betaRows).toHaveLength(15);
+
+      // score = 100 - 15*1 - 5*2 = 75; crawled = 7; keywords = 5
+      expect(alphaRows[0].values[3]).toBe(75);
+      expect(alphaRows[0].values[4]).toBe(7);
+      expect(alphaRows[0].values[12]).toBe(5);
+      // fila de hoy: GSC + GA4 reales
+      const todayRow = alphaRows.find((r: { values: unknown[] }) => String(r.values[0]) === todayIso.replace(/-/g, ""));
+      expect(todayRow.values[5]).toBe(42);
+      expect(todayRow.values[9]).toBe(13);
+
+      // p2: última auditoría running → score/crawled null; 0 keywords
+      expect(betaRows[0].values[3]).toBeNull();
+      expect(betaRows[0].values[4]).toBeNull();
+      expect(betaRows[0].values[12]).toBe(0);
+
+      expect(body.meta.totalProjects).toBe(2);
+      expect(body.meta.isDemoData).toBe(false);
+
+      // Sin N+1: 7 queries fijas (1 projects + 3 raw + 1 kw + 2 fase-2)
+      expect(getCalls()).toBe(7);
+
+      // Regresión: en raw sql de drizzle el array aporta sus propios
+      // paréntesis → `IN ($1, $2)` y nunca `IN (($1, $2))` (inválido en PG).
+      const rawWithIn = getExecutedRaw().filter((q) => sqlText(q).includes("project_id IN"));
+      expect(rawWithIn).toHaveLength(3);
+      for (const q of rawWithIn) {
+        const built = new PgDialect().sqlToQuery(q as never);
+        expect(built.sql).not.toContain("IN ((");
+        expect(built.sql).toMatch(/project_id IN \(\$1/);
+      }
+    } finally {
+      mockWithRLS.mockImplementation(async (_userId: string, cb: (tx: unknown) => Promise<unknown>) => cb({}));
+    }
+  });
+
+  it("sin proyectos → 0 queries de enriquecimiento", async () => {
+    const { tx, getCalls } = createBatchedTx({ projectRows: [] });
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: "user-1" } } });
+    mockWithRLS.mockImplementation((_userId, cb) => cb(tx));
+
+    try {
+      const res = await GET(
+        createRequest("http://localhost/api/looker-studio", {
+          Authorization: `Bearer ${KEY}`,
+          "x-forwarded-for": "10.1.0.9",
+        })
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.rows).toEqual([]);
+      // solo la select de projects (sin enriquecimiento)
+      expect(getCalls()).toBe(1);
+    } finally {
+      mockWithRLS.mockImplementation(async (_userId: string, cb: (tx: unknown) => Promise<unknown>) => cb({}));
+    }
   });
 });

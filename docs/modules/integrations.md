@@ -34,7 +34,7 @@ A diferencia de backlinks/competitors/cro/schema, **este dominio sí tiene consu
 | Looker Studio (GSC/GA4) | `src/app/api/looker-studio/route.ts` (L164, L205) | [VERIFIED] |
 | Seed | `src/shared/db/seed.ts` (L85) | [VERIFIED] |
 
-**Hallazgo de fuga [VERIFIED]:** no existe `src/app/api/integrations/**` — no hay endpoints de integración (conectar/desconectar OAuth, sync manual). La tabla `integration_sync_logs` no tiene escritor en producción (solo schema).
+**Hallazgo de fuga [VERIFIED 2026-08-02, cerrado 2026-09-25]:** no existe `src/app/api/integrations/**` — no hay endpoints de integración (conectar/desconectar OAuth, sync manual). La tabla `integration_sync_logs` tenía escritor ausente (solo schema); desde 2026-09-25 la escribe el trigger `integration-sync-sweep` (`src/trigger/integration-sync.trigger.ts`, TD-10/TSK-016).
 
 ---
 
@@ -44,8 +44,8 @@ Dominio de integraciones con fuentes externas de datos (Google Search Console, G
 
 ## 2. Responsibilities
 
-- **Reales:** lectura de `integration_data_gsc`/`integration_data_ga4` para alimentar el reporte IA y Looker Studio [VERIFIED].
-- **Previstas (por schema):** gestionar `integrations`, `integration_sync_logs`, `integration_data_bing` [INFERRED — sin código en producción].
+- **Reales:** lectura de `integration_data_gsc`/`integration_data_ga4` para alimentar el reporte IA y Looker Studio; escritura de `integrations`/`integration_sync_logs` por el trigger `integration-sync-sweep` (reconciliación diaria) [VERIFIED].
+- **Previstas (por schema):** gestionar `integration_data_bing` [INFERRED — sin código de sync en producción].
 
 ## 3. Inputs
 
@@ -62,7 +62,7 @@ Dominio de integraciones con fuentes externas de datos (Google Search Console, G
 | Dependencia | Uso | Evidencia |
 |-------------|-----|-----------|
 | `@/shared/db/schemas` (integrationDataGsc, integrationDataGa4, keywordTargets, audits, projects) | Lectura de datos | [VERIFIED] |
-| `@/shared/db/schemas` (integrations, integrationSyncLogs, integrationDataBing) | Definidas, sin uso en producción | [VERIFIED] |
+| `@/shared/db/schemas` (integrations, integrationSyncLogs, integrationDataBing) | Escritura (`integration-sync-sweep`) / seed | [VERIFIED] |
 
 ## 6. Public API
 
@@ -76,19 +76,19 @@ Dominio de integraciones con fuentes externas de datos (Google Search Console, G
 |-------|--------------------|-----------|
 | `integration_data_gsc` | SELECT (ai/report, looker-studio), INSERT (seed) | [VERIFIED] |
 | `integration_data_ga4` | SELECT (ai/report, looker-studio) | [VERIFIED] |
-| `integrations` | Definida; sin uso en producción | [VERIFIED] |
-| `integration_sync_logs` | Definida; sin uso en producción | [VERIFIED] |
+| `integrations` | SELECT/UPDATE (`integration-sync-sweep`: `last_sync_at`, `status`→`expired`) | [VERIFIED] |
+| `integration_sync_logs` | INSERT/UPDATE (`integration-sync-sweep`: `running`→`success`/`failed`) | [VERIFIED] |
 | `integration_data_bing` | Definida; sin uso en producción | [VERIFIED] |
 
 Columnas: `docs/database/DATA-DICTIONARY.md`.
 
 ## 8. Events
 
-- [VERIFIED] Ningún evento emitido/consumido (sin `tasks.trigger` relacionado en `src/trigger/*`).
+- [VERIFIED] Ningún evento emitido/consumido (sin `tasks.trigger` relacionado; el sweep es schedule, no evento).
 
 ## 9. Jobs
 
-- [VERIFIED] Ningún job Trigger.dev opera sobre tablas de integraciones (la sync de GSC/GA4 se asume OAuth externo; no verificable en repo [UNKNOWN]).
+- [VERIFIED] `integration-sync-sweep` (`src/trigger/integration-sync.trigger.ts`, cron `0 3 * * *`) reconcilia `integrations` y escribe `integration_sync_logs` (2026-09-25, TD-10). La sync de datos GSC/GA4 sigue sin implementación (asume OAuth externo; no verificable en repo [UNKNOWN]).
 
 ## 10. Security
 
@@ -99,15 +99,16 @@ Columnas: `docs/database/DATA-DICTIONARY.md`.
 ## 11. Tests
 
 - **0 archivos `*.test.ts` en `src/modules/integrations`** [VERIFIED].
-- Sin `route.test.ts` para `ai/report` ni `looker-studio` [VERIFIED].
+- `src/app/api/looker-studio/route.test.ts` existe; sigue sin `route.test.ts` para `ai/report` [VERIFIED 2026-09-25].
+- `src/trigger/integration-sync.trigger.test.ts` (8 tests) cubre el escritor de `integration_sync_logs` [VERIFIED].
 
 ## 12. Observability
 
-- [UNKNOWN] Sin logs estructurados específicos de integraciones. `integration_sync_logs` sin escritor (gap de observabilidad) [VERIFIED].
+- [VERIFIED 2026-09-25] `integration_sync_logs` tiene escritor: `integration-sync-sweep` persiste un log por integración y corrida (`running`→`success`/`failed`, `recordsSynced`, `errorMessage`), cerrando el gap de observabilidad.
 
 ## 13. Failure Modes
 
-- [UNKNOWN] Sin endpoints de sync, sin modos de fallo gestionados. [ASSUMPTION] El reporte IA depende de que los datos GSC/GA4 existan (se devuelve `0` si faltan [INFERRED]).
+- [PARTIAL] Sin endpoints de sync; los modos de fallo de la reconciliación se gestionan en `integration_sync_logs` (`failed` + `errorMessage`, expiración >48h) [VERIFIED 2026-09-25]. [ASSUMPTION] El reporte IA depende de que los datos GSC/GA4 existan (se devuelve `0` si faltan [INFERRED]).
 
 ---
 
@@ -174,7 +175,7 @@ flowchart LR
 ## 19. Unknowns y supuestos
 
 - [UNKNOWN] Cómo se autentican y sincronizan GSC/GA4 (no hay código en repo).
-- [UNKNOWN] Destino real de `integration_sync_logs` (tabla sin escritor).
+- ~~[UNKNOWN] Destino real de `integration_sync_logs` (tabla sin escritor).~~ → cerrado 2026-09-25: escritor `integration-sync-sweep` (TD-10).
 - [ASSUMPTION] La integración OAuth vive fuera del repo (dashboard Vercel/externo).
 
 ## 20. Glosario
@@ -189,6 +190,7 @@ flowchart LR
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Creación inicial (T04-02, BATCH 04) | Aprobado |
+| 1.1 | 2026-09-25 | Cierre TD-10: escritor `integration-sync-sweep` (§0/§2/§5/§7/§9/§11/§12/§13/§19) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/modules/integrations.md --min 80` → PASS (100/100)
 
