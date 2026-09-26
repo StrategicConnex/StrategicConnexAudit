@@ -3,7 +3,7 @@ layout: default
 title: Test Coverage Matrix
 nav_order: 4.1
 permalink: /docs/testing/test-coverage-matrix
-version: 1.10
+version: 1.11
 fecha: 2026-09-26
 autor: StrategicConnex Engineering
 estado: Aprobado
@@ -22,12 +22,12 @@ estado: Aprobado
 
 ---
 
-> **⚠️ ACTUALIZACIÓN 2026-09-26 (TD-05 eliminado, TD-01 cerrado, lote TD-03 #1: +6 route.test de seguridad; datos previos del lote 2026-09-25).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Estado real medido contra el código actual:
+> **⚠️ ACTUALIZACIÓN 2026-09-26 (lote TD-03 #2: +14 route.test de public/v1 e intelligence; datos previos del lote TD-03 #1: TD-05 eliminado/TD-01 cerrado; cuerpo fechado 2026-08-08).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Estado real medido contra el código actual:
 >
 > | Métrica | Valor 2026-09-26 | Nota |
 > |---------|------------------|------|
-> | `pnpm test` | **176 archivos · 1632 tests → 1632 ✅ / 0 ❌** (exit 0) | Suite completa en verde; +6 archivos/+37 tests sobre lote Impacto runtime (170/1595) |
-> | `pnpm test:coverage` | **Stmts 44.66% · Branch 35.19% · Funcs 38.94% · Lines 45.76%** | Todos los umbrales cumplidos (40/30/34/41), exit 0 con `--coverage.reportOnFailure=true` |
+> | `pnpm test` | **190 archivos · 1741 tests → 1741 ✅ / 0 ❌** (exit 0) | Suite completa en verde; +14 archivos/+109 tests sobre lote TD-03 #1 (176/1632) |
+> | `pnpm test:coverage` | **Stmts 47.41% · Branch 37.20% · Funcs 40.79% · Lines 48.57%** | Todos los umbrales cumplidos (40/30/34/41), exit 0 con `--coverage.reportOnFailure=true` |
 > | Umbrales CI | `statements 40 · branches 30 · functions 34 · lines 41` | `vitest.config.ts` (ratchet 2026-09-24) |
 > | `pnpm lint` | ✅ **0 errores · 0 warnings** (exit 0) | — |
 > | `tsc --noEmit` | ✅ **OK** (exit 0) | — |
@@ -35,7 +35,7 @@ estado: Aprobado
 > | `pnpm build` | ✅ **PASS** (exit 0) | Bloqueante `keywords.ts:224` resuelto en Fase 0 |
 > | `drizzle-kit check` | ✅ Everything's fine | — |
 > | `pnpm db:drift-check` | ✅ **69/69 tablas · sin drift duro** | 20 diffs adhesivas preexistentes (defaults/nullability) |
-> | `quality-gate` de este documento | ✅ **100/100** (`--min 80`) | v1.9 |
+> | `quality-gate` de este documento | ✅ **100/100** (`--min 80`) | v1.11 |
 >
 > **Quick wins 2026-09-25:** +4 suites de test — `looker-studio/route` (9: fail-closed + rate-limit + timingSafeEqual), `reports/pdf/progress/route` (7: 401 + clave namespaced), `intelligence/runs/route` (12: auth/scope/egress/tool-not-found) y `server/api/public-router` (11: apiKeyAuth + scopes + api_key_usage) — **39 tests** que cierran los huecos P1 de §12. `src/modules/*` eliminado (TD-04) y docs obsoletos reconciliados (SECURITY-AUDIT VULN-006..009, ENVIRONMENT CS-301/302, MAT-205/207, TD-09/11, RSK-09).
 >
@@ -47,7 +47,7 @@ estado: Aprobado
 >
 > Estabilidad de la suite: `maxWorkers: 4` en `vitest.config.ts` — con los ~7 forks por defecto la suite agotaba la RAM (~1 GB libre de 7.5 GB) y vitest reportaba 4 "Unhandled Errors" (exit 1) pese a tener todo en verde.
 >
-> Los conteos de rutas/triggers del cuerpo (42 rutas, 12 triggers) quedaron obsoletos: hoy son **60 route handlers** (55 privados + 5 públicos v1; 33 con `route.test.ts`, 27 sin — recuento 2026-09-26) y **22 triggers** (todos con test).
+> Los conteos de rutas/triggers del cuerpo (42 rutas, 12 triggers) quedaron obsoletos: hoy son **61 route handlers** (60 en `api/**` = 55 privados + 5 públicos v1, + `auth/callback`; **48 con `route.test.ts`** — 47 en `api/**` (78.3%) —, 13 sin; recuento 2026-09-26 con `Test-Path -LiteralPath`) y **22 triggers** (todos con test).
 
 ## 1. Scope y objetivos
 
@@ -71,7 +71,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | REQ-201 | Suite unit completa en verde (`pnpm test`) | ✅ 327/327 (ejecución real 2026-08-02) |
 | REQ-202 | Cobertura global por encima del umbral de CI | ✅ Statements 27.21% ≥ 25% · Lines 27.41% ≥ 25% · Funcs 22.83% ≥ 20% · Branches 20.67% ≥ 20% (2026-08-08) |
 | REQ-203 | Ruta crítica de seguridad con test propio | ✅ rls (5) · AiCopilot XSS (6) · webhooks (15) · egress-guard (31) |
-| REQ-204 | Cada endpoint público/crítico con `route.test.ts` | ⚠️ 33/60 rutas (55.0%) — lote TD-03 #1 cerró 6 de seguridad 2026-09-26 |
+| REQ-204 | Cada endpoint público/crítico con `route.test.ts` | ⚠️ 47/60 rutas api (78.3%) — lotes TD-03 #1 (6 de seguridad) y #2 (14: public/v1 ×3 + intelligence ×11) cerrados 2026-09-26 |
 | REQ-205 | Cada trigger con test (src/trigger/*) | ✅ 22/22 triggers (100%) |
 | REQ-206 | Contrato de API publicado y testeado | ✅ 10/10 (`tests/api-contract`) |
 | REQ-207 | No-regresión de cobertura vs baseline | ✅ Sin regresión (ver §5) |
@@ -135,7 +135,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 
 ## 6. APIs y endpoints afectados (cobertura por endpoint)
 
-60 rutas API (`src/app/api/**/route.ts`) · **33 con `route.test.ts` (55.0%)** · 27 sin test directo (recuento real 2026-09-26).
+60 rutas API (`src/app/api/**/route.ts`) · **47 con `route.test.ts` (78.3%)** · 13 sin test directo (recuento real 2026-09-26, `Test-Path -LiteralPath` para rutas `[id]`).
 
 | Ruta | Método | Auth | ¿route.test? | Prioridad |
 |------|--------|------|--------------|-----------|
@@ -289,7 +289,7 @@ VS BASELINE B00:    +1.21pp Stmts · +0.84pp Branch · +1.40pp Funcs · +1.25pp 
 | ✅ QW | `src/server/api/public-router.test.ts` | unit — **hecho** (11 tests, 2026-09-25) | API key auth/scope/logging |
 | ✅ TD-03#1 | 6 rutas de seguridad (security/{audit-logs,csp-report,siem/test,siem-alerts}, internal/track-access, auth/callback) | route.test.ts — **hecho** (37 tests, 2026-09-26) | Gate admin, CSP anti-flood, open-redirect, rate-limit callback y telemetría cubiertos |
 | P1 | `src/server/ai/ai-router.ts` | unit de `callAIWithFallback` (fallback chain) | Fallos de IA en cascada |
-| P2 | 27 rutas restantes | route.test.ts básico (401/404/200) | Completar 60/60 |
+| P2 | 13 rutas restantes | route.test.ts básico (401/404/200) | Completar 60/60 |
 | ✅ | `src/modules/*` (TSK-014) | scaffold vacío **eliminado 2026-09-25** (decisión: retirar, no implementar) | Doble arquitectura cerrada |
 
 ---
@@ -346,7 +346,7 @@ flowchart LR
 |-----------|--------------|-----------|
 | "La cobertura regresó" | §4.2 vs §4.1: sube en 4 métricas | **REFUTADO** — no-regresión ✅ [VERIFIED] |
 | "Los triggers están cubiertos" | 9/12 con test (75%) | **PARCIAL** — 3 pendientes [VERIFIED] |
-| "Todas las rutas tienen route.test" | 33/60 (55.0%) | **REFUTADO** — gap de 27 rutas [VERIFIED — recuento 2026-09-26] |
+| "Todas las rutas tienen route.test" | 47/60 (78.3%) | **REFUTADO** — gap de 13 rutas [VERIFIED — recuento 2026-09-26] |
 | "Los 3 fallos de egress-guard son regresión" | la suite ahora sondea conectividad (example.com/httpbin.org) en `beforeAll` y omite los tests sin red | **RESUELTO** — 31/31 sin fallos [VERIFIED] |
 | "Baseline B00 = 248 tests" (MASTER-INDEX) | PRODUCTION-PUSH-FINAL-VALIDATION §4 registra 254 (251+3) | **INCONSISTENCIA RESUELTA** — 254 es el conteo con los 3 ambientales; este reporte usa 254 |
 | "report-utils XSS estaba cubierto" | bug real encontrado y corregido en batch XSS | **HALLAZGO RESUELTO** — ahora 2 suites cubren [VERIFIED] |
@@ -407,6 +407,7 @@ flowchart LR
 | 1.8 | 2026-09-25 | **Quick wins de deuda técnica**: +4 suites (+39 tests: `looker-studio/route` 9, `reports/pdf/progress/route` 7, `intelligence/runs/route` 12, `server/api/public-router` 11) → **167 files · 1573 tests ✅/0 ❌** · **Stmts 42.66% · Branch 32.97% · Funcs 37.5% · Lines 43.69%** · TD-04 (`src/modules/*` eliminado), TD-09/11 cerrados y docs reconciliados | Aprobado |
 | 1.9 | 2026-09-25 | **Lote Impacto runtime**: +3 suites (+16 tests: `actions/performance` 4, `PerformanceTab.tsx` 4, `integration-sync.trigger` 8) y +6 de regresión en suites existentes (looker-studio +2 anti-`IN ((`, uptime +3 transiciones/batch, monitoring +1 flush) → **170 files · 1595 tests ✅/0 ❌** · **Stmts 43.84% · Branch 34.15% · Funcs 38.60% · Lines 44.86%** · TD-07/TD-10 cerrados · higiene de migraciones: 5 `.sql` fechados registrados en `_journal.json` (idx 38-42), `db:migrate` OK (ledger 43/43), `drizzle-kit check` + drift-check PASS | Aprobado |
 | 1.10 | 2026-09-26 | **TD-05/TD-01 + lote TD-03 #1**: `run-migration.ts` eliminado (0 imports) y TD-01 cerrado (umbrales 40/30/34/41 ya activos); +6 `route.test.ts` de seguridad (+37 tests: `security/audit-logs` 7, `security/csp-report` 5, `security/siem/test` 5, `security/siem-alerts` 5, `internal/track-access` 7, `auth/callback` 8) → **176 files · 1632 tests ✅/0 ❌** · **Stmts 44.66% · Branch 35.19% · Funcs 38.94% · Lines 45.76%** · rutas con test **33/60 (55.0%)**, recuento real de rutas/triggers (60/22) reconciliado en §6/§12/§15 | Aprobado |
+| 1.11 | 2026-09-26 | **Lote TD-03 #2**: +14 `route.test.ts` (+109 tests: `public/v1/{audits,reports,uptime}` 17, `intelligence/{history,anomalies,brief,copilot,bulk,discovery}` 46, `intelligence/{assets/graph,live,compare}` 17, `intelligence/adversary/{mitre,vulnerabilities}` 28) → **190 files · 1741 tests ✅/0 ❌** · **Stmts 47.41% · Branch 37.20% · Funcs 40.79% · Lines 48.57%** · rutas con test **47/60 api (78.3%)** / 48/61 total, 13 pendientes (recuento con `Test-Path -LiteralPath`, fix de wildcard `[id]`) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/testing/TEST-COVERAGE-MATRIX.md --min 80` → PASS
 

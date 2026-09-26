@@ -70,7 +70,7 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 |----|------|----------|--------|------|--------|----------|------------|
 | TD-01 | ~~Cobertura global bajo umbrales CI (Stmts 13.72% < 25%)~~ | TESTING | Bloqueaba habilitar umbrales duros en CI | RSK-02 | L | P0 | RESUELTO 2026-09-26: cobertura real Stmts 44.66% / Branch 35.19% / Funcs 38.94% / Lines 45.76% (176 files · 1632 tests) y umbrales **duros 40/30/34/41** activos en `vitest.config.ts` + job CI `Tests & Coverage` (`pnpm test:coverage` falla si bajan) — objetivo original ≥25% ampliamente superado |
 | TD-02 | 12 triggers sin tests (0%) | TESTING | Trabajo asíncrono en prod sin verificación | RSK-02/07 | M | P0 | RESUELTO 2026-09-17: 9 trigger tests en verde (siem/uptime/adversary/anomaly/discovery/monitoring/scheduled-scan/audit/webhook) |
-| TD-03 | 27/61 rutas sin route.test (era 36/42 al registro; lote 2026-09-26 cerró 6 rutas de seguridad: audit-logs, csp-report, siem/test, siem-alerts, internal/track-access, auth/callback — verificado con `Get-ChildItem src/app -Recurse -Filter route.ts` vs `route.test.ts`: 34 con test) | TESTING | Regresión silenciosa en endpoints | RSK-02 | L | P0 | route.test básico (401/404/200) por lotes, siguiente lote: public/v1 (audits/reports/uptime) + intelligence bulk |
+| TD-03 | 13/61 rutas sin route.test (era 36/42 al registro; lotes 2026-09-26: #1 cerró 6 de seguridad — audit-logs, csp-report, siem/test, siem-alerts, internal/track-access, auth/callback — y #2 cerró 14 — public/v1 {audits,reports,uptime} + intelligence {history,anomalies,brief,copilot,bulk,discovery,compare,live,assets/graph,adversary/mitre,adversary/vulnerabilities}; verificado con `Get-ChildItem src/app -Recurse -Filter route.ts` vs `Test-Path -LiteralPath route.test.ts`: **48 con test**) | TESTING | Regresión silenciosa en endpoints | RSK-02 | L | P0 | route.test básico (401/404/200) por lotes; siguiente lote (13 restantes): ai/copilot, api-keys/[id]/usage, auth/validate-email, benchmarking, billing/entitlements, bulk-scan, compliance/soc2-pack, export, notifications/push-subscribe, plugins, projects/[id]/branding, projects/[id]/export/keywords, webhooks/cicd |
 | TD-04 | `src/modules/*` vacíos (9 dirs clean-arch, 0 archivos) | ARCHITECTURE | Doble arquitectura: legacy vs target | RSK-02 | L | P1 | RESUELTO 2026-09-25: scaffold vacío eliminado (`Remove-Item src/modules`); funcionalidad vive en src/app, src/server, src/trigger |
 | TD-05 | ~~`src/shared/db/run-migration.ts` legacy hardcodeado a 0001~~ | LEGACY | Riesgo de promoción incorrecta | RSK-05 | S | P1 | RESUELTO 2026-09-26: fichero **eliminado** (`src/shared/db/run-migration.ts` ya no existe) — verificado 0 imports de código y 0 scripts en `package.json` (solo referencias en docs históricos); entrada de coverage exclude retirada de `vitest.config.ts`; `drizzle-kit push`/`migrate` es el único camino (§10) |
 | TD-06 | `scheduled-scan.trigger.ts` stub no registrado | LEGACY | Feature no operativa silenciosa | RSK-07 | S | P1 | RESUELTO 2026-09-17: scheduled-scan-runner implementado + retry maxAttempts 3 |
@@ -108,7 +108,7 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 
 | Deuda | Impacto de seguridad | Mitigación |
 |-------|----------------------|------------|
-| TD-03 (rutas sin test) | auth/RLS sin verificación en 27 rutas | route.test de security primero (6/6 del lote security cerrados 2026-09-26) |
+| TD-03 (rutas sin test) | auth/RLS sin verificación en 13 rutas | lotes TD-03: #1 seguridad 6/6 + #2 public/v1 e intelligence 14/14 cerrados 2026-09-26 (48/61 con test) |
 | TD-02 (triggers sin test) | jobs de seguridad (siem) sin verificación | trigger tests P0 |
 | TD-11 (2 registries) | ~~divergencia de tools vs ADR-001~~ **CERRADO** — registry/ solo tipos, core/ único runtime | verificado 2026-09-25 |
 | TD-12 (script suelto) | acceso directo a DB sin gate | migrar o eliminar |
@@ -119,12 +119,12 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 
 | Deuda | Test de cobertura | Estado |
 |-------|-------------------|--------|
-| TD-01/02/03 | TEST-COVERAGE-MATRIX documenta los gaps | ✅ documentado (TD-01/02 cerrados 2026-09-26/17; TD-03 recount 33/61) |
+| TD-01/02/03 | TEST-COVERAGE-MATRIX documenta los gaps | ✅ documentado (TD-01/02 cerrados 2026-09-26/17; TD-03 recount 48/61 tras lote #2) |
 | TD-05 | `drizzle-kit check` verifica journal (no el script legacy) | ✅ cerrado 2026-09-26 (script eliminado) |
 | TD-07 | `performance.test.ts` (4) + `PerformanceTab.test.tsx` (4) | ✅ cerrado 2026-09-25 |
 | TD-11 | `executors.test.ts` cubre un registry; falta el otro | ✅ cerrado (registry/ = tipos, sin runtime que testear) |
 
-**Cobertura global:** 176 files · 1632 tests · Stmts 44.66% / Branch 35.19% / Funcs 38.94% / Lines 45.76% (vitest + coverage 2026-09-26) [VERIFIED — TEST-COVERAGE-MATRIX v1.10].
+**Cobertura global:** 190 files · 1741 tests · Stmts 47.41% / Branch 37.20% / Funcs 40.79% / Lines 48.57% (vitest + coverage 2026-09-26) [VERIFIED — TEST-COVERAGE-MATRIX v1.11].
 
 ---
 
@@ -189,7 +189,7 @@ flowchart LR
 
 - [UNKNOWN] Esfuerzo exacto (S/M/L) de cada resolución — estimaciones de batch, calibrar al ejecutar.
 - ~~[UNKNOWN] Costo de consolidar TD-11 (riesgo de regresión en tools del engine).~~ **CERRADO** — no hay consolidación que hacer: solo tipos vs runtime (TD-11 RESUELTO 2026-09-25).
-- [ASSUMPTION] Resolver P0 (TD-01/02/03) antes del push de CHANGE-001..003 — TD-01/02 cerrados; **solo TD-03 queda P0** (33 rutas pendientes por lotes).
+- [ASSUMPTION] Resolver P0 (TD-01/02/03) antes del push de CHANGE-001..003 — TD-01/02 cerrados; **solo TD-03 queda P0** (13 rutas pendientes por lotes).
 - [RECOMMENDED] Registrar la deuda nueva en cada batch para mantener el registro vivo.
 
 ---
