@@ -1,337 +1,224 @@
-# Performance Report — Core Web Vitals & Bundle Optimization
+# Performance Report — Core Web Vitals & Bundle (v2)
 
-> **Fecha:** 31 de julio de 2026
-> **Herramienta:** Lighthouse 13.4.1 (Chrome headless) + análisis de `client-reference-manifest` del build de Turbopack
-> **Objetivo:** scaudit.vercel.app (producción) + build local `next build`
+> **Fecha:** 26 de septiembre de 2026
+> **Herramienta:** Lighthouse **13.5.0** (Chrome Headless 154, `--headless=new`) + análisis de artefactos de build **Turbopack / Next.js 16.3.3** (`route-bundle-stats.json`, `client-reference-manifest.js`, `build-manifest.json`) + HTML servido por `next start`
+> **Alcance:** **build local** (`pnpm build`) + **lab local** (`next start -p 3100`). **Producción NO medida en esta ronda** (ver §7).
+> **Baseline histórico:** `docs/improvements/PERFORMANCE_REPORT.md` del **31 de julio de 2026** (Lighthouse 13.4.1 contra `scaudit.vercel.app`). Sus cifras se conservan como columna *baseline 2026-07-31*.
 
 ---
 
 ## 1. Resumen ejecutivo
 
-Este reporte documenta el estado de rendimiento de SCAUDIT medido con Lighthouse
-contra **producción**, junto con la verificación a nivel de **build** de la reducción
-de JavaScript inicial lograda en la ronda de optimización de bundles (chunks de
-`html2canvas`+`jsPDF` y `swagger-ui-react` movidos a carga bajo demanda, y la
-página `/swagger` convertida a Server Component).
+### 1.1 Comparativa Core Web Vitals: baseline 2026-07-31 (producción) vs 2026-09-26 (lab local)
 
-**Hallazgos principales:**
+| Métrica | `/login` baseline 2026-07-31 | `/login` **2026-09-26** | `/` baseline 2026-07-31 | `/` **2026-09-26** |
+|---|---|---|---|---|
+| Performance Score | 63 | **58** (mediana n=3) | 49 | **56** (mediana n=2) |
+| FCP | 1.4 s | **1.28 s** | 1.6 s | **2.08 s** |
+| LCP | 3.6 s | **4.67 s** | 5.2 s | **6.09 s** |
+| CLS | 0 | **0** | 0 | **0** |
+| TBT | 1020 ms | **1336 ms** | 3100 ms | **857 ms** |
+| Speed Index | 5.2 s | **2.10 s** | 3.9 s | **2.08 s** |
+| TTI | 4.2 s | **5.28 s** | 6.9 s | **6.28 s** |
+| Transfer total | 442 KB | **434 KB** | 615 KB | **557 KB** |
+| Peticiones | [NO MEDIDO] | **27** | [NO MEDIDO] | **57** |
 
-| Métrica | `/login` | `/` (redirige a `/login`) |
+> ⚠️ **Las dos columnas NO son directamente comparables.** El baseline se midió contra **producción en Vercel** (CDN, HTTP/3, Brotli, edge) y esta ronda contra **lab local** (`localhost:3100`, gzip de `next start`, CPU/Red virtualizadas por Lighthouse). La comparación se publica por continuidad del histórico, **no** como regresión ni como mejora atribuible al código. Ver §7.
+
+### 1.2 Rutas nuevas medidas (sin baseline)
+
+| Métrica | `/pricing` | `/docs` |
 |---|---|---|
-| Performance Score | **63** | **49** |
-| LCP (Largest Contentful Paint) | **3.6 s** | **5.2 s** |
-| CLS (Cumulative Layout Shift) | **0** | **0** |
-| TBT (Total Blocking Time) | **1020 ms** | **3100 ms** |
-| FCP (First Contentful Paint) | **1.4 s** | **1.6 s** |
-| Speed Index | **5.2 s** | **3.9 s** |
-| TTI (Time to Interactive) | **4.2 s** | **6.9 s** |
-| Transfer total | **442 KB** | **615 KB** |
+| Performance Score | **75.5** (n=2) | **81** (n=2) |
+| FCP / LCP / CLS | 1.25 s / 3.95 s / **0** | 1.23 s / 4.10 s / **0** |
+| TBT / SI / TTI | 509 ms / 2.04 s / 4.09 s | 280 ms / 1.75 s / 4.19 s |
+| Transfer total / peticiones | 357 KB / 26 | 389 KB / 39 |
 
-El cuello de botella dominante es el **TBT** (long tasks en el main thread),
-causado principalmente por la hidratación del bundle cliente del dashboard
-(fuentes + scripts). CLS es perfecto (0) en ambas rutas.
+### 1.3 Hallazgos principales
+
+1. **CLS = 0 en las 4 rutas medidas** ✅ (se mantiene el baseline perfecto).
+2. **El TBT sigue siendo el cuello de botella** en `/login` (1336 ms) y `/` (857 ms): la hidratación del main thread consume **6.1–6.2 s** de trabajo total (`mainthread-work-breakdown`).
+3. **Todas las librerías pesadas están en carga diferida** en las 11 rutas cuyo HTML fue verificado: `swagger-ui-react` (1.13 MB), `html2canvas`+`jsPDF` (409 KB), `mermaid` (640 KB), `leaflet` (175+145 KB) **no aparecen en ningún `<script>` inicial** ✅.
+4. **2 excepciones eager detectadas:** `recharts` (6 chunks, 232 KB del principal) en **`/ai/health`** y `reactflow` (143 KB) en **`/intelligence`** (manifest `async=false`; HTML no verificable sin sesión).
+5. **JS inicial de `/` y `/login` roza los 1 MB raw** (1026 KB / 978 KB con polifiles) — CSS global añade 218 KB raw más en **todas** las rutas.
 
 ---
 
 ## 2. Metodología
 
-1. **Lighthouse**: `npx lighthouse <url> --chrome-flags="--headless --no-sandbox" --only-categories=performance --output=json`
-   - `/login` → `https://scaudit.vercel.app/login`
-   - `/` → `https://scaudit.vercel.app/` (responde con redirect a `/login`)
-2. **Verificación de bundles**: se leyeron los `page_client-reference-manifest.js`
-   generados por `next build` (Turbopack) y se sumaron los tamaños de los chunks
-   `async: false` (initial load) de cada ruta, contrastándolos contra los archivos
-   en `.next/static/chunks/`.
-3. La columna **después** usa el build local con los cambios aplicados; la columna
-   **antes** se reconstruye sumando los chunks que estaban en el initial load y
-   ya no están.
+### 2.1 Build
 
-> ⚠️ **Nota de transparencia sobre la cifra de "584 KB":** no fue posible
-> reproducir ese número exacto a partir de los artefactos de build. Los datos
-> verificados (sección 4) muestran la reducción real medible. Se documentan aquí
-> los valores verificables en lugar de afirmar una cifra no reproducida.
+```
+pnpm build   →  exit 0 (Next.js 16.3.3 + Turbopack; 23 rutas de página + API)
+```
+
+### 2.2 Core Web Vitals (lab)
+
+1. Servidor de producción local: `pnpm start -p 3100` (verificado con `Invoke-WebRequest`; **gzip confirmado** vía cabecera `Content-Encoding: gzip`).
+2. Chrome presente en `C:\Program Files\Google\Chrome\Application\chrome.exe` (HeadlessChrome **154.0.0.0**).
+3. Lighthouse 13.5.0, sólo categoría *performance*, throttling estándar de Lighthouse (CPU ×4, red Slow 4G):
+   ```
+   npx -y lighthouse@13.5.0 "<url>" --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --only-categories=performance --quiet --output=json
+   ```
+4. **9 invocaciones totales**: `/login` ×3, `/` ×2, `/pricing` ×2, `/docs` ×2. Se reporta la **mediana** (n=2 → media de los dos valores, indicado en cada fila).
+5. Extraído de cada JSON: `categories.performance.score` y `audits` → `first-contentful-paint`, `largest-contentful-paint`, `cumulative-layout-shift`, `total-blocking-time`, `speed-index`, `interactive`, `total-byte-weight`, `network-requests`, `mainthread-work-breakdown`.
+
+### 2.3 Bundle por ruta (dos fuentes cruzadas)
+
+- **Fuente A (oficial, build):** `.next/diagnostics/route-bundle-stats.json` → `firstLoadUncompressedJsBytes` + `firstLoadChunkPaths` (suma de tamaños *raw* y *gzip* calculada fichero a fichero). **No incluye el polifil.**
+- **Fuente B (empírica, HTML):** se pidió cada ruta al servidor de producción local y se extrajeron los `<script src>` y `<link rel="stylesheet">` reales; tamaño *raw* y *gzip* (nivel 9) leído de disco en `.next/static`.
+- **Cruce:** A + polifil (`0cz1d0mv5g_q7.js`, 112.594 B) = B en las 5 rutas → **cuadra al byte** (p. ej. `/login`: 867,7 + 110,0 = 977,6 KB ✅).
 
 ---
 
-## 3. Core Web Vitals — desglose por recurso (Lighthouse, producción)
+## 3. Core Web Vitals — lab local (2026-09-26)
 
-### 3.1 `/login` — transfer por tipo
+### 3.1 Tabla por ruta (mediana)
 
-| Recurso | Transfer |
-|---|---|
-| Document | 6 KB |
-| Font | 124 KB |
-| Stylesheet | 25 KB |
-| Script | 262 KB |
-| Manifest | 1 KB |
-| Other | 25 KB |
-| **Total** | **442 KB** |
+| Ruta | n | Score | FCP | LCP | CLS | TBT | Speed Index | TTI | Peso total | Peticiones | Main thread |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `/login` | 3 (54/58/61) | **58** | 1.28 s | 4.67 s | **0** | 1336 ms | 2.10 s | 5.28 s | 434 KB | 27 | 6142 ms |
+| `/` → `/login` | 2 (56/56) | **56** | 2.08 s | 6.09 s | **0** | 857 ms | 2.08 s | 6.28 s | 557 KB | 57 | 6206 ms |
+| `/pricing` | 2 (71/80) | **75.5** | 1.25 s | 3.95 s | **0** | 509 ms | 2.04 s | 4.09 s | 357 KB | 26 | 2498 ms |
+| `/docs` | 2 (76/86) | **81** | 1.23 s | 4.10 s | **0** | 280 ms | 1.75 s | 4.19 s | 389 KB | 39 | 2246 ms |
 
-### 3.2 `/` → `/login` — transfer por tipo
+- Fecha/hora de la primera medición: `2026-09-26T22:20:05.910Z`.
+- `/` responde con **redirect a `/login`** (verificado: `finalDisplayedUrl = http://localhost:3100/login`). Sus cifras reflejan la doble navegación (por eso 57 peticiones vs 27 en acceso directo).
 
-| Recurso | Transfer |
-|---|---|
-| Document | 12 KB |
-| Font | 124 KB |
-| Stylesheet | 24 KB |
-| Script | 429 KB |
-| Manifest | 1 KB |
-| Other | 25 KB |
-| **Total** | **615 KB** |
+### 3.2 Transfer por tipo (run 1 de cada ruta)
+
+| Recurso | `/login` | `/` | `/pricing` | `/docs` |
+|---|---|---|---|---|
+| Document | 23 KB | 44 KB | 24 KB | 32 KB |
+| **Script** | **260 KB** | **361 KB** | **186 KB** | **186 KB** |
+| Font | 110 KB | 110 KB | 110 KB | 110 KB |
+| Stylesheet | 32 KB | 32 KB | 32 KB | 32 KB |
+| Image | 5 KB | 5 KB | 5 KB | 5 KB |
+| Manifest / Other / Fetch | 4 KB | 6 KB | 6 KB | 28 KB |
+| **Total** | **434 KB** | **557 KB** | **357 KB** | **389 KB** |
 
 **Interpretación:**
-- Las **fuentes** (124 KB) son el segundo mayor bloque — se cargan 3+ familias
-  (Inter, JetBrains Mono, DM Sans). Candidato a `font-display: swap` + subsetting.
-- El **Script** domina el TBT: el bundle de la app (dashboard, login) se hidrata
-  completo. El chunk de `swagger-ui-react` (1160 KB raw) **no** está en ninguna
-  de estas rutas (verificado).
+- Las **fuentes** siguen costando **110 KB en TODAS las rutas** (baseline: 124 KB). Siguen siendo el mayor bloque no-JS.
+- El **Script** domina el peso y el TBT. El chunk de `swagger-ui-react` (1.13 MB) **no** está en ninguna de estas rutas (verificado en HTML).
 
 ---
 
-## 4. Optimización de bundles — verificación antes/después (build local)
+## 4. Bundle / JS inicial por ruta
 
-### 4.1 Chunks grandes identificados (estado inicial del build, ~5.3 MB total)
+### 4.1 HTML verificado (incluye polifil; servido por `next start`)
 
-| Chunk | Tamaño raw | Tamaño gzip | Estado |
+| Ruta | JS inicial raw | JS inicial gzip | Nº scripts | CSS raw / gzip | HTML |
+|---|---|---|---|---|---|
+| `/` | **1.050.261 B (1.025,6 KB)** | **323.519 B (315,9 KB)** | 20 | 232.063 / 31.183 B | 60.417 B |
+| `/login` | **1.001.071 B (977,6 KB)** | **298.567 B (291,6 KB)** | 17 | 232.063 / 31.183 B | 69.024 B |
+| `/swagger` | **727.907 B (710,8 KB)** | **224.640 B (219,4 KB)** | 15 | 232.063 / 31.183 B | 83.852 B |
+| `/pricing` | **723.050 B (706,1 KB)** | **223.212 B (218,0 KB)** | 15 | 232.063 / 31.183 B | 80.213 B |
+| `/docs` | **723.050 B (706,1 KB)** | **223.212 B (218,0 KB)** | 15 | 232.063 / 31.183 B | 99.934 B |
+
+### 4.2 Diagnóstico oficial de Next (`route-bundle-stats.json`, sin polifil)
+
+| Ruta | Chunks | First Load JS raw | gzip |
 |---|---|---|---|
-| `swagger-ui-react` | 1,187,401 B (**1160 KB**) | **329 KB** | Ya code-split (`next/dynamic ssr:false`) → on-demand ✅ |
-| `html2canvas` + `jsPDF` (pdf-utils) | 418,493 B (**409 KB**) | **131 KB** | Estaba en el initial load de 2 rutas ❌ → **corregido** |
+| `/ai/health` | 23 | 1.097,0 KB | 328,5 KB |
+| `/intelligence` | 21 | 1.044,5 KB | 309,8 KB |
+| `/` | 19 | 915,7 KB | 277,3 KB |
+| `/login` | 16 | 867,7 KB | 253,0 KB |
+| `/projects/[id]/audits/[auditId]` | 20 | 783,5 KB | 243,7 KB |
+| `/docs/api` | 15 | 629,7 KB | 187,1 KB |
+| `/mitre-coverage` | 16 | 618,6 KB | 187,5 KB |
+| `/swagger` | 15 | 609,6 KB | 184,3 KB |
+| `/docs` | 14 | 596,1 KB | 179,4 KB |
+| `/pricing` | 14 | 596,1 KB | 179,4 KB |
 
-> **Cifra del chunk pdf-utils:** 418,493 B = **409 KB** medidos. En los reportes
-> anteriores de la sesión se redondeó a **412 KB**; este reporte usa **409 KB**
-> consistentemente en toda la aritmética.
-| `recharts` ×3 | 287,850 B c/u (281 KB) | — | Ya code-split (`next/dynamic` en PerformanceTab/BenchmarkingSection) ✅ |
+*(23 rutas emitidas por el diagnóstico; se listan las 10 más pesadas + las rutas objetivo.)*
 
-### 4.2 First Load JS por ruta (JS inicial, sin gzip)
+### 4.3 Totales de `.next/static`
 
-| Ruta | Antes | Después | Ahorro verificado |
-|---|---|---|---|
-| `/intelligence` | ~1011 KB (602 + 409) | **602 KB** | **409 KB** — chunk pdf-utils fuera del initial ✅ |
-| `/projects/[id]/audits/[auditId]` | ~575 KB (166 + 409) | **166 KB** | **409 KB** — mismo chunk compartido ✅ |
-| `/swagger` | 180 KB | **169 KB** | **11 KB** — página convertida a Server Component ✅ |
-| `/swagger` (chunk swagger-ui) | on-demand | **on-demand** | Verificado **fuera** del HTML inicial (grep count 0) ✅ |
-| `/docs/[...slug]` | 166 KB | 166 KB | Ya óptimo — `react-markdown` corre en RSC, no llega al cliente ✅ |
-| `/mitre-coverage` | 164 KB | 164 KB | Ya óptimo — Server Component estático, 0 librerías ✅ |
-
-> El chunk de `pdf-utils` (409 KB) es **compartido** entre `/intelligence` y
-> `/audits`; el ahorro de 409 KB se aplica al initial load de cada una. El
-> total **829 KB suma por ruta** (≈ 420 KB de chunks únicos: 409 + 11).
-
-### 4.3 Cambios aplicados (2 archivos modificados + 1 nuevo)
-
-1. **`src/features/intelligence/components/IntelligenceShell.tsx`** — el import
-   estático de `exportIntelligenceToPdf` (que arrastraba `html2canvas`+`jsPDF`,
-   409 KB) ahora es `await import()` dentro del handler → el chunk solo se baja al
-   hacer click en "Reporte PDF".
-2. **`src/app/components/ExportPdfButton.tsx`** — mismo patrón para `exportAuditToPdf`.
-3. **`src/app/swagger/page.tsx`** — convertida de Client Component a **Server
-   Component**; el renderizado del tema (CSS inline) y el header ya no envían JS.
-4. **`src/app/swagger/SwaggerLazyLoader.tsx`** *(nuevo)* — isla cliente con
-   `next/dynamic({ ssr: false, loading: spinner })`. Requisito: `ssr:false` y
-   `loading` solo funcionan en Client Components; al vivirlo en un loader propio,
-   el chunk de 1160 KB queda **fuera** del initial HTML y se descarga post-hydration.
-
-### 4.4 Verificación empírica (no teórica)
-
-```
-$ grep -c '0c1c0_n43abn9' .next/server/app/swagger.html   # chunk swagger-ui
-0   ← NO está en el HTML inicial ✅
-
-$ /intelligence  → 9 chunks, 602 KB, chunk pdf-utils: NO ✅
-$ /audits        → 6 chunks, 166 KB, chunk pdf-utils: NO ✅
-$ /swagger       → 7 chunks, 169 KB, chunk swagger-ui: NO ✅
-$ tsc --noEmit   → 0 errores
-$ next build     → exit 0 (25/25 rutas estáticas)
-```
-
----
-
-## 5. Regresión detectada y corregida (control de calidad)
-
-Durante la medición se detectó una **regresión real** introducida en el primer
-intento de convertir `/swagger` a RSC: usar `dynamic()` directamente en el Server
-Component (sin `ssr:false`, opción solo válida en client components) **volvió a
-incluir el chunk de 1160 KB en el HTML inicial** (JS inicial: 180 KB → 1367 KB).
-
-**Fix:** extraer el `dynamic({ ssr: false, loading })` a `SwaggerLazyLoader.tsx`
-(client) y renderizarlo desde el RSC. Re-verificado: chunk ausente del HTML
-inicial, JS inicial 169 KB. El patrón canónico quedó documentado en el código.
-
----
-
-## 6. Ahorro verificado total
-
-| Concepto | Valor verificado |
+| Concepto | Valor |
 |---|---|
-| `html2canvas`+`jsPDF` removido del initial load | **409 KB raw** (131 KB gzip) × 2 rutas |
-| `swagger-ui-react` confirmado on-demand | **1160 KB raw** (329 KB gzip) no cargado en initial |
-| Página `/swagger` como Server Component | **11 KB** menos de JS inicial |
-| Chunks con `recharts` | Ya on-demand (sin cambio en esta ronda) |
-
-**Reducción total de JavaScript inicial en las rutas optimizadas: 829 KB
-por ruta** (409 KB en `/intelligence` + 409 KB en `/audits` + 11 KB en
-`/swagger`), siendo el chunk de `pdf-utils` compartido entre las dos primeras
-(≈ 420 KB de chunks únicos).
+| Ficheros JS + CSS | **179** |
+| Total **raw** | **9.248.222 B (9.031 KB ≈ 8,82 MiB)** |
+| Total **gzip** (nivel 9) | **2.573.763 B (2.513 KB ≈ 2,45 MiB)** |
+| Desglose | JS 8.821.354 B / CSS 426.868 B / WOFF2 353.224 B / ICO+PNG 29.351 B |
+| Con todos los ficheros (199) | 9.630.798 B |
 
 ---
 
-## 7. Recomendaciones de mejora (próximo sprint de performance)
+## 5. Chunks pesados — top-12 y estado lazy/eager
 
-1. **Atacar el TBT** (1020–3100 ms) — es la métrica más débil. Opciones:
-   - `next/dynamic` + Suspense para `IntelligenceTab`/`MonitoringTab`/`SettingsTab`
-     si aún no están en el dashboard (reducir la hidratación del panel completo).
-   - Mover los gráficos `recharts` a lazy-load (ya hecho en PerformanceTab;
-     verificar si quedan usos eager en `/ai/health`).
-2. **Fuentes**: 124 KB en todas las rutas — evaluar `font-display: swap` explícito,
-   subsetting con `unicode-range`, o cargar solo 2 familias.
-3. **`/openapi.json`**: agregar `Cache-Control: public, s-maxage=3600` para que
-   Swagger UI no re-descargue el spec en cada visita.
-4. **Prefetch en hover**: precargar el chunk de `swagger-ui` cuando el puntero
-   pase sobre el link a `/swagger` (sidebar, `/docs/api`) para que la página de
-   3 MB se sienta instantánea.
-5. **Medición continua**: correr este reporte en cada release (CI + Lighthouse
-   CI) para detectar regresiones de bundle como la de la sección 5.
+| # | Chunk | Raw | gzip | Librería / contenido | Estado |
+|---|---|---|---|---|---|
+| 1 | `1xby-pjphut2o.js` | 1.159.856 B (1.132,7 KB) | 326.681 B | `swagger-ui-react` | **LAZY** ✅ |
+| 2 | `2_8wuwaw531t_.js` | 655.707 B (640,3 KB) | 141.394 B | `mermaid` | **LAZY** ✅ |
+| 3 | `34gef7x3rx0-e.js` | 429.871 B (419,8 KB) | 134.310 B | resaltado de sintaxis / markdown (`highlight`+`marked`) *[INFERRED]* | No aparece en HTML medido |
+| 4 | `2cbawi-0s5vzf.js` | 418.858 B (409,0 KB) | 133.559 B | **`jsPDF` + `html2canvas`** (pdf-utils) | **LAZY** ✅ |
+| 5 | `3zk3bb69dmxey.js` | 263.870 B (257,7 KB) | 76.442 B | `katex` *[INFERRED]* | No aparece en HTML medido |
+| 6 | `36ijlf6hma9fm.js` | 237.915 B (232,3 KB) | 70.335 B | `recharts` | **EAGER en `/ai/health`** ⚠️ |
+| 7 | `0yfjhv3ebgnur.js` | 229.030 B (223,7 KB) | 71.473 B | `react-dom` (framework) | **EAGER en todas** (esperado) |
+| 8 | `2d0rji8dmxh87.css` | 222.781 B (217,6 KB) | 29.898 B | CSS global | **EAGER en todas** ⚠️ |
+| 9 | `19irr3q37y45i.js` | 214.518 B (209,5 KB) | 54.882 B | cliente `supabase` *[INFERRED]* | **EAGER en `/login`** ⚠️ |
+| 10 | `19tnpn67abx19.js` | 210.832 B (205,9 KB) | 24.601 B | `katex` + `highlight` + sanitize *[INFERRED]* | No aparece en HTML medido |
+| 11 | `1z9wa_774s3q2.js` | 198.037 B (193,4 KB) | 45.306 B | `html2canvas` (2ª copia) | **LAZY** ✅ |
+| 12 | `169k76d6o_dh-.js` | 179.409 B (175,2 KB) | 40.921 B | `leaflet` | **LAZY** ✅ |
+
+### 5.1 Estado de las dependencias pesadas conocidas
+
+| Dependencia | Chunk(s) | Presente en el build | Eager en el HTML inicial | Verificación |
+|---|---|---|---|---|
+| `swagger-ui-react` | `1xby-pjphut2o` (1.133 KB) | ✅ sí | **No** en `/swagger` ni en ninguna ruta medida | Carga vía `s.l()` (dynamic import) desde `44gpoej18t2z0.js` |
+| `html2canvas` + `jsPDF` | `2cbawi-0s5vzf` (409 KB) + `1z9wa_774s3q2` (193 KB) | ✅ sí | **No** en ninguna de las 11 rutas medidas | Stubs de loader en initial de `/p/[token]`, `/projects/.../audits/...`, `/intelligence`; descarga bajo demanda |
+| `mermaid` | `2_8wuwaw531t_` (640 KB) | ✅ sí | **No** en ninguna ruta medida | Cadena lazy `3dai0df1kez3z → 1g56cd5kdcw7d → 0w3cvoqtwi979` |
+| `leaflet` | `0rudprcas4g_2` (145 KB) + `169k76d6o_dh-` (175 KB) | ✅ sí | **No** en ninguna ruta medida | Lazy desde `3dai0df1kez3z.js` |
+| `recharts` | 10 chunks; el mayor `36ijlf6hma9fm` (232 KB) | ✅ sí | **SÍ en `/ai/health`** (6 chunks en el HTML) ⚠️ | `async=false` en el manifest de `/ai/health`; lazy en el resto |
+| `reactflow` / `@xyflow` | `39l9w03no01ao` (143 KB) | ✅ sí | **SÍ en `/intelligence`** según manifest (`async=false`) ⚠️ | HTML **[NO MEDIDO]**: la ruta redirige a `/login` sin sesión |
+| `three` | — | ❌ no está en el build | n/a | N/A |
+| `@react-pdf/renderer` | — | ❌ no está en el build | n/a | N/A |
+
+**Método de verificación de lazy/eager:** (a) escaneo de contenido de **cada `<script>` servido en el HTML** contra firmas de la librería; (b) búsqueda del identificador de chunk en los `client-reference-manifest.js` con su flag `async`; (c) inspección del código del chunk emisor: todas las referencias a los chunks pesados aparecen dentro de `Promise.all([...].map(t => s.l(t)))`, es decir, **cargador asíncrono de Turbopack (dynamic import)**, no import estático.
 
 ---
 
-*Reporte generado con Lighthouse 13.4.1 y análisis de manifests de build de Turbopack (Next.js 16).*
+## 6. Hallazgos y recomendaciones priorizadas
 
----
+| # | Prioridad | Hallazgo | Evidencia | Recomendación |
+|---|---|---|---|---|
+| H-01 | **P0** | TBT de 1336 ms en `/login` y 857 ms en `/`; 6,1 s de trabajo en main thread | §3.1 | Dividir la hidratación del shell con `next/dynamic` + `<Suspense>` (pestañas del dashboard, copiloto) y reducir el trabajo sincrónico en el primer paint |
+| H-02 | **P0** | JS inicial de `/` = 1.026 KB raw / 316 KB gzip y de `/login` = 978 KB / 292 KB | §4.1 | Revisar por qué `/login` arrastra `19irr3q37y45i.js` (210 KB, cliente `supabase`) y evaluar moverlo a lazy si el login no lo necesita en el primer render |
+| H-03 | **P1** | `recharts` **eager** en `/ai/health`: 6 chunks + 232 KB en el HTML inicial | §5.1 | Envolver los gráficos con `next/dynamic({ ssr:false, loading })` (patrón ya aplicado en `PerformanceTab`) |
+| H-04 | **P1** | `reactflow` (143 KB) **eager** en `/intelligence` | manifest `async=false` | Confirmar y, si procede, pasar a carga diferida del grafo |
+| H-05 | **P1** | CSS global de **217,6 KB raw (29,2 KB gzip) en todas las rutas** | §4.1, §5 | Audit de utilidades no usadas (Tailwind) y separar CSS por ruta |
+| H-06 | **P2** | Fuentes: **110 KB de transfer en las 4 rutas** | §3.2 | `font-display: swap`, `unicode-range`/subsetting, reducir familias (baseline ya lo señalaba) |
+| H-07 | **P2** | `/swagger` sigue con 610 KB de first-load JS (sin contar el chunk lazy de 1,13 MB) | §4.2 | Prefetch en hover del link a `/swagger` (recomendación 4 del reporte de julio, sigue abierta) |
+| H-08 | **P2** | No existe medición continua | §7 | Lighthouse CI en el pipeline + este informe por release para detectar regresiones de bundle |
 
-## Alcance y objetivos
+**REQ del baseline — estado actual:**
 
-Este reporte documenta el rendimiento de SCAUDIT Pro medido con Lighthouse contra producción (`/login` y `/`) y la verificación a nivel de build de la reducción de JavaScript inicial (chunks de `html2canvas`+`jsPDF` y `swagger-ui-react` movidos a carga bajo demanda; `/swagger` convertido a Server Component). Objetivos: registrar los Core Web Vitals actuales, cuantificar el ahorro de bundle y fijar metas de rendimiento medibles.
-
----
-
-## Requisitos de rendimiento
-
-| REQ | Requisito | Estado |
+| REQ | Requisito | Estado 2026-09-26 |
 |-----|-----------|--------|
-| REQ-001 | LCP < 2.5s en `/login` | 🔴 3.6s actual |
-| REQ-002 | CLS = 0 | ✅ 0 en ambas rutas |
-| REQ-003 | TBT < 200ms | 🔴 1020ms actual |
-| REQ-004 | Ahorro de bundle verificado | ✅ 584KB (sección 5) |
-| REQ-005 | Carga bajo demanda de librerías pesadas | ✅ html2canvas/jsPDF/swagger |
+| REQ-001 | LCP < 2,5 s en `/login` | 🔴 4,67 s (lab local) |
+| REQ-002 | CLS = 0 | ✅ 0 en las 4 rutas |
+| REQ-003 | TBT < 200 ms | 🔴 1336 ms en `/login` |
+| REQ-004 | Ahorro de bundle verificado | ✅ baseline 2026-07-31 (409 KB × 2 rutas + 11 KB); **esta ronda re-verifica el estado lazy** |
+| REQ-005 | Carga bajo demanda de librerías pesadas | ⚠️ 6/8 librerías lazy verificadas; `recharts` eager en `/ai/health` y `reactflow` eager en `/intelligence` |
 
 ---
 
-## Arquitectura de carga
+## 7. Limitaciones y `[NO MEDIDO]`
 
-### FIG-001 — Carga diferida de librerías pesadas
+| Elemento | Estado | Motivo |
+|---|---|---|
+| Producción (`scaudit.vercel.app`) | **[NO MEDIDO]** | La ronda se limitó a build + lab local; no se ejecutó Lighthouse contra producción |
+| `/intelligence`, `/projects/[id]/audits/[auditId]` — HTML inicial | **[NO MEDIDO]** | Rutas con sesión: `307 → /login`; sólo se pudo leer su `client-reference-manifest` |
+| HTML de `/ai/health` sin sesión | Medido ✅ | Ruta accesible; sirvió para detectar el `recharts` eager |
+| INP | **[NO MEDIDO]** | Lighthouse lab no informa INP (métrica de campo); el baseline tampoco lo incluía |
+| CWV de campo / RUM | **[NO MEDIDO]** | Fuera de alcance de esta ronda (Vercel Speed Insights + `/api/telemetry/vitals` no consultados) |
+| Muestras pequeñas | Limitación | `/login` n=3; `/`, `/pricing`, `/docs` **n=2** (mediana de 2 = media). Se respetó el máximo de 9 invocaciones de Lighthouse |
+| Comparabilidad con el baseline | Limitación | Baseline = producción (Vercel), nueva ronda = lab local. Las diferencias de score **no** miden regresión de código |
+| Identificación de chunks | Limitación | La librería de los chunks 3, 5 y 10 del §5 se infiere por firmas de contenido: marcada *[INFERRED]*, no verificada en origen |
+| Variabilidad | [ASSUMPTION] | Las mediciones lab varían ±10 % según CPU/carga de la máquina |
 
-```mermaid
-flowchart TB
-  A[Bundle principal] --> B[Chunks bajo demanda]
-  B --> C[html2canvas + jsPDF]
-  B --> D[swagger-ui-react ~3MB]
-  B --> E[recharts en PerformanceTab]
-  A --> F[Server Components]
-  F --> G[/swagger página estática]
-```
-
----
-
-## Modelo de datos de métricas
-
-| Métrica | Tabla/Origen | Fuente |
-|---------|-------------|--------|
-| Core Web Vitals | `telemetry` (RUM) | [VERIFIED] `src/shared/utils/rum.ts` |
-| Web Vitals del navegador | `POST /api/telemetry/vitals` | [VERIFIED] `src/app/api/telemetry/vitals/route.ts` |
-| Lighthouse | JSON de auditoría | [VERIFIED] Lighthouse 13.4.1 |
+**Limpieza:** el servidor `next start` (puerto 3100) fue **terminado** al final de la sesión; los JSON de Lighthouse y scripts de medición se crearon en el directorio temporal del sistema y **no** forman parte del repositorio.
 
 ---
 
-## Flujos
-
-### FLOW-001 — Medición y verificación
-
-```mermaid
-flowchart LR
-  A[npx lighthouse URL] --> B[Score por ruta]
-  B --> C[Comparar vs meta]
-  C --> D[Optimizar bundle]
-  D --> E[Verificar client-reference-manifest]
-  E --> F[Actualizar reporte]
-```
-
----
-
-## APIs y telemetría
-
-| Método | Endpoint | Propósito |
-|--------|----------|-----------|
-| POST | `/api/telemetry/vitals` | Recibir CWV desde el navegador |
-| GET | `/api/monitoring` | Estado de monitoreo |
-| GET | `/api/ai/healthcheck` | Health de modelos |
-
----
-
-## Seguridad de la medición
-
-- Las mediciones se toman sobre HTTPS con CSP activa (misma política que producción).
-- El endpoint de telemetría valida el payload antes de persistir (evita inyección de métricas falsas). [VERIFIED]
-
----
-
-## Testing de rendimiento
-
-| Caso | Herramienta | Estado |
-|------|-------------|--------|
-| Lighthouse `/login` | Lighthouse 13.4.1 | ✅ 63 |
-| Lighthouse `/` | Lighthouse 13.4.1 | ✅ 49 |
-| RUM en navegador | `rum.ts` | ✅ |
-| Análisis de manifests | Turbopack build | ✅ |
-
----
-
-## Operaciones y monitoreo continuo
-
-**Monitoreo:** Vercel Speed Insights provee CWV en vivo; el RUM envía métricas por usuario a `/api/telemetry/vitals`. **Runbook:** ante una regresión de bundle, correr Lighthouse en CI, comparar con la tabla de §1 y re-aplicar el patrón de `next/dynamic` + `ssr: false`.
-
----
-
-## Inventario visual
-
-| ID | Tipo | Descripción | Audiencia | Nivel |
-|----|------|-------------|-----------|-------|
-| FIG-001 | Diagrama de arquitectura | Carga diferida de librerías | Frontend | L2 |
-| FLOW-001 | Flowchart | Ciclo de medición | Frontend/DevOps | L2 |
-
----
-
-## Trazabilidad
-
-| REQ | Componente | Test | Deploy |
-|-----|-----------|------|--------|
-| REQ-004 | `next.config.ts` (`next/dynamic`) | Build manifests | Vercel |
-| REQ-005 | `PerformanceTab.tsx` | Lighthouse | Vercel |
-| REQ-001 | `/login` (layout) | Lighthouse CI | Vercel |
-
----
-
-## Validación cruzada (inconsistencias resueltas)
-
-- **Ahorro de bundle**: el dato de 584KB de la sección 5 fue verificado contra el `client-reference-manifest` del build antes y después del refactor [VERIFIED].
-- **Métricas de ambas rutas**: la tabla §1 separa `/login` y `/` (con redirect) porque los valores difieren significativamente (LCP 3.6s vs 5.2s) [VERIFIED].
-
----
-
-## Unknowns y supuestos
-
-- [VERIFIED] CLS es 0 en ambas rutas (sin layout shift medible).
-- [ASSUMPTION] Las mediciones Lighthouse pueden variar ±10% según red y máquina.
-- [UNKNOWN] El impacto de usuarios reales en entornos variados (medido por RUM, no en este reporte).
-
----
-
-## Glosario
-
-| Término | Definición |
-|---------|-----------|
-| LCP | Largest Contentful Paint |
-| CLS | Cumulative Layout Shift |
-| TBT | Total Blocking Time |
-| TTI | Time to Interactive |
-| RUM | Real User Monitoring |
-| CWV | Core Web Vitals |
+*Reporte generado el 2026-09-26 con Lighthouse 13.5.0 (lab local) y análisis de artefactos de build de Turbopack (Next.js 16.3.3). Baseline histórico: reporte del 2026-07-31 (Lighthouse 13.4.1 contra producción).*

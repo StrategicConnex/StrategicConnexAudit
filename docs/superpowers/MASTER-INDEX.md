@@ -105,7 +105,7 @@
   - [x] T06-04 trigger.test siem (4) · discovery (4) · uptime (5) — registro de task + delegación a run*
   - [x] T06-05 trigger.test adversary (5) · anomaly (5) · monitoring (6) — escenarios MITRE, anomalías, alertas High/Critical
   - [x] T06-06 trigger.test scheduled-scan (3) · audit (6) · webhook (7) — stub config, flujo crawl/ownership, HMAC + SSRF
-- [ ] **B07 — Performance** (refresh PERFORMANCE_REPORT + CWV + bundle)
+- [x] **B07 — Performance** (completado 2026-09-26: PERFORMANCE_REPORT v2 con CWV lab Lighthouse 13.5.0 + bundle por ruta — scores 58/56/75.5/81 en /login·/·/pricing·/docs, CLS 0, JS inicial 978–1026 KB raw en /login·/, `.next/static` 9,03 MB; 6/8 librerías pesadas verificadas lazy, `recharts` eager en /ai/health)
 - [x] **B08 — Observabilidad** (completado 2026-09-25: OBSERVABILITY-MATRIX 11 señales + convención correlation IDs)
 - [x] **B09 — i18n** (completado 2026-09-25: I18N-AUDIT paridad 0.00% + guard CI `i18n-parity.mjs`)
 - [x] **B10 — Final** (completado 2026-08-02; TRACEABILITY-MATRIX, RISK-REGISTER, TECH-DEBT-REGISTER, FINAL-REPORT §51, Quality Gate T10-04 27/27)
