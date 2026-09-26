@@ -33,7 +33,6 @@ export default defineConfig({
         'src/**/*.d.ts',
         'src/shared/db/schemas/**',
         'src/shared/db/seed.ts',
-        'src/shared/db/run-migration.ts',
         'src/shared/db/test-rls.ts',
       ],
       thresholds: {

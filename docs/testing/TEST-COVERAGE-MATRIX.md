@@ -3,8 +3,8 @@ layout: default
 title: Test Coverage Matrix
 nav_order: 4.1
 permalink: /docs/testing/test-coverage-matrix
-version: 1.9
-fecha: 2026-09-25
+version: 1.10
+fecha: 2026-09-26
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -22,12 +22,12 @@ estado: Aprobado
 
 ---
 
-> **⚠️ ACTUALIZACIÓN 2026-09-25 (lote Impacto runtime: TD-07, N+1, higiene de migraciones, TD-10 + Quick wins anteriores).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Estado real medido contra el código actual:
+> **⚠️ ACTUALIZACIÓN 2026-09-26 (TD-05 eliminado, TD-01 cerrado, lote TD-03 #1: +6 route.test de seguridad; datos previos del lote 2026-09-25).** El cuerpo de este documento es un **snapshot fechado (2026-08-08)**. Estado real medido contra el código actual:
 >
-> | Métrica | Valor 2026-09-25 | Nota |
+> | Métrica | Valor 2026-09-26 | Nota |
 > |---------|------------------|------|
-> | `pnpm test` | **170 archivos · 1595 tests → 1595 ✅ / 0 ❌** (exit 0) | Suite completa en verde; +3 archivos/+22 tests sobre quick wins (167/1573) |
-> | `pnpm test:coverage` | **Stmts 43.84% · Branch 34.15% · Funcs 38.60% · Lines 44.86%** | Todos los umbrales cumplidos (40/30/34/41), exit 0 con `--coverage.reportOnFailure=true` |
+> | `pnpm test` | **176 archivos · 1632 tests → 1632 ✅ / 0 ❌** (exit 0) | Suite completa en verde; +6 archivos/+37 tests sobre lote Impacto runtime (170/1595) |
+> | `pnpm test:coverage` | **Stmts 44.66% · Branch 35.19% · Funcs 38.94% · Lines 45.76%** | Todos los umbrales cumplidos (40/30/34/41), exit 0 con `--coverage.reportOnFailure=true` |
 > | Umbrales CI | `statements 40 · branches 30 · functions 34 · lines 41` | `vitest.config.ts` (ratchet 2026-09-24) |
 > | `pnpm lint` | ✅ **0 errores · 0 warnings** (exit 0) | — |
 > | `tsc --noEmit` | ✅ **OK** (exit 0) | — |
@@ -47,7 +47,7 @@ estado: Aprobado
 >
 > Estabilidad de la suite: `maxWorkers: 4` en `vitest.config.ts` — con los ~7 forks por defecto la suite agotaba la RAM (~1 GB libre de 7.5 GB) y vitest reportaba 4 "Unhandled Errors" (exit 1) pese a tener todo en verde.
 >
-> Los conteos de rutas/triggers del cuerpo (42 rutas, 12 triggers) quedaron obsoletos: hoy son **60 route handlers** (55 privados + 5 públicos v1) y **22 triggers** (todos con test).
+> Los conteos de rutas/triggers del cuerpo (42 rutas, 12 triggers) quedaron obsoletos: hoy son **60 route handlers** (55 privados + 5 públicos v1; 33 con `route.test.ts`, 27 sin — recuento 2026-09-26) y **22 triggers** (todos con test).
 
 ## 1. Scope y objetivos
 
@@ -71,8 +71,8 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | REQ-201 | Suite unit completa en verde (`pnpm test`) | ✅ 327/327 (ejecución real 2026-08-02) |
 | REQ-202 | Cobertura global por encima del umbral de CI | ✅ Statements 27.21% ≥ 25% · Lines 27.41% ≥ 25% · Funcs 22.83% ≥ 20% · Branches 20.67% ≥ 20% (2026-08-08) |
 | REQ-203 | Ruta crítica de seguridad con test propio | ✅ rls (5) · AiCopilot XSS (6) · webhooks (15) · egress-guard (31) |
-| REQ-204 | Cada endpoint público/crítico con `route.test.ts` | ❌ 8/42 rutas (19.0%) |
-| REQ-205 | Cada trigger con test (src/trigger/*) | ❌ 9/12 triggers (75%) |
+| REQ-204 | Cada endpoint público/crítico con `route.test.ts` | ⚠️ 33/60 rutas (55.0%) — lote TD-03 #1 cerró 6 de seguridad 2026-09-26 |
+| REQ-205 | Cada trigger con test (src/trigger/*) | ✅ 22/22 triggers (100%) |
 | REQ-206 | Contrato de API publicado y testeado | ✅ 10/10 (`tests/api-contract`) |
 | REQ-207 | No-regresión de cobertura vs baseline | ✅ Sin regresión (ver §5) |
 
@@ -135,7 +135,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 
 ## 6. APIs y endpoints afectados (cobertura por endpoint)
 
-42 rutas API (`src/app/api/**/route.ts`) · **8 con `route.test.ts` (19.0%)** · 34 sin test directo.
+60 rutas API (`src/app/api/**/route.ts`) · **33 con `route.test.ts` (55.0%)** · 27 sin test directo (recuento real 2026-09-26).
 
 | Ruta | Método | Auth | ¿route.test? | Prioridad |
 |------|--------|------|--------------|-----------|
@@ -147,10 +147,11 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | `/api/cron/uptime` | POST | Cron token | ✅ route.test | ALTA |
 | `/api/security/siem/run` | POST | CRON_SECRET o sesión | ✅ 5 tests | ALTA |
 | `/api/public/v1/intelligence` | GET/POST | API key SHA-256 | ✅ 11 tests | ALTA |
-| `/api/intelligence/runs` | GET/POST | Sesión + RLS | ❌ | ALTA |
-| `/api/reports/pdf/progress` | GET | Sesión | ❌ | ALTA (VULN-007) |
-| `/api/intelligence/*` (9 rutas) | GET/POST/PATCH | Sesión | ❌ | MEDIA-ALTA |
-| `/api/monitoring`, `/api/security/*` (3), `/api/looker-studio`, `/api/telemetry/vitals`, resto | — | Sesión/cron | ❌ | MEDIA |
+| `/api/intelligence/runs` | GET/POST | Sesión + RLS | ✅ 12 tests (2026-09-25) | ALTA |
+| `/api/reports/pdf/progress` | GET | Sesión | ✅ 7 tests (2026-09-25) | ALTA (VULN-007) |
+| `/api/intelligence/*` (11 rutas: mitre, vulnerabilities, anomalies, assets/graph, brief, bulk, compare, copilot, discovery, history, live) | GET/POST/PATCH | Sesión | ❌ | MEDIA-ALTA |
+| `/api/monitoring`, `/api/security/*` (5), `/api/looker-studio`, `/api/telemetry/vitals` | GET/POST | Sesión/cron/admin | ✅ (2026-09-25/26) | MEDIA — resto sin test (27): ver fila siguiente |
+| resto sin test (ai/copilot, api-keys/[id]/usage, validate-email, benchmarking, entitlements, bulk-scan, soc2-pack, export, plugins, branding, keywords, push-subscribe, cicd, public/v1/{audits,reports,uptime}) | GET/POST | Sesión/API key | ❌ | MEDIA |
 
 **Errores esperados documentados:** 401/403 auth · 404 no encontrado · 42501 RLS (solo no-miembros) · 429 rate limit (inteligencia, fail-open) · 500 → require rollback [VERIFIED — SECURITY-AUDIT v2.2].
 
@@ -170,7 +171,7 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | Rate limiting / circuit breaker | `src/shared/lib/ratelimit.test.ts` | ✅ |
 | Contrato de API público | `tests/api-contract/contract.test.ts` | 10/10 ✅ |
 
-**Amenazas documentadas (SECURITY-AUDIT v2.2):** IDOR cross-tenant (VULN-004/005), XSS IA (VULN-001), fuga realtime (SB-002), secret tokens (VULN-002) — todas cubiertas por tests [VERIFIED]. **Brechas de seguridad sin test:** CSP report endpoint, `looker-studio`, `webhooks/cicd`, `public/v1/health`.
+**Amenazas documentadas (SECURITY-AUDIT v2.2):** IDOR cross-tenant (VULN-004/005), XSS IA (VULN-001), fuga realtime (SB-002), secret tokens (VULN-002) — todas cubiertas por tests [VERIFIED]. **Brechas de seguridad sin test (recuento 2026-09-26):** `webhooks/cicd`, `api/plugins`, `api/bulk-scan`, `api/export`, `notifications/push-subscribe` — CSP report, looker-studio, security/{audit-logs,siem/test,siem-alerts} y `public/v1/health` **ya están cubiertos**.
 
 ---
 
@@ -283,11 +284,12 @@ VS BASELINE B00:    +1.21pp Stmts · +0.84pp Branch · +1.40pp Funcs · +1.25pp 
 |-----------|-------|--------------------|---------|
 | ✅ B06 | 12 triggers (siem, discovery, uptime) | `*.test.ts` — **hecho** (13 tests) | Trabajo asíncrono en prod cubierto parcialmente |
 | ✅ B06 | `/api/security/siem/run`, `/api/public/v1/intelligence` | route.test.ts — **hecho** (5 + 11 tests) | Superficie pública/servidor cubierta |
-| P1 | 3 triggers sin test restantes (api-key-expiry, cleanup, hello) | `*.test.ts` por trigger | Trabajo asíncrono en prod sin verificación |
+| ✅ | 3 triggers sin test restantes (api-key-expiry, cleanup, hello) | `*.test.ts` — **hecho** (22/22 triggers con test, 2026-09-17/24) | Trabajo asíncrono en prod cubierto |
 | ✅ QW | `/api/intelligence/runs`, `/api/reports/pdf/progress`, `/api/looker-studio` | route.test.ts — **hecho** (12 + 7 + 9 tests, 2026-09-25) | VULN-006/007 + flujo core |
 | ✅ QW | `src/server/api/public-router.test.ts` | unit — **hecho** (11 tests, 2026-09-25) | API key auth/scope/logging |
+| ✅ TD-03#1 | 6 rutas de seguridad (security/{audit-logs,csp-report,siem/test,siem-alerts}, internal/track-access, auth/callback) | route.test.ts — **hecho** (37 tests, 2026-09-26) | Gate admin, CSP anti-flood, open-redirect, rate-limit callback y telemetría cubiertos |
 | P1 | `src/server/ai/ai-router.ts` | unit de `callAIWithFallback` (fallback chain) | Fallos de IA en cascada |
-| P2 | 30 rutas restantes | route.test.ts básico (401/404/200) | Completar 42/42 |
+| P2 | 27 rutas restantes | route.test.ts básico (401/404/200) | Completar 60/60 |
 | ✅ | `src/modules/*` (TSK-014) | scaffold vacío **eliminado 2026-09-25** (decisión: retirar, no implementar) | Doble arquitectura cerrada |
 
 ---
@@ -344,7 +346,7 @@ flowchart LR
 |-----------|--------------|-----------|
 | "La cobertura regresó" | §4.2 vs §4.1: sube en 4 métricas | **REFUTADO** — no-regresión ✅ [VERIFIED] |
 | "Los triggers están cubiertos" | 9/12 con test (75%) | **PARCIAL** — 3 pendientes [VERIFIED] |
-| "Todas las rutas tienen route.test" | 8/42 (19.0%) | **REFUTADO** — gap de 34 rutas [VERIFIED] |
+| "Todas las rutas tienen route.test" | 33/60 (55.0%) | **REFUTADO** — gap de 27 rutas [VERIFIED — recuento 2026-09-26] |
 | "Los 3 fallos de egress-guard son regresión" | la suite ahora sondea conectividad (example.com/httpbin.org) en `beforeAll` y omite los tests sin red | **RESUELTO** — 31/31 sin fallos [VERIFIED] |
 | "Baseline B00 = 248 tests" (MASTER-INDEX) | PRODUCTION-PUSH-FINAL-VALIDATION §4 registra 254 (251+3) | **INCONSISTENCIA RESUELTA** — 254 es el conteo con los 3 ambientales; este reporte usa 254 |
 | "report-utils XSS estaba cubierto" | bug real encontrado y corregido en batch XSS | **HALLAZGO RESUELTO** — ahora 2 suites cubren [VERIFIED] |
@@ -404,6 +406,7 @@ flowchart LR
 | 1.7 | 2026-09-24 | **Plan de mejoras Fases 2.1-4.6**: validación Zod lazy de env (`envSchema` + `validateEnv()` en `src/env.ts`, sin parse en import, +12 tests), Prettier 3.9.9 (`.prettierrc`, `.prettierignore`, scripts `format`/`format:check`, sin `--write` masivo), índice `idx_audit_logs_created_at` (`drizzle/2026-09-24_recommended_indexes.sql`; los otros 2 candidatos del plan ya existían), integraciones Slack/Teams/AlertManager (`src/server/integrations/{slack,teams,shared}`, 24 tests) y RBAC completo (matriz de permisos en código sin tablas nuevas, `addMember`/`updateMemberRole`/`removeProjectMember` con protección de último owner, rutas `members/[userId]` y `audit-log`, 64 tests) → **163 files · 1534 tests ✅/0 ❌** · **Stmts 41.65% · Branch 32.2% · Funcs 36.89% · Lines 42.59%** · estabilidad: `maxWorkers: 4` (fix de "Unhandled Errors" por RAM agotada, exit 1 con todo en verde) | Aprobado |
 | 1.8 | 2026-09-25 | **Quick wins de deuda técnica**: +4 suites (+39 tests: `looker-studio/route` 9, `reports/pdf/progress/route` 7, `intelligence/runs/route` 12, `server/api/public-router` 11) → **167 files · 1573 tests ✅/0 ❌** · **Stmts 42.66% · Branch 32.97% · Funcs 37.5% · Lines 43.69%** · TD-04 (`src/modules/*` eliminado), TD-09/11 cerrados y docs reconciliados | Aprobado |
 | 1.9 | 2026-09-25 | **Lote Impacto runtime**: +3 suites (+16 tests: `actions/performance` 4, `PerformanceTab.tsx` 4, `integration-sync.trigger` 8) y +6 de regresión en suites existentes (looker-studio +2 anti-`IN ((`, uptime +3 transiciones/batch, monitoring +1 flush) → **170 files · 1595 tests ✅/0 ❌** · **Stmts 43.84% · Branch 34.15% · Funcs 38.60% · Lines 44.86%** · TD-07/TD-10 cerrados · higiene de migraciones: 5 `.sql` fechados registrados en `_journal.json` (idx 38-42), `db:migrate` OK (ledger 43/43), `drizzle-kit check` + drift-check PASS | Aprobado |
+| 1.10 | 2026-09-26 | **TD-05/TD-01 + lote TD-03 #1**: `run-migration.ts` eliminado (0 imports) y TD-01 cerrado (umbrales 40/30/34/41 ya activos); +6 `route.test.ts` de seguridad (+37 tests: `security/audit-logs` 7, `security/csp-report` 5, `security/siem/test` 5, `security/siem-alerts` 5, `internal/track-access` 7, `auth/callback` 8) → **176 files · 1632 tests ✅/0 ❌** · **Stmts 44.66% · Branch 35.19% · Funcs 38.94% · Lines 45.76%** · rutas con test **33/60 (55.0%)**, recuento real de rutas/triggers (60/22) reconciliado en §6/§12/§15 | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/testing/TEST-COVERAGE-MATRIX.md --min 80` → PASS
 
