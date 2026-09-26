@@ -51,6 +51,10 @@ test-results/
 playwright-report/
 screenshot-*.png
 e2e/test.txt
+/screenshots/
+
+# local debug dumps
+test-debug*.txt
 
 # generated Postman collection (regenerated from openapi.json in CI)
 /tests/api-contract/scaudit-api-collection.json
