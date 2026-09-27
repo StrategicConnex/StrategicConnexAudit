@@ -10,6 +10,7 @@ import { runAiSeoReport } from "@/trigger/ai-report.trigger";
 import { assertAiQuota } from '@/server/ai/ai-usage';
 import { generateSeoReport } from '@/server/ai/seo-report-service';
 import { assertProjectAccess } from '@/server/lib/project-access';
+import { withRequestContext, currentCorrelationId } from "@/lib/request-context";
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +63,7 @@ export const POST = withRateLimit(
       try {
         await tasks.trigger<typeof runAiSeoReport>("ai-seo-report-generation", {
           jobId: job.id,
+          correlationId: currentCorrelationId(),
         });
         return NextResponse.json({ success: true, pending: true, jobId: job.id });
       } catch (triggerErr) {
@@ -92,7 +94,7 @@ export const POST = withRateLimit(
 /**
  * GET /api/ai/report/status?jobId= — polling del trabajo diferido.
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -128,3 +130,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

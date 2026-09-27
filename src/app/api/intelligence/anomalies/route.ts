@@ -21,10 +21,11 @@ import { anomalyDetections } from "@/shared/db/schemas/anomaly";
 import { eq, and, desc, isNull, gte, count, sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -113,3 +114,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRequestContext(rawGet);

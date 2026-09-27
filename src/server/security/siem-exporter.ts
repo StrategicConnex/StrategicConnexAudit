@@ -6,6 +6,7 @@ import { gte, eq, and, sql, desc } from "drizzle-orm";
 import { directDb } from "@/shared/db";
 import { securityAuditLogs, siemAlertLogs } from "@/shared/db/schemas";
 import { logSecurityEvent } from "@/shared/lib/audit-log";
+import { currentCorrelationId, correlatedHeaders } from "@/lib/request-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,11 @@ export interface SiemPattern {
   paths: string[];
   methods: string[];
   metadataSamples: Record<string, unknown>[];
+  /**
+   * G2 — id de correlación de la ejecución que generó la alerta (request
+   * `x-request-id` o cadena de cron). Permite trazar request → job → SIEM.
+   */
+  correlationId?: string;
 }
 
 export interface SiemHeartbeatInfo {
@@ -141,9 +147,9 @@ function formatSlack(pattern: SiemPattern): WebhookPayload {
   }
   return {
     url: process.env.SIEM_WEBHOOK_SLACK || "", body: {
-      text: "", blocks: [
+      text: "",       blocks: [
         { type: "section", text: { type: "mrkdwn", text: lines.join("\n") } },
-        { type: "context", elements: [{ type: "mrkdwn", text: `\u{1F6E1}\uFE0F *SCAUDIT SIEM* \u00B7 ${new Date().toISOString()}` }] },
+        { type: "context", elements: [{ type: "mrkdwn", text: `\u{1F6E1}\uFE0F *SCAUDIT SIEM* \u00B7 ${new Date().toISOString()}${pattern.correlationId ? ` \u00B7 \`corr: ${pattern.correlationId}\`` : ""}` }] },
         { type: "divider" },
       ],
     },
@@ -160,7 +166,7 @@ function formatPagerDuty(pattern: SiemPattern): WebhookPayload {
         summary: `${pattern.label} \u2014 ${pattern.count} eventos desde ${pattern.ip}`, source: pattern.ip,
         severity: pattern.severity, timestamp: pattern.lastSeen.toISOString(),
         component: "security-audit", group: pattern.eventType, class: "security_event",
-        custom_details: { count: pattern.count, windowMinutes: pattern.windowMinutes, firstSeen: pattern.firstSeen.toISOString(), lastSeen: pattern.lastSeen.toISOString(), paths: pattern.paths, methods: pattern.methods, metadataSamples: pattern.metadataSamples },
+        custom_details: { count: pattern.count, windowMinutes: pattern.windowMinutes, firstSeen: pattern.firstSeen.toISOString(), lastSeen: pattern.lastSeen.toISOString(), paths: pattern.paths, methods: pattern.methods, metadataSamples: pattern.metadataSamples, ...(pattern.correlationId ? { correlationId: pattern.correlationId } : {}) },
       },
     },
   };
@@ -175,6 +181,7 @@ function formatSplunk(pattern: SiemPattern): WebhookPayload {
         count: pattern.count, window_minutes: pattern.windowMinutes,
         first_seen: pattern.firstSeen.toISOString(), last_seen: pattern.lastSeen.toISOString(),
         paths: pattern.paths, methods: pattern.methods, metadata: pattern.metadataSamples, source: "SCAUDIT SIEM",
+        ...(pattern.correlationId ? { correlation_id: pattern.correlationId } : {}),
       },
     },
   };
@@ -335,17 +342,20 @@ async function sendAlerts(patterns: SiemPattern[]): Promise<{ sent: number; fail
   let sent = 0, failed = 0; const errors: string[] = [];
   const webhookTargets = WEBHOOK_FORMATTERS.filter(w => process.env[w.envVar]);
   if (webhookTargets.length === 0) { errors.push("No hay canales SIEM configurados"); return { sent, failed, errors }; }
+  // G2/G3 — el correlation id de la ejecución viaja en cada payload exportado
+  // y en la cabecera `x-request-id` de la llamada saliente.
+  const correlationId = currentCorrelationId();
   for (const pattern of patterns) {
     for (const target of webhookTargets) {
       try {
         const payload = target.formatter(pattern);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch(payload.url, { method: "POST", headers: { "Content-Type": "application/json", ...payload.headers }, body: JSON.stringify(payload.body), signal: controller.signal });
+        const res = await fetch(payload.url, { method: "POST", headers: correlatedHeaders({ "Content-Type": "application/json", ...payload.headers }), body: JSON.stringify(payload.body), signal: controller.signal });
         clearTimeout(timeout);
-        if (res.ok) { sent++; await persistDelivery(pattern, target.name, "success", res.status, null); }
-        else { const errText = await res.text().catch(() => "unknown"); errors.push(`[${target.name}] ${res.status} \u2192 ${errText.slice(0, 200)}`); failed++; await persistDelivery(pattern, target.name, "failed", res.status, errText.slice(0, 500)); }
-      } catch (err: unknown) { const siemErrMsg = err instanceof Error ? err.message : String(err); errors.push(`[${target.name}] ${siemErrMsg || String(err)}`); failed++; await persistDelivery(pattern, target.name, "failed", null, (siemErrMsg || "Unknown error").slice(0, 500)); }
+        if (res.ok) { sent++; await persistDelivery(pattern, target.name, "success", res.status, null, correlationId ? { correlationId } : undefined); }
+        else { const errText = await res.text().catch(() => "unknown"); errors.push(`[${target.name}] ${res.status} \u2192 ${errText.slice(0, 200)}`); failed++; await persistDelivery(pattern, target.name, "failed", res.status, errText.slice(0, 500), correlationId ? { correlationId } : undefined); }
+      } catch (err: unknown) { const siemErrMsg = err instanceof Error ? err.message : String(err); errors.push(`[${target.name}] ${siemErrMsg || String(err)}`); failed++; await persistDelivery(pattern, target.name, "failed", null, (siemErrMsg || "Unknown error").slice(0, 500), correlationId ? { correlationId } : undefined); }
     }
   }
   return { sent, failed, errors };
@@ -415,8 +425,11 @@ export async function runSiemExport(): Promise<SiemResult> {
     const matched = await detectMatchingPatterns(); let patterns: SiemPattern[] = []; let alertsSent = 0; let alertsFailed = 0;
     if (matched.length > 0) {
       patterns = await attachSamples(matched);
+      // G2 — cada alerta exportada queda ligada al correlation id de esta ejecución.
+      const correlationId = currentCorrelationId();
+      if (correlationId) patterns = patterns.map(p => ({ ...p, correlationId }));
       for (const p of patterns) {
-        logSecurityEvent("invalid_input", { ip: p.ip, path: "/api/security/siem/run", method: "POST", metadata: { action: "siem_pattern_detected", matchedEventType: p.eventType, count: p.count, windowMinutes: p.windowMinutes, severity: p.severity, label: p.label } });
+        logSecurityEvent("invalid_input", { ip: p.ip, path: "/api/security/siem/run", method: "POST", metadata: { action: "siem_pattern_detected", matchedEventType: p.eventType, count: p.count, windowMinutes: p.windowMinutes, severity: p.severity, label: p.label, correlationId: p.correlationId } });
       }
       const { sent, failed, errors: sendErrors } = await sendAlerts(patterns);
       errors.push(...sendErrors); alertsSent = sent; alertsFailed = failed; await sendPushAlerts(patterns);

@@ -12,6 +12,7 @@ import {
 import { and, desc, eq } from 'drizzle-orm';
 import { logger } from "@/lib/logger";
 import { getLocale } from '@/i18n/request';
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -207,7 +208,7 @@ async function loadAdversaryReportData(
   return { ok: true, data: { project, assessment, vulnerabilities } };
 }
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   let loaded: Awaited<ReturnType<typeof loadAdversaryReportData>>;
   try {
     const supabase = await createClient();
@@ -271,3 +272,5 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+
+export const GET = withRequestContext(rawGet);

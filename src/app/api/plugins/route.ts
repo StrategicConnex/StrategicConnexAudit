@@ -10,6 +10,7 @@ import {
 import { registerSinglePluginExecutor } from "@/server/intelligence/plugins/plugin-executor";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
  * - catalog: lista todos los plugins del marketplace (default)
  * - installed: lista solo los plugins instalados por el usuario
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -46,11 +47,13 @@ export async function GET(req: NextRequest) {
   }
 }
 
+export const GET = withRequestContext(rawGet);
+
 /**
  * POST /api/plugins
  * Body: { action: "install" | "uninstall", packageId: string, projectId?: string }
  */
-export async function POST(req: NextRequest) {
+async function rawPost(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -108,3 +111,5 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const POST = withRequestContext(rawPost);

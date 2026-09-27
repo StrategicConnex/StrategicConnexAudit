@@ -4,6 +4,7 @@ import { userLogs } from "@/shared/db/schemas";
 import { sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 /* ═══════════════════════════════════════════════════════════════════════
    POST /api/internal/track-access — Telemetría de accesos (solo interno)
@@ -21,7 +22,7 @@ import { getErrorMessage } from "@/shared/lib/errors";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request): Promise<Response> {
+async function rawPost(request: Request): Promise<Response> {
   try {
     // 1. Sesión válida requerida (la cookie viaja automáticamente mismo-origen)
     const { createClient } = await import("@/shared/lib/supabase/server");
@@ -74,3 +75,5 @@ export async function POST(request: Request): Promise<Response> {
     return new Response(null, { status: 204 });
   }
 }
+
+export const POST = withRequestContext(rawPost);

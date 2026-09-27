@@ -7,6 +7,7 @@ import { CONNECTORS, type RemediationConnector } from "@/server/lib/remediation/
 import { withErrorHandler } from "@/server/lib/error-handler";
 import { ValidationError, NotFoundError, ForbiddenError } from "@/server/lib/app-error";
 import { ProjectIdSchema } from "@/shared/schemas/api";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ const CONNECTOR_IDS = CONNECTORS.map((c) => c.id);
  * GET /api/remediation?projectId= — lista acciones (report:view).
  * POST — propone (scan:execute). PUT?action=approve|execute (admin+).
  */
-export const GET = withErrorHandler(async (req: NextRequest) => {
+const rawGetHandler = withErrorHandler(async (req: NextRequest) => {
   const user = await getCurrentUserOrThrow();
   const parsed = ProjectIdSchema.safeParse({ projectId: new URL(req.url).searchParams.get("projectId") });
   if (!parsed.success) {
@@ -56,7 +57,7 @@ const proposeSchema = z.object({
   vulnerabilityTitle: z.string().max(200).optional(),
 });
 
-export const POST = withErrorHandler(async (req: NextRequest) => {
+const rawPostHandler = withErrorHandler(async (req: NextRequest) => {
   const user = await getCurrentUserOrThrow();
   const parsed = proposeSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
@@ -72,7 +73,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   return NextResponse.json({ success: true, id });
 });
 
-export const PUT = withErrorHandler(async (req: NextRequest) => {
+const rawPutHandler = withErrorHandler(async (req: NextRequest) => {
   const user = await getCurrentUserOrThrow();
   const body = await req.json().catch(() => ({}));
   const parsed = z
@@ -94,3 +95,7 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
   const result = await executeAction(parsed.data.id);
   return NextResponse.json({ success: true, status: "verified", result });
 });
+
+export const GET = withRequestContext(rawGetHandler);
+export const POST = withRequestContext(rawPostHandler);
+export const PUT = withRequestContext(rawPutHandler);

@@ -8,11 +8,12 @@ import { checkIntelScanRateLimit } from "@/shared/lib/ratelimit";
 import { runDiscovery } from "@/server/intelligence/discovery/orchestrator";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
 // ─── GET: Listar activos descubiertos ─────────────────────────────────────────
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest) {
 }
 
 // ─── POST: Ejecutar descubrimiento manual ─────────────────────────────────────
-export async function POST(req: NextRequest) {
+async function rawPost(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -184,3 +185,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRequestContext(rawGet);
+export const POST = withRequestContext(rawPost);

@@ -6,6 +6,7 @@ import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/db/rls';
 import { logger } from "@/lib/logger";
 import type { DbTransaction } from '@/shared/lib/actions';
+import { withRequestContext } from "@/lib/request-context";
 
 interface ProjectData {
   id: string;
@@ -214,7 +215,7 @@ function checkRateLimit(key: string, maxRequests: number = 60, windowMs: number 
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     // 1. Rate limiting check
     const rateLimitKey = getRateLimitKey(req);
@@ -417,7 +418,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
+export const GET = withRequestContext(rawGet);
+
+async function rawOptions() {
   const headers: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization'
@@ -438,6 +441,8 @@ export async function OPTIONS() {
     headers
   });
 }
+
+export const OPTIONS = withRequestContext(rawOptions);
 
 
 

@@ -8,6 +8,7 @@ import { eq, and, gt, count } from "drizzle-orm";
 import { tasks } from "@trigger.dev/sdk";
 import type { runProjectAudit } from "@/trigger/audit.trigger";
 import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
+import { headers } from "next/headers";
 import { directDb } from "@/shared/db";
 
 const AuditSchema = z.object({
@@ -167,8 +168,18 @@ export const startAuditAction = async (data: z.infer<typeof AuditSchema>): Promi
   const result = await triggerAudit(data);
   if (result.data?.success && result.data.auditId) {
     try {
+      // G2 — correlación: las server actions no comparten el ALS del proxy,
+      // así que el x-request-id inyectado se lee directo de los headers.
+      // Fail-safe: fuera de un scope de request (tests, cron) se omite.
+      let rid: string | undefined;
+      try {
+        rid = (await headers()).get("x-request-id") ?? undefined;
+      } catch {
+        rid = undefined;
+      }
       await tasks.trigger<typeof runProjectAudit>("run-project-audit", {
         projectId: result.data.projectId!, auditId: result.data.auditId, userId: result.data.userId!,
+        correlationId: rid,
       });
       return { data: { success: true, auditId: result.data.auditId } };
     } catch (triggerError: unknown) {

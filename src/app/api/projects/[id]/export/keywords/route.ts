@@ -5,10 +5,11 @@ import { createClient } from '@/shared/lib/supabase/server';
 import { withRLS } from '@/shared/lib/../db/rls';
 import { assertProjectAccess } from '@/server/lib/project-access';
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(
+async function rawGet(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -98,3 +99,5 @@ export async function GET(
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

@@ -9,6 +9,7 @@ import {
   type MemberMutationCode,
 } from "@/server/lib/rbac";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 async function authorizeProject(
   projectId: string
@@ -82,21 +83,25 @@ async function handleRoleUpdate(
   }
 }
 
-export async function PATCH(
+async function rawPatch(
   request: Request,
   ctx: { params: Promise<{ id: string; userId: string }> }
 ) {
   return handleRoleUpdate(request, ctx);
 }
 
-export async function PUT(
+export const PATCH = withRequestContext(rawPatch);
+
+async function rawPut(
   request: Request,
   ctx: { params: Promise<{ id: string; userId: string }> }
 ) {
   return handleRoleUpdate(request, ctx);
 }
 
-export async function DELETE(
+export const PUT = withRequestContext(rawPut);
+
+async function rawDelete(
   _request: Request,
   { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
@@ -117,3 +122,5 @@ export async function DELETE(
     return NextResponse.json({ success: false, error: "Error al procesar la solicitud" }, { status: 500 });
   }
 }
+
+export const DELETE = withRequestContext(rawDelete);

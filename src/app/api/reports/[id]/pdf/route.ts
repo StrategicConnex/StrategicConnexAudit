@@ -4,8 +4,9 @@ import { withRLS } from "@/shared/db/rls";
 import { reports } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
-export async function GET(
+async function rawGet(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -49,3 +50,5 @@ export async function GET(
     );
   }
 }
+
+export const GET = withRequestContext(rawGet);

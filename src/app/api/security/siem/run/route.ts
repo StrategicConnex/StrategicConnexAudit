@@ -4,11 +4,12 @@ import { isCronSecretMatched } from "@/server/auth/cron";
 import { requireAdmin } from "@/server/auth/admin";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120; // 2 minutes timeout
 
-export async function POST(req: NextRequest) {
+async function rawPost(req: NextRequest) {
   try {
     // Auth: allow cron secret OR platform-admin user
     // (SECURITY: sin el gate de admin, cualquier usuario autenticado podía
@@ -38,3 +39,5 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const POST = withRequestContext(rawPost);

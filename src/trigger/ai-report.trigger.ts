@@ -4,9 +4,12 @@ import { directDb } from "@/shared/db";
 import { aiReportJobs } from "@/shared/db/schemas";
 import { generateSeoReport } from "@/server/ai/seo-report-service";
 import { logger } from "@/lib/logger";
+import { runWithCorrelation } from "@/lib/request-context";
 
 export interface AiSeoReportPayload {
   jobId: string;
+  /** G2 — id de correlación de la request que encoló el job. */
+  correlationId?: string;
 }
 
 /**
@@ -24,53 +27,56 @@ export const runAiSeoReport = task({
     minTimeoutInMs: 5_000,
     maxTimeoutInMs: 60_000,
   },
-  run: async (payload: AiSeoReportPayload) => {
-    const [job] = await directDb
-      .select()
-      .from(aiReportJobs)
-      .where(eq(aiReportJobs.id, payload.jobId))
-      .limit(1);
+  run: async (payload: AiSeoReportPayload) =>
+    runWithCorrelation(payload.correlationId, () => runAiSeoReportJob(payload)),
+});
 
-    if (!job) {
-      throw new Error(`ai_report_jobs inexistente: ${payload.jobId}`);
+async function runAiSeoReportJob(payload: AiSeoReportPayload) {
+  const [job] = await directDb
+    .select()
+    .from(aiReportJobs)
+    .where(eq(aiReportJobs.id, payload.jobId))
+    .limit(1);
+
+  if (!job) {
+    throw new Error(`ai_report_jobs inexistente: ${payload.jobId}`);
+  }
+
+  await directDb
+    .update(aiReportJobs)
+    .set({ status: "running", updatedAt: new Date() })
+    .where(eq(aiReportJobs.id, job.id));
+
+  try {
+    const result = await generateSeoReport(job.projectId, job.userId ?? "system");
+
+    if (!result.ok) {
+      await directDb
+        .update(aiReportJobs)
+        .set({ status: "failed", error: result.error, updatedAt: new Date() })
+        .where(eq(aiReportJobs.id, job.id));
+      return { ok: false, error: result.error };
     }
 
     await directDb
       .update(aiReportJobs)
-      .set({ status: "running", updatedAt: new Date() })
+      .set({
+        status: "completed",
+        report: result.report,
+        isFallback: result.isFallback,
+        modelUsed: result.modelUsed ?? null,
+        updatedAt: new Date(),
+      })
       .where(eq(aiReportJobs.id, job.id));
 
-    try {
-      const result = await generateSeoReport(job.projectId, job.userId ?? "system");
-
-      if (!result.ok) {
-        await directDb
-          .update(aiReportJobs)
-          .set({ status: "failed", error: result.error, updatedAt: new Date() })
-          .where(eq(aiReportJobs.id, job.id));
-        return { ok: false, error: result.error };
-      }
-
-      await directDb
-        .update(aiReportJobs)
-        .set({
-          status: "completed",
-          report: result.report,
-          isFallback: result.isFallback,
-          modelUsed: result.modelUsed ?? null,
-          updatedAt: new Date(),
-        })
-        .where(eq(aiReportJobs.id, job.id));
-
-      return { ok: true, jobId: job.id, isFallback: result.isFallback };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error("ai-seo-report-generation falló", { error: message });
-      await directDb
-        .update(aiReportJobs)
-        .set({ status: "failed", error: message.slice(0, 500), updatedAt: new Date() })
-        .where(eq(aiReportJobs.id, job.id));
-      throw error;
-    }
-  },
-});
+    return { ok: true, jobId: job.id, isFallback: result.isFallback };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error("ai-seo-report-generation falló", { error: message });
+    await directDb
+      .update(aiReportJobs)
+      .set({ status: "failed", error: message.slice(0, 500), updatedAt: new Date() })
+      .where(eq(aiReportJobs.id, job.id));
+    throw error;
+  }
+}

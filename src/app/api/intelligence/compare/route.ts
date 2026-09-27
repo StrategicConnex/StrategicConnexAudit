@@ -9,6 +9,7 @@ import {
 } from "@/shared/db/schemas";
 import { withErrorHandler } from "@/server/lib/error-handler";
 import { ValidationError, NotFoundError } from "@/server/lib/app-error";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,7 @@ interface CompareResult {
  * - Unchanged findings
  * - Tool usage differences
  */
-export const GET = withErrorHandler(async (req: NextRequest) => {
+const rawGetHandler = withErrorHandler(async (req: NextRequest) => {
   const user = await getCurrentUserOrThrow();
   const { searchParams } = new URL(req.url);
   const investigationAId = searchParams.get("investigationA");
@@ -179,3 +180,5 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
 
   return NextResponse.json({ success: true, ...result });
 });
+
+export const GET = withRequestContext(rawGetHandler);

@@ -1,18 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const { insertMock, loggerMock } = vi.hoisted(() => ({
+const { insertMock, loggerMock, scopeHolder } = vi.hoisted(() => ({
   insertMock: vi.fn(),
   loggerMock: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+  scopeHolder: {
+    current: undefined as { requestId?: string; userId?: string; correlationId?: string } | undefined,
+  },
 }));
 vi.mock("@/shared/db", () => ({ directDb: { insert: insertMock } }));
 vi.mock("@/shared/db/schemas", () => ({ securityAuditLogs: {} }));
-vi.mock("@/lib/logger", () => ({ logger: loggerMock }));
+vi.mock("@/lib/logger", () => ({
+  logger: loggerMock,
+  getRequestContext: () => scopeHolder.current,
+}));
 
 import { logSecurityEvent, extractIpFromHeaders, eventFromRequest } from "./audit-log";
 
 describe("audit-log — logSecurityEvent (fail-safe)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    scopeHolder.current = undefined;
     insertMock.mockImplementation(() => ({
       values: vi.fn(async () => undefined),
     }));
@@ -51,6 +58,23 @@ describe("audit-log — logSecurityEvent (fail-safe)", () => {
     expect(event.path).toBe("/");
     expect(event.method).toBe("UNKNOWN");
     expect(event.metadata).toEqual({});
+  });
+
+  it("G1 — mergea requestId/userId del scope activo en consola y en metadata", async () => {
+    const valuesSpy = vi.fn(async (_v: Record<string, unknown>) => undefined);
+    insertMock.mockImplementation(() => ({ values: valuesSpy }));
+    scopeHolder.current = { requestId: "req-abc", userId: "u-scope" };
+
+    logSecurityEvent("auth_failure", { ip: "198.51.100.9", path: "/login" });
+
+    const event = JSON.parse(loggerMock.info.mock.calls[0]![0] as string);
+    expect(event.requestId).toBe("req-abc");
+    expect(event.userId).toBe("u-scope");
+
+    await new Promise((r) => setTimeout(r, 0));
+    const values = valuesSpy.mock.calls[0]![0]!;
+    expect((values.metadata as Record<string, unknown>).requestId).toBe("req-abc");
+    scopeHolder.current = undefined;
   });
 
   it("persiste en Supabase vía directDb (fire-and-forget)", async () => {

@@ -5,10 +5,11 @@ import { directDb } from "@/shared/db";
 import { requireAdmin } from "@/server/auth/admin";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     // 1. Authenticate + authorize (SECURITY: alertas SIEM son datos globales
     // de la plataforma — solo rol admin de plataforma puede leerlas)
@@ -124,3 +125,5 @@ export async function GET(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

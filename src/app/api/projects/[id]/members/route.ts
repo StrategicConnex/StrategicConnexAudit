@@ -13,6 +13,7 @@ import {
   removeMember,
 } from "@/server/lib/invitations";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 async function authorizeProject(
   projectId: string,
@@ -30,7 +31,7 @@ async function authorizeProject(
   return { userId: user.id, role };
 }
 
-export async function GET(
+async function rawGet(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -111,12 +112,14 @@ export async function GET(
   return NextResponse.json({ success: true, projectId, myRole: auth.role, ...data });
 }
 
+export const GET = withRequestContext(rawGet);
+
 const inviteSchema = z.object({
   email: z.string().email().max(320),
   role: z.enum(["admin", "editor", "viewer", "guest"]),
 });
 
-export async function POST(
+async function rawPost(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -162,7 +165,9 @@ export async function POST(
   }
 }
 
-export async function DELETE(
+export const POST = withRequestContext(rawPost);
+
+async function rawDelete(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -185,3 +190,5 @@ export async function DELETE(
   }
   return NextResponse.json({ success: false, error: "Falta memberUserId o invitationId" }, { status: 400 });
 }
+
+export const DELETE = withRequestContext(rawDelete);

@@ -18,6 +18,7 @@ import { calculateRiskScore } from "@/server/intelligence/core/risk-engine";
 import type { Finding } from "@/server/intelligence/types/executor.types";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ function getNormalizedHost(target: string): string {
   return host.split(":")[0] || "";
 }
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const user = await getCurrentUserOrThrow();
     const { searchParams } = new URL(req.url);
@@ -105,6 +106,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
+export const GET = withRequestContext(rawGet);
+
 // ─── Tools que se ejecutan en cada escaneo ─────────────────────────
 const TOOLS_TO_RUN = [
   { id: "dns.lookup", category: "network" },
@@ -130,7 +133,7 @@ const TOOLS_TO_RUN = [
   { id: "osint.whois", category: "network" }
 ];
 
-export async function POST(req: NextRequest) {
+async function rawPost(req: NextRequest) {
   try {
     const user = await getCurrentUserOrThrow();
     const body = await req.json();
@@ -441,6 +444,8 @@ export async function POST(req: NextRequest) {
     }, { status: msg === "No autorizado" ? 401 : 500 });
   }
 }
+
+export const POST = withRequestContext(rawPost);
 
 /**
  * Helper para marcar el resultado de una investigación desde el background scan.

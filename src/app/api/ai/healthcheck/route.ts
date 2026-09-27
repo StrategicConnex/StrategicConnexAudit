@@ -27,6 +27,7 @@ import { aiHealthLogs } from "@/shared/db/schemas/health";
 import { logSecurityEvent } from "@/shared/lib/audit-log";
 import { TASK_ROUTING } from "@/server/ai/ai-router";
 import { isCronAuthorized } from "@/server/auth/cron";
+import { withRequestContext } from "@/lib/request-context";
 
 export const maxDuration = 120; // 2 minutes — need time for model fallback chains
 export const dynamic = "force-dynamic";
@@ -206,7 +207,7 @@ async function persistResult(result: HealthCheckResult, triggerSource: string): 
 
 // ─── Handler principal ──────────────────────────────────────────────────────
 
-export async function GET(request: Request) {
+async function rawGet(request: Request) {
   const startTime = Date.now();
 
   try {
@@ -329,3 +330,5 @@ export async function GET(request: Request) {
     }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

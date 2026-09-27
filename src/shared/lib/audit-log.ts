@@ -11,7 +11,7 @@ import 'server-only';
 
 import { directDb } from "@/shared/db";
 import { securityAuditLogs } from "@/shared/db/schemas";
-import { logger } from "@/lib/logger";
+import { getRequestContext, logger } from "@/lib/logger";
 
 const IP_BLOCKLIST = new Set([
   "127.0.0.1", "::1", "::ffff:127.0.0.1", "0.0.0.0", "::", "localhost",
@@ -36,12 +36,19 @@ export interface SecurityEvent {
   path: string;
   method: string;
   userAgent?: string;
+  /** G1 — Correlation ID del scope activo (`x-request-id`). */
+  requestId?: string;
   metadata: Record<string, unknown>;
 }
 
 /**
  * Registra un evento de seguridad estructurado.
  * Fail-safe: nunca lanza excepciones, nunca bloquea.
+ *
+ * G1 — Correlation IDs: si hay un scope de petición activo (ALS poblado por
+ * `proxy.ts` o por los wrappers `withRequestContext` / `withRateLimit`), el
+ * `requestId` y el `userId` se completan automáticamente y viajan tanto al
+ * JSON de consola como a la metadata persistida.
  */
 export function logSecurityEvent(
   eventType: SecurityEventType,
@@ -51,10 +58,13 @@ export function logSecurityEvent(
     path?: string;
     method?: string;
     userAgent?: string;
+    requestId?: string;
     metadata?: Record<string, unknown>;
   }
 ): void {
   try {
+    const scope = getRequestContext();
+    const requestId = details.requestId ?? scope?.requestId ?? scope?.correlationId;
     const event: SecurityEvent = {
       audit: true,
       timestamp: new Date().toISOString(),
@@ -63,7 +73,8 @@ export function logSecurityEvent(
       path: details.path || "/",
       method: details.method || "UNKNOWN",
       userAgent: details.userAgent,
-      userId: details.userId,
+      userId: details.userId ?? scope?.userId,
+      requestId,
       metadata: details.metadata || {},
     };
     logger.info(JSON.stringify(event));
@@ -117,7 +128,10 @@ async function persistEvent(event: SecurityEvent): Promise<void> {
       path: event.path,
       method: event.method,
       userAgent: event.userAgent || null,
-      metadata: event.metadata,
+      metadata: {
+        ...(event.requestId ? { requestId: event.requestId } : {}),
+        ...event.metadata,
+      },
     });
   } catch (err) {
     // Fail-safe: no queremos que un fallo de BD interrumpa la request

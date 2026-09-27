@@ -4,8 +4,9 @@ import { verifyWebhookSignature, evaluateGate, type GatePolicy } from "@/server/
 import { directDb } from "@/shared/db";
 import { audits, issues } from "@/shared/db/schemas";
 import { desc, eq, sql, count } from "drizzle-orm";
+import { withRequestContext } from "@/lib/request-context";
 
-export async function POST(request: Request) {
+async function rawPost(request: Request) {
   try {
     const rawBody = await request.text();
     const signature = request.headers.get("x-scaudit-signature") || "";
@@ -113,3 +114,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const POST = withRequestContext(rawPost);

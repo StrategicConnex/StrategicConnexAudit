@@ -5,6 +5,7 @@ import { uptimeLogs } from "@/shared/db/schemas";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -124,7 +125,7 @@ async function getEventsSnapshot(userId: string, investigationId?: string | null
   });
 }
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -158,3 +159,5 @@ export async function GET(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

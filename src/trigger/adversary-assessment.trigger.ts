@@ -9,9 +9,12 @@
 
 import { task } from "@trigger.dev/sdk/v3";
 import { executeAssessment } from "@/server/intelligence/adversary/assessment/assessment-service";
+import { runWithCorrelation } from "@/lib/request-context";
 
 export interface AdversaryAssessmentPayload {
   assessmentId: string;
+  /** G2 — id de correlación de la request que encoló el job (opcional en crons). */
+  correlationId?: string;
 }
 
 export const runAdversaryAssessment = task({
@@ -19,10 +22,11 @@ export const runAdversaryAssessment = task({
   retry: {
     maxAttempts: 3,
   },
-  run: async (payload: AdversaryAssessmentPayload) => {
-    console.log(`[AdversaryReal] Iniciando evaluación real ${payload.assessmentId}`);
-    await executeAssessment(payload.assessmentId);
-    console.log(`[AdversaryReal] Evaluación ${payload.assessmentId} finalizada`);
-    return { ok: true };
-  },
+  run: async (payload: AdversaryAssessmentPayload) =>
+    runWithCorrelation(payload.correlationId, async () => {
+      console.log(`[AdversaryReal] Iniciando evaluación real ${payload.assessmentId}`);
+      await executeAssessment(payload.assessmentId);
+      console.log(`[AdversaryReal] Evaluación ${payload.assessmentId} finalizada`);
+      return { ok: true };
+    }),
 });

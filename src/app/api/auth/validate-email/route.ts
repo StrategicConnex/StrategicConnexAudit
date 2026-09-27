@@ -4,6 +4,7 @@ import { validateEmail } from "@/lib/email-validation";
 import { checkEmailRateLimit, extractClientIp, buildRateLimitHeaders, isEmailAllowlisted } from "@/shared/lib/ratelimit";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
  * Response (400): { valid: false, reason: string }
  * Response (429): { valid: false, reason: string, retryAfter: number }
  */
-export async function POST(req: NextRequest): Promise<NextResponse> {
+async function rawPost(req: NextRequest): Promise<NextResponse> {
   try {
     // ── 1. Parsear body (necesario para evaluar allowlist de email) ──
     let body: Record<string, unknown>;
@@ -99,3 +100,5 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 }
+
+export const POST = withRequestContext(rawPost);

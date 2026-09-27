@@ -9,6 +9,7 @@ import {
   isValidApiScope,
   API_SCOPES,
 } from '@/shared/lib/api-keys';
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/api-keys
  * List all API keys for the authenticated user (without secret keys).
  */
-export async function GET(_req: NextRequest) {
+async function rawGet(_req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -36,6 +37,8 @@ export async function GET(_req: NextRequest) {
   }
 }
 
+export const GET = withRequestContext(rawGet);
+
 /**
  * POST /api/api-keys
  * Create a new API key for the authenticated user.
@@ -43,7 +46,7 @@ export async function GET(_req: NextRequest) {
  *
  * Body: { name: string, scope?: string[], expiresAt?: string }
  */
-export async function POST(req: NextRequest) {
+async function rawPost(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -98,11 +101,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export const POST = withRequestContext(rawPost);
+
 /**
  * DELETE /api/api-keys?id=<keyId>
  * Revoke (delete) an API key by ID.
  */
-export async function DELETE(req: NextRequest) {
+async function rawDelete(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -129,3 +134,5 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
+
+export const DELETE = withRequestContext(rawDelete);

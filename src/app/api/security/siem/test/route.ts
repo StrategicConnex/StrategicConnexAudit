@@ -4,6 +4,7 @@ import { isCronSecretMatched } from "@/server/auth/cron";
 import { requireAdmin } from "@/server/auth/admin";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -27,7 +28,7 @@ export const maxDuration = 30;
  *     ]
  *   }
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     // Auth: cron secret OR platform-admin user
     const authHeader = req.headers.get("authorization");
@@ -54,3 +55,5 @@ export async function GET(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

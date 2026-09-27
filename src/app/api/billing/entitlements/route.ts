@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/shared/lib/supabase/server";
 import { getEntitlements } from "@/server/lib/entitlements";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/billing/entitlements — plan y uso del usuario autenticado. */
-export async function GET() {
+async function rawGet() {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -20,3 +21,5 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runSiemExport } from "@/server/security/siem-exporter";
 import { isCronAuthorized } from "@/server/auth/cron";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const maxDuration = 120; // 2 minutes timeout
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
  *
  * Alertas enviadas a: Slack, PagerDuty, Splunk (según env vars configuradas).
  */
-export async function GET(request: Request) {
+async function rawGet(request: Request) {
   try {
     // 1. Verify Vercel Cron Secret (timing-safe, fail-closed en producción)
     if (!isCronAuthorized(request)) {
@@ -43,3 +44,5 @@ export async function GET(request: Request) {
     }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

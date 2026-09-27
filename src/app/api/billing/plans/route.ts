@@ -3,11 +3,12 @@ import { directDb } from "@/shared/db";
 import { subscriptionPlans } from "@/shared/db/schemas";
 import { asc } from "drizzle-orm";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/billing/plans — catálogo público de planes (para /pricing y el modal). */
-export async function GET() {
+async function rawGet() {
   try {
     const plans = await directDb.query.subscriptionPlans.findMany({
       orderBy: [asc(subscriptionPlans.priceMonthly)],
@@ -31,3 +32,5 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

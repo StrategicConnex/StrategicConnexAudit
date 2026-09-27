@@ -5,6 +5,7 @@ import { eq, and, lt, desc } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -147,7 +148,7 @@ function detectDriftChanges(
   return changes;
 }
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -222,3 +223,5 @@ export async function GET(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

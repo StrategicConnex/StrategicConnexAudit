@@ -21,6 +21,7 @@ import { buildResultMap, getPrimaryIp, buildScanResponse, buildScanMetadata } fr
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/lib/logger";
 import { ProjectIdSchema } from "@/shared/schemas/api";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ function getNormalizedHost(target: string): string {
   return host.split(":")[0] || "";
 }
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -137,7 +138,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export const GET = withRequestContext(rawGet);
+
+async function rawPost(req: NextRequest) {
   let createdInvestigationId: string | undefined = undefined;
   let loggedInUserId: string | undefined = undefined;
 
@@ -441,3 +444,5 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const POST = withRequestContext(rawPost);

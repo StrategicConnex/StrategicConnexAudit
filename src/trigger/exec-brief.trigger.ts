@@ -1,5 +1,6 @@
 import { task } from "@trigger.dev/sdk";
 import { runExecBrief } from "@/server/ai/exec-brief";
+import { runWithCorrelation } from "@/lib/request-context";
 
 /**
  * exec-brief.trigger.ts — Resumen ejecutivo post-auditoría (Sprint 3, idea #2).
@@ -21,31 +22,43 @@ export const execBriefAfterAudit = task({
     maxTimeoutInMs: 30_000,
     randomize: true,
   },
-  run: async (payload: { projectId: string; /** userId opcional para atribuir cuota/telemetría. */ userId?: string | null }) => {
-    console.log(`[exec-brief] Generando resumen ejecutivo para proyecto ${payload.projectId}`);
-
-    const result = await runExecBrief(payload.projectId, {
-      userId: payload.userId ?? null,
-    });
-
-    if (!result.generated) {
-      // Sin auditorías completadas o salida inválida del modelo: log y fin
-      // limpio (el sweep de reintentos no aplica aquí — el próximo brief
-      // llegará con la siguiente auditoría).
-      console.log(`[exec-brief] Sin generación: ${result.error ?? "brief vivo ya existente"}`);
-      return { ok: false, reason: result.error ?? "brief ya existente" };
-    }
-
-    console.log(
-      `[exec-brief] Listo: brief=${result.briefId} fallback=${result.isFallback} ` +
-        `model=${result.modelUsed ?? "n/d"} cache=${result.fromCache}`
-    );
-    return {
-      ok: true,
-      briefId: result.briefId,
-      isFallback: result.isFallback,
-      modelUsed: result.modelUsed,
-      fromCache: result.fromCache,
-    };
-  },
+  run: async (payload: {
+    projectId: string;
+    /** userId opcional para atribuir cuota/telemetría. */
+    userId?: string | null;
+    /** G2 — id de correlación heredado de la auditoría que lo encoló. */
+    correlationId?: string;
+  }) => runWithCorrelation(payload.correlationId, () => execBriefAfterAuditJob(payload)),
 });
+
+async function execBriefAfterAuditJob(payload: {
+  projectId: string;
+  userId?: string | null;
+  correlationId?: string;
+}) {
+  console.log(`[exec-brief] Generando resumen ejecutivo para proyecto ${payload.projectId}`);
+
+  const result = await runExecBrief(payload.projectId, {
+    userId: payload.userId ?? null,
+  });
+
+  if (!result.generated) {
+    // Sin auditorías completadas o salida inválida del modelo: log y fin
+    // limpio (el sweep de reintentos no aplica aquí — el próximo brief
+    // llegará con la siguiente auditoría).
+    console.log(`[exec-brief] Sin generación: ${result.error ?? "brief vivo ya existente"}`);
+    return { ok: false, reason: result.error ?? "brief ya existente" };
+  }
+
+  console.log(
+    `[exec-brief] Listo: brief=${result.briefId} fallback=${result.isFallback} ` +
+      `model=${result.modelUsed ?? "n/d"} cache=${result.fromCache}`
+  );
+  return {
+    ok: true,
+    briefId: result.briefId,
+    isFallback: result.isFallback,
+    modelUsed: result.modelUsed,
+    fromCache: result.fromCache,
+  };
+}

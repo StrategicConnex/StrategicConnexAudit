@@ -5,6 +5,7 @@ import { forecasts } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { assertProjectAccess } from "@/server/lib/project-access";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
  * GET /api/forecast?projectId= — predicciones a 14 días (C-1).
  * Lectura para owner/miembro. Sin filas = el job semanal aún no corrió.
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -50,3 +51,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

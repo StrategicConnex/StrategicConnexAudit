@@ -1,4 +1,5 @@
-import { ok, err, type Result } from "@/shared/lib/result";
+import { ok, err, type Result } from "@/shared/lib/result";import { correlatedHeaders } from "@/lib/request-context";
+
 
 import { formatSlackAlert } from "./formatter";
 import type { SlackAlert } from "./types";
@@ -10,7 +11,7 @@ export async function sendSlackAlert(
   try {
     const response = await fetch(webhookUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: correlatedHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(formatSlackAlert(alert)),
       signal: AbortSignal.timeout(10_000),
     });

@@ -5,12 +5,13 @@ import { projects } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { getProjectRole } from "@/server/lib/project-access";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 /**
  * GET /api/projects/[id]/branding — marca blanca del proyecto (B-4).
  * Lectura para cualquier miembro; escritura vía updateProjectBranding.
  */
-export async function GET(
+async function rawGet(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -43,3 +44,5 @@ export async function GET(
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

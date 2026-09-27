@@ -53,10 +53,12 @@ export async function emitProjectEvent(
 
     // 3. Webhooks suscritos (con la narración incluida en el payload).
     const { tasks } = await import("@trigger.dev/sdk");
+    const { currentCorrelationId } = await import("@/lib/request-context");
     await tasks.trigger("dispatch-webhook-task", {
       projectId,
       event,
       data: narrative ? { ...data, narrative } : data,
+      correlationId: currentCorrelationId(),
     });
   } catch {
     // Silencio deliberado: el evento es notificación, no parte del flujo.

@@ -8,6 +8,7 @@ import { checkIntelScanRateLimit, buildRateLimitHeaders } from "@/shared/lib/rat
 import { apiKeyHasScope, API_SCOPES } from "@/shared/lib/api-keys";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 const bulkSchema = z.object({
   projectId: z.string().uuid(),
@@ -33,7 +34,7 @@ function normalizeTarget(raw: string): {
   return { target, normalizedTarget, targetType };
 }
 
-export async function POST(req: NextRequest) {
+async function rawPost(req: NextRequest) {
   try {
     // 1. Validar autenticación vía API Key
     const authContext = await validateApiKey(req);
@@ -115,3 +116,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export const POST = withRequestContext(rawPost);

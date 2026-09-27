@@ -13,6 +13,7 @@ import {
 } from "@/shared/db/schemas";
 import { requireAdmin } from "@/server/auth/admin";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ interface ControlEvidence {
  * de los últimos 90 días; el paquete incluye su hash SHA-256 para cadena
  * de custodia. Sin PII: agregados y metadatos, nunca contenidos crudos.
  */
-export async function GET() {
+async function rawGet() {
   try {
     const gate = await requireAdmin();
     if (!gate.ok) return gate.response;
@@ -149,3 +150,5 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

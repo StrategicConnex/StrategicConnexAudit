@@ -12,6 +12,7 @@ import { assertPublicHostname } from "@/server/intelligence/security/egress-guar
 import { encryptField, maskSecret } from "@/server/lib/field-crypto";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ const webhookCreateSchema = z.object({
   active: z.boolean().default(true)
 });
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -104,7 +105,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export const GET = withRequestContext(rawGet);
+
+async function rawPost(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -178,7 +181,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export const POST = withRequestContext(rawPost);
+
+async function rawDelete(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -230,3 +235,5 @@ export async function DELETE(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const DELETE = withRequestContext(rawDelete);

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { assertProjectAccess } from "@/server/lib/project-access";
 import type { runAdversaryAssessment } from "@/trigger/adversary-assessment.trigger";
+import { withRequestContext, currentCorrelationId } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ const patchSchema = z.object({
   retest: z.boolean().optional(),
 });
 
-export async function PATCH(req: NextRequest) {
+async function rawPatch(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -87,6 +88,7 @@ export async function PATCH(req: NextRequest) {
           const { tasks } = await import("@trigger.dev/sdk");
           await tasks.trigger<typeof runAdversaryAssessment>("adversary-real-assessment", {
             assessmentId: created.id,
+            correlationId: currentCorrelationId(),
           });
         } catch (e) {
           logger.warn("vuln retest: Trigger.dev no disponible, fallback local", { error: e instanceof Error ? e.message : String(e) });
@@ -103,3 +105,5 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const PATCH = withRequestContext(rawPatch);

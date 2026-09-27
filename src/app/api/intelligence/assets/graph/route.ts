@@ -5,12 +5,13 @@ import { intelligenceAssets, intelligenceFindings } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 /**
  * Genera un grafo topológico (nodos y aristas compatibles con React Flow)
  * a partir de los assets y hallazgos descubiertos en las investigaciones de un proyecto.
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -127,3 +128,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

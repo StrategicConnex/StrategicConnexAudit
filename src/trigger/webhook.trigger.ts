@@ -5,18 +5,25 @@ import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { decryptField } from "@/server/lib/field-crypto";
+import { runWithCorrelation, correlatedHeaders } from "@/lib/request-context";
 
 export interface WebhookPayload {
   projectId: string;
   event: string;
   data: Record<string, unknown>;
+  /** G2 — id de correlación de la request/productor que encoló el evento. */
+  correlationId?: string;
 }
 
 // Tarea asíncrona para despachar webhooks a clientes (con reintentos automáticos)
 export const dispatchWebhookTask = task({
   id: "dispatch-webhook-task",
   retry: { maxAttempts: 5 }, // Trigger.dev manejará backoff exponencial automáticamente
-  run: async (payload: WebhookPayload, { ctx }) => {
+  run: async (payload: WebhookPayload, { ctx }) =>
+    runWithCorrelation(payload.correlationId, () => dispatchWebhookJob(payload, { ctx }))
+});
+
+async function dispatchWebhookJob(payload: WebhookPayload, { ctx }: { ctx: { run: { id: string } } }) {
     logger.info(`Iniciando envío de webhook event '${payload.event}' para proyecto ${payload.projectId}`);
 
     // Buscar configuraciones de webhook activas para este evento y proyecto
@@ -63,12 +70,12 @@ export const dispatchWebhookTask = task({
         
         const response = await fetch(config.url, {
           method: "POST",
-          headers: {
+          headers: correlatedHeaders({
             "Content-Type": "application/json",
             "User-Agent": "StrategicAudit-Webhook/1.0",
             "X-StrategicAudit-Signature": `sha256=${signature}`,
             "X-StrategicAudit-Event": payload.event
-          },
+          }),
           body
         });
 
@@ -88,5 +95,4 @@ export const dispatchWebhookTask = task({
     }
 
     return { delivered: deliveredCount };
-  },
-});
+}

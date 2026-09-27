@@ -5,7 +5,8 @@ import { directDb } from "@/shared/db";
 import { projectInvitations, projectMembers, teamAuditLogs } from "@/shared/db/schemas";
 import { logger } from "@/lib/logger";
 import type { ProjectRole } from "@/server/auth/rbac";
-import { appUrl } from "@/shared/lib/app-url";
+import { appUrl } from "@/shared/lib/app-url";import { correlatedHeaders } from "@/lib/request-context";
+
 
 const INVITE_TTL_DAYS = 7;
 
@@ -30,7 +31,10 @@ export async function sendInviteEmail(
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: correlatedHeaders({
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      }),
       body: JSON.stringify({
         from,
         to: [toEmail],

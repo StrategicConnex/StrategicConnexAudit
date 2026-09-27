@@ -7,6 +7,7 @@ import { projects, teamAuditLogs } from "@/shared/db/schemas";
 import { getProjectRole, type ProjectAccessRole } from "@/server/lib/project-access";
 import { PaginationSchema } from "@/shared/schemas/api";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 async function authorizeProject(
   projectId: string
@@ -23,7 +24,7 @@ async function authorizeProject(
   return { userId: user.id, role };
 }
 
-export async function GET(
+async function rawGet(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -97,3 +98,5 @@ export async function GET(
     return NextResponse.json({ success: false, error: "Error al procesar la solicitud" }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

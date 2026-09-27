@@ -3,6 +3,7 @@ import { externalApiHealthChecker } from "@/server/intelligence/core/health-chec
 import { createClient } from "@/shared/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
  * Also exposes circuit breaker states and recent degradation events.
  * The health checker starts monitoring on first access if not already running.
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     // Authenticate (optional — health can be public for monitoring tools)
     const supabase = await createClient();
@@ -62,3 +63,5 @@ export async function GET(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

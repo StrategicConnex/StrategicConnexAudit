@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { ADVERSARY_CATALOG } from "@/server/intelligence/adversary/catalog";
 import { runScenario, listScenariosWithRuns } from "@/server/intelligence/adversary/scenario-runner";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ const patchLooseSchema = z.object({
  * Devuelve el catálogo de escenarios + historial de ejecuciones para un proyecto.
  * Query params: projectId (required)
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -107,12 +108,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
+export const GET = withRequestContext(rawGet);
+
 /**
  * POST /api/intelligence/adversary
  * Ejecuta un escenario de simulación de adversario.
  * Body: { scenarioMitreId, projectId, investigationId?, detectedBy?, notes? }
  */
-export async function POST(req: NextRequest) {
+async function rawPost(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -171,12 +174,14 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export const POST = withRequestContext(rawPost);
+
 /**
  * PATCH /api/intelligence/adversary/:runId
  * Reporta el resultado de una simulación (detectado/no detectado).
  * Body: { result: "detected" | "missed", detectedBy?: string }
  */
-export async function PATCH(req: NextRequest) {
+async function rawPatch(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -246,3 +251,5 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+export const PATCH = withRequestContext(rawPatch);

@@ -2,6 +2,7 @@ import { task, schedules } from "@trigger.dev/sdk";
 import { directDb } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { runFindingTriageSweep, TRIAGE_BATCH_SIZE } from "@/server/ai/finding-triage";
+import { runWithCorrelation } from "@/lib/request-context";
 
 /**
  * finding-triage.trigger.ts — Triage IA de findings (Sprint 2, roadmap).
@@ -24,28 +25,39 @@ import { runFindingTriageSweep, TRIAGE_BATCH_SIZE } from "@/server/ai/finding-tr
 export const triageAfterAudit = task({
   id: "triage-after-audit",
   retry: { maxAttempts: 3 },
-  run: async (payload: { projectId: string; userId?: string | null }) => {
-    const { projectId, userId } = payload;
-    console.log(`[Triage] Post-audit para proyecto ${projectId}`);
-
-    const result = await runFindingTriageSweep(projectId, {
-      userId: userId ?? null,
-      maxCalls: 3,
-      batchSize: TRIAGE_BATCH_SIZE,
-    });
-
-    console.log(
-      `[Triage] Proyecto ${projectId}: updated=${result.updated} calls=${result.calls}` +
-        (result.error ? ` error=${result.error.slice(0, 200)}` : "")
-    );
-
-    return {
-      success: !result.error || result.updated > 0,
-      projectId,
-      ...result,
-    };
-  },
+  run: async (payload: {
+    projectId: string;
+    userId?: string | null;
+    /** G2 — id de correlación heredado de la auditoría que lo encoló. */
+    correlationId?: string;
+  }) => runWithCorrelation(payload.correlationId, () => triageAfterAuditJob(payload)),
 });
+
+async function triageAfterAuditJob(payload: {
+  projectId: string;
+  userId?: string | null;
+  correlationId?: string;
+}) {
+  const { projectId, userId } = payload;
+  console.log(`[Triage] Post-audit para proyecto ${projectId}`);
+
+  const result = await runFindingTriageSweep(projectId, {
+    userId: userId ?? null,
+    maxCalls: 3,
+    batchSize: TRIAGE_BATCH_SIZE,
+  });
+
+  console.log(
+    `[Triage] Proyecto ${projectId}: updated=${result.updated} calls=${result.calls}` +
+      (result.error ? ` error=${result.error.slice(0, 200)}` : "")
+  );
+
+  return {
+    success: !result.error || result.updated > 0,
+    projectId,
+    ...result,
+  };
+}
 
 export const findingTriageSweep = schedules.task({
   id: "finding-triage-sweep",

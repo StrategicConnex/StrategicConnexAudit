@@ -10,6 +10,7 @@ import {
 } from "@/shared/db/schemas";
 import { withErrorHandler } from "@/server/lib/error-handler";
 import { ValidationError } from "@/server/lib/app-error";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ type ExportFormat = "csv" | "json";
  *
  * Bulk export of project data. Returns the data in CSV or JSON format.
  */
-export const GET = withErrorHandler(async (req: NextRequest) => {
+const rawGetHandler = withErrorHandler(async (req: NextRequest) => {
   const user = await getCurrentUserOrThrow();
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("projectId");
@@ -143,3 +144,5 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     },
   });
 });
+
+export const GET = withRequestContext(rawGetHandler);

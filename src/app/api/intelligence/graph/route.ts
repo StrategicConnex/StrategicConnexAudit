@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/shared/lib/supabase/server";
+import { withRequestContext } from "@/lib/request-context";
 
 /**
  * VULN-009 fix: la ruta exige sesión (el frontend AttackSurfaceGraph la consume,
  * así que se protege con authenticate en vez de eliminarse). El payload sigue
  * siendo mock hasta conectar el grafo real.
  */
-export async function GET(request: Request) {
+async function rawGet(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -58,3 +59,5 @@ export async function GET(request: Request) {
     edges: newEdges,
   });
 }
+
+export const GET = withRequestContext(rawGet);

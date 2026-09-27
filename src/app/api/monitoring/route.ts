@@ -11,6 +11,7 @@ import { getCurrentUserOrThrow } from "@/shared/lib/auth";
 import { withErrorHandler } from "@/server/lib/error-handler";
 import { NotFoundError, ValidationError } from "@/server/lib/app-error";
 import { ProjectIdSchema } from "@/shared/schemas/api";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ const scheduleSchema = z.object({
   interval: z.enum(["daily", "weekly", "monthly"])
 });
 
-export const GET = withErrorHandler(async (req: NextRequest) => {
+const rawGetHandler = withErrorHandler(async (req: NextRequest) => {
   const user = await getCurrentUserOrThrow();
 
   const { searchParams } = new URL(req.url);
@@ -63,7 +64,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   return NextResponse.json({ success: true, ...result });
 });
 
-export const POST = withErrorHandler(async (req: NextRequest) => {
+const rawPostHandler = withErrorHandler(async (req: NextRequest) => {
   const user = await getCurrentUserOrThrow();
 
   const body = await req.json();
@@ -113,3 +114,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   return NextResponse.json({ success: true, ...result });
 });
+
+export const GET = withRequestContext(rawGetHandler);
+export const POST = withRequestContext(rawPostHandler);

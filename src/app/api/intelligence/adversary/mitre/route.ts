@@ -12,6 +12,7 @@ import { z } from "zod";
 import { tasks } from "@trigger.dev/sdk";
 import { runMitreEvaluationTask } from "@/trigger/mitre-evaluation.trigger";
 import { extractTargetHost } from "@/server/intelligence/adversary/sandbox-executor";
+import { withRequestContext, currentCorrelationId } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -31,7 +32,7 @@ async function getOwnedProject(userId: string, projectId: string) {
 const postSchema = z.object({ projectId: z.string().uuid() });
 
 /** POST — lanza el batch de evaluación MITRE real. */
-export async function POST(req: NextRequest) {
+async function rawPost(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
     try {
       await tasks.trigger<typeof runMitreEvaluationTask>("mitre-real-evaluation", {
         evaluationId: evaluation!.id,
+        correlationId: currentCorrelationId(),
       });
     } catch (err) {
       logger.warn("mitre: Trigger.dev no disponible, fallback local", { message: { error: err instanceof Error ? err.message : err } })
@@ -93,11 +95,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export const POST = withRequestContext(rawPost);
+
 /**
  * GET — lista evaluaciones (o detalle de una con resultados por técnica).
  * Query: projectId (req), evaluationId (opt)
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -144,3 +148,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

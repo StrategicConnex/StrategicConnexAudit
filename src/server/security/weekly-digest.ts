@@ -15,7 +15,8 @@ import {
   persistDelivery,
   type SiemPattern,
 } from "@/server/security/siem-exporter";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger";import { correlatedHeaders } from "@/lib/request-context";
+
 
 export interface DigestProjectResult {
   projectId: string;
@@ -50,7 +51,7 @@ async function deliverDirect(
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        headers: correlatedHeaders({ Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" }),
         body: JSON.stringify({
           from,
           to: [ownerEmail],
@@ -71,7 +72,7 @@ async function deliverDirect(
       const text = `Resumen semanal ${domain}\nUptime 7d: ${uptimePct ?? "sin datos"}\nCríticas: ${criticalIssues}\nAnomalías: ${anomalies}`;
       const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: correlatedHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ chat_id: telegramChatId, text }),
         signal: AbortSignal.timeout(10_000),
       });
@@ -196,7 +197,7 @@ export async function runWeeklyDigest(): Promise<{
           const timeout = setTimeout(() => controller.abort(), 10000);
           const res = await fetch(payload.url, {
             method: "POST",
-            headers: { "Content-Type": "application/json", ...payload.headers },
+            headers: correlatedHeaders({ "Content-Type": "application/json", ...payload.headers }),
             body: JSON.stringify(payload.body),
             signal: controller.signal,
           });

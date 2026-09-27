@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { runWithRequestContext } from "@/lib/logger";
 import { updateSession } from "@/shared/lib/supabase/middleware";
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -102,6 +103,20 @@ export default async function proxy(request: NextRequest) {
   const requestId = crypto.randomUUID();
   const csp = buildCsp(nonce);
 
+  // G1 — Correlation IDs: el ALS se popula aquí con el `requestId` que se
+  // inyecta en las cabeceras, de modo que todo el trabajo del proxy
+  // (session refresh, telemetría, redirecciones) loguea con correlación.
+  return runWithRequestContext({ requestId }, () =>
+    runProxy(request, nonce, requestId, csp)
+  );
+}
+
+async function runProxy(
+  request: NextRequest,
+  nonce: string,
+  requestId: string,
+  csp: string
+) {
   // ── 2. Clone request with nonce + CSP + requestId ──────────────
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-csp-nonce", nonce);

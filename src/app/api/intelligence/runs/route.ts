@@ -14,10 +14,11 @@ import { executeTool } from "@/server/intelligence/core/dispatcher";
 import { checkIntelScanRateLimit, buildRateLimitHeaders } from "@/shared/lib/ratelimit";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const user = await getCurrentUserOrThrow();
     const { searchParams } = new URL(req.url);
@@ -64,7 +65,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export const GET = withRequestContext(rawGet);
+
+async function rawPost(req: NextRequest) {
   try {
     const user = await getCurrentUserOrThrow();
     const body = await req.json();
@@ -196,4 +199,6 @@ export async function POST(req: NextRequest) {
     }, { status: msg === "No autorizado" ? 401 : 500 });
   }
 }
+
+export const POST = withRequestContext(rawPost);
 

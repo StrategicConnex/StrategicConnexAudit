@@ -15,6 +15,7 @@ import { tasks } from "@trigger.dev/sdk";
 import { runAdversaryAssessment } from "@/trigger/adversary-assessment.trigger";
 import { extractTargetHost } from "@/server/intelligence/adversary/sandbox-executor";
 import { failStaleAssessments } from "@/server/intelligence/adversary/assessment/assessment-service";
+import { withRequestContext, currentCorrelationId } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -122,6 +123,7 @@ export const POST = withRateLimit(
     try {
       await tasks.trigger<typeof runAdversaryAssessment>("adversary-real-assessment", {
         assessmentId: assessment!.id,
+        correlationId: currentCorrelationId(),
       });
     } catch (triggerErr) {
       // Fallback local (dev / Trigger.dev caído): ejecuta en background del proceso
@@ -144,7 +146,7 @@ export const POST = withRateLimit(
  * Lista las evaluaciones del proyecto (o el detalle de una) + vulnerabilidades.
  * PATCH-like: también sirve para actualizar consentimiento vía PUT.
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -222,7 +224,7 @@ const putSchema = z.object({
 });
 
 /** PUT — actualiza el consentimiento de evaluación activa (gate legal). */
-export async function PUT(req: NextRequest) {
+async function rawPut(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -260,3 +262,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);
+export const PUT = withRequestContext(rawPut);

@@ -1,4 +1,5 @@
-import { envSecrets } from "@/shared/config/env-secrets";
+import { envSecrets } from "@/shared/config/env-secrets";import { correlatedHeaders } from "@/lib/request-context";
+
 import type { AIMessage } from "./ai-router";
 
 /**
@@ -71,11 +72,11 @@ export async function callAnthropicText(req: ProviderTextRequest): Promise<Provi
   const { system, rest } = splitSystem(req.messages);
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: {
+    headers: correlatedHeaders({
       "Content-Type": "application/json",
       "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
-    },
+    }),
     body: JSON.stringify({
       model: req.model,
       max_tokens: req.maxTokens,

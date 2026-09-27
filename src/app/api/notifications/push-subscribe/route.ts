@@ -18,6 +18,7 @@ import { pushSubscriptions } from "@/shared/db/schemas/push-subscriptions";
 import { eq, and } from "drizzle-orm";
 import { getVapidPublicKey } from "@/server/notifications/push";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export const dynamic = "force-dynamic";
  *   subscription: PushSubscriptionJSON  // { endpoint, keys: { p256dh, auth } }
  * }
  */
-export async function POST(req: NextRequest) {
+async function rawPost(req: NextRequest) {
   try {
     // 1. Auth
     const supabase = await createClient();
@@ -121,6 +122,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export const POST = withRequestContext(rawPost);
+
 /**
  * DELETE — Desuscribir (marcar como inactivo).
  *
@@ -129,7 +132,7 @@ export async function POST(req: NextRequest) {
  *   endpoint: string  // el endpoint de la PushSubscription a desactivar
  * }
  */
-export async function DELETE(req: NextRequest) {
+async function rawDelete(req: NextRequest) {
   try {
     // 1. Auth
     const supabase = await createClient();
@@ -175,11 +178,13 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
+export const DELETE = withRequestContext(rawDelete);
+
 /**
  * GET — Retorna la VAPID public key para que el frontend la use al suscribirse.
  *        También retorna el estado de suscripción del usuario autenticado.
  */
-export async function GET(_req: NextRequest) {
+async function rawGet(_req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -223,3 +228,5 @@ export async function GET(_req: NextRequest) {
     );
   }
 }
+
+export const GET = withRequestContext(rawGet);

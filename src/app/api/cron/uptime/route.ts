@@ -5,11 +5,12 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { validateSafeUrl, normalizeUrl, safeFetchFollow } from "@/server/intelligence/security/egress-guard";
 import { isCronAuthorized } from "@/server/auth/cron";
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const maxDuration = 60; // 1 minute timeout
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
+async function rawGet(request: Request) {
   try {
     // 1. Verify Vercel Cron Secret (timing-safe, fail-closed en producción)
     if (!isCronAuthorized(request)) {
@@ -102,3 +103,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: errMsg || 'Cron error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestContext(rawGet);

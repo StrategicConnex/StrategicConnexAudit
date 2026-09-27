@@ -1,4 +1,5 @@
-import { ok, err, type Result } from "@/shared/lib/result";
+import { ok, err, type Result } from "@/shared/lib/result";import { correlatedHeaders } from "@/lib/request-context";
+
 
 import { formatTeamsAlert } from "./formatter";
 import type { TeamsAlert } from "./types";
@@ -10,7 +11,7 @@ export async function sendTeamsAlert(
   try {
     const response = await fetch(webhookUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: correlatedHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(formatTeamsAlert(alert)),
       signal: AbortSignal.timeout(10_000),
     });
