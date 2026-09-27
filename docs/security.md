@@ -31,7 +31,7 @@ SCAUDIT Pro implementa seguridad en múltiples capas: red, aplicación, autentic
 │              1. Content Security Policy (CSP)        │
 │         Aplicado dinámicamente con nonce/request     │
 ├─────────────────────────────────────────────────────┤
-│              2. Rate Limiting (Upstash Redis)        │
+│              2. Rate Limiting (en memoria)        │
 │         20 req/60s email · 5 req/60s AI · etc.      │
 ├─────────────────────────────────────────────────────┤
 │              3. Protección SSRF (Egress Guard)       │
@@ -96,7 +96,7 @@ Las violaciones CSP se envían a `/api/security/csp-report` y se persisten en `s
 ### Arquitectura
 
 ```
-Request → extractClientIp() → Upstash Redis → Handler | 429
+Request → extractClientIp() → Rate limiter (in-memory) → Handler | 429
                 │
                 ▼
          security_audit_logs
@@ -137,15 +137,15 @@ export const POST = withRateLimit(
 El decorador:
 1. Extrae la IP del cliente
 2. Autentica opcionalmente al usuario
-3. Verifica rate limit en Redis
+3. Verifica el contador en memoria (por IP o usuario)
 4. Si excede → responde 429 con headers estándar + audit log
 5. Si ok → ejecuta handler + adjunta headers `X-RateLimit-*`
 
-### Fail-close en producción
+### Fail-open en todo entorno
 
-Si Redis no está disponible:
-- **Producción:** Deniega el request (fail-closed)
-- **Desarrollo:** Permite el request (fail-open)
+El limitador corre en memoria por instancia (sin Redis): si un cálculo falla
+por cualquier motivo, **permite** el request (fail-open) — nunca genera 429
+masivos por un fallo de infraestructura (ADR-002).
 
 ---
 
@@ -283,7 +283,7 @@ El parámetro `next` en `/auth/callback` se valida estrictamente:
 
 ## 6. Alcance y objetivos
 
-Este documento describe la arquitectura de seguridad de SCAUDIT Pro: las capas de defensa (CSP, rate limiting, protección SSRF, SIEM y autenticación), las políticas configuradas con sus umbrales, y los procedimientos de respuesta. Alcance: componentes serverless (Vercel), Supabase Auth, Upstash Redis y los endpoints públicos.
+Este documento describe la arquitectura de seguridad de SCAUDIT Pro: las capas de defensa (CSP, rate limiting, protección SSRF, SIEM y autenticación), las políticas configuradas con sus umbrales, y los procedimientos de respuesta. Alcance: componentes serverless (Vercel), Supabase Auth y los endpoints públicos.
 
 ---
 
@@ -346,7 +346,7 @@ Este documento describe la arquitectura de seguridad de SCAUDIT Pro: las capas d
 flowchart TB
   A[Cliente] --> B[Vercel Edge: proxy.ts]
   B --> C[CSP Header + nonce]
-  C --> D[Rate Limit Upstash Redis]
+  C --> D[Rate Limit en memoria]
   D --> E[Egress Guard SSRF]
   E --> F[Supabase Auth Magic Link]
   F --> G[API Handlers]
@@ -360,12 +360,10 @@ flowchart TB
 ```mermaid
 flowchart LR
   A[Request] --> B[extractClientIp]
-  B --> C{Redis Upstash}
+  B --> C{Contador en memoria}
   C -->|bajo limite| D[Handler]
   C -->|excede| E[429 + X-RateLimit-*]
-  C -->|caido| F{Produccion?}
-  F -->|si| G[Denegar fail-closed]
-  F -->|no| H[Permitir fail-open]
+  C -->|error interno| F[Fail-open: continuar]
 ```
 
 ---
@@ -393,14 +391,14 @@ flowchart LR
 
 ## 14. Validación cruzada (inconsistencias resueltas)
 
-- **Fail-open vs fail-closed**: la sección §2 documentaba ambos comportamientos en el mismo párrafo sin distinguir entorno. Se clarificó: producción = fail-closed, desarrollo = fail-open (verificado en `src/shared/lib/ratelimit.ts`).
+- **Fail-open vs fail-closed**: la sección §2 documentaba ambos comportamientos en el mismo párrafo sin distinguir entorno y contradecía ADR-002. Se corrigió: el comportamiento es **fail-open en todos los entornos** (el limitador vive en memoria; un fallo nunca bloquea la operación).
 - **Umbrales de email**: el texto decía "20 req/60s" en la tabla de límites y "40 intentos/minuto" en §5. Corregido: `POST /api/auth/validate-email` = 20/60s por IP; el "40" corresponde al decorador `withRateLimit` de auth. [VERIFIED]
 
 ---
 
 ## 15. Unknowns y supuestos
 
-- [VERIFIED] La app degrada a fallback en memoria cuando Redis está caído (fail-open) y `circuit-breaker.ts` no descarta resultados de IA exitosos.
+- [VERIFIED] El rate limit y el circuit breaker viven en memoria por instancia (sin dependencias externas) y hacen fail-open ante cualquier error; `circuit-breaker.ts` no descarta resultados de IA exitosos. El progreso de PDF persiste en Postgres con RLS por usuario.
 - [ASSUMPTION] Los rangos bloqueados del egress guard (16 IPv4 + 7 IPv6) cubren todos los rangos privados actuales de IANA.
 - [UNKNOWN] La latencia real de los webhooks SIEM depende de la disponibilidad de los proveedores externos.
 

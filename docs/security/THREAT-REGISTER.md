@@ -161,7 +161,7 @@ flowchart TB
 | Item | Valor |
 |---|---|
 | Monitoring | Healthcheck de modelos cada 6h; SIEM exporter |
-| Runbooks | `docs/guides/upstash-redis-recovery.md`, `docs/guides/troubleshooting.md` |
+| Runbooks | `docs/guides/troubleshooting.md`, `docs/guides/deployment.md` |
 | Alerting | PagerDuty / Slack / Splunk vía SIEM exporter |
 
 ---

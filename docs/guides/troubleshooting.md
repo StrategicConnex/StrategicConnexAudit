@@ -256,43 +256,18 @@ Error: Email rate limit exceeded. Please try again later.
 
 ---
 
-## 4. Errores de Redis (Upstash)
-
-### Error: `UPSTASH_REDIS_REST_URL not configured`
-
-```
-Error: Rate limiting deshabilitado — UPSTASH_REDIS_REST_URL no está configurado
-```
-
-**Solución:**
-```bash
-# Agregar URL y token de Upstash
-UPSTASH_REDIS_REST_URL=https://useful-llama-12345.upstash.io
-UPSTASH_REDIS_REST_TOKEN=AXNkAAIjcDE0NTY3ODkw...
-```
-
-### Error: Redis connection timeout
-
-```
-Error: connect ETIMEDOUT
-```
-
-**Causas posibles:**
-1. **Proyecto pausado:** Upstash pausa bases de datos inactivas después de 7 días. Ve al dashboard y reactívala
-2. **DB eliminada (DNS `Non-existent domain`):** si el subdominio `<animal>-<numero>.upstash.io` ya no resuelve, la base fue borrada — sigue la [Guía de Recuperación de Upstash Redis](/docs/guides/upstash-redis-recovery)
-3. **Region mismatch:** Si elegiste `us-east` pero tu servidor está en `eu-west`, puede haber latencia
-4. **Global Database:** Si usas plan gratuito, no habilites Global (requiere plan pro)
-
-**Solución:**
-```bash
-# Verificar conectividad
-curl -s -X GET "$UPSTASH_REDIS_REST_URL/ping" \
-  -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN"
-# → {"result":"PONG"}
-```
+## 4. Errores de Redis / Upstash — histórico
 
 {: .note }
-**Diagnóstico rápido:** `npx tsx scripts/verify-upstash.mjs` verifica PING, SET/GET, INCR, TTL y limpieza — distingue DB muerta de latencia. Si la DB fue eliminada, usa `scripts/apply-upstash-env.mjs` para rotar las credenciales en `.env.local`, `.env.test` y Vercel en un solo paso.
+**Resuelto (etapa 2026-09-27):** se eliminaron `@upstash/redis` y
+`@upstash/ratelimit`. El rate limit, el circuit breaker IA y la caché IA corren
+**en memoria por instancia** y el progreso de PDF vive en la tabla Postgres
+`pdf_progress`. Ya no existe ninguna variable `UPSTASH_*` ni el error
+`UPSTASH_REDIS_REST_URL not configured`.
+
+Si en `.env.local` todavía quedan credenciales de Upstash, bórralas: no tienen
+ningún efecto. Si tu app antigua respondía `429` / `x-ratelimit-*`, sigue
+respondiéndolo — el contador ahora es local a la instancia.
 
 ---
 
@@ -823,26 +798,20 @@ Error: Codecov token not found
 echo "═══ Diagnóstico rápido SCAUDIT ═══"
 
 # 1. Node.js
-echo "[1/5] Node.js: $(node -v)"
+echo "[1/4] Node.js: $(node -v)"
 
 # 2. Variables de entorno
-echo "[2/5] Supabase: $(if [ -n \"$NEXT_PUBLIC_SUPABASE_URL\" ]; then echo '✅'; else echo '❌'; fi)"
-echo "[2/5] Upstash:   $(if [ -n \"$UPSTASH_REDIS_REST_URL\" ]; then echo '✅'; else echo '❌'; fi)"
-echo "[2/5] OpenRouter:$(if [ -n \"$OPENROUTER_API_KEY\" ]; then echo '✅'; else echo '❌'; fi)"
+echo "[2/4] Supabase: $(if [ -n \"$NEXT_PUBLIC_SUPABASE_URL\" ]; then echo '✅'; else echo '❌'; fi)"
+echo "[2/4] OpenRouter:$(if [ -n \"$OPENROUTER_API_KEY\" ]; then echo '✅'; else echo '❌'; fi)"
 
 # 3. Conexión Supabase
-curl -s -o /dev/null -w "[3/5] Supabase API: HTTP %{http_code}\n" \
+curl -s -o /dev/null -w "[3/4] Supabase API: HTTP %{http_code}\n" \
   "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/" \
   -H "apikey: $NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
 
-# 4. Conexión Redis
-curl -s -X GET "$UPSTASH_REDIS_REST_URL/ping" \
-  -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN" | \
-  grep -q "PONG" && echo "[4/5] Redis: ✅ PONG" || echo "[4/5] Redis: ❌"
-
-# 5. Servidor local
-curl -s -o /dev/null -w "[5/5] Dev server: HTTP %{http_code}\n" \
-  http://localhost:3000/login 2>/dev/null || echo "[5/5] Dev server: ❌ no corriendo"
+# 4. Servidor local
+curl -s -o /dev/null -w "[4/4] Dev server: HTTP %{http_code}\n" \
+  http://localhost:3000/login 2>/dev/null || echo "[4/4] Dev server: ❌ no corriendo"
 ```
 
 ---
@@ -854,7 +823,6 @@ curl -s -o /dev/null -w "[5/5] Dev server: HTTP %{http_code}\n" \
 | Servidor de desarrollo | Terminal donde corre `pnpm dev` |
 | Vercel Production | Vercel Dashboard → Function Logs |
 | Supabase Auth | Supabase Dashboard → Auth → Logs |
-| Upstash Redis | Upstash Dashboard → Metrics |
 | OpenRouter | OpenRouter Dashboard → Logs |
 | Trigger.dev | Trigger.dev Dashboard → Runs |
 | GitHub Actions | GitHub → Actions → workflow → job |
@@ -876,7 +844,7 @@ curl -s -o /dev/null -w "[5/5] Dev server: HTTP %{http_code}\n" \
 
 ## Alcance y objetivos
 
-Esta guía documenta los errores más comunes al instalar, ejecutar y desplegar SCAUDIT Pro, con causa raíz, síntomas y soluciones verificadas. Alcance: errores de instalación, Supabase, autenticación, Upstash Redis, OpenRouter, dev server, build, SIEM, engine de inteligencia, React/Next.js, Playwright, Trigger.dev y CI. Objetivo: reducir el tiempo de resolución a menos de 10 minutos por escenario.
+Esta guía documenta los errores más comunes al instalar, ejecutar y desplegar SCAUDIT Pro, con causa raíz, síntomas y soluciones verificadas. Alcance: errores de instalación, Supabase, autenticación, rate limiting en memoria, OpenRouter, dev server, build, SIEM, engine de inteligencia, React/Next.js, Playwright, Trigger.dev y CI. Objetivo: reducir el tiempo de resolución a menos de 10 minutos por escenario.
 
 ---
 
@@ -889,13 +857,11 @@ flowchart TD
   A[Error de instalación] --> B{Qué capa falla?}
   B -->|Dependencias| C[pnpm install / sharp / rolldown]
   B -->|Base de datos| D[DIRECT_URL / auth / ECONNREFUSED]
-  B -->|Redis| E[ETIMEDOUT / DNS non-existent]
   B -->|IA| F[429 / 502 / Unauthorized]
   B -->|Dev server| G[puerto 3000 / Turbopack]
   B -->|Build| H[timeout 45s / bundle 50MB]
   C --> I[Ver sección 1]
   D --> J[Ver sección 2]
-  E --> K[Ver sección 4 + upstash-redis-recovery]
   F --> L[Ver sección 5]
   G --> M[Ver sección 6]
   H --> N[Ver sección 7]
@@ -905,26 +871,24 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  A[429 Too Many Requests] --> B{Redis responde?}
-  B -->|PONG| C[Límite real alcanzado: esperar 60s]
-  B -->|HTTP 000 / DNS| D[DB eliminada: seguir upstash-redis-recovery]
+  A[429 Too Many Requests] --> B{¿Instancia nueva?}
+  B -->|No| C[Límite real alcanzado: esperar 60s]
+  B -->|Sí| D[Contador en memoria por instancia: revisar IP / usuario]
 ```
 
 ---
 
 ## Operaciones y runbooks
 
-**Monitoreo:** los logs de cada componente están tabulados en la sección "Referencia rápida" (Vercel Function Logs, Supabase Auth Logs, Upstash Metrics, OpenRouter Logs, Trigger.dev Runs, GitHub Actions).
+**Monitoreo:** los logs de cada componente están tabulados en la sección "Referencia rápida" (Vercel Function Logs, Supabase Auth Logs, OpenRouter Logs, Trigger.dev Runs, GitHub Actions).
 
 **Runbook — diagnóstico rápido de 5 segundos:**
 
 1. `node -v` → ≥ 20
-2. Variables de entorno: `NEXT_PUBLIC_SUPABASE_URL`, `UPSTASH_REDIS_REST_URL`, `OPENROUTER_API_KEY` presentes
+2. Variables de entorno: `NEXT_PUBLIC_SUPABASE_URL`, `OPENROUTER_API_KEY` presentes
 3. `curl` a Supabase `/rest/v1/` con anon key → HTTP 200
-4. `curl` a Upstash `/ping` → `PONG`
-5. `curl http://localhost:3000/login` → HTTP 200
-
-Si el paso 4 falla con DNS non-existent, la DB fue eliminada — seguir la [Guía de Recuperación de Upstash Redis](/docs/guides/upstash-redis-recovery).
+4. `curl http://localhost:3000/login` → HTTP 200
+5. `curl http://localhost:3000/api/public/v1/health` → `"status":"ok"`
 
 ---
 
@@ -943,7 +907,7 @@ Si el paso 4 falla con DNS non-existent, la DB fue eliminada — seguir la [Guí
 |-----|-----------|------|--------|
 | REQ-001 Node ≥ 20 | Toolchain | TEST-001 (instalación) | CI `node-version: 22` |
 | REQ-002 Supabase configurado | `src/shared/lib/supabase` | `test-db` | Env vars Vercel |
-| REQ-003 Redis configurado | `src/shared/lib/ratelimit.ts` | `verify-upstash.mjs` | Env vars Vercel |
+| REQ-003 Rate limit en memoria | `src/shared/lib/ratelimit.ts` | `ratelimit.test.ts` | Sin env vars |
 | REQ-004 AI key | `src/server/ai/ai-router.ts` | Fallback resiliente | Env vars Vercel |
 
 ---
@@ -951,7 +915,7 @@ Si el paso 4 falla con DNS non-existent, la DB fue eliminada — seguir la [Guí
 ## Validación cruzada (inconsistencias resueltas)
 
 - **Umbral de rate limit de email**: se documenta 20 req/60s en validate-email (tabla de límites) y 40 intentos/minuto en la sección de autenticación — corresponde al decorador `withRateLimit` del endpoint de auth, mientras que el rate limit anti-spam es de 20/60s [VERIFIED].
-- **Diagnóstico Redis**: el error `ETIMEDOUT` (latencia) se distingue del DNS `Non-existent domain` (DB eliminada) — la guía dirige cada caso a su solución correcta [VERIFIED].
+- **Rate limit sin Redis**: desde 2026-09-27 el contador vive en memoria por instancia (ADR-002): un 429 significa límite real alcanzado en esa instancia, no un fallo de infraestructura [VERIFIED].
 
 ---
 

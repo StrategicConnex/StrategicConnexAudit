@@ -68,7 +68,6 @@ flowchart LR
 | `DATABASE_URL` / `DIRECT_URL` | servidor | 🔴 Alta (secreta) | db/index.ts |
 | `CRON_SECRET` | servidor | 🔴 Alta (secreta) | ratelimit.ts |
 | `SCAUDIT_WEBHOOK_SECRET` | servidor | 🔴 Alta (secreta) | cicd-helper.ts |
-| `UPSTASH_REDIS_REST_*` | servidor | 🔴 Alta (secreta) | ratelimit.ts |
 
 ---
 
@@ -83,8 +82,6 @@ flowchart LR
 | `DIRECT_URL` | db/index.ts | ✅ | 🔴 no | ✅ | ✅ | ✅ | server-only (workers) |
 | `OPENROUTER_API_KEY` | env.ts | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | opcional (pool gratuito) |
 | `OPENROUTER_BASE_URL` | env.ts | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | default OpenRouter |
-| `UPSTASH_REDIS_REST_URL` | ratelimit.ts | ✅ | ⬜ | ✅ | ✅ | ✅ | requerido para rate limit |
-| `UPSTASH_REDIS_REST_TOKEN` | ratelimit.ts | ✅ | ⬜ | ✅ | ✅ | ✅ | requerido para rate limit |
 | `CRON_SECRET` | ratelimit.ts | ✅ | ✅ | ✅ | ✅ | ✅ | requerido crons |
 | `TRIGGER_SECRET_KEY` | env.ts | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | opcional (Trigger.dev) |
 | `VAPID_PUBLIC_KEY` | env.ts | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | opcional (push) |

@@ -1195,14 +1195,9 @@
           "services": {
             "type": "object",
             "required": [
-              "redisConfigured",
               "dbConfigured"
             ],
             "properties": {
-              "redisConfigured": {
-                "type": "boolean",
-                "description": "Redis/Upstash env vars are configured"
-              },
               "dbConfigured": {
                 "type": "boolean",
                 "description": "Supabase env vars are configured"

@@ -101,6 +101,16 @@
       <h1>Documentación completa SCAUDIT Pro</h1>
       <p>Todos los manuales, guías, reportes y documentos de arquitectura fusionados en un único archivo HTML, sin omitir contenido. Usa el menú lateral para navegar entre secciones.</p>
     </div>
+
+    <div style="border:1px solid var(--border); background:var(--card); border-radius:12px; padding:1rem 1.2rem; margin-bottom:1.6rem; border-left:3px solid var(--accent);">
+      <b>⚠ Nota de archivo (2026-09-27).</b>
+      Este documento es un <i>snapshot</i> consolidado y <b>no está actualizado</b>. Desde 2026-09-27 se eliminaron las dependencias
+      <code>@upstash/redis</code> y <code>@upstash/ratelimit</code>: no hay servicio Redis, las variables
+      <code>UPSTASH_REDIS_REST_URL/TOKEN</code> ya no existen, el rate limit y el circuit breaker corren <b>en memoria (por instancia)</b>,
+      el progreso de PDF vive en la tabla <code>pdf_progress</code> de Postgres y el health check expone solo <code>dbConfigured</code>.
+      Las secciones que hablan de Upstash/Redis son históricas. La fuente de verdad vigente es
+      <code>docs/architecture/ADR/ADR-002-fail-open-rate-limit.md</code> (v1.1, §14) y los manuales de <code>docs/</code>.
+    </div>
     
 <section class="doc-section" id="home">
   <div class="section-header">

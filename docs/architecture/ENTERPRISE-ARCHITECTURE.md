@@ -32,7 +32,7 @@ SCAUDIT (StrategicAudit Pro) es una plataforma **enterprise-grade de inteligenci
 | **Repo** | [StrategicConnex/StrategicConnexAudit](https://github.com/StrategicConnex/StrategicConnexAudit) |
 | **Frontend** | Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript 5 |
 | **Backend** | Next.js Route Handlers, Drizzle ORM, Supabase (PostgreSQL + Auth + RLS) |
-| **Cache/Rate Limit** | Upstash Redis (serverless), fail-open en memoria |
+| **Cache/Rate Limit** | En memoria por instancia (sin servicios externos), fail-open |
 | **IA** | OpenRouter (pool de modelos `:free` + meta-modelo `openrouter/free`) |
 | **Jobs** | Vercel Cron (mecanismo garantizado: SIEM 5 min, uptime 15 min) + Trigger.dev **opcional** (12 tasks; deploy no verificado) |
 | **Docs** | GitHub Pages + Jekyll (just-the-docs) |
@@ -40,7 +40,7 @@ SCAUDIT (StrategicAudit Pro) es una plataforma **enterprise-grade de inteligenci
 
 ### Principios arquitectónicos
 
-1. **Resiliencia fail-open**: la disponibilidad de la app **nunca** depende de Redis ni de la IA (degradación graciosa verificada en producción).
+1. **Resiliencia fail-open**: la disponibilidad de la app **nunca** depende de un servicio auxiliar (rate limit, circuit breaker) ni de la IA (degradación graciosa verificada en producción).
 2. **Single Source of Truth**: `tool-registry.ts` es el único registro de tools (C05 consolidó 4 superficies en 1).
 3. **Defensa en profundidad**: RLS multi-tenant + egress-guard SSRF + CSP nonce + rate limiting + audit logging.
 4. **Seguridad por defecto**: egress-guard bloquea CIDRs privados/meta en TODA salida HTTP del engine.
@@ -70,7 +70,6 @@ flowchart LR
     USER["👤 Analista / Consultor / CISO"]
     APP["SCAUDIT Platform<br/>(Next.js 16 en Vercel)"]
     SUPABASE[("Supabase<br/>PostgreSQL + Auth + RLS")]
-    REDIS[("Upstash Redis<br/>rate limit + caché")]
     OPENROUTER["OpenRouter<br/>modelos IA :free"]
     TRIGGER["Trigger.dev (opcional)<br/>12 background tasks"]
     WEBHOOKS["Webhooks SIEM<br/>Slack · PagerDuty · Splunk · Email"]
@@ -80,7 +79,6 @@ flowchart LR
 
     USER -->|"HTTPS"| APP
     APP -->|"queries con RLS"| SUPABASE
-    APP -->|"REST (upstash.io)"| REDIS
     APP -->|"chat/completions"| OPENROUTER
     APP -->|"schedules"| TRIGGER
     TRIGGER -->|"alerts"| WEBHOOKS
@@ -135,7 +133,6 @@ flowchart TB
 
     subgraph DATA["Data Layer"]
         PG[("Supabase Postgres<br/>58 tablas, RLS")]
-        REDIS2[("Upstash Redis")]
     end
 
     EDGE --> UI
@@ -161,7 +158,7 @@ flowchart TB
 | Data | 58 tablas, ERD núcleo | ERD Núcleo (§9) | L3 |
 | Technology | Stack completo | tabla §2 | L1 |
 | Security | Defensa en profundidad | Defense in Depth (§10) | L2 |
-| Deployment | Vercel + Supabase + Upstash (+ Trigger.dev opcional, no verificado) | Deployment Diagram (§8) | L3 |
+| Deployment | Vercel + Supabase (+ Trigger.dev opcional, no verificado) | Deployment Diagram (§8) | L3 |
 | Integration | Webhooks SIEM, GSC/GA4, OpenRouter | System Context (§3) | L2 |
 
 ---
@@ -279,7 +276,6 @@ flowchart LR
     end
     subgraph EXTERNAL["Servicios externos"]
         DB[("Supabase :5432/:6543")]
-        RD[("Upstash :443")]
         OR["OpenRouter :443"]
         TD["Trigger.dev"]
         GSC2["GSC API"]
@@ -288,7 +284,6 @@ flowchart LR
     BROWSER -->|"HTTPS 443"| EDGE2
     EDGE2 --> FN
     FN --> DB
-    FN --> RD
     FN --> OR
     FN --> GSC2
     FN --> GA42
@@ -316,22 +311,16 @@ flowchart LR
 GitHub ──push main──▶ GitHub Actions ──deploy──▶ Vercel (Production + Preview)
         (StrategicConnex)   (lint + test +        │
                            coverage)             │
-              ┌──────────────────────────────────┼─────────────────────┐
-              ▼                                  ▼                     ▼
-     Supabase PostgreSQL                 Upstash Redis           Trigger.dev
-     (project sbktqevuy…)                (rate limit + caché)    (project proj_vzzxt…)
-              ▲                                  │
-              └──────────────────────────────────┘
-                                                 │
-                                                 ▼
-                                     Cloudflare / Upstash edge
+              ┌──────────────────────────────────┼──────────┐
+              ▼                                  ▼          ▼
+     Supabase PostgreSQL                    Cloudflare    Trigger.dev
+     (project sbktqevuy…)                    (edge)       (project proj_vzzxt…)
 ```
 
 | Servicio | Rol | Plan |
 |----------|-----|------|
 | Vercel | Hosting Next.js, serverless functions, edge proxy | Hobby/Pro |
 | Supabase | PostgreSQL + Auth (Magic Link) + RLS + Realtime | Free/Pro |
-| Upstash | Redis serverless — rate limit + caché | Free (10k cmds/día) |
 | OpenRouter | Pool de modelos IA gratuitos | Free (50 req/día) |
 | Trigger.dev | 12 tasks background — **opcional** (deploy no verificado) | Free |
 | GitHub Actions | CI (lint, 198 tests, coverage) | Free |
@@ -404,7 +393,7 @@ erDiagram
 ├─────────────────────────────────────────────────────────┤
 │ Capa 2 — API                                            │
 │   · withErrorHandler + AppError                         │
-│   · Rate limit Redis (fail-open en memoria)             │
+│   · Rate limit en memoria (fail-open)                   │
 │   · Email allowlist bypass                              │
 ├─────────────────────────────────────────────────────────┤
 │ Capa 3 — Engine                                         │
@@ -435,7 +424,7 @@ erDiagram
 | Clickjacking | `X-Frame-Options: DENY` | `src/proxy.ts` |
 | MIME sniffing | `X-Content-Type-Options: nosniff` | `src/proxy.ts` |
 | SSRF | egress-guard CIDR + DNS rebinding + redirects validados | `egress-guard.ts` |
-| Rate limiting | sliding window Redis + fallback memoria | `ratelimit.ts` |
+| Rate limiting | sliding window en memoria (por instancia) | `ratelimit.ts` |
 | RLS | `withRLS()` por query multi-tenant | `db/rls.ts` |
 | Open redirect | `safeNext()` en callback auth | `auth/callback` |
 | Secrets | env vars server-only, `.env*` gitignored | `.gitignore` |
@@ -478,7 +467,7 @@ flowchart TD
 | `seo-report` | openrouter/free → gemma-4 (acotada, peor caso 2×50s=100s < maxDuration=120s) | 50s × 2 |
 
 **Resiliencia verificada en producción (jul 2026):**
-- Redis caído → `safeRedis` fail-open (1.5s timeout) — nunca descarta resultados exitosos ni agrega 5–15s de latencia (fix `d59543a`).
+- Limitador con Redis caído → `safeRedis` fail-open (1.5s timeout) — nunca descarta resultados exitosos ni agrega 5–15s de latencia (fix `d59543a`). *[Histórico: desde 2026-09-27 no hay Redis; el limitador es local y por construcción no puede caer.]*
 - Modelo lento → timeouts por tarea + cadena de fallback (`26c8524`).
 - Reporte sin mermaid → template resiliente con sección fija mermaid (`14ce62d`).
 
@@ -492,7 +481,6 @@ flowchart TD
 |------------|-----------|-----------|---------------|
 | Supabase Auth | Bidireccional | HTTPS REST | anon key + JWT |
 | Supabase Postgres | App → DB | PostgreSQL (pooler :6543 / direct :5432) | service_role / JWT claims |
-| Upstash Redis | App → Redis | HTTPS REST (`*.upstash.io`) | Bearer token |
 | OpenRouter | App → IA | HTTPS `chat/completions` | Bearer API key |
 | GSC | App → Google | OAuth | refresh token |
 | GA4 | App → Google | OAuth | refresh token |
@@ -507,7 +495,7 @@ flowchart TD
 
 | Señal | Mecanismo | Endpoint/Archivo |
 |-------|-----------|-----------------|
-| Health check público | `/api/public/v1/health` (status ok/degraded/down, redisConfigured, dbConfigured) | `public/v1/health/route.ts` |
+| Health check público | `/api/public/v1/health` (status ok/degraded/down, dbConfigured) | `public/v1/health/route.ts` |
 | Health IA | `/api/ai/healthcheck` (prueba modelos del pool) | `ai/healthcheck` |
 | AI health logs | Tabla `ai_health_logs` | `schemas/health.ts` |
 | Security audit | `logSecurityEvent` → `security_audit_logs` | `audit-log.ts` |
@@ -527,7 +515,7 @@ flowchart TD
 | Tampering | Requests HTTP | HSTS + `upgrade-insecure-requests` + egress-guard |
 | Repudiation | Acciones de usuario | `security_audit_logs` + SIEM |
 | Information Disclosure | APIs | RLS + auth + `service_role` solo server |
-| DoS | Endpoints | rate limit Redis + semáforos de concurrencia + timeouts |
+| DoS | Endpoints | rate limit en memoria + semáforos de concurrencia + timeouts |
 | Elevation of Privilege | Multi-tenant | RLS por `request.jwt.claims.sub` + `SET LOCAL ROLE authenticated` |
 | SSRF | Engine de escaneo | egress-guard CIDR + DNS rebinding |
 | Prompt injection | IA | Prompts con contexto acotado + modelo específico por tarea |
@@ -540,11 +528,11 @@ flowchart TD
 
 | # | Riesgo | Prob. | Impacto | Control mitigante | Residual |
 |---|--------|-------|---------|-------------------|----------|
-| R1 | Redis/Upstash caído | Media | Alto | Fail-open en memoria + `safeRedis` 1.5s timeout | Bajo |
+| R1 | Limitador/caída del circuit breaker | Media | Alto | Fail-open en memoria + estado local (sin red) | Bajo |
 | R2 | Outage de modelos IA | Media | Medio | Pool `:free` con cadena de fallback + template resiliente | Bajo |
 | R3 | Fuga multi-tenant | Baja | Crítico | RLS por `request.jwt.claims.sub` + `SET LOCAL ROLE` | Bajo |
 | R4 | SSRF desde el engine | Media | Alto | egress-guard CIDR + DNS rebinding + redirects validados | Bajo |
-| R5 | Rate limit evadido | Media | Medio | Sliding window Redis (global) + allowlist de email | Medio |
+| R5 | Rate limit evadido | Media | Medio | Sliding window en memoria (por instancia) + allowlist de email | Medio |
 | R6 | Dependencias vulnerables | Media | Medio | CI con SCA (en `ci.yml`) + upgrade tracking | Medio |
 | R7 | Pérdida de datos Postgres | Baja | Alto | Backups automáticos de Supabase + PITR | Bajo |
 | R8 | Credenciales expuestas | Baja | Crítico | `.env*` gitignored + env encryptados en Vercel | Bajo |
@@ -556,15 +544,14 @@ flowchart TD
 
 | Escenario | RTO objetivo | RPO objetivo | Procedimiento |
 |-----------|-------------|--------------|---------------|
-| DB de Upstash eliminada | < 15 min | 0 (stateless) | [Recuperación Upstash Redis](/docs/guides/upstash-redis-recovery) — recrear DB + `apply-upstash-env.mjs` |
 | Deploy roto en Vercel | < 10 min | 0 | Rollback a último deploy sano (Vercel → Instant Rollback) |
-| Pérdida de datos Postgres | < 4 h | ≤ 7 días (plan free) | Restore desde Supabase → Database backups / PITR |
+| Pérdida de datos Postgres | < 4 h | = 7 días (plan free) | Restore desde Supabase → Database backups / PITR |
 | Outage de Supabase | < 1 h | 0 | Dependencia gestionada; monitorear status.supabase.com |
-| Pérdida de secrets | < 30 min | 0 | Regenerar en dashboards (Supabase, Upstash, OpenRouter, Trigger.dev) + Vercel env |
+| Pérdida de secrets | < 30 min | 0 | Regenerar en dashboards (Supabase, OpenRouter, Trigger.dev) + Vercel env |
 
 **Redundancia:**
-- Redis: stateless (solo rate limit + caché) — sin RPO.
-- IA: pool multi-modelo — sin punto único de fallo.
+- Rate limit / circuit breaker: estado local por instancia — sin RPO y sin dependencia de servicio externo (el trade-off es que no está distribuido; ADR-002).
+- IA: pool multi-modelo - sin punto único de fallo.
 - Base de datos: managed por Supabase (HA + backups + PITR).
 - App: serverless en Vercel (múltiples regiones, auto-escalado).
 
@@ -581,8 +568,6 @@ flowchart TD
 | `SUPABASE_SERVICE_ROLE_KEY` | Secreto | Server only, bypass RLS |
 | `DATABASE_URL` | Secreto | Pooler :6543 |
 | `DIRECT_URL` | Secreto | Migraciones :5432 |
-| `UPSTASH_REDIS_REST_URL` | Secreto | Rate limit/caché |
-| `UPSTASH_REDIS_REST_TOKEN` | Secreto | Auth Redis |
 | `OPENROUTER_API_KEY` | Secreto | Pool IA |
 | `OPENROUTER_BASE_URL` | Secreto | Default `https://openrouter.ai/api/v1` |
 | `TRIGGER_SECRET_KEY` | Secreto | Trigger.dev |
@@ -665,7 +650,7 @@ sequenceDiagram
     participant B as Navegador (SPA)
     participant E as Edge (proxy.ts)
     participant H as Route Handler
-    participant R as Rate limit (Redis)
+    participant R as Rate limit (memoria)
     participant D as Dispatcher
     participant X as Executor
 
@@ -746,10 +731,10 @@ Durante la cross-check de este documento se detectó que la tabla §5 (Architect
 |---------|-----------|
 | egress-guard | Guardia de salida HTTP que bloquea CIDRs privados (RFC1918, loopback, link-local) y mitiga SSRF/DNS rebinding |
 | RLS | Row Level Security: filtro multi-tenant por query en Supabase (`withRLS`) |
-| fail-open | Degradación que prioriza disponibilidad: Redis o IA caídos no tumban la app |
+| fail-open | Degradación que prioriza disponibilidad: servicios auxiliares o IA caídos no tumban la app |
 | ToolOutputMap | Mapa tipado tool → output concreto, reemplazó `Map<string, any>` en scan-response |
 | dispatcher | Pipeline central de ejecución de tools: policy → validate → cache → semaphore → exec |
-| sliding window | Algoritmo de rate limiting en ventanas de tiempo (Redis + fallback memoria) |
+| sliding window | Algoritmo de rate limiting en ventanas de tiempo (implementado en memoria por instancia) |
 | tool-registry | Única fuente de verdad del catálogo de tools (consolidación C05) |
 | sequenceDiagram | Diagrama de secuencia Mermaid para flujos request/response |
 
@@ -759,4 +744,4 @@ Durante la cross-check de este documento se detectó que la tabla §5 (Architect
 **Fuentes de este documento:** código fuente en `src/` (commit `2ccda08`), `package.json`, `docs/installation.md`, `docs/guides/*`, commits de `main` (verificados: `eda77c4`, `6f04ea5`, `26c8524`, `14ce62d`, `d59543a`, `88b7f2c`).
 
 {: .tip }
-**¿Quieres profundizar?** [Instalación](/docs/installation) · [Seguridad](/docs/security) · [API](/docs/api) · [Pipeline DNS/WHOIS](/docs/architecture/pipeline-history) · [Recuperación Redis](/docs/guides/upstash-redis-recovery)
+**¿Quieres profundizar?** [Instalación](/docs/installation) · [Seguridad](/docs/security) · [API](/docs/api) · [Pipeline DNS/WHOIS](/docs/architecture/pipeline-history)

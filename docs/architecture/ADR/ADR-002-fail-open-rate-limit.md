@@ -3,13 +3,20 @@ layout: default
 title: ADR-002
 nav_order: 3.4.2
 permalink: /docs/architecture/adr/002
-version: 1.0
+version: 1.1
 fecha: 2026-08-02
 autor: StrategicConnex Engineering
-estado: Aprobado
+estado: Aprobado (enmendado 2026-09-27)
 ---
 
 # ADR-002 — Fail-open en rate limit y circuit breaker (Redis)
+
+{: .warning }
+**Enmienda 2026-09-27 (v1.1):** se eliminaron `@upstash/redis` y
+`@upstash/ratelimit`. El rate limit, el circuit breaker y la caché IA ahora
+corren **en memoria por instancia**; no hay cliente Redis, ni `Proxy` lazy, ni
+`safeRedis` con timeout. La decisión original —**nunca bloquear por un fallo de
+infraestructura auxiliar**— se conserva y se cumple por construcción. Ver §14.
 
 {: .no_toc }
 
@@ -129,5 +136,55 @@ N/A — decisión ya aplicada. Los consumidores importan safeRedis/rateLimit sin
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Registro de la decisión fail-open (T01-04) | Aprobado |
+| 1.1 | 2026-09-27 | Enmienda: eliminación de Upstash Redis; store en memoria | Aprobado |
 
 **Resultado quality gate:** 100/100 (PASS, `--min 80`, 2026-08-02).
+
+---
+
+## 14. Enmienda (2026-09-27) — fin de la dependencia de Upstash
+
+**Contexto de la enmienda:** `UPSTASH_REDIS_REST_URL/TOKEN` no existían en el
+entorno real; la app ya operaba con fallback en memoria y el health público
+respondía `503` por `redisConfigured=false`. Se optó por eliminar los paquetes
+en lugar de renegociar credenciales.
+
+**Qué cambió:**
+
+| Antes (v1.0) | Ahora (v1.1) |
+|--------------|-------------|
+| `ratelimit.ts` con `Proxy` lazy + llamadas REST a Upstash | `checkRateLimitInMemory()` puro, sin red |
+| `circuit-breaker.ts` con `safeRedis` (timeout 1500 ms) y store remoto | `CircuitBreaker` con store `Map` en memoria + `resetAllCircuits()` |
+| Caché IA en 2 niveles (L1 memoria + L2 Upstash) | Solo L1 en memoria |
+| Progreso de PDF en claves Redis (`pdf_progress:<user>:<genId>`) | Tabla Postgres `pdf_progress` con RLS por usuario |
+| Salida de build: `@upstash/redis` + `@upstash/ratelimit` | Sin dependencias Upstash en `package.json` |
+
+**Qué NO cambió (invariante del ADR):** la operación **nunca** se bloquea por un
+fallo del limitador: cualquier error interno devuelve `allowed=true` y el
+request continúa. Los 429 auténticos siguen emitiéndose con cabeceras IETF
+`RateLimit-Limit/Remaining/Reset` + `X-RateLimit-*`, y `isEmailAllowlisted()`
+sigue eximiendo a las cuentas críticas.
+
+**Nuevo trade-off explícito (aceptado):** el rate limit y el circuit breaker
+**dejan de estar distribuidos**. Cada instancia serverless cuenta sus propios
+intentos, así que el límite efectivo por usuario puede multiplicarse por el
+número de instancias calientes. Se compensa con la allowlist, con los límites
+por endpoint y con el rate limit perimetral de Vercel. El progreso de PDF, en
+cambio, **sí** quedó compartido al pasar a Postgres.
+
+**Verificación (2026-09-27):** `npx tsc --noEmit`, `pnpm lint`, `pnpm test`
+(207 archivos / 1901 tests), `pnpm test:coverage` (51.14% stmts · 39.83% branches ·
+43.6% funcs · 52.52% lines — por encima del ratchet 45/35/39/46), `pnpm build`,
+guards (`contrast-guard`, `guard-client-cdns`, `guard-client-secrets`,
+`i18n-parity`), `npx drizzle-kit check` (*Everything's fine*) y
+`pnpm db:drift-check` (**sin drift duro**, 70/70 tablas) — todos sin errores.
+
+`pdf_progress` se aplicó a Supabase ejecutando `drizzle/2026-09-27_pdf_progress.sql`
+(con `create table if not exists`, índice, RLS `pdf_progress_owner` y `grant` a
+`authenticated`). No se usó `drizzle-kit migrate`: la BD no tiene la tabla
+`__drizzle_migrations` (se creó históricamente con `db:push`), por lo que
+reproducir el journal completo habría sido inseguro.
+
+Nota: el `pnpm-lock.yaml` aún lista `@upstash/redis@1.38.0` como **dependencia
+opcional transitiva de `drizzle-orm`** (no es dependencia del proyecto ni se
+importa en el código). `@upstash/ratelimit` ya no aparece en el lockfile.

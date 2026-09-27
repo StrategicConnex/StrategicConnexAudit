@@ -252,6 +252,7 @@ flowchart TB
 - **Issue:** `GET /api/reports/pdf/progress?genId=<id>` es público. `genId` es un UUID generado por el cliente (o aleatorio) de ≥8 chars; al ser adivinable/determinista, un atacante puede observar el progreso de generación de PDFs ajenos. [VERIFIED, código leído]
 - **Impact:** Fuga de metadatos de generación (percent, step, errores); DoS leve por conexiones SSE abiertas.
 - **Fix aplicado (TSK-005, P0):** El GET exige sesión (`createClient().auth.getUser()` → 401 sin sesión). La clave Redis ahora es `pdf_progress:<userId>:<genId>` (namespaced por usuario) tanto en el POST (`reports/pdf/route.tsx`) como en el GET — un caller solo puede ver el progreso de sus propias generaciones.
+- **Actualización 2026-09-27:** se eliminó Upstash; el progreso vive en la tabla Postgres `pdf_progress` con PK compuesta (`userId`, `genId`) + RLS `user_id = auth.uid()`. El aislamiento por usuario se conserva (ahora por RLS y no por nombre de clave).
 
 ### VULN-008 — Endpoint de miembros sin auth (Low, mock) — REMEDIADO ✅
 
@@ -327,7 +328,7 @@ flowchart TB
 | Item | Valor |
 |---|---|
 | Monitoring | Healthcheck de modelos IA cada 6h; SIEM exporter de security_audit_logs |
-| Runbooks | `docs/guides/upstash-redis-recovery.md`, `docs/guides/troubleshooting.md` |
+| Runbooks | `docs/guides/troubleshooting.md`, `docs/guides/deployment.md` |
 | Recovery | Reporte resiliente sin IA + fallback chain de modelos |
 | Auditoría de seguridad | `security_audit_logs` (api_key_usage, RLS violations, SIEM) |
 

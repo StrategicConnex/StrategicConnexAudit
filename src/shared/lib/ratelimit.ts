@@ -1,35 +1,7 @@
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 import { logSecurityEvent } from "./audit-log";
-import { logger } from "@/lib/logger";
-
-// ═════════════════════════════════════════════════════════════════════════════
-// Redis Client (lazy, proxied para evitar eager instantiation en build)
-// ═════════════════════════════════════════════════════════════════════════════
-
-let _redisInstance: Redis | null = null;
-
-function getRedisInstance(): Redis {
-  if (!_redisInstance) {
-    _redisInstance = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL || "",
-      token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
-    });
-  }
-  return _redisInstance;
-}
-
-export const redis = new Proxy({} as Redis, {
-  get(_, prop) {
-    const instance = getRedisInstance();
-    const value = Reflect.get(instance, prop);
-    if (typeof value === "function") {
-      return value.bind(instance);
-    }
-    return value;
-  }
-});
+import { logger, runWithRequestContext } from "@/lib/logger";
+import { readRequestId } from "@/lib/request-context";
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Email allowlist (bypass de rate limit para cuentas autorizadas)
@@ -176,17 +148,15 @@ export function rateLimitResponse(result: RateLimitResult, extraBody: Record<str
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// Generic Rate Limiter (cached per prefix)
+// Rate Limit Config
 // ═════════════════════════════════════════════════════════════════════════════
-
-const _rateLimiterCache = new Map<string, Ratelimit>();
 
 export interface RateLimitConfig {
   /** Máximo de requests permitidos en la ventana */
   limit: number;
   /** Ventana de tiempo en segundos */
   window: number;
-  /** Prefijo único para el limiter en Redis (ej: "validate_email") */
+  /** Prefijo único del limiter en memoria (ej: "validate_email") */
   prefix: string;
   /** Opcional: función para extraer el identificador (default: extractClientIp) */
   identifier?: (req: Request) => string;
@@ -199,33 +169,16 @@ export interface RateLimitConfig {
 }
 
 /**
- * Cachea y retorna una instancia de Ratelimit para un prefix dado.
+ * Rate limiting con sliding window en memoria por instancia.
+ *
+ * Tras eliminar `@upstash/ratelimit`/`@upstash/redis` esta es la ÚNICA
+ * estrategia: nunca hay red, nunca puede haber fail-closed masivo por un
+ * outage externo, y el coste por request es O(1) de CPU. Tradeoff aceptado
+ * (ADR-002): el límite es por instancia serverless, no global — en Vercel
+ * pueden existir N instancias calientes. Para abuso distribuido la defensa
+ * son el WAF/edge y las cuotas diarias por usuario.
+ * ═════════════════════════════════════════════════════════════════════════════
  */
-function getOrCreateLimiter(config: RateLimitConfig): Ratelimit {
-  const key = config.prefix;
-  let instance = _rateLimiterCache.get(key);
-  if (!instance) {
-    instance = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(config.limit, `${config.window} s`),
-      analytics: true,
-      prefix: `strat_audit_${config.prefix}`,
-    });
-    _rateLimiterCache.set(key, instance);
-  }
-  return instance;
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// In-Memory Fallback (sliding window por instancia)
-//
-// Cuando Redis está caído (o no configurado) la app NO debe quedar bloqueada:
-// un outage de Upstash no puede convertir todos los endpoints rate-limited
-// en 429 masivos. Este fallback mantiene un sliding window en memoria por
-// instancia serverless. Tradeoff aceptado: el límite es por instancia, no
-// global (Vercel puede tener N instancias calientes), pero garantiza
-// disponibilidad y una protección razonable contra abuso básico.
-// ═════════════════════════════════════════════════════════════════════════════
 
 const memoryWindows = new Map<string, number[]>();
 
@@ -280,44 +233,12 @@ function checkRateLimitInMemory(identifier: string, config: RateLimitConfig): Ra
 /**
  * Verifica rate limit para un identificador con la configuración dada.
  *
- * Estrategia de resiliencia (fail-open degradado, nunca fail-closed):
- * 1. Redis configurado y sano → limiter distribuido de Upstash.
- * 2. Redis configurado pero caído (timeout/error) → fallback en memoria.
- * 3. Redis no configurado → fallback en memoria (igual en prod y dev).
- *
- * La disponibilidad de la app nunca depende de la salud de Redis.
+ * Sliding window en memoria por instancia: sin I/O de red y sin servicio
+ * externo del que degradar, por lo que jamás puede convertirse en un
+ * fail-closed masivo. El alcance es por instancia serverless (ADR-002).
  */
 async function checkRateLimitInternal(identifier: string, config: RateLimitConfig): Promise<RateLimitResult> {
-  if (!process.env.UPSTASH_REDIS_REST_URL) {
-    logger.warn(`[RateLimit] UPSTASH_REDIS_REST_URL no configurado. Usando fallback en memoria para ${config.prefix}.`);
-    return checkRateLimitInMemory(identifier, config);
-  }
-
-  try {
-    const limiter = getOrCreateLimiter(config);
-    // Timeout corto: si Redis no responde, degradar rápido al fallback en
-    // memoria en vez de colgar el request (los 5.8s vistos en prod eran los
-    // reintentos del SDK contra un host eliminado).
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    try {
-      const result = await Promise.race([
-        limiter.limit(identifier),
-        new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error("Redis rate limit timeout")), 3000);
-        }),
-      ]);
-      const retryAfter = result.reset ? Math.max(1, Math.ceil((result.reset - Date.now()) / 1000)) : 60;
-      return { ...result, retryAfter };
-    } finally {
-      // Evitar timers colgados cuando Redis responde rápido (mantiene la
-      // instancia viva innecesariamente y rompe los open-handle checks)
-      if (timeoutId) clearTimeout(timeoutId);
-    }
-  } catch (err) {
-    // Redis unreachable — degradación graciosa, nunca 429 masivos
-    logger.error(`[RateLimit] Redis unreachable for ${config.prefix}. Usando fallback en memoria.`, err);
-    return checkRateLimitInMemory(identifier, config);
-  }
+  return checkRateLimitInMemory(identifier, config);
 }
 
 /**
@@ -357,72 +278,94 @@ export function withRateLimit<T extends Request = Request>(
   config: RateLimitConfig,
   handler: (req: T, identifier: string, ...args: unknown[]) => Promise<Response>
 ): (req: T, ...args: unknown[]) => Promise<Response> {
-  return async (req: T, ...args: unknown[]): Promise<Response> => {
-    try {
-      let identifier: string;
-      // Extraer IP siempre (antes de auth para rate_limit_hit log)
-      const requestIp = extractClientIp(req);
+  // G1 — Correlation IDs: la guarda completa (auth, chequeo, handler y
+  // catch) corre dentro del scope del `x-request-id`, de modo que los logs
+  // de `rate_limit_hit` y los del handler comparten correlation id.
+  return (req: T, ...args: unknown[]): Promise<Response> =>
+    runWithRequestContext(
+      { requestId: readRequestId(req) },
+      () => runRateLimited(config, handler, req, args)
+    );
+}
 
-      // Autenticación opcional antes del rate limiting
-      if (config.authenticate) {
-        const user = await config.authenticate(req);
-        if (!user) {
-          return NextResponse.json(
-            { success: false, error: "No autorizado" },
-            { status: 401 }
-          );
-        }
-        identifier = user.id;
-      } else {
-        identifier = config.identifier?.(req) ?? requestIp;
+async function runRateLimited<T extends Request>(
+  config: RateLimitConfig,
+  handler: (req: T, identifier: string, ...args: unknown[]) => Promise<Response>,
+  req: T,
+  args: unknown[]
+): Promise<Response> {
+  try {
+    let identifier: string;
+    // Extraer IP siempre (antes de auth para rate_limit_hit log)
+    const requestIp = extractClientIp(req);
+
+    // Autenticación opcional antes del rate limiting
+    if (config.authenticate) {
+      const user = await config.authenticate(req);
+      if (!user) {
+        return NextResponse.json(
+          { success: false, error: "No autorizado" },
+          { status: 401 }
+        );
       }
-
-      const result = await checkRateLimitInternal(identifier, config);
-
-      if (!result.success) {
-        // Auditar evento de rate limit excedido (siempre incluye IP y userId)
-        logSecurityEvent("rate_limit_hit", {
-          ip: requestIp,
-          userId: config.authenticate ? identifier : undefined,
-          path: req.url || "/",
-          method: req.method || "UNKNOWN",
-          userAgent: req.headers?.get("user-agent") || undefined,
-          metadata: {
-            prefix: config.prefix,
-            limit: config.limit,
-            window: config.window,
-            remaining: result.remaining,
-            reset: result.reset,
-            retryAfter: result.retryAfter,
-          },
-        });
-        return rateLimitResponse(result);
-      }
-
-      const response = await handler(req, identifier, ...args);
-
-      // Adjuntar headers de rate limit a la respuesta (estándar + legacy)
-      const newHeaders = new Headers(response.headers);
-      newHeaders.set("RateLimit-Limit", String(result.limit));
-      newHeaders.set("RateLimit-Remaining", String(result.remaining));
-      newHeaders.set("RateLimit-Reset", String(result.reset));
-      newHeaders.set("X-RateLimit-Limit", String(result.limit));
-      newHeaders.set("X-RateLimit-Remaining", String(result.remaining));
-      newHeaders.set("X-RateLimit-Reset", String(result.reset));
-
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: newHeaders,
-      });
-    } catch (error) {
-      logger.error(`[withRateLimit:${config.prefix}] Error:`, error);
-      return NextResponse.json(
-        { error: "Error interno del servidor" },
-        { status: 500 }
-      );
+      identifier = user.id;
+    } else {
+      identifier = config.identifier?.(req) ?? requestIp;
     }
-  };
+
+    const result = await checkRateLimitInternal(identifier, config);
+
+    if (!result.success) {
+      // Auditar evento de rate limit excedido (siempre incluye IP y userId)
+      logSecurityEvent("rate_limit_hit", {
+        ip: requestIp,
+        userId: config.authenticate ? identifier : undefined,
+        path: req.url || "/",
+        method: req.method || "UNKNOWN",
+        userAgent: req.headers?.get("user-agent") || undefined,
+        metadata: {
+          prefix: config.prefix,
+          limit: config.limit,
+          window: config.window,
+          remaining: result.remaining,
+          reset: result.reset,
+          retryAfter: result.retryAfter,
+        },
+      });
+      return rateLimitResponse(result);
+    }
+
+    // G1 — Correlation IDs: el scope del handler añade `userId` para que
+    // cualquier logger.* dentro del route handler lo incluya en la línea JSON.
+    const response = await runWithRequestContext(
+      {
+        requestId: readRequestId(req),
+        userId: config.authenticate ? identifier : undefined,
+      },
+      () => handler(req, identifier, ...args)
+    );
+
+    // Adjuntar headers de rate limit a la respuesta (estándar + legacy)
+    const newHeaders = new Headers(response.headers);
+    newHeaders.set("RateLimit-Limit", String(result.limit));
+    newHeaders.set("RateLimit-Remaining", String(result.remaining));
+    newHeaders.set("RateLimit-Reset", String(result.reset));
+    newHeaders.set("X-RateLimit-Limit", String(result.limit));
+    newHeaders.set("X-RateLimit-Remaining", String(result.remaining));
+    newHeaders.set("X-RateLimit-Reset", String(result.reset));
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders,
+    });
+  } catch (error) {
+    logger.error(`[withRateLimit:${config.prefix}] Error:`, error);
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -438,8 +381,8 @@ export async function checkAiRateLimit(userId: string) {
 // ─── Cuotas diarias IA por task (P0-1 anti-ruina) ─────────────────────
 // Frecuencia ≠ volumen: los sliding-window por minuto no impiden que un
 // loop agote el free-tier del proveedor para toda la plataforma. Estas
-// cuotas diarias por usuario acotan el gasto total. Ventana 86400 s; el
-// fallback en memoria aplica cuando Redis no está disponible.
+// cuotas diarias por usuario acotan el gasto total. Ventana 86400 s,
+// contada en memoria por instancia (misma estrategia que los sliding-window).
 
 export const AI_DAILY_QUOTAS = {
   "seo-report": 20,

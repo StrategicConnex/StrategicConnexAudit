@@ -22,7 +22,7 @@
      - Certificado CA de Supabase en src/shared/db/supabase-ca.crt
 
    NOTA: el check de ```mermaid requiere egreso de red a OpenRouter
-   (chat/completions) y a Upstash Redis. En máquinas con egress
+   (chat/completions). En máquinas con egress
    restringido el router IA cae al reporte resiliente (isFallback=true),
    que es un resultado válido de la validación del pipeline.
 

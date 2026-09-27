@@ -2,11 +2,14 @@ import { createHash } from "node:crypto";
 import type { AIMessage, AITaskType } from "./ai-router";
 
 /**
- * ai-cache.ts — Caché semántica IA en 2 niveles (P1-3).
+ * ai-cache.ts — Caché semántica IA (P1-3).
  *
- * L1: Map en memoria (rápido, por instancia). L2: Upstash Redis compartido
- * (sobrevive a serverless y a deploys). Sin Redis configurado solo opera L1.
- * Todo falla en silencio hacia "miss": la caché nunca rompe una respuesta.
+ * Único nivel: Map en memoria por instancia (L1). El nivel L2 que vivía en
+ * Upstash Redis desapareció con la eliminación de `@upstash/redis`: la
+ * caché ya no sobrevive a un deploy ni se comparte entre instancias
+ * serverless, de modo que una respuesta cacheada solo acelera repetición
+ * dentro de la misma instancia caliente. Todo falla en silencio hacia
+ * "miss": la caché nunca rompe una respuesta.
  *
  * Clave = sha256(taskType + scope + mensajes COMPLETOS). El scope lo aporta
  * el caller (ej. `seo-report:{projectId}:{yyyy-mm-dd}`) para que regenerar
@@ -39,34 +42,6 @@ export interface CacheHit {
 }
 
 const memory = new Map<string, { content: string; modelId: string; expiresAt: number }>();
-
-type RedisLike = {
-  get: (key: string) => Promise<string | object | null>;
-  set: (key: string, value: string, opts?: { ex?: number }) => Promise<unknown>;
-  /** Opcionales para la invalidación por scope (SCAN + DEL). */
-  scan?: (cursor: string, opts: { MATCH: string; COUNT: number }) => Promise<[string, string[]]>;
-  del?: (...keys: string[]) => Promise<unknown>;
-};
-
-let redisClient: RedisLike | null | undefined;
-function getRedis(): RedisLike | null {
-  if (redisClient !== undefined) return redisClient;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) {
-    redisClient = null;
-    return null;
-  }
-  try {
-    // Import perezoso: no arrastrar el SDK si no hay credenciales.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Redis } = require("@upstash/redis") as typeof import("@upstash/redis");
-    redisClient = new Redis({ url, token }) as unknown as RedisLike;
-  } catch {
-    redisClient = null;
-  }
-  return redisClient;
-}
 
 export function buildSemanticKey(
   taskType: AITaskType,
@@ -120,17 +95,7 @@ async function lookupSemanticCache(key: string): Promise<CacheHit | null> {
     return { content: mem.content, modelId: mem.modelId };
   }
   if (mem) memory.delete(key);
-  const redis = getRedis();
-  if (!redis) return null;
-  try {
-    const raw = await redis.get(key);
-    if (!raw) return null;
-    const parsed = (typeof raw === "string" ? JSON.parse(raw) : raw) as CacheHit;
-    if (!parsed?.content) return null;
-    return { content: parsed.content, modelId: parsed.modelId };
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export async function setSemanticCache(
@@ -145,13 +110,6 @@ export async function setSemanticCache(
     if (oldest) memory.delete(oldest);
   }
   memory.set(key, { content, modelId, expiresAt: Date.now() + ttlSec * 1000 });
-  const redis = getRedis();
-  if (!redis) return;
-  try {
-    await redis.set(key, JSON.stringify({ content, modelId }), { ex: ttlSec });
-  } catch {
-    // Miss silencioso en escritura: L1 sigue sirviendo.
-  }
 }
 
 /**
@@ -159,7 +117,7 @@ export async function setSemanticCache(
  * nuevo de un proyecto, el caller pasa su cacheScope para que los resúmenes
  * cacheados (p.ej. exec-brief de 24h) nunca sirvan datos stale.
  *
- * Borra L1 (memoria) y L2 (Redis SCAN+DEL). Retorna las claves eliminadas.
+ * Borra la caché de la instancia. Retorna las claves eliminadas.
  * Falla en silencio: la invalidación nunca rompe al caller.
  */
 export async function invalidateCacheScope(taskType: AITaskType, scope: string): Promise<number> {
@@ -170,21 +128,6 @@ export async function invalidateCacheScope(taskType: AITaskType, scope: string):
       memory.delete(key);
       deleted++;
     }
-  }
-  const redis = getRedis();
-  if (!redis?.scan || !redis.del) return deleted;
-  try {
-    let cursor = "0";
-    do {
-      const [next, keys] = await redis.scan(cursor, { MATCH: `${prefix}*`, COUNT: 100 });
-      cursor = next;
-      if (keys.length > 0) {
-        await redis.del(...keys);
-        deleted += keys.length;
-      }
-    } while (cursor !== "0");
-  } catch {
-    // L1 ya quedó invalidada; L2 expirará por TTL.
   }
   return deleted;
 }

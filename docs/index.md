@@ -69,7 +69,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 | Capa | Tecnología |
 |------|-----------|
 | **Frontend** | Next.js 16, React 19, Tailwind CSS v4, TypeScript 5 |
-| **Backend** | Drizzle ORM, Supabase (PostgreSQL + Auth), Upstash Redis |
+| **Backend** | Drizzle ORM, Supabase (PostgreSQL + Auth) |
 | **AI** | OpenRouter (modelos gratuitos: Gemini Flash, DeepSeek, Llama 4, Mistral, Qwen) |
 | **Testing** | Vitest, Playwright, Codecov |
 | **Infra** | Vercel, Trigger.dev, GitHub Actions |
@@ -144,7 +144,7 @@ flowchart LR
 
 ## Seguridad
 
-SCAUDIT aplica: CSP con nonce, rate limiting distribuido (Upstash Redis), protección SSRF (egress guard), SIEM exporter multicanal y Magic Link auth. Detalle completo en [Seguridad](/docs/security). [VERIFIED]
+SCAUDIT aplica: CSP con nonce, rate limiting por instancia (en memoria), protección SSRF (egress guard), SIEM exporter multicanal y Magic Link auth. Detalle completo en [Seguridad](/docs/security). [VERIFIED]
 
 ---
 
@@ -192,7 +192,7 @@ El sitio de documentación se publica con GitHub Pages (workflow `docs.yml`) y e
 ## Validación cruzada (inconsistencias resueltas)
 
 - **Enlaces**: los accesos de §Enlaces rápidos fueron contrastados contra los `permalink` de cada documento (installation, api, security, guides) [VERIFIED].
-- **Stack**: la tabla de stack coincide con `package.json` (Next.js 16, React 19, Tailwind v4, Drizzle, Supabase, Upstash, OpenRouter) [VERIFIED].
+  - **Stack**: la tabla de stack coincide con `package.json` (Next.js 16, React 19, Tailwind v4, Drizzle, Supabase, OpenRouter) [VERIFIED].
 
 ---
 

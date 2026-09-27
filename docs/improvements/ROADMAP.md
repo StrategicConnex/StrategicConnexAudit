@@ -4,17 +4,18 @@
 > **Base:** Análisis competitivo de 10 herramientas del mercado (Shodan, Censys, SecurityTrails, GreyNoise, AttackIQ, Detectify, Moz Pro, SEMrush, Datadog, Grafana)
 > **Ubicación:** `docs/improvements/COMPETITIVE-ANALYSIS.md`
 
-> **⚠️ ACTUALIZACIÓN 2026-09-17 (Fase 0.1 del plan de mejoras).** Este roadmap es un **snapshot fechado (Julio 2026)**; varias cifras quedaron obsoletas. Estado real verificado contra el código:
+> **⚠️ ACTUALIZACIÓN 2026-09-27 (Fase 0.1 + cierre G1–G3).** Este roadmap es un **snapshot fechado (Julio 2026)**; varias cifras quedaron obsoletas. Estado real verificado contra el código:
 >
-> | Dato del roadmap | Valor real 2026-09-17 |
+> | Dato del roadmap | Valor real 2026-09-27 |
 > |------------------|------------------------|
 > | "Intelligence scanning (21 tools)" | **43 definiciones de tool** (34 nativas con executor + 9 huérfanas de catálogo) |
-> | 58 tablas | **67 tablas `pgTable`**, todas con `ENABLE RLS` y al menos una policy |
-> | 42 rutas API | **55 route handlers** (50 privados + 5 públicos v1: health, intelligence, audits, reports, uptime) |
-> | 12 triggers | **18 triggers** Trigger.dev (9 con test) |
+> | 58 tablas | **69 tablas `pgTable`**, todas con `ENABLE RLS` y al menos una policy |
+> | 42 rutas API | **64 route handlers** (61 `route.ts` + 3 `route.tsx`; 61/61 `route.ts` con `route.test.ts`) |
+> | 12 triggers | **22 triggers** Trigger.dev (`src/trigger/*.trigger.ts`, excl. tests) — **22/22 con test** |
 > | MITRE | **39 tools mapeados · 16 técnicas únicas · 5 tácticas** (Reconnaissance, Resource Development, Discovery, Collection, C2) |
-> | Cobertura | **Stmts 28.53% · Branch 21.62% · Funcs 24.61% · Lines 28.88%** (92 archivos · 751 ✅ / 3 ❌) |
-> | Build | ✅ **PASS** tras Fase 0 (bloqueante `keywords.ts:224` resuelto: `normalizeDomain` movido a `src/shared/utils/domain.ts`) |
+> | Cobertura | **Stmts 51.15% · Branch 39.83% · Funcs 43.6% · Lines 52.48%** (207 archivos · 1897 tests ✅) — umbrales duros 45/35/39/46 |
+> | Build | ✅ **PASS** (`pnpm build` exit 0, Next.js 16 Turbopack) |
+> | Observabilidad | ✅ **G1–G3 implementados** (ALS + `correlationId` + `x-request-id` saliente) — ver `docs/observability/OBSERVABILITY-MATRIX.md` |
 
 ---
 
@@ -28,7 +29,7 @@ Lo que ya tenemos y funciona:
 |---------|--------|----------------|
 | Magic Link Auth + email validation | ✅ | `src/app/login/`, `src/app/auth/` |
 | Security headers (CSP, HSTS) | ✅ | `src/proxy.ts`, `src/app/layout.tsx` |
-| Rate limiting (Upstash Redis) | ✅ | `src/shared/lib/ratelimit.ts` |
+| Rate limiting (en memoria, por instancia) | ✅ | `src/shared/lib/ratelimit.ts` |
 | AI Router con fallback multi-modelo | ✅ | `src/server/ai/ai-router.ts` |
 | Intelligence scanning (21 tools) | ✅ | `src/server/intelligence/executors/` |
 | Attack Surface Graph | ✅ | `src/app/components/AttackSurfaceGraph.tsx` |
@@ -672,7 +673,7 @@ flowchart TD
 ### Stack a mantener:
 - **Next.js 16** (Turbopack, RSC, Server Actions)
 - **Supabase** (Auth, PostgreSQL, RLS)
-- **Upstash Redis** (Rate limiting, caché)
+- **Rate limit + circuit breaker en memoria** (sin servicio externo; progreso PDF en Postgres)
 - **Trigger.dev** (Background jobs, cron)
 - **OpenRouter** (Modelos de IA gratuitos)
 - **Drizzle ORM** (Type-safe SQL)

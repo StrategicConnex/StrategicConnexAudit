@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
-import { redis } from '@/shared/lib/ratelimit';
 import { createClient } from '@/shared/lib/supabase/server';
+import { readPdfProgress, deletePdfProgress } from '@/server/reports/pdf-progress';
 import { logger } from "@/lib/logger";
+import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -10,19 +11,20 @@ export const runtime = 'nodejs';
  * GET /api/reports/pdf/progress?genId=<uuid>
  *
  * SSE endpoint that streams PDF generation progress.
- * The POST /api/reports/pdf handler writes progress to Redis as it works.
- * This endpoint polls Redis every 600ms and forwards events to the client.
+ * The POST /api/reports/pdf handler writes progress to the `pdf_progress`
+ * table as it works. This endpoint polls it every 600ms and forwards events
+ * to the client.
  *
- * SECURITY (VULN-007 fix): requires an active session. The Redis key is
- * namespaced by userId (`pdf_progress:<userId>:<genId>`), so a caller can
- * only observe progress of generations they started themselves.
+ * SECURITY (VULN-007 fix): requires an active session. The row is keyed by
+ * (userId, genId), so a caller can only observe progress of generations they
+ * started themselves.
  *
  * Events:
  *   event: progress\ndata: {"percent":N,"step":"..."}\n\n
  *   event: complete\ndata: {"percent":100}\n\n
  *   event: error\ndata: {"error":"..."}\n\n
  */
-export async function GET(req: NextRequest) {
+async function rawGet(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -35,8 +37,6 @@ export async function GET(req: NextRequest) {
   if (!genId || typeof genId !== 'string' || genId.length < 8) {
     return new Response('Missing or invalid genId', { status: 400 });
   }
-
-  const redisKey = `pdf_progress:${user.id}:${genId}`;
 
   // SSE response headers
   const headers: Record<string, string> = {
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       const poll = async () => {
         while (!closed) {
           try {
-            const raw = await redis.get<{ percent: number; step?: string; status?: string; error?: string }>(redisKey);
+            const raw = await readPdfProgress(user.id, genId);
 
             if (raw) {
               if (raw.status === 'complete' || raw.percent >= 100) {
@@ -62,8 +62,8 @@ export async function GET(req: NextRequest) {
                 controller.enqueue(encoder.encode(msg));
                 closed = true;
                 controller.close();
-                // Clean up Redis key
-                redis.del(redisKey).catch(() => {});
+                // Clean up progress row
+                void deletePdfProgress(user.id, genId);
                 return;
               }
 
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
                 controller.enqueue(encoder.encode(msg));
                 closed = true;
                 controller.close();
-                redis.del(redisKey).catch(() => {});
+                void deletePdfProgress(user.id, genId);
                 return;
               }
 
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
               controller.enqueue(encoder.encode(`: heartbeat\n\n`));
             }
           } catch (err) {
-            logger.error('[progress-sse] Redis error:', err);
+            logger.error('[progress-sse] read error:', err);
           }
 
           // Wait before next poll
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
             controller.close();
           } catch {}
           closed = true;
-          redis.del(redisKey).catch(() => {});
+          void deletePdfProgress(user.id, genId);
         }
       }, 60_000);
     },
@@ -127,3 +127,5 @@ export async function GET(req: NextRequest) {
 
   return new Response(stream, { headers });
 }
+
+export const GET = withRequestContext(rawGet);

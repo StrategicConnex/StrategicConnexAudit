@@ -5,8 +5,8 @@
 ## Fases
 
 ### Fase 0 — Preparación
-- [ ] Rama + baseline visual (`docs/design/baseline/`)
-- [ ] Inventario CSV de migración
+- [x] Rama + baseline visual (`docs/design/baseline/` — 5 PNG: dashboard dark/light, login dark/light, audit-loading)
+- [x] Inventario CSV de migración (`docs/design/inventario-migracion.csv` — 71 filas)
 - [x] Alcance: landing incluida (tokens en F1, re-verificación en F3.4)
 
 ### Fase 1 — Fundaciones

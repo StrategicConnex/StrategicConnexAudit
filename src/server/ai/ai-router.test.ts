@@ -2,8 +2,8 @@
  * Tests del AI Router: function calling (tools), bucle agéntico y
  * registro de tools con validación Zod.
  *
- * NOTA: el cliente de Upstash Redis (circuit breaker) también usa global.fetch
- * contra "/pipeline", por lo que el mock filtra SIEMPRE por URL de OpenRouter.
+ * NOTA: el mock filtra SIEMPRE por URL de OpenRouter: cualquier otra
+ * petición de red que dispare el código bajo test recibe una respuesta vacía.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -14,7 +14,7 @@ let fetchHandler: FetchHandler = () => new Response("{}", { status: 200 });
 vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
   const urlStr = String(url);
   if (!urlStr.includes("openrouter.ai")) {
-    // Upstash /pipeline u otros: respuesta vacía, no nos importa en estos tests
+    // Otra URL que no sea OpenRouter: respuesta vacía, no nos importa en estos tests
     return new Response("[]", { status: 200 });
   }
   return fetchHandler(urlStr, (init ?? {}) as RequestInit);

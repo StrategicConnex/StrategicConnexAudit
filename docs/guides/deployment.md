@@ -33,7 +33,6 @@ Antes de empezar, asegúrate de tener:
 - [ ] Repositorio en GitHub con el código de SCAUDIT
 - [ ] Cuenta en [Vercel](https://vercel.com) (plan Hobby gratuito)
 - [ ] Proyecto de [Supabase](https://supabase.com) configurado (ver [guía de instalación](../installation.md))
-- [ ] Base de datos [Upstash Redis](https://upstash.com) creada
 - [ ] API Key de [OpenRouter](https://openrouter.ai/keys)
 - [ ] (Opcional) Cuenta en [Trigger.dev](https://trigger.dev) para background jobs
 
@@ -99,8 +98,6 @@ En la pantalla de configuración del proyecto, expande la sección **Environment
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role key |
 | `DATABASE_URL` | Supabase → Database → Connection string (pooler :6543) |
 | `DIRECT_URL` | Supabase → Database → Connection string (direct :5432) |
-| `UPSTASH_REDIS_REST_URL` | Upstash → Database → REST URL |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash → Database → REST Token |
 | `CRON_SECRET` | Genérala con `openssl rand -hex 32` |
 
 #### Variables recomendadas
@@ -131,7 +128,7 @@ En la pantalla de configuración del proyecto, expande la sección **Environment
 │  │ DATABASE_URL    postgresql://postgres:...@xxx:p   │   │
 │  │     ○ Development  ● Production  ○ Preview        │   │
 │  ├──────────────────────────────────────────────────┤   │
-│  │ UPSTASH_REDIS_REST_URL   https://xxx.upstash.io   │   │
+│  │ OPENROUTER_API_KEY    sk-or-v1-...               │   │
 │  │     ○ Development  ● Production  ○ Preview        │   │
 │  └──────────────────────────────────────────────────┘   │
 │                                                         │
@@ -159,7 +156,6 @@ vercel link
 # Agregar variables (una por una)
 vercel env add NEXT_PUBLIC_SUPABASE_URL
 vercel env add DATABASE_URL
-vercel env add UPSTASH_REDIS_REST_URL
 # ...
 
 # Ver variables configuradas
@@ -185,8 +181,6 @@ Resultado esperado (todas las variables deben aparecer):
   NEXT_PUBLIC_SUPABASE_URL        Production, Preview, Development
   OPENROUTER_API_KEY              Production, Preview, Development
   SUPABASE_SERVICE_ROLE_KEY       Production, Preview, Development
-  UPSTASH_REDIS_REST_TOKEN        Production, Preview, Development
-  UPSTASH_REDIS_REST_URL          Production, Preview, Development
 ```
 
 ---
@@ -232,7 +226,7 @@ La pantalla de deploy muestra logs en tiempo real:
 curl https://strategicaudit-pro.vercel.app/api/public/v1/health
 
 # Respuesta esperada:
-# {"status":"ok","version":"1.0.0","services":{"redisConfigured":true,"dbConfigured":true}}
+# {"status":"ok","version":"1.0.0","services":{"dbConfigured":true}}
 ```
 
 ---

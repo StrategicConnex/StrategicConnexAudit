@@ -103,7 +103,6 @@ flowchart TB
     end
     subgraph Data["Data Layer"]
         PG["Supabase Postgres<br/>RLS + 58 tablas"]
-        REDIS["Upstash Redis<br/>rate limit + cache"]
     end
     subgraph Jobs["Trigger.dev"]
         T_SIEM["siem c/5min"]
@@ -119,9 +118,7 @@ flowchart TB
     API --> Intel
     API --> ROUTER
     Intel --> PG
-    Intel --> REDIS
     Jobs --> PG
-    Jobs --> REDIS
     T_SIEM -->|Slack/Email/PagerDuty/Splunk| EXT["Canales externos"]
 </pre>
     </div>
@@ -436,7 +433,7 @@ const withErrorHandler = (handler) => async (req) =&gt; {
     <ul>
       <li><strong>Row Level Security</strong>: políticas en todas las tablas con <code>withRLS()</code>; defensa en profundidad contra fugas entre tenants.</li>
       <li><strong>Egress Guard</strong>: validación CIDR matemática IPv4/IPv6 (16 rangos privados + 7 IPv6), <code>assertPublicHostname()</code> y <code>safeFetch()</code> con timeout y redirect validado.</li>
-      <li><strong>Rate limiting</strong>: decorator genérico con Upstash Redis, headers estándar, fail-closed en prod.</li>
+      <li><strong>Rate limiting</strong>: decorator genérico en memoria (por instancia), headers estándar, fail-open en prod.</li>
       <li><strong>CSP</strong>: nonce por request + strict-dynamic + report endpoint.</li>
       <li><strong>Índices compuestos</strong>: migraciones 0014/0015 con índices en FK y consultas agregadas (GROUP BY en SQL, sin descargar tablas completas a JS).</li>
     </ul>

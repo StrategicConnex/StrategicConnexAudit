@@ -6,7 +6,7 @@
    - proyecto inexistente / sin ownership → 404
    - sin investigaciones → 404
    - happy path → 200 con application/pdf, Content-Length > 0, X-Generation-Id
-     y claves de progreso Redis namespaceadas por usuario (VULN-007)
+     y escrituras de progreso scoped por usuario (VULN-007)
    - fallo inesperado → 500 con success:false
    - casos borde: investigaciones con score null → overallScore null;
      findings vacíos → 200 con totalFindings 0
@@ -58,7 +58,8 @@ const mocks = vi.hoisted(() => {
     findInvestigations: vi.fn(),
     findFindings: vi.fn(),
     findAssets: vi.fn(),
-    redisSet: vi.fn(async () => "OK"),
+    writePdfProgress: vi.fn(async () => {}),
+    pruneStalePdfProgress: vi.fn(async () => {}),
     createClient: vi.fn(),
     loggerInfo: vi.fn(),
     loggerWarn: vi.fn(),
@@ -69,12 +70,11 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("@/shared/lib/ratelimit", () => ({
   withRateLimit: (_cfg: unknown, handler: unknown) => handler,
-  redis: {
-    set: mocks.redisSet,
-    get: vi.fn(async () => null),
-    incr: vi.fn(async () => 1),
-    expire: vi.fn(async () => true),
-  },
+}));
+
+vi.mock("@/server/reports/pdf-progress", () => ({
+  writePdfProgress: mocks.writePdfProgress,
+  pruneStalePdfProgress: mocks.pruneStalePdfProgress,
 }));
 
 vi.mock("@/shared/lib/supabase/server", () => ({
@@ -244,17 +244,20 @@ describe("POST /api/reports/pdf", () => {
     expect(res.headers.get("X-Generation-Id")).toBe("gen-12345678");
     expect(res.headers.get("Content-Disposition")).toContain("SCAUDIT_Report_");
     expect(await res.text()).toContain("%PDF-1.4");
-    expect(mocks.redisSet).toHaveBeenCalledWith(
-      "pdf_progress:user-1:gen-12345678",
-      expect.anything(),
+    expect(mocks.writePdfProgress).toHaveBeenCalledWith(
+      "user-1",
+      "gen-12345678",
+      expect.objectContaining({ percent: expect.any(Number), step: expect.any(String) }),
     );
+    expect(mocks.pruneStalePdfProgress).toHaveBeenCalledTimes(1);
   });
 
   it("missing genId omits X-Generation-Id", async () => {
     const res = await POST(createRequest({ projectId: PROJECT_ID }), USER_ID);
     expect(res.status).toBe(200);
     expect(res.headers.get("X-Generation-Id")).toBeNull();
-    expect(mocks.redisSet).not.toHaveBeenCalled();
+    expect(mocks.writePdfProgress).not.toHaveBeenCalled();
+    expect(mocks.pruneStalePdfProgress).not.toHaveBeenCalled();
   });
 
   it("null scores yield overallScore null", async () => {

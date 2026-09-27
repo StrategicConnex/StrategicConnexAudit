@@ -44,7 +44,7 @@ Dominio de generación y exportación de reportes SEO (PDF, IA y CSV) por proyec
 
 ## 2. Responsibilities
 
-- **Reales:** generar PDF de reporte con progreso en Redis (`/api/reports/pdf`, `progress`) [VERIFIED]; generar reporte ejecutivo IA (`/api/ai/report`) [VERIFIED]; exportar keywords CSV [VERIFIED]; parsear/sanitizar secciones de reporte IA (`report-utils.ts`) [VERIFIED].
+- **Reales:** generar PDF de reporte con progreso persistido en Postgres (`/api/reports/pdf`, `progress`) [VERIFIED]; generar reporte ejecutivo IA (`/api/ai/report`) [VERIFIED]; exportar keywords CSV [VERIFIED]; parsear/sanitizar secciones de reporte IA (`report-utils.ts`) [VERIFIED].
 - **Previstas (por schema):** persistir `reports` y `report_exports` [INFERRED — sin uso en producción].
 
 ## 3. Inputs
@@ -56,7 +56,7 @@ Dominio de generación y exportación de reportes SEO (PDF, IA y CSV) por proyec
 ## 4. Outputs
 
 - PDF del reporte [VERIFIED].
-- Progreso de generación leído desde Redis [VERIFIED: `progress/route.ts` comenta "writes progress to Redis"].
+- Progreso de generación leído desde la tabla `pdf_progress` [VERIFIED: `progress/route.ts` usa `readPdfProgress()`].
 - Reporte IA (texto/markdown) [VERIFIED].
 - CSV de keywords [VERIFIED].
 
@@ -65,7 +65,7 @@ Dominio de generación y exportación de reportes SEO (PDF, IA y CSV) por proyec
 | Dependencia | Uso | Evidencia |
 |-------------|-----|-----------|
 | `@/shared/db/schemas` (projects, audits, keywordTargets, integrationDataGsc/Ga4, reports, reportExports) | Datos del reporte | [VERIFIED] |
-| Redis (Upstash) | Progreso del PDF | [VERIFIED] |
+| Postgres (`pdf_progress` + RLS por usuario) | Progreso del PDF | [VERIFIED] |
 | `@/shared/lib/actions` | `exportKeywordsCSV` | [VERIFIED] |
 | `@/shared/db/schemas` (reports, reportExports) | Definidas; sin uso en producción | [VERIFIED] |
 
@@ -102,16 +102,16 @@ Columnas: `docs/database/DATA-DICTIONARY.md`. Las tablas de reporte persistidas 
 
 - **0 archivos `*.test.ts` en `src/modules/reporting`** [VERIFIED].
 - `report-utils` cubierto por tests existentes (conteo B00: utils de reporte en TEST-001 de ENTERPRISE-ARCHITECTURE) [VERIFIED].
-- Sin `route.test.ts` para `reports/pdf` (gap conocido de B06) [VERIFIED].
+- `route.test.ts` presente para `reports/pdf` y `reports/pdf/progress` [VERIFIED: 15 tests].
 
 ## 12. Observability
 
-- Progreso de PDF en Redis (clave `genId`) [VERIFIED].
+- Progreso de PDF en la tabla `pdf_progress` (PK `userId + genId`) [VERIFIED].
 - [UNKNOWN] Logs estructurados específicos de reporting.
 
 ## 13. Failure Modes
 
-- Fallo de Redis → progreso no disponible [INFERRED].
+- Error al persistir progreso → se degrada en silencio (nunca rompe la generación del PDF) [VERIFIED].
 - `exportKeywordsCSV` con proyecto inexistente → error controlado [VERIFIED].
 - XSS en reporte IA mitigado por `escapeHtml` (parcial; VULN-001 cubre el resto) [VERIFIED].
 
@@ -146,7 +146,7 @@ Columnas: `docs/database/DATA-DICTIONARY.md`. Las tablas de reporte persistidas 
 flowchart TB
     UI["ReportsTab"] --> PDF["POST /api/reports/pdf"]
     UI --> AI["GET /api/ai/report"]
-    PDF --> REDIS[("Redis: progreso genId")]
+    PDF --> PG[("Postgres: pdf_progress")]
     PDF --> OUT["PDF"]
     AI --> OUT2["Reporte IA markdown"]
     AI --> UTIL["report-utils.ts (escapeHtml)"]
@@ -158,7 +158,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    REQ["POST /api/reports/pdf"] --> PROG["escribe progreso en Redis"]
+    REQ["POST /api/reports/pdf"] --> PROG["escribe progreso en pdf_progress"]
     PROG --> POLL["GET /api/reports/pdf/progress?genId="]
     PROG --> DONE["PDF final"]
 ```
@@ -190,7 +190,7 @@ flowchart LR
 
 | Término | Definición |
 |---------|------------|
-| genId | Identificador de generación de PDF en Redis |
+| genId | Identificador de generación de PDF (PK compuesta `userId + genId` en `pdf_progress`) |
 
 ## 21. Versionado y verificación
 

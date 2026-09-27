@@ -106,7 +106,7 @@ flowchart TB
 | 28 | `docs/` | OK [VERIFIED] | `docs/` (17 `.md` + `docs/html/` manuales) | LOW | 17 docs a 100/100 (QUALITY_GATE_REPORT); ENTERPRISE-ARCHITECTURE v2.1 aprobado; ROADMAP 36/36. |
 | 29 | `drizzle/` | OK [VERIFIED] | `drizzle/` (22 archivos `.sql`), `drizzle/meta/_journal.json` (22 entradas, idx 0–21, última `0021_push_active_boolean`) | LOW | Journal consistente `0000…0021`, disco = journal (22/22, sin huérfanos tras higiene B03/MODE C que eliminó `0001_quota_enforcement.sql`). |
 | 30 | `src/shared/db/schemas` | OK [VERIFIED] | `schemas/*.ts` (12 archivos + `index.ts` 507 líneas) | MEDIUM | **58 tablas** [VERIFIED: conteo `pgTable(` 2026-08-08]. Barrel `index.ts` con fan-in 73 (madge) y **9 ciclos** tipo `index > schema-file` (madge `--circular`). Ver DEPENDENCY-GRAPH §5. |
-| 31 | Scripts de operación (raíz) | OK [VERIFIED] | `db-security-scan.ts`, `rls-fire-test.ts`, `test-rls-root.ts`, `test-db.ts`, `backup-manager.ts`, `configure-upstash-alerts.ts`, `hello.ts` | MEDIUM | Scripts de seguridad/ops en raíz; **excluidos de ESLint** (`eslint.config.mjs` globalIgnores) y **no integrados en CI** — gap para B02. |
+| 31 | Scripts de operación (raíz) | OK [VERIFIED] | `db-security-scan.ts`, `rls-fire-test.ts`, `test-rls-root.ts`, `test-db.ts`, `backup-manager.ts`, `hello.ts` | MEDIUM | Scripts de seguridad/ops en raíz; **excluidos de ESLint** (`eslint.config.mjs` globalIgnores) y **no integrados en CI** — gap para B02. |
 | 32 | `.githooks/` | OK [VERIFIED] | `package.json` script `prepare: git config core.hooksPath .githooks` | LOW | Pre-commit hook ejecuta quality gate (commit `5eb33ff` documenta la suite). |
 
 ---
@@ -187,12 +187,12 @@ Casos cubiertos: executors DNS/network/TLS/email/OSINT, egress-guard, ratelimit,
 
 ## 10. Operaciones y observabilidad
 
-- Health público: `GET /api/public/v1/health` (status ok/degraded/down, `redisConfigured`, `dbConfigured`).
+  - Health público: `GET /api/public/v1/health` (status ok/degraded/down, `dbConfigured`).
 - Health IA: `GET /api/ai/healthcheck` → `ai_health_logs`.
 - Logging estructurado: `src/shared/lib/logger.ts` (`info/warn/error/security`).
 - Audit: `logSecurityEvent()` → `security_audit_logs`; SIEM exporter (5 min vía Trigger.dev).
 - RUM: `/api/telemetry/vitals` → `web_vitals_logs`.
-- Runbooks: `docs/guides/upstash-redis-recovery.md`, `docs/guides/troubleshooting.md`, `docs/guides/deployment.md`.
+  - Runbooks: `docs/guides/troubleshooting.md`, `docs/guides/deployment.md`.
 
 ---
 

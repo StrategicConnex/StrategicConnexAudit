@@ -76,12 +76,12 @@ function rel(p) {
 }
 
 /** Ejecutar el validador sobre un archivo; devuelve {file, ...} o {file, error}. */
-function runValidator(file) {
+function runValidator(file, extraArgs = []) {
   // El --min elegido se PROPAGA al validador para que el PASS/FAIL del
   // reporte refleje el mismo umbral declarado en el encabezado.
   const proc = spawnSync(
     process.execPath,
-    [VALIDATOR, file, "--json", "--min", String(min)],
+    [VALIDATOR, file, "--json", "--min", String(min), ...extraArgs],
     { encoding: "utf8", timeout: 30_000 }
   );
   if (!proc || proc.status === 2 || !proc.stdout) {
@@ -96,13 +96,42 @@ function runValidator(file) {
 }
 
 // ─── Ejecutar el validador sobre cada archivo ────────────────────────────────
-const results = files.map(runValidator);
+const results = files.map((f) => runValidator(f));
 
 const valid = results.filter((r) => !r.error);
 const passed = valid.filter((r) => r.pass);
 const avg = valid.length ? Math.round((valid.reduce((s, r) => s + r.score, 0) / valid.length) * 10) / 10 : 0;
 const best = valid.length ? valid.reduce((a, b) => (b.score > a.score ? b : a)) : null;
 const worst = valid.length ? valid.reduce((a, b) => (b.score < a.score ? b : a)) : null;
+
+// --------------------------------------------------------------- Alcance CI --
+// Réplica exacta del job `docs-quality-gate` de .github/workflows/ci.yml:
+// sólo estas carpetas técnicas se validan en CI, con 80/100 (90/100 en
+// docs/jobs). Se recalcula aquí para que el reporte muestre el alcance real
+// del gate en cada regeneración, sin números pegados a mano.
+const CI_DIRS = [
+  "docs/architecture",
+  "docs/database",
+  "docs/jobs",
+  "docs/modules",
+  "docs/traceability",
+  "docs/risk",
+  "docs/technical-debt",
+  "docs/testing",
+];
+const ciFiles = CI_DIRS.flatMap((d) => {
+  const abs = join(ROOT, d);
+  try {
+    return walkMd(abs);
+  } catch {
+    return [];
+  }
+});
+const ciResults = ciFiles
+  .map((f) => runValidator(f, ["--min-dir", "docs/jobs=90"]))
+  .filter((r) => !r.error);
+const ciPass = ciResults.filter((r) => r.pass);
+const ciFails = ciResults.filter((r) => !r.pass);
 
 // Cumplimiento por check (sobre los docs válidos)
 const perCheck = [];
@@ -125,10 +154,10 @@ layout: default
 title: Quality Gate Report
 nav_order: 6
 permalink: /docs/improvements/quality-gate-report
-version: 1.1
+version: 1.2
 date: ${dateStr}
 author: Equipo SCAUDIT
-status: Aprobado
+status: Gate CI ${ciPass.length}/${ciResults.length} PASS · árbol completo ${passed.length}/${valid.length}
 ---
 
 # QUALITY GATE REPORT — Documentación SCAUDIT Pro
@@ -235,7 +264,7 @@ flowchart LR
 | 02 | \`pnpm build\` | ✅ PASS | Turbopack (exit 0) |
 | 03 | \`pnpm test\` | ✅ PASS | 359/359 · 40 files (aislado) |
 | 04 | \`pnpm test:contract\` | ✅ PASS | 10/10 (aislado) |
-| 05 | quality-gate sobre docs/ | ✅ PASS | ${passed.length}/${valid.length} ≥ ${min} · avg ${avg} |
+| 05 | quality-gate sobre docs/ | ${ciFails.length === 0 ? "✅ PASS" : "❌ FAIL"} | alcance CI ${ciPass.length}/${ciResults.length} (>= ${min} · docs/jobs 90) · árbol completo ${passed.length}/${valid.length} → avg ${avg} |
 
 ### Bloque B — Cross-validation §54 (10 pares, 0 contradicciones)
 
@@ -269,7 +298,28 @@ flowchart LR
 | 26 | K Mermaid Validity | ✅ mermaid en docs clave validado |
 | 27 | L Unknowns/Assumptions | ✅ FINAL-REPORT §25 + marcadores [UNKNOWN] |
 
-**Resultado: 27/27 PASS · 0 contradicciones · gates locales verificados en aislamiento** (lint 0 errores · build PASS · test 359/359 · contract 10/10; el run paralelo local mostró interferencia de recursos, re-verificado en aislamiento). **CI en GitHub Actions:** se ejecuta en push a main (5 jobs); la verificación remota del run queda sujeta al próximo push — \`[ASSUMPTION]\` hasta entonces. **Cobertura completa del inventario:** los 2 últimos artefactos que no alcanzaban el umbral (MASTER-INDEX 45/100 governance · engineering-master-plan 75/100 planning) fueron elevados **posteriormente** a 100/100 aplicando las 20 secciones del template obligatorio — **68/68 docs PASS**.
+**Resultado: 27/27 PASS · 0 contradicciones · gates locales verificados en aislamiento** (lint 0 errores · build PASS · test 359/359 · contract 10/10; el run paralelo local mostró interferencia de recursos, re-verificado en aislamiento). **CI en GitHub Actions:** se ejecuta en push a main (5 jobs); la verificación remota del run queda sujeta al próximo push — \`[ASSUMPTION]\` hasta entonces. **Cobertura completa del inventario:** los 2 últimos artefactos que no alcanzaban el umbral (MASTER-INDEX 45/100 governance · engineering-master-plan 75/100 planning) fueron elevados **posteriormente** a 100/100 aplicando las 20 secciones del template obligatorio — **68/68 docs PASS**. **⚠️ Snapshot histórico (T10-04, 2026-08-02):** no es el estado actual — el estado vigente es el de la sección *Resumen ejecutivo* y de *Alcance: reporte completo vs. gate de CI* de esta misma regeneración (fecha ${dateStr}).
+
+---
+
+## Alcance: reporte completo vs. gate de CI
+
+Este reporte puntúa **todos** los \`.md\` de \`docs/\` con el mismo template de 20 secciones.
+El gate de CI (\`.github/workflows/ci.yml\` → job \`docs-quality-gate\`) sólo valida las carpetas
+técnicas de la tabla siguiente —umbral **80/100** y **90/100** en \`docs/jobs\`—. Por tanto,
+un **FAIL aquí no rompe CI** cuando el documento está fuera de esas carpetas.
+
+**Gate de CI (alcance técnico) — recalculado el ${dateStr}:** ${ciPass.length}/${ciResults.length} PASS · ${ciFails.length} FAIL ${ciFails.length === 0 ? "✅" : ""}
+
+| Carpeta del alcance CI | Umbral |
+|---|---|
+${CI_DIRS.map((d) => `| \`${d}\` | ${d === "docs/jobs" ? "90/100" : "80/100"} |`).join("\n")}
+
+${ciFails.length === 0 ? "Sin FAILS en el alcance de CI." : ciFails.map((r) => `> ❌ \`${r.file}\`: ${r.score}/100`).join("\n")}
+
+**Evaluados aquí pero fuera del alcance de CI** (se puntúan con el mismo template aunque no
+sean entregables técnicos): \`docs/archive/**\` (snapshots históricos), \`docs/templates/**\`
+(esqueletos sin contenido), \`docs/plans/**\` y \`docs/superpowers/**\` (planes y specs vivos).
 
 ---
 

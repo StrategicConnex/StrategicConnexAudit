@@ -5,7 +5,6 @@ import { eq, and, asc, desc } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { directDb } from '@/shared/db';
 import { withRLS } from '@/shared/db/rls';
-import { redis } from '@/shared/lib/ratelimit';
 import {
   projects,
   intelligenceInvestigations,
@@ -13,6 +12,11 @@ import {
   intelligenceAssets,
 } from '@/shared/db/schemas';
 import { withRateLimit } from '@/shared/lib/ratelimit';
+import {
+  writePdfProgress,
+  pruneStalePdfProgress,
+  type PdfProgressStatus,
+} from '@/server/reports/pdf-progress';
 import { PdfReport, type PdfReportData, type PdfFinding, type PdfAsset, type WhiteLabelBranding } from '@/server/reports/pdf-template';
 import { logger } from "@/lib/logger";
 
@@ -32,15 +36,18 @@ export const dynamic = 'force-dynamic';
  * Header:  X-Generation-Id (if genId was provided)
  */
 
-// Helper: write progress to Redis (fire-and-forget, non-blocking)
-// SECURITY (VULN-007): the key is namespaced by userId so the progress of a
-// generation can only be read by its owner (see progress/route.ts).
-function reportProgress(userId: string, genId: string | undefined, percent: number, step: string, status?: string) {
+// Helper: write progress (fire-and-forget, non-blocking)
+// SECURITY (VULN-007): la fila está compuesta por (userId, genId), por lo que
+// solo su dueño puede leerla (ver progress/route.ts).
+function reportProgress(
+  userId: string,
+  genId: string | undefined,
+  percent: number,
+  step: string,
+  status?: PdfProgressStatus,
+) {
   if (!genId) return;
-  const key = `pdf_progress:${userId}:${genId}`;
-  // Pass raw object — Upstash handles serialization internally
-  redis.set(key, { percent, step, status: status || 'working' })
-    .catch((e: unknown) => logger.warn('[pdf-progress] Redis write failed:', e));
+  void writePdfProgress(userId, genId, { percent, step, status: status ?? 'working' });
 }
 
 export const POST = withRateLimit(
@@ -65,6 +72,7 @@ export const POST = withRateLimit(
         genId?: string;
       };
       genId = body.genId;
+      if (genId) void pruneStalePdfProgress();
 
       if (!projectId) {
         return NextResponse.json(

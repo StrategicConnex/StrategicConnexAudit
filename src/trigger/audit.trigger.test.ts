@@ -60,7 +60,7 @@ class MockBreaker {
 }
 
 vi.mock("@/shared/lib/circuit-breaker", () => ({
-  RedisCircuitBreaker: MockBreaker,
+  CircuitBreaker: MockBreaker,
 }));
 
 vi.mock("@trigger.dev/sdk", () => ({

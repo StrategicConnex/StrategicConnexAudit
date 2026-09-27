@@ -24,39 +24,32 @@ describe("Health público — /api/public/v1/health", () => {
     vi.unstubAllEnvs();
   });
 
-  it("config completa (DATABASE_URL + NEXT_PUBLIC_SUPABASE_URL + Redis) → 200 ok", async () => {
+  it("config completa (DATABASE_URL + NEXT_PUBLIC_SUPABASE_URL) → 200 ok", async () => {
     vi.stubEnv("DATABASE_URL", "postgres://user:pass@host:5432/db");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc.supabase.co");
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://redis.example");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token");
 
     const res = await GET();
     expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(body.status).toBe("ok");
-    expect(body.services).toEqual({ redisConfigured: true, dbConfigured: true });
+    expect(body.services).toEqual({ dbConfigured: true });
   });
 
   it("REGRESIÓN: SUPABASE_SERVICE_ROLE_KEY NO hace dbConfigured true (var muerta)", async () => {
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role-secret");
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://redis.example");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token");
     // Sin DATABASE_URL ni NEXT_PUBLIC_SUPABASE_URL → DB NO configurada.
 
     const res = await GET();
     expect(res.status).toBe(503);
 
     const body = await res.json();
-    expect(body.status).toBe("degraded");
-    expect(body.services.dbConfigured).toBe(false);
-    expect(body.services.redisConfigured).toBe(true);
+    expect(body.status).toBe("down");
+    expect(body.services).toEqual({ dbConfigured: false });
   });
 
   it("DATABASE_URL presente sin NEXT_PUBLIC_SUPABASE_URL → degraded (faltan ambas de la pareja)", async () => {
     vi.stubEnv("DATABASE_URL", "postgres://user:pass@host:5432/db");
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://redis.example");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token");
 
     const res = await GET();
     expect(res.status).toBe(503);
@@ -66,17 +59,15 @@ describe("Health público — /api/public/v1/health", () => {
     expect(body.services.dbConfigured).toBe(false);
   });
 
-  it("sin Redis ni DB → 503 down", async () => {
+  it("sin configuración alguna → 503 down", async () => {
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
 
     const res = await GET();
     expect(res.status).toBe(503);
 
     const body = await res.json();
     expect(body.status).toBe("down");
-    expect(body.services).toEqual({ redisConfigured: false, dbConfigured: false });
+    expect(body.services).toEqual({ dbConfigured: false });
   });
 });

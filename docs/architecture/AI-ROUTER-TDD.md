@@ -44,7 +44,7 @@ Su propósito es doble:
 | `TASK_ROUTING` | Const | Mapa tarea → cadena de modelos (exportado para healthcheck) |
 | `MODEL_TIMEOUTS` | Const | Timeout por tarea (ms), exportado |
 | `responseCache` | Map privado | Caché in-memory TTL 5 min, máx 200 entradas LRU |
-| `openRouterCircuitBreaker` | Instancia | RedisCircuitBreaker (5 fallos → open 30s) |
+| `openRouterCircuitBreaker` | Instancia | CircuitBreaker (5 fallos → open 30s) |
 | `callModel()` | Función privada | Fetch a `/chat/completions` de OpenRouter |
 | `callAIWithFallback()` | **API pública** | Pipeline completo: caché → key → cadena → fallback |
 | `getNoApiKeyResponse()` | **API pública** | Mensaje contextual bilingüe en/es por tarea |
@@ -66,7 +66,7 @@ ai-router.ts
 ├── TASK_ROUTING (Record<AITaskType, string[]>)
 ├── MODEL_TIMEOUTS (Record<AITaskType, number>)
 ├── responseCache (Map + TTL + LRU)
-├── openRouterCircuitBreaker (RedisCircuitBreaker)
+├── openRouterCircuitBreaker (CircuitBreaker)
 ├── callModel()            — fetch + manejo de errores HTTP
 ├── callAIWithFallback()   — pipeline público
 └── getNoApiKeyResponse()  — templates bilingües
@@ -90,7 +90,7 @@ flowchart TB
     subgraph ROUTER["AI ROUTER (ai-router.ts)"]
         A["callAIWithFallback()"]
         CACHE["responseCache<br/>TTL 5min · LRU 200"]
-        CB["RedisCircuitBreaker<br/>5 fallos → open 30s"]
+        CB["CircuitBreaker<br/>5 fallos → open 30s"]
         CHAIN["TASK_ROUTING[taskType]<br/>cadena de modelos :free"]
     end
     subgraph OR["OpenRouter"]
@@ -148,7 +148,7 @@ const aiResult = await callAIWithFallback({
 | Dependencia | Uso |
 |-------------|-----|
 | `@/shared/config/env` | `openRouterApiKey`, `openRouterBaseUrl` |
-| `@/shared/lib/circuit-breaker` | `RedisCircuitBreaker` (requiere Upstash Redis) |
+| `@/shared/lib/circuit-breaker` | `CircuitBreaker` (estado en memoria, sin dependencias externas) |
 | OpenRouter API | Proveedor externo (HTTPS) |
 
 ## 13. Trazabilidad
@@ -188,7 +188,7 @@ REQ-AI-001 (reporte IA funcional) → CMP-AI-001 (ai-router) → callAIWithFallb
 | 9. Ejemplo | N/A |
 | 10. Seguridad | Key server-side, Referer fijo |
 | 11. Operativo | Instancias serverless → caché no compartida |
-| 12. Dependencias | OpenRouter + Redis |
+| 12. Dependencias | OpenRouter |
 | 13. Trazabilidad | REQ-AI-001 |
 | 14. Validación | tsc + E2E + healthcheck |
 
@@ -210,7 +210,7 @@ flowchart LR
     R2 --> AR
     R3 --> AR
     AR -->|"HTTPS /chat/completions"| OR["OpenRouter<br/>(free models)"]
-    AR -->|"rate limit + breaker"| REDIS["Upstash Redis"]
+    AR -->|"rate limit + breaker"| MEM["Memoria por instancia"]
     AR -->|"persiste"| DB[("Supabase<br/>ai_health_logs")]
 ```
 
@@ -270,7 +270,7 @@ flowchart TD
 | HTTP genérico | `!response.ok` | throw (texto 200 chars) | fallback al siguiente modelo |
 | Respuesta vacía | `!data.choices?.[0]?.message?.content` | throw | fallback al siguiente modelo |
 | Timeout | `AbortSignal.timeout` | abort | fallback al siguiente modelo |
-| Circuit open | RedisCircuitBreaker | rechazo inmediato | fallback al siguiente modelo |
+| Circuit open | CircuitBreaker | rechazo inmediato | fallback al siguiente modelo |
 
 ---
 
@@ -493,7 +493,7 @@ flowchart LR
 | **Meta-modelo** | `openrouter/free`: router de OpenRouter que auto-selecciona el mejor modelo gratuito según la capacidad requerida |
 | **Task type** | Categoría de solicitud (`copilot-remediation`, `incident-brief`, `general-chat`, `seo-report`) que determina cadena y timeout |
 | **Fallback chain** | Cadena ordenada de modelos `:free` que se intentan en secuencia hasta lograr una respuesta |
-| **Circuit breaker** | `RedisCircuitBreaker`: 5 fallos → open 30s → success 2 cierra |
+| **Circuit breaker** | `CircuitBreaker`: 5 fallos → open 30s → success 2 cierra |
 | **TTL** | Time-to-live de la caché: 5 minutos |
 | **LRU** | Least Recently Used: eviction de la entrada más vieja al superar 200 |
 | **maxDuration** | Límite de ejecución de Vercel (120s en las rutas que consumen el router) |

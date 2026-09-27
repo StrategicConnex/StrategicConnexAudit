@@ -372,7 +372,7 @@ Plan de implementación para el rediseño completo de UX/UI de SCAUDIT Pro. Cada
 
 ## Cierre
 
-- [ ] Fases 1-6 mergeadas (un PR por semana)
-- [ ] Sin imports de shadcn en componentes migrados
-- [ ] Tests y accesibilidad verificados por fase
-- [ ] Rollback disponible por PR si alguna fase falla
+- [x] Fases 1-6 mergeadas (un PR por semana) — **VERIFIED 2026-09-27**: los 12 commits semanales (`5a04703` s1 … `87daf36` s12) están en `main`; una unidad por semana permite revert selectivo. [ASSUMPTION] la existencia de PR individual no se pudo confirmar (`gh` sin autenticar en este entorno).
+- [x] Sin imports de shadcn en componentes migrados — **VERIFIED 2026-09-27**: 0 imports de `@radix-ui/*` o shadcn en `src/**/*.tsx`; los primitivos de `src/components/ui/*` usan `@base-ui/react` (Dialog, etc.). El paquete `shadcn` sigue en `package.json` pero no se importa desde código — deuda de dependencia, no de componente.
+- [x] Tests y accesibilidad verificados por fase — **VERIFIED 2026-09-27**: assertions de a11y/ARIA/reduced-motion en 8 suites (`src/components/ui/primitives.test.tsx`, `CommandPalette.test.tsx`, `layout.test.tsx`, `audit-start.test.tsx`, `project-detail.test.tsx`, `MonitoringTab.test.tsx` + `e2e/visual-regression.spec.ts`, `e2e/end-user-simulation.spec.ts`); `contrast-guard.mjs` PASS (min 4.5:1).
+- [x] Rollback disponible por PR si alguna fase falla — **VERIFIED 2026-09-27**: cada semana es un commit aislado en `main` (revert por hash); gate final `pnpm lint` 0 · `tsc` 0 · `pnpm test` 1897/1897 · `pnpm build` exit 0.

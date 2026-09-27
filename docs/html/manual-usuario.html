@@ -315,7 +315,7 @@ flowchart TB
       <tr><td>¿Cómo veo el historial de cambios de un dominio?</td><td>En IntelligenceTab → pestaña <span class="ui">History</span> o en <code>/security/audit</code> (pestañas WHOIS Alerts / DNS Alerts).</td></tr>
       <tr><td>¿La sección DNS del scan aparece vacía?</td><td>Era un bug de keys mayúsculas/minúsculas, ya corregido con lecturas tipadas en <code>scan-response.ts</code>.</td></tr>
       <tr><td>¿Puedo usar mis propios plugins?</td><td>Por ahora el marketplace incluye 8 plugins oficiales. El mecanismo de ejecución soporta plugins custom vía registry.</td></tr>
-      <tr><td>¿Hay límite de escaneos?</td><td>Sí, rate limiting por IP con Upstash Redis (headers <code>RateLimit-*</code> en las respuestas).</td></tr>
+      <tr><td>¿Hay límite de escaneos?</td><td>Sí, rate limiting por IP (en memoria; headers <code>RateLimit-*</code> en las respuestas).</td></tr>
       <tr><td>¿Dónde veo las alertas de seguridad?</td><td>En <code>/security/audit</code>: pestañas Events, SIEM Alerts, WHOIS Alerts y DNS Alerts.</td></tr>
     </table>
     <div class="box tip"><b>¿Necesitas ayuda?</b>Consulta el <a href="manual-funcionamiento.html" style="color:var(--primary)">Manual de Funcionamiento Técnico</a> para detalles de arquitectura o revisa <a href="manual-instalacion.html" style="color:var(--primary)">el manual de instalación</a> para despliegues.</div>

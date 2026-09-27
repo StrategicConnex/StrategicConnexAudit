@@ -39,7 +39,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | REQ-103 | Rutas de inteligencia protegidas por middleware | SECURITY-AUDIT VULN-003 [VERIFIED] |
 | REQ-104 | RLS multi-tenant (member_or_owner) | SECURITY-AUDIT + rls.test.ts [VERIFIED] |
 | REQ-105 | Egress-guard SSRF en toda salida HTTP del engine | ADR-005 [VERIFIED] |
-| REQ-106 | Rate limiting fail-open (Redis + fallback) | ADR-002 [VERIFIED] |
+| REQ-106 | Rate limiting fail-open (in-memory + fallback) | ADR-002 [VERIFIED] |
 | REQ-107 | API pública con API key hash SHA-256 | api.md + idx_developer_api_keys_hashed [VERIFIED] |
 | REQ-108 | Jobs Trigger.dev idempotentes | docs/jobs/* (B05) [VERIFIED] |
 | REQ-109 | Notificaciones push con `active` boolean | TSK-009 / migración 0021 [VERIFIED] |
@@ -55,7 +55,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | Componente | Archivos reales | Dependencia |
 |------------|-----------------|-------------|
 | Auth | `src/app/login/`, `src/app/auth/`, `src/shared/lib/supabase/` | Supabase Auth |
-| Rate limit | `src/shared/lib/ratelimit.ts` | Upstash Redis (fail-open) |
+| Rate limit | `src/shared/lib/ratelimit.ts` | Contador en memoria (fail-open) |
 | Egress-guard | `src/server/intelligence/security/egress-guard.ts` | network utils |
 | SIEM | `src/server/security/siem-exporter.ts` | `src/trigger/siem.trigger.ts` |
 | Adversary | `src/app/api/intelligence/adversary/route.ts` | scenario-runner + sandbox-executor |

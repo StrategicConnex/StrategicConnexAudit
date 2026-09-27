@@ -2,9 +2,10 @@ import { task, tasks } from "@trigger.dev/sdk";
 import { directDb } from "@/shared/db";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
-import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
+import { CircuitBreaker } from "@/shared/lib/circuit-breaker";
 import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
 import { logger } from "@/lib/logger";
+import { runWithCorrelation } from "@/lib/request-context";
 import { invalidateCacheScope } from "@/server/ai/ai-cache";
 import type { triageAfterAudit } from "./finding-triage.trigger";
 import type { execBriefAfterAudit } from "./exec-brief.trigger";
@@ -36,7 +37,7 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   await validateSafeUrl(targetUrl);
 
   // 2. Fetch with a 20s AbortSignal timeout to prevent unbounded hangs
-  const crawlerCircuitBreaker = new RedisCircuitBreaker('web_crawler', {
+  const crawlerCircuitBreaker = new CircuitBreaker('web_crawler', {
     failureThreshold: 5,
     recoveryTimeout: 60000,
   });
@@ -146,12 +147,23 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
   };
 }
 
+export interface RunProjectAuditPayload {
+  projectId: string;
+  auditId: string;
+  userId?: string;
+  /** G2 — id de correlación de la request que encoló el job (opcional en crons). */
+  correlationId?: string;
+}
+
 export const runProjectAudit = task({
   id: "run-project-audit",
   retry: {
     maxAttempts: 3,
   },
-  run: async (payload: { projectId: string; auditId: string; userId?: string }) => {
+  run: async (payload: RunProjectAuditPayload) => runWithCorrelation(payload.correlationId, () => runProjectAuditJob(payload)),
+});
+
+async function runProjectAuditJob(payload: RunProjectAuditPayload) {
       const { auditId, projectId } = payload;
       
       logger.info(`[Worker] Tarea recibida. ID Auditoría: ${auditId}. Procesando...`);
@@ -322,6 +334,7 @@ export const runProjectAudit = task({
         await tasks.trigger<typeof triageAfterAudit>("triage-after-audit", {
           projectId: payload.projectId,
           userId: payload.userId ?? null,
+          correlationId: payload.correlationId,
         });
       } catch (triageErr) {
         logger.warn(
@@ -338,6 +351,7 @@ export const runProjectAudit = task({
         await tasks.trigger<typeof execBriefAfterAudit>("exec-brief-after-audit", {
           projectId: payload.projectId,
           userId: payload.userId ?? null,
+          correlationId: payload.correlationId,
         });
       } catch (briefErr) {
         logger.warn(
@@ -366,5 +380,4 @@ export const runProjectAudit = task({
       
       throw err;
     }
-  },
-});
+}

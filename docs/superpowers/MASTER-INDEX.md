@@ -106,7 +106,7 @@
   - [x] T06-05 trigger.test adversary (5) · anomaly (5) · monitoring (6) — escenarios MITRE, anomalías, alertas High/Critical
   - [x] T06-06 trigger.test scheduled-scan (3) · audit (6) · webhook (7) — stub config, flujo crawl/ownership, HMAC + SSRF
 - [x] **B07 — Performance** (completado 2026-09-26: PERFORMANCE_REPORT v2 con CWV lab Lighthouse 13.5.0 + bundle por ruta — scores 58/56/75.5/81 en /login·/·/pricing·/docs, CLS 0, JS inicial 978–1026 KB raw en /login·/, `.next/static` 9,03 MB; 6/8 librerías pesadas verificadas lazy, `recharts` eager en /ai/health)
-- [x] **B08 — Observabilidad** (completado 2026-09-25: OBSERVABILITY-MATRIX 11 señales + convención correlation IDs)
+- [x] **B08 — Observabilidad** (completado 2026-09-25: OBSERVABILITY-MATRIX 11 señales + convención correlation IDs; **2026-09-27: G1–G3 implementados** — ALS poblado en `proxy.ts` + `withRequestContext` en 61/61 rutas, `correlationId` en payloads Trigger.dev y export SIEM, `x-request-id` en fetch salientes, tests `src/lib/request-context.test.ts` 18/18)
 - [x] **B09 — i18n** (completado 2026-09-25: I18N-AUDIT paridad 0.00% + guard CI `i18n-parity.mjs`)
 - [x] **B10 — Final** (completado 2026-08-02; TRACEABILITY-MATRIX, RISK-REGISTER, TECH-DEBT-REGISTER, FINAL-REPORT §51, Quality Gate T10-04 27/27)
   - [x] T10-01 TRACEABILITY-MATRIX.md — 12 funcionalidades trazadas REQ→COMP→API→DB→JOB→TEST→DOC, gate 100/100
@@ -117,18 +117,20 @@
 
 ## Baseline de verificación
 
-> Registrado por T00-03 el 2026-08-01. Comandos: `pnpm lint` · `pnpm build` · `pnpm test` · `pnpm test:coverage`. Fuente: salida real de los comandos [VERIFIED].
+> Registrado por T00-03 el 2026-08-01; **actualizado 2026-09-27** con salida real de los comandos. Comandos: `pnpm lint` -> `pnpm build` -> `pnpm test` -> `pnpm test:coverage`. Fuente: salida real de los comandos [VERIFIED].
 
 | Comando | Resultado | Detalle |
 |---------|-----------|---------|
-| `pnpm lint` | **PASS** — 0 errores, 69 warnings | warnings `no-unused-vars` / `react-hooks/exhaustive-deps` preexistentes, no bloqueantes |
-| `pnpm build` | **PASS** — compilado OK (37.7s + TS 37.0s) | Next.js 16.2.4 Turbopack; 1 warning no bloqueante (NFT trace en `next.config.ts`) |
-| `pnpm test` | **PASS** — 248 tests / 248 passed (19 files) | Vitest 4.1.5, duración 27.52s |
-| `pnpm test:coverage` | **EJECUTADO — NO cumple umbrales globales (exit 1)** | Statements 12.51% (umbral 25%) · Branches 9.78% (umbral 20%) · Functions 8.8% (umbral 20%) · Lines 12.46% (umbral 25%) |
+| `pnpm lint` | **PASS** — 0 errores, 0 warnings | eslint flat config; sin bloqueantes de regresión |
+| `pnpm build` | **PASS** — Next.js 16 Turbopack, exit 0 | rutas dinámicas compiladas; proxy/middleware registrado |
+| `pnpm test` | **PASS** — 1897 tests / 1897 passed (207 files) | Vitest 4.1.11 |
+| `pnpm test:coverage` | **PASS (exit 0)** | Stmts 51.15% · Branch 39.83% · Funcs 43.6% · Lines 52.48% — umbrales duros **45/35/39/46** (`vitest.config.ts`, ratchet +5 por iteración) |
+| guards | **PASS (4/4)** | `contrast-guard.mjs` · `guard-client-cdns.mjs` · `guard-client-secrets.mjs` · `i18n-parity.mjs` (es=642 en=642, 0.00%) |
 
-> **Nota coverage:** los tests pasan en verde; el fallo es solo de umbral de cobertura global (preexistente, no causado por B00). Registrado como baseline para verificar no-regresión. Ver `docs/testing/TEST-COVERAGE-MATRIX.md` (B06) y `src/trigger/*` al 0% como áreas críticas.
->
-> **Nota quality gate:** `node scripts/quality-gate.mjs docs/superpowers/MASTER-INDEX.md --min 80` → **10/100 FAIL** porque el validador usa el template de 20 secciones de documentación técnica (scope/arquitectura/flujos/API…). MASTER-INDEX.md es un artefacto de gobernanza, no un doc técnico; el plan remite el ajuste del validador a B10. No bloqueante para B00 [OBSERVED].
+> **Nota histórica (baseline T00-03 2026-08-01):** 248 tests, Statements 12.51% bajo umbral 25% (exit 1). Aquel gap se cerró: ver TD-01 (cobertura) y TD-03 (route.test) en `docs/technical-debt/TECH-DEBT-REGISTER.md`.
+
+> **Nota quality gate:** `node scripts/quality-gate.mjs docs/superpowers/MASTER-INDEX.md --min 80` -> **10/100 FAIL** porque el validador usa el template de 20 secciones de documentación técnica (scope/arquitectura/flujos/API…). MASTER-INDEX.md es un artefacto de gobernanza, no un doc técnico; el plan remite el ajuste del validador a B10. No bloqueante para B00 [OBSERVED].
+
 
 ## Notas
 
@@ -201,7 +203,7 @@ El inventario de **42 rutas** está en `docs/architecture/PROJECT-INVENTORY.md` 
 
 ## Seguridad
 
-Trust boundaries: el middleware autentica rutas protegidas; RLS multi-tenant cubre 5/58 tablas (SB-001) — ver `docs/database/SUPABASE-AUDIT.md`. **VULN-001..007 remediados en P0** (XSS IA, secretToken webhooks, middleware /intelligence, looker fail-closed, pdf progress, gitleaks fail-hard). Threat register: 15 amenazas STRIDE en `docs/security/THREAT-REGISTER.md`. Controles: rate limiting Upstash Redis, egress-guard SSRF, escapeHtml antes del render. [VERIFIED]
+Trust boundaries: el middleware autentica rutas protegidas; RLS multi-tenant cubre 5/58 tablas (SB-001) — ver `docs/database/SUPABASE-AUDIT.md`. **VULN-001..007 remediados en P0** (XSS IA, secretToken webhooks, middleware /intelligence, looker fail-closed, pdf progress, gitleaks fail-hard). Threat register: 15 amenazas STRIDE en `docs/security/THREAT-REGISTER.md`. Controles: rate limiting en memoria (fail-open, ADR-002), egress-guard SSRF, escapeHtml antes del render. [VERIFIED]
 
 ## Testing
 

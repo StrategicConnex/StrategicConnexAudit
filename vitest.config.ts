@@ -36,12 +36,12 @@ export default defineConfig({
         'src/shared/db/test-rls.ts',
       ],
       thresholds: {
-        // Ratchet 2026-09-24: cobertura real 41.05/31.75/36.39/42 — umbrales
+        // Ratchet 2026-09-27: cobertura real 51.18/39.85/43.7/52.5 — umbrales
         // justo por debajo para impedir regresión; subir 5 pts cada vez que se superen.
-        branches: 30,
-        functions: 34,
-        lines: 41,
-        statements: 40,
+        branches: 35,
+        functions: 39,
+        lines: 46,
+        statements: 45,
       },
     },
   },

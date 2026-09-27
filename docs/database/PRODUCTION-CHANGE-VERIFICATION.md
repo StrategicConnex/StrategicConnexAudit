@@ -412,7 +412,7 @@ flowchart TB
 | `/api/security/siem/run` | POST | Servidor (cron) | CHANGE-001: índices GIN en `security_audit_logs` |
 | `/api/notifications/push-subscribe` | POST | Sesión | CHANGE-002: `push_subscriptions.active` boolean |
 
-Errores esperados post-cambio: 42501 (RLS denegado) → se verifica que solo ocurra para usuarios sin membresía (autorizado vs no autorizado, §12) [VERIFIED: rls.test.ts]; HTTP 500 → requiere rollback (§16). Rate limit: los endpoints de inteligencia usan `checkAiRateLimit`/rate limit Upstash fail-open [VERIFIED: SECURITY-AUDIT].
+Errores esperados post-cambio: 42501 (RLS denegado) → se verifica que solo ocurra para usuarios sin membresía (autorizado vs no autorizado, §12) [VERIFIED: rls.test.ts]; HTTP 500 → requiere rollback (§16). Rate limit: los endpoints de inteligencia usan `checkAiRateLimit`/rate limit en memoria fail-open [VERIFIED: SECURITY-AUDIT].
 
 ---
 

@@ -85,13 +85,12 @@ flowchart LR
     subgraph DATA["Data Access"]
         SH_DB["shared/db/<br/>schemas/ · rls.ts · index.ts"]
         SB["shared/lib/supabase/<br/>server.ts · admin.ts · middleware.ts"]
-        RL["shared/lib/ratelimit.ts<br/>(lazy Redis + allowlist)"]
+        RL["shared/lib/ratelimit.ts<br/>(in-memory + allowlist)"]
     end
 
     subgraph EXT["Servicios externos"]
-        SUPA["Supabase<br/>Postgres + Auth"]
-        REDIS["Upstash Redis"]
-        OSINT["APIs OSINT / DNS / CVE<br/>(connect-src CSP)"]
+          SUPA["Supabase<br/>Postgres + Auth"]
+          OSINT["APIs OSINT / DNS / CVE<br/>(connect-src CSP)"]
     end
 
     BR --> PX
@@ -105,9 +104,8 @@ flowchart LR
     EXEC --> SEC
     SRV --> SH_DB
     SH_DB --> SB
-    SB --> SUPA
-    RL --> REDIS
-    EXEC --> OSINT
+      SB --> SUPA
+      EXEC --> OSINT
 ```
 
 **FLOW-101 — Ciclo de vida de un request autenticado (secuencia)** · Nivel L3 · Mermaid `sequenceDiagram`
@@ -152,8 +150,8 @@ sequenceDiagram
 | Engine | `src/server/intelligence/core/dispatcher.ts` | Orquestación de scans | [VERIFIED] |
 | Ejecutores | `src/server/intelligence/executors/*.ts` (14 archivos de ejecución) | DNS, OSINT, CVE, TLS, email, tech-profiler, bucket, subdomain-takeover, network, website | [VERIFIED] |
 | SSRF guard | `src/server/intelligence/security/egress-guard.ts` | Bloqueo de IPs privadas (16 CIDRs v4 + 7 v6) + IPv4-mapped IPv6 (`::ffff:x.x.x.x`, RFC 4291) | [VERIFIED] |
-| Rate limit | `src/shared/lib/ratelimit.ts` | Lazy Redis + allowlist + headers IETF | [VERIFIED] |
-| Circuit breaker | `src/shared/lib/circuit-breaker.ts` | Fail-open con `REDIS_OP_TIMEOUT_MS=1500` | [VERIFIED] |
+| Rate limit | `src/shared/lib/ratelimit.ts` | Contador en memoria + allowlist + headers IETF | [VERIFIED] |
+| Circuit breaker | `src/shared/lib/circuit-breaker.ts` | Fail-open, estado en memoria por instancia | [VERIFIED] |
 | RLS | `src/shared/db/rls.ts` | `withRLS()` → `SET LOCAL ROLE authenticated` + JWT claims | [VERIFIED] |
 | Supabase admin | `src/shared/lib/supabase/admin.ts` | Client service-role solo server | [VERIFIED] |
 | Datos | `src/shared/db/schemas/*` (58 tablas) + `drizzle/` (22 migraciones) | Modelo relacional | [VERIFIED] |
@@ -288,7 +286,7 @@ Los 42 route handlers de `src/app/api` son el contrato HTTP del sistema. Los mé
 
 **Notas [VERIFIED]:**
 - La sesión se gestiona en `src/proxy.ts` → `updateSession()`; rutas protegidas redirigen a login si no hay sesión.
-- El rate limit global se aplica vía `src/shared/lib/ratelimit.ts` (lazy Redis, fail-open; `EMAIL_ALLOWLIST` exime a `palacios_juan@hotmail.com`). Respuestas 429 con cabeceras `RateLimit-Limit/Remaining/Reset` + `X-RateLimit-*`.
+  - El rate limit global se aplica vía `src/shared/lib/ratelimit.ts` (in-memory, fail-open; `EMAIL_ALLOWLIST` exime a `palacios_juan@hotmail.com`). Respuestas 429 con cabeceras `RateLimit-Limit/Remaining/Reset` + `X-RateLimit-*`.
 - API pública v1: `src/app/api/public/v1/intelligence/route.ts` usa `withPublicApi()` de `src/server/api/public-router.ts`; resuelve el usuario desde `req.apiKeyAuth.userId`.
 - Webhooks CI/CD: `src/app/api/webhooks/cicd/route.ts` verifica firma con `verifyWebhookSignature()` de `src/server/security/cicd-helper.ts`.
 
@@ -401,7 +399,7 @@ Este documento no repite el ERD: su foco es el **flujo** de datos entre capas, n
 | Trigger.dev | Plataforma de jobs programados/on-demand (`@trigger.dev/sdk/v3`) |
 | Task / Job | Unidad de trabajo definida con `task()` o `schedules.task()` en `src/trigger` |
 | RLS | Row Level Security de Supabase; `withRLS()` en `src/shared/db/rls.ts` |
-| Fail-open | Degradación graciosa: ante fallo de Redis, permite la operación |
+| Fail-open | Degradación graciosa: ante un fallo del limitador, permite la operación |
 | Fan-in / Fan-out | Conteo de dependencias entrantes/salientes por módulo (§5 de DEPENDENCY-GRAPH.md) |
 | SSRF | Server-Side Request Forgery; mitigado por `egress-guard.ts` |
 | Trust boundary | Frontera entre dominios de confianza; cada TB-* de §7 tiene su control |

@@ -2,15 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const mockGetUser = vi.fn(async () => ({ data: { user: null as { id: string } | null } }));
-const mockRedisGet = vi.fn();
-const mockRedisDel = vi.fn(async () => 1);
+const mockReadPdfProgress = vi.fn();
+const mockDeletePdfProgress = vi.fn(async () => {});
 
 vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: vi.fn(() => ({ auth: { getUser: mockGetUser } })),
 }));
 
-vi.mock("@/shared/lib/ratelimit", () => ({
-  redis: { get: mockRedisGet, del: mockRedisDel },
+vi.mock("@/server/reports/pdf-progress", () => ({
+  readPdfProgress: mockReadPdfProgress,
+  deletePdfProgress: mockDeletePdfProgress,
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -26,7 +27,7 @@ const user = { id: "user-1" };
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetUser.mockResolvedValue({ data: { user } });
-  mockRedisDel.mockResolvedValue(1);
+  mockDeletePdfProgress.mockResolvedValue(undefined);
 });
 
 async function readFirstChunk(res: Response): Promise<string> {
@@ -62,8 +63,8 @@ describe("GET /api/reports/pdf/progress — SSE de progreso (VULN-007)", () => {
     expect(res.status).toBe(400);
   });
 
-  it("sesión válida → 200 text/event-stream y clave Redis namespaceada por usuario", async () => {
-    mockRedisGet.mockResolvedValue({ percent: 100, status: "complete" });
+  it("sesión válida → 200 text/event-stream y lectura por (userId, genId)", async () => {
+    mockReadPdfProgress.mockResolvedValue({ percent: 100, status: "complete" });
     const res = await GET(createRequest("http://localhost/api/reports/pdf/progress?genId=gen-12345678"));
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("text/event-stream");
@@ -71,11 +72,11 @@ describe("GET /api/reports/pdf/progress — SSE de progreso (VULN-007)", () => {
 
     const chunk = await readFirstChunk(res);
     expect(chunk).toContain("event: complete");
-    expect(mockRedisGet).toHaveBeenCalledWith("pdf_progress:user-1:gen-12345678");
+    expect(mockReadPdfProgress).toHaveBeenCalledWith("user-1", "gen-12345678");
   });
 
   it("progreso en curso → evento progress con percent y step", async () => {
-    mockRedisGet.mockResolvedValue({ percent: 40, step: "Crawling" });
+    mockReadPdfProgress.mockResolvedValue({ percent: 40, step: "Crawling" });
     const res = await GET(createRequest("http://localhost/api/reports/pdf/progress?genId=gen-12345678"));
     const chunk = await readFirstChunk(res);
     expect(chunk).toContain("event: progress");
@@ -83,19 +84,19 @@ describe("GET /api/reports/pdf/progress — SSE de progreso (VULN-007)", () => {
     expect(chunk).toContain('"step":"Crawling"');
   });
 
-  it("sin clave en Redis → heartbeat en lugar de evento", async () => {
-    mockRedisGet.mockResolvedValue(null);
+  it("sin fila de progreso → heartbeat en lugar de evento", async () => {
+    mockReadPdfProgress.mockResolvedValue(null);
     const res = await GET(createRequest("http://localhost/api/reports/pdf/progress?genId=gen-12345678"));
     const chunk = await readFirstChunk(res);
     expect(chunk).toContain(": heartbeat");
   });
 
-  it("generación con error → evento error y limpieza de la clave", async () => {
-    mockRedisGet.mockResolvedValue({ status: "error", error: "render failed" });
+  it("generación con error → evento error y limpieza de la fila", async () => {
+    mockReadPdfProgress.mockResolvedValue({ status: "error", error: "render failed" });
     const res = await GET(createRequest("http://localhost/api/reports/pdf/progress?genId=gen-12345678"));
     const chunk = await readFirstChunk(res);
     expect(chunk).toContain("event: error");
     expect(chunk).toContain("render failed");
-    expect(mockRedisDel).toHaveBeenCalledWith("pdf_progress:user-1:gen-12345678");
+    expect(mockDeletePdfProgress).toHaveBeenCalledWith("user-1", "gen-12345678");
   });
 });

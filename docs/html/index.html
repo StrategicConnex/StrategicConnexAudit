@@ -65,7 +65,7 @@
     <a class="card" href="manual-instalacion.html">
       <div class="icon">🚀</div>
       <h3>Manual de Instalación</h3>
-      <p>De cero a servidor corriendo: Supabase, Upstash Redis, OpenRouter, Trigger.dev, VAPID, SIEM webhooks y variables de entorno paso a paso.</p>
+      <p>De cero a servidor corriendo: Supabase, OpenRouter, Trigger.dev, VAPID, SIEM webhooks y variables de entorno paso a paso.</p>
       <span class="tag">Guía paso a paso →</span>
     </a>
     <a class="card" href="manual-usuario.html">
@@ -107,7 +107,6 @@ flowchart TB
     end
     subgraph Data["Data Layer"]
         SUP["Supabase Postgres (RLS)"]
-        RED["Upstash Redis"]
     end
     subgraph Jobs["Background (Trigger.dev)"]
         SIEM["SIEM Exporter c/5min"]
@@ -123,7 +122,6 @@ flowchart TB
     API --> Core
     SA --> SUP
     Core --> SUP
-    Core --> RED
     API --> ROUTER
     Jobs --> SUP
     Jobs --> RED

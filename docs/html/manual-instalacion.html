@@ -60,7 +60,7 @@
     <a class="toc" href="#cuentas">2. Cuentas requeridas</a>
     <a class="toc" href="#quickstart">3. Quick Start (5 min)</a>
     <a class="toc" href="#supabase">4. Supabase (BD + Auth)</a>
-    <a class="toc" href="#upstash">5. Upstash Redis</a>
+    <a class="toc" href="#ratelimit">5. Rate limiting (sin Redis)</a>
     <a class="toc" href="#openrouter">6. OpenRouter (IA)</a>
     <a class="toc" href="#trigger">7. Trigger.dev (jobs)</a>
     <a class="toc" href="#vapid">8. VAPID (push)</a>
@@ -75,17 +75,15 @@
   <main>
     <div class="crumb"><a href="index.html">Documentación</a> / Manual de Instalación</div>
     <h1>🚀 Manual de Instalación</h1>
-    <p>Esta guía te lleva <strong>desde cero a servidor corriendo</strong> con todos los servicios configurados: Supabase, Upstash Redis, OpenRouter, Trigger.dev, VAPID keys y webhooks SIEM. Cada sección incluye pasos exactos, qué verás en pantalla y resolución de errores comunes.</p>
+    <p>Esta guía te lleva <strong>desde cero a servidor corriendo</strong> con todos los servicios configurados: Supabase, OpenRouter, Trigger.dev, VAPID keys y webhooks SIEM. Cada sección incluye pasos exactos, qué verás en pantalla y resolución de errores comunes.</p>
 
     <div class="diagram">
 <pre class="mermaid">
 flowchart TD
     A["git clone + pnpm install"] --> B["Configurar .env.local"]
     B --> C["Supabase: crear proyecto + credenciales"]
-    B --> D["Upstash: crear Redis + token"]
     B --> E["OpenRouter: API key gratuita"]
     C --> F["pnpm db:push (migraciones)"]
-    D --> F
     F --> G["pnpm dev → localhost:3000"]
     G --> H["Verificar health + login + AI"]
     E --> H
@@ -107,7 +105,6 @@ flowchart TD
     <table>
       <tr><th>Servicio</th><th>Propósito</th><th>Plan gratuito</th><th>Setup</th></tr>
       <tr><td><a style="color:var(--primary)" href="https://supabase.com">Supabase</a></td><td>PostgreSQL + Auth + RLS</td><td>500 MB, 50k filas</td><td>10 min</td></tr>
-      <tr><td><a style="color:var(--primary)" href="https://upstash.com">Upstash</a></td><td>Redis serverless (rate limit)</td><td>10k commands/día</td><td>5 min</td></tr>
       <tr><td><a style="color:var(--primary)" href="https://openrouter.ai/keys">OpenRouter</a></td><td>Modelos IA gratuitos</td><td>50 req/día sin tarjeta</td><td>5 min</td></tr>
       <tr><td><a style="color:var(--primary)" href="https://vercel.com">Vercel</a></td><td>Hosting</td><td>Hobby (100 GB)</td><td>5 min</td></tr>
       <tr><td><a style="color:var(--primary)" href="https://trigger.dev">Trigger.dev</a></td><td>Background jobs / cron</td><td>3 tasks, 10k runs/mes</td><td>5 min</td></tr>
@@ -158,13 +155,9 @@ pnpm dev
     <p>Resultado esperado: listado de tablas (audits, projects, intelligence_*, security_audit_logs, siem_alert_logs, anomaly_detections, adversary_scenarios, plugin_packages, dns_history, whois_history, etc.) y <em>Applied migrations</em>.</p>
     <div class="box warn"><b>Direct URL</b>Si ves <code>DIRECT_URL is missing</code>, asegúrate de copiar <code>.env.example</code> → <code>.env.local</code> y llenar <code>DIRECT_URL</code>. Si tu password tiene <code>@ # $</code>, usa URL encoding (<code>@</code> → <code>%40</code>).</div>
 
-    <h2 id="upstash">5. Upstash Redis — Rate Limiting</h2>
-    <ol class="steps">
-      <li>upstash.com → <strong>Create database</strong> → nombre <code>scaudit-ratelimit</code>, región cercana, <em>Enable Global</em> recomendado.</li>
-      <li>En la pantalla de detalles copia <code>REST URL</code> → <code>UPSTASH_REDIS_REST_URL</code> y <code>REST Token</code> → <code>UPSTASH_REDIS_REST_TOKEN</code>.</li>
-    </ol>
-    <pre><code>curl -s -X GET "$UPSTASH_REDIS_REST_URL/ping" -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN"
-# → {"result":"PONG"}</code></pre>
+    <h2 id="ratelimit">5. Rate Limiting — local, sin Redis</h2>
+    <div class="box tip"><b>Ya configurado</b>El rate limit y el circuit breaker corren <strong>en memoria dentro de la app</strong>: no requieren cuenta, token ni servicio externo. No hay nada que crear aquí (desde 2026-09-27; ver <code>docs/architecture/ADR/ADR-002</code>).</div>
+    <p>Limita 10 req/min por IP en login/registro (<code>src/shared/lib/ratelimit.ts</code>) con <em>fail-open</em>: si algo falla, la petición sigue adelante. En producción multipod la ventana es <strong>por instancia</strong> (no global) — trade-off documentado en ADR-002 §14.</p>
 
     <h2 id="openrouter">6. OpenRouter — Modelos de IA Gratuitos</h2>
     <ol class="steps">
@@ -227,8 +220,6 @@ SIEM_WEBHOOK_SPLUNK=https://http-inputs-mysplunk.splunkcloud.com:8088/services/c
       <tr><td><code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>Supabase → Settings → API</td><td>Service role (bypass RLS)</td></tr>
       <tr><td><code>DATABASE_URL</code></td><td>Supabase → pooler :6543</td><td>Conexión principal</td></tr>
       <tr><td><code>DIRECT_URL</code></td><td>Supabase → direct :5432</td><td>Migraciones + workers</td></tr>
-      <tr><td><code>UPSTASH_REDIS_REST_URL</code></td><td>Upstash → REST URL</td><td>Rate limiting API</td></tr>
-      <tr><td><code>UPSTASH_REDIS_REST_TOKEN</code></td><td>Upstash → REST Token</td><td>Auth Redis</td></tr>
       <tr><td><code>CRON_SECRET</code></td><td>Generada por ti</td><td>Protege endpoints de cron</td></tr>
     </table>
     <h3>Opcionales</h3>
@@ -271,8 +262,6 @@ vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 vercel env add SUPABASE_SERVICE_ROLE_KEY
 vercel env add DATABASE_URL
 vercel env add DIRECT_URL
-vercel env add UPSTASH_REDIS_REST_URL
-vercel env add UPSTASH_REDIS_REST_TOKEN
 vercel env add CRON_SECRET
 vercel env add OPENROUTER_API_KEY
 vercel env add AUTH_EMAIL_ALLOWLIST</code></pre>
@@ -293,12 +282,9 @@ vercel env add AUTH_EMAIL_ALLOWLIST</code></pre>
     <h2 id="postinstall">14. Verificación Post-Instalación</h2>
     <pre><code># 1. Health check
 curl http://localhost:3000/api/public/v1/health
-# → {"status":"ok","services":{"redisConfigured":true,"dbConfigured":true}}
+# → {"status":"ok","services":{"dbConfigured":true}}
 
-# 2. Redis
-curl -s -X GET "$UPSTASH_REDIS_REST_URL/ping" -H "Authorization: Bearer $UPSTASH_REDIS_REST_TOKEN"
-
-# 3. AI
+# 2. AI
 curl -s -X POST https://openrouter.ai/api/v1/chat/completions \
   -H "Authorization: Bearer $OPENROUTER_API_KEY" -H "Content-Type: application/json" \
   -d '{"model":"google/gemini-2.0-flash-exp:free","messages":[{"role":"user","content":"ping"}],"max_tokens":5}'</code></pre>

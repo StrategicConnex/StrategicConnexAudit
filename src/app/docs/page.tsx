@@ -14,7 +14,7 @@ interface DocCard {
 const DOCS: DocCard[] = [
   {
     title: "Instalación",
-    description: "Guía paso a paso para configurar el entorno de desarrollo local. Supabase, Upstash Redis, OpenRouter y variables de entorno.",
+    description: "Guía paso a paso para configurar el entorno de desarrollo local. Supabase, OpenRouter y variables de entorno.",
     href: "/docs/installation",
     icon: <Wrench size={20} />,
     category: "Guía",

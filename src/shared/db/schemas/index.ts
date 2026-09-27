@@ -519,3 +519,4 @@ export * from "./adversary";
 export * from "./plugins";
 // ─── 43. User Logs (telemetría de accesos — panel admin)
 export * from "./user-logs";
+export * from "./pdf-progress";

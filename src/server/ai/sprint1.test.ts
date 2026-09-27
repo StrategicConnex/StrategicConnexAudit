@@ -99,7 +99,7 @@ let fetchHandler: FetchHandler = () => new Response("{}", { status: 200 });
 vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
   const urlStr = String(url);
   if (!urlStr.includes("openrouter.ai")) {
-    return new Response("[]", { status: 200 }); // Upstash /pipeline
+    return new Response("[]", { status: 200 }); // fuera de OpenRouter
   }
   return fetchHandler(urlStr, (init ?? {}) as RequestInit);
 }));

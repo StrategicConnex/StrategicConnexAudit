@@ -1,15 +1,18 @@
 # Plan de remediación — noUncheckedIndexedAccess (última fase)
 
-**Fecha**: 2026-08-24 · **Estado**: 284/368 errores resueltos (77%) · **Restantes**: 84
+**Fecha**: 2026-08-24 · **Estado**: ✅ **CERRADO 2026-09-27** — flag **activo** en `tsconfig.json` (`"noUncheckedIndexedAccess": true`) + `npx tsc --noEmit` **exit 0 / 0 errores** + suite Vitest **1897/1897** · (historial: 284/368 resueltos al crear este plan, 84 restantes — todos cerrados)
 
 ## Objetivo
 
 Activar `noUncheckedIndexedAccess` en `tsconfig.json` de forma permanente. Criterio de done:
-`npx tsc --noEmit` en 0 errores CON el flag activo + suite vitest 653/653.
+`npx tsc --noEmit` en 0 errores CON el flag activo + suite vitest en verde.
+
+**Criterio de done: CUMPLIDO** [VERIFIED 2026-09-27] — `tsc` exit 0 con el flag activo, suite completa en verde.
 
 ## Estado actual
 
-- Flag REVERTIDO temporalmente (CI debe pasar). Los 284 fixes anteriores están commiteados.
+- **Flag ACTIVO de forma permanente** (ya no revertido). Los fixes anteriores están commiteados y la suite pasa.
+- El dump de 84 errores de 2026-08-24 que sigue más abajo queda **histórico** (no hay errores pendientes: `tsc --noEmit` → 0).
 - Este plan sustituye al intento de autofix masivo, que fue **revertido por corrupto** (insertaba
   `!` en nombres de propiedad, tras `return` y dentro de llamadas — ver "Anti-patrones").
 

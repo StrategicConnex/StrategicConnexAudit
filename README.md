@@ -113,7 +113,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 
 ### 🛡️ Seguridad & SIEM
 - **CSP dinámico**: Content-Security-Policy con nonce por request (Next.js 16 proxy)
-- **Rate limiting**: `withRateLimit` decorator genérico con Upstash Redis (por IP o user)
+- **Rate limiting**: `withRateLimit` decorator genérico con contador en memoria por instancia (por IP o user)
 - **Headers estándar**: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` en todas las respuestas
 - **Audit logging**: eventos estructurados en `security_audit_logs` con persistencia en Supabase
 - **SIEM Exporter**: detección de patrones sospechosos (open redirect attacks, rate limit bypass, CSP spikes)
@@ -196,7 +196,7 @@ Documentación completa en formato **HTML** con diagramas Mermaid, skeletons de 
 | Documento | Descripción |
 |-----------|-------------|
 | [Centro de Documentación](docs/html/index.html) | Hub con navegación y diagrama de arquitectura de alto nivel |
-| [Manual de Instalación](docs/html/manual-instalacion.html) | De cero a servidor corriendo: Supabase, Upstash, OpenRouter, Trigger.dev, VAPID, SIEM |
+| [Manual de Instalación](docs/html/manual-instalacion.html) | De cero a servidor corriendo: Supabase, OpenRouter, Trigger.dev, VAPID, SIEM |
 | [Manual de Usuario Final](docs/html/manual-usuario.html) | Guía de uso completa: dashboard, inteligencia, reportes IA, adversary, plugins, PWA |
 | [Manual de Funcionamiento Técnico](docs/html/manual-funcionamiento.html) | Arquitectura, pipeline de escaneo, executors tipados, history DNS/WHOIS, SIEM |
 
@@ -246,8 +246,7 @@ flowchart TB
         end
 
         subgraph DATA["Data"]
-            DB["🗄️ Supabase Postgres<br/>67 tablas · 37 migraciones SQL · RLS"]
-            REDIS["⚡ Upstash Redis<br/>rate limit + cache (fail-open)"]
+            DB["??? Supabase Postgres<br/>67 tablas · 37 migraciones SQL · RLS"]
         end
     end
 
@@ -274,7 +273,6 @@ flowchart TB
     API_CRON --> CORE
     TD --> CORE
     CORE --> DB
-    CORE --> REDIS
     DB --> AI
     SEC --> DB
 ```
@@ -338,7 +336,6 @@ src/server/
 - **ORM**: Drizzle ORM 0.45
 - **Database**: PostgreSQL (Supabase)
 - **Auth**: Supabase Auth (Magic Link)
-- **Cache**: Upstash Redis
 - **Background Jobs**: Trigger.dev 4.4
 - **AI**: OpenRouter API (free models)
 
@@ -867,7 +864,6 @@ Refactorizaciones de la fase de consolidación (C-series + best practices):
 - Node.js >= 20
 - pnpm >= 9
 - Una cuenta de [Supabase](https://supabase.com) (gratuita)
-- Una cuenta de [Upstash](https://upstash.com) (gratuita, para Redis)
 - Una cuenta de [OpenRouter](https://openrouter.ai/keys) (gratuita, sin tarjeta)
 
 ### Pasos
@@ -909,10 +905,6 @@ DIRECT_URL=postgresql://...         # Directa :5432 (workers/migraciones)
 # ⚠️ Si tu password contiene `$` seguido de letra/dígito (ej. `$1ab`),
 # Next.js lo expande como variable vacía y rompe la auth (28P01).
 # Escápalo como `\$` o, mejor, rota el password a uno sin `$`.
-
-# ─── Upstash Redis (obligatorio para rate limiting) ─────────────
-UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
-UPSTASH_REDIS_REST_TOKEN=xxx
 
 # ─── OpenRouter (opcional — AI Copilot, Reportes) ───────────────
 OPENROUTER_API_KEY=sk-or-v1-...    # https://openrouter.ai/keys
@@ -1028,7 +1020,7 @@ SCAUDIT Pro usa un **design system propietario** definido en OKLCH, inspirado en
 - **Decorator genérico**: `withRateLimit(config, handler)` envuelve cualquier route handler
 - **Headers estándar**: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` en todas las respuestas
 - **Identificación por IP**: extracción jerárquica (x-vercel-forwarded-for → x-real-ip → x-forwarded-for)
-- **Fail closed** en producción si Redis no está disponible
+- **Fail-open** ante cualquier error interno del limitador (nunca 429 masivos; ADR-002)
 - **Audit logging**: cada rate limit hit se registra en `security_audit_logs`
 - **Rate limit por API Key**: 60 req/min en API pública
 

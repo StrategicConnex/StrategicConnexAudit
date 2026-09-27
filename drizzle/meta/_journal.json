@@ -302,6 +302,13 @@
       "when": 1790337604000,
       "tag": "2026-09-24_recommended_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1790596804000,
+      "tag": "2026-09-27_pdf_progress",
+      "breakpoints": true
     }
   ]
 }

@@ -1,15 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Reutiliza los mocks de @upstash para no instanciar Redis real
-vi.mock("@upstash/redis", () => ({ Redis: vi.fn(() => ({})) }));
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: class {
-    limit = vi.fn();
-    static slidingWindow = vi.fn();
-  },
-}));
-vi.mock("./audit-log", () => ({ logSecurityEvent: vi.fn() }));
-
 import {
   extractClientIp,
   buildRateLimitHeaders,
@@ -21,7 +11,7 @@ const mkReq = (headers: Record<string, string>) => ({
   headers: new Headers(headers),
 });
 
-describe("ratelimit — extractClientIp (precedencia de confianza)", () => {
+describe("ratelimit â€” extractClientIp (precedencia de confianza)", () => {
   it("prioriza x-vercel-forwarded-for (no falsificable)", () => {
     const ip = extractClientIp(mkReq({
       "x-vercel-forwarded-for": "203.0.113.9",
@@ -39,7 +29,7 @@ describe("ratelimit — extractClientIp (precedencia de confianza)", () => {
     expect(ip).toBe("198.51.100.1");
   });
 
-  it("usa el primer valor de x-forwarded-for como último recurso", () => {
+  it("usa el primer valor de x-forwarded-for como Ãºltimo recurso", () => {
     const ip = extractClientIp(mkReq({ "x-forwarded-for": "192.0.2.1, 10.0.0.1" }));
     expect(ip).toBe("192.0.2.1");
   });
@@ -53,7 +43,7 @@ describe("ratelimit — extractClientIp (precedencia de confianza)", () => {
     expect(ip).toBe("203.0.113.42");
   });
 
-  it("genera fallback hash anon-XXXXXX sin ningún header de IP", () => {
+  it("genera fallback hash anon-XXXXXX sin ningÃºn header de IP", () => {
     const ip = extractClientIp(mkReq({
       "user-agent": "Mozilla/5.0 TestBrowser/1.0",
       "accept-language": "es-ES,es;q=0.9",
@@ -67,8 +57,8 @@ describe("ratelimit — extractClientIp (precedencia de confianza)", () => {
   });
 });
 
-describe("ratelimit — buildRateLimitHeaders / rateLimitResponse", () => {
-  it("setea headers estándar IETF y legacy X-", () => {
+describe("ratelimit â€” buildRateLimitHeaders / rateLimitResponse", () => {
+  it("setea headers estÃ¡ndar IETF y legacy X-", () => {
     const h = buildRateLimitHeaders({
       success: true, limit: 10, remaining: 9, reset: 1234, retryAfter: 0,
     });
@@ -106,7 +96,7 @@ describe("ratelimit — buildRateLimitHeaders / rateLimitResponse", () => {
   });
 });
 
-describe("ratelimit — withRateLimit (middleware de route handlers)", () => {
+describe("ratelimit â€” withRateLimit (middleware de route handlers)", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
   });
@@ -125,7 +115,7 @@ describe("ratelimit — withRateLimit (middleware de route handlers)", () => {
     expect(body.who).toMatch(/^(anon-|127)/);
   });
 
-  it("429 cuando se excede el límite (fallback en memoria)", async () => {
+  it("429 cuando se excede el lÃ­mite (fallback en memoria)", async () => {
     const wrapped = withRateLimit({ limit: 2, window: 60, prefix: "t2" }, handler);
     const req = () => new Request("http://localhost/api/x", { method: "POST" });
 

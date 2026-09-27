@@ -11,17 +11,18 @@ estado: Aprobado
 
 # FINAL REPORT — SCAUDIT Pro (B10, §51 del Master Prompt)
 
-> **⚠️ ACTUALIZACIÓN 2026-09-17 (Fase 0.1 del plan de mejoras).** Este reporte es un **snapshot fechado (2026-08-02)**. Estado real verificado contra el código actual:
+> **⚠️ ACTUALIZACIÓN 2026-09-27 (Fase 0.1 + cierre G1–G3 + B07/B08).** Este reporte es un **snapshot fechado (2026-08-02)**. Estado real verificado contra el código actual:
 >
-> | Dato del reporte | Valor real 2026-09-17 |
+> | Dato del reporte | Valor real 2026-09-27 |
 > |------------------|------------------------|
-> | 58 tablas · RLS 5/58 | **67 tablas `pgTable`**, **67/67 con `ENABLE RLS`** y al menos una policy (0 sin proteger) |
+> | 58 tablas · RLS 5/58 | **69 tablas `pgTable`**, **69/69 con `ENABLE RLS`** y al menos una policy (0 sin proteger) |
 > | Journal 0021 · 22 migraciones | **37 ficheros SQL** (33 en journal `drizzle-kit` + 4 manuales) |
-> | API Layer 42 route handlers | **55 route handlers** (50 privados + 5 públicos v1) |
-> | Jobs 12 triggers | **18 triggers** Trigger.dev (9 con test) |
+> | API Layer 42 route handlers | **64 route handlers** (61 `route.ts` + 3 `route.tsx`; **61/61 `route.ts` con `route.test.ts`** → TD-03 cerrado) |
+> | Jobs 12 triggers | **22 triggers** Trigger.dev — **22/22 con test** |
 > | 34 tools nativos + 9 catálogo | **34 nativas con executor + 9 huérfanas = 43 definiciones** |
-> | Testing 29 archivos · 298 tests · Stmts 13.72% | **92 archivos · 754 tests (751 ✅ / 3 ❌) · Stmts 28.53% · Branch 21.62% · Funcs 24.61% · Lines 28.88%** |
-> | Build PASS | ✅ **PASS** hoy (bloqueante `keywords.ts:224` resuelto en Fase 0: `normalizeDomain` movido a `src/shared/utils/domain.ts`) |
+> | Testing 29 archivos · 298 tests · Stmts 13.72% | **207 archivos · 1897 tests ✅ · Stmts 51.15% · Branch 39.83% · Funcs 43.6% · Lines 52.48%** (umbrales duros 45/35/39/46) |
+> | Build PASS | ✅ **PASS** hoy (`pnpm build` exit 0, Next.js 16 Turbopack) |
+> | Observabilidad (§17) "correlation IDs" como target | ✅ **G1–G3 implementados 2026-09-27** — ALS en `proxy.ts` + `withRequestContext` 61/61 rutas, `correlationId` en payloads Trigger.dev y export SIEM, `x-request-id` en fetch salientes |
 >
 > MAT-500 sigue con 5 PENDING (aprobación owner + backup + push de migraciones), pero ya no por cobertura ni por RLS: ambos avanzaron sustancialmente.
 
@@ -46,7 +47,7 @@ Consolidar en un **reporte maestro de 30 secciones (§51 del Master Prompt)** el
 
 ## 2. Executive Summary
 
-SCAUDIT Pro es una plataforma enterprise de inteligencia cibernética y monitoreo de superficie de ataque (Next.js 16 · React 19 · Tailwind v4 · TypeScript 5 · Supabase/PostgreSQL + Drizzle · Upstash Redis · OpenRouter :free · Trigger.dev · Vercel) [VERIFIED — ENTERPRISE-ARCHITECTURE].
+SCAUDIT Pro es una plataforma enterprise de inteligencia cibernética y monitoreo de superficie de ataque (Next.js 16 · React 19 · Tailwind v4 · TypeScript 5 · Supabase/PostgreSQL + Drizzle · OpenRouter :free · Trigger.dev · Vercel) [VERIFIED — ENTERPRISE-ARCHITECTURE].
 
 | Área | Estado | Fuente |
 |------|--------|--------|
@@ -88,7 +89,7 @@ SCAUDIT Pro es una plataforma enterprise de inteligencia cibernética y monitore
 | DB | Supabase PostgreSQL + Drizzle, 58 tablas, RLS 5/58 | DATA-DICTIONARY · SUPABASE-AUDIT |
 | Docs | GitHub Pages (just-the-docs) | ENTERPRISE-ARCHITECTURE §12 |
 
-**Dependencias clave:** `tool-registry.ts` como Single Source of Truth (ADR-001) · egress-guard SSRF en toda salida HTTP (ADR-005) · Redis fail-open (ADR-002). [VERIFIED — ADRs]
+**Dependencias clave:** `tool-registry.ts` como Single Source of Truth (ADR-001) · egress-guard SSRF en toda salida HTTP (ADR-005) · fail-open del limitador/circuit breaker (ADR-002). [VERIFIED — ADRs]
 
 ---
 
@@ -135,7 +136,7 @@ THREAT-REGISTER documenta **15 amenazas STRIDE** [VERIFIED]:
 | Tampering | Prompt injection (XSS IA), HMAC webhooks | ✅ escapeHtml + HMAC-SHA256 |
 | Repudiation | Auditoría de eventos | ✅ security_audit_logs + SIEM |
 | Information Disclosure | IDOR cross-tenant, fuga realtime (SB-002) | ✅ auth+RLS / SB-002 pendiente |
-| DoS | Rate limit fail-open, Redis caída | ✅ ADR-002 fail-open |
+| DoS | Rate limit fail-open, sin dependencia externa (limitador local) | ✅ ADR-002 fail-open |
 | Elevation | RLS bypass, Service Role a cliente | ✅ SB-000 server-only |
 
 ---
@@ -336,7 +337,7 @@ flowchart TB
     APP["Next.js 16 App"] --> API["42 Route Handlers"]
     API --> DB[(Supabase + Drizzle)]
     API --> IA["AI Router :free + cache"]
-    API --> RD["Upstash Redis fail-open"]
+    API --> RL["Rate limit en memoria (fail-open)"]
     TR["12 Trigger.dev Jobs"] --> DB
     SEC["Seguridad: RLS + egress-guard + CSP"] --> API
     TST["Testing: 29 files · 13.72% Stmts"] --> APP

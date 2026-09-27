@@ -13,12 +13,13 @@
  */
 
 import { envSecrets } from "@/shared/config/env-secrets";
-import { RedisCircuitBreaker } from "@/shared/lib/circuit-breaker";
+import { CircuitBreaker } from "@/shared/lib/circuit-breaker";
 import { recordAiUsage } from "./ai-usage";
 import { buildSemanticKey, getSemanticCache, setSemanticCache } from "./ai-cache";
 import { callAnthropicText, anthropicDefaultModel, isAnthropicConfigured } from "./providers";
 import { estimateCostUsd } from "./ai-cost";
 import { promptVersion } from "./prompt-version";
+import { correlatedHeaders } from "@/lib/request-context";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -317,7 +318,7 @@ export const MODEL_TIMEOUTS: Record<AITaskType, number> = {
 
 // ─── Circuit Breaker for OpenRouter ─────────────────────────────────────────
 
-const openRouterCircuitBreaker = new RedisCircuitBreaker("openrouter_api", {
+const openRouterCircuitBreaker = new CircuitBreaker("openrouter_api", {
   failureThreshold: 5,
   recoveryTimeout: 30_000,
   successThreshold: 2,
@@ -400,12 +401,12 @@ async function callModel(
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
-    headers: {
+    headers: correlatedHeaders({
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
       "HTTP-Referer": "https://scaudit.app",
       "X-Title": "StrategicAudit Pro",
-    },
+    }),
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
