@@ -1,9 +1,23 @@
 ---
 ---
+{% if site.logo %}
+$logo: "{{ site.logo | relative_url }}";
+{% endif %}
 
 // ──────────────────────────────────────────────
 // SCAUDIT Pro — Just the Docs custom overrides
+// Orden (idéntico al entry del tema, assets/css/just-the-docs-default.scss):
+//   1. soporte + setup del tema
+//   2. color schemes (asignan valores fijos, sin !default)
+//   3. overrides de variables SCAUDIT  ← ganan por asignarse DESPUÉS
+//   4. módulos del tema + callouts/custom
+//   5. reglas concretas SCAUDIT ← ganan por orden
 // ──────────────────────────────────────────────
+
+@import "support/support";
+@import "custom/setup";
+@import "color_schemes/light";
+@import "color_schemes/dark";
 
 // ── Brand colors (match SCAUDIT design system) ─
 $scaudit-indigo: #818cf8;
@@ -27,8 +41,10 @@ $table-background-color: $scaudit-card;
 $code-background-color: #0d0e18;
 $feedback-color: #14152a;
 
-// ── Import base theme ─────────────────────────
-@import "../../../../_sass/color_schemes/dark";
+// ── Theme styles ──────────────────────────────
+@import "modules";
+{% include css/callouts.scss.liquid color_scheme = "dark" %}
+{% include css/custom.scss.liquid %}
 
 // ── Custom overrides ─────────────────────────
 .site-title {
