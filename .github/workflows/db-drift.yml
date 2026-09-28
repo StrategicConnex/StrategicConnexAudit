@@ -32,8 +32,7 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: |
           if [ -z "$DIRECT_URL" ]; then
-            echo "❌ Secreto DIRECT_URL no configurado."
-            echo "   Añádelo en Settings → Secrets → Actions para activar este check."
-            exit 1
+            echo "::warning::Secreto DIRECT_URL no configurado — check de drift contra la BD OMITIDO (el journal de migraciones SÍ se validó arriba)."
+            exit 0
           fi
           node scripts/db/drift-check.mjs

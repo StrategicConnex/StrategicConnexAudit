@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/shared/lib/supabase/server'
-import { extractClientIp, checkCallbackRateLimit, rateLimitResponse, isEmailAllowlisted } from '@/shared/lib/ratelimit'
+import { extractClientIp, checkCallbackRateLimit, rateLimitResponse, buildRateLimitHeaders, isEmailAllowlisted } from '@/shared/lib/ratelimit'
 import { logSecurityEvent, eventFromRequest } from '@/shared/lib/audit-log'
 import { sanitizeNextPath } from '@/shared/lib/safe-next'
 
@@ -39,6 +39,18 @@ export async function GET(request: Request): Promise<Response> {
     });
   }
 
+  // Headers de cuota (RateLimit-* / X-RateLimit-*) adjuntados a TODA respuesta
+  // cuando el límite se evaluó — mismo criterio que withRateLimit.
+  let rlHeaders: Headers | null = null
+  const withRateLimitHeaders = (res: Response): Response => {
+    if (rlHeaders) {
+      rlHeaders.forEach((value, key) => {
+        if (!res.headers.has(key)) res.headers.set(key, value)
+      })
+    }
+    return res
+  }
+
   if (code) {
     // Fábrica compartida (única implementación del cookie-adapter SSR).
     // En un Route Handler cookieStore.set siempre funciona: el try/catch de
@@ -73,13 +85,14 @@ export async function GET(request: Request): Promise<Response> {
         });
         return rateLimitResponse(rateResult)
       }
+      rlHeaders = buildRateLimitHeaders(rateResult)
     }
 
     if (!error && user) {
-      return NextResponse.redirect(`${origin}${safeNext}`)
+      return withRateLimitHeaders(NextResponse.redirect(`${origin}${safeNext}`))
     }
   }
 
   // Retornar al login con error si algo falla
-  return NextResponse.redirect(`${origin}/login?error=auth-code-error`)
+  return withRateLimitHeaders(NextResponse.redirect(`${origin}/login?error=auth-code-error`))
 }

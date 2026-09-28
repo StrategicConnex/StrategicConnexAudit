@@ -32,29 +32,38 @@ test.describe("Login Page", () => {
     await expect(page.locator("h1")).toContainText(/StrategicAudit Pro/i);
   });
 
-  test("has email and password fields", async ({ page }) => {
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
-    await expect(page.locator("button[type=submit]")).toContainText(/Entrar/i);
+  test("has email field", async ({ page }) => {
+    const email = page.locator("#login-email");
+    await expect(email).toBeVisible();
+    await expect(email).toHaveAttribute("type", "email");
   });
 
-  test("has Magic Link button", async ({ page }) => {
-    await expect(page.locator("button", { hasText: /Magic Link/i })).toBeVisible();
+  test("primary CTA is the magic link button", async ({ page }) => {
+    await expect(page.locator('button[type="submit"]').first()).toContainText(/Enviar enlace/i);
   });
 
-  test("does not submit with invalid email", async ({ page }) => {
-    await page.locator('input[type="email"]').fill("not-an-email");
-    await page.locator('input[type="password"]').fill("short");
-    await page.locator("button[type=submit]").click();
+  test("does not submit with empty or invalid email", async ({ page }) => {
+    const submit = page.locator('button[type="submit"]').first();
+    await expect(submit).toBeDisabled();
+    // Con '@' pero formato inválido → backend responde 400 → botón deshabilitado
+    await page.locator("#login-email").fill("malformed@");
+    await expect(submit).toBeDisabled();
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("has support link", async ({ page }) => {
-    await expect(page.locator("button", { hasText: /Contactar Soporte/i })).toBeVisible();
+  test("password access is collapsed by default and expands on toggle", async ({ page }) => {
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
+    const toggle = page.getByRole("button", { name: /Acceso con contrase/i });
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    const password = page.locator('input[type="password"]');
+    await expect(password).toBeVisible();
+    await expect(password).toHaveAttribute("autocomplete", "current-password");
   });
 
-  test("has forgot password link", async ({ page }) => {
-    await expect(page.locator("button", { hasText: /Olvidaste/i })).toBeVisible();
+  test("has support and security footer", async ({ page }) => {
+    await expect(page.getByText(/Protegido por Supabase Auth/)).toBeVisible();
+    await expect(page.getByText(/Enterprise Grade/)).toBeVisible();
   });
 });
 
@@ -68,9 +77,10 @@ test.describe("API Health", () => {
     expect(body).toHaveProperty("success");
   });
 
-  test("GET /api/monitoring returns data", async ({ request }) => {
+  test("GET /api/monitoring responde JSON (401 sin sesión)", async ({ request }) => {
     const res = await request.get("/api/monitoring");
-    expect(res.ok()).toBeTruthy();
+    // La ruta exige sesión: 401 en CI/anónimo, 200 si hubiera cookie de auth.
+    expect([200, 401]).toContain(res.status());
     const body = await res.json();
     expect(body).toBeDefined();
   });

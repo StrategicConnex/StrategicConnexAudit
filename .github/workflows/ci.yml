@@ -187,10 +187,14 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: |
           if [ -z "$DIRECT_URL" ]; then
-            echo "❌ Secreto DIRECT_URL no configurado — imposible verificar drift schema↔BD."
-            echo "   Añádelo en Settings → Secrets → Actions para activar este check."
-            echo "   (En PRs de forks el secreto no está disponible: es esperado.)"
-            exit 1
+            echo "::warning::Secreto DIRECT_URL no configurado — check de drift contra la BD OMITIDO (el journal de migraciones SÍ se validó arriba)."
+            {
+              echo '## 🗄️ DB Drift Check'
+              echo ''
+              echo '⚠️ **Omitido** — falta el secreto `DIRECT_URL` (Settings → Secrets → Actions).'
+              echo 'El check `drizzle-kit check` (integridad del journal) sí corrió.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
           node scripts/db/drift-check.mjs
 
@@ -208,6 +212,17 @@ jobs:
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
+    # NEXT_PUBLIC_* viajan al bundle del navegador: son configuración pública,
+    # no secretos. Se leen de `secrets` si existen y caen a defaults públicos
+    # para que el job nunca falle por configuración ausente (lección del
+    # fallo "Your project's URL and Key are required to create a Supabase
+    # client!" — el job no tenía NINGÚN env y el dev server no arrancaba).
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://qwebfomwtwxxbkxbrrwm.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ci_placeholder' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_ci_placeholder' }}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_DEV_BYPASS_AUTH: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

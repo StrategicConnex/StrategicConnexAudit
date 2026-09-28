@@ -32,6 +32,16 @@ vi.mock("@/shared/lib/ratelimit", () => ({
   rateLimitResponse: (result: { retryAfter?: number }) =>
     new Response(null, { status: 429, headers: { "x-retry-after": String(result.retryAfter ?? 60) } }),
   isEmailAllowlisted: (email: string | null | undefined) => mockAllowlist(email),
+  buildRateLimitHeaders: (result: { limit: number; remaining: number; reset: number }) => {
+    const headers = new Headers();
+    headers.set("RateLimit-Limit", String(result.limit));
+    headers.set("RateLimit-Remaining", String(result.remaining));
+    headers.set("RateLimit-Reset", String(result.reset));
+    headers.set("X-RateLimit-Limit", String(result.limit));
+    headers.set("X-RateLimit-Remaining", String(result.remaining));
+    headers.set("X-RateLimit-Reset", String(result.reset));
+    return headers;
+  },
 }));
 
 vi.mock("@/shared/lib/audit-log", () => ({
@@ -78,6 +88,10 @@ describe("Auth: Callback — GET", () => {
     const res = await GET(createRequest("?code=abc123&next=/dashboard"));
     expect(res.status).toBeGreaterThanOrEqual(300);
     expect(res.headers.get("location")).toBe(`${ORIGIN}/dashboard`);
+
+    expect(res.headers.get("ratelimit-limit")).toBe("10");
+    expect(res.headers.get("ratelimit-remaining")).toBe("9");
+    expect(res.headers.get("x-ratelimit-remaining")).toBe("9");
 
     expect(mockExchange).toHaveBeenCalledWith("abc123");
     expect(mockCheckRate).toHaveBeenCalledWith("203.0.113.7");
