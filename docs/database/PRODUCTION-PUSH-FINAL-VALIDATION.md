@@ -40,6 +40,7 @@ La secuencia obligatoria es: **ANALIZAR → MODIFICAR → TESTEAR → APROBAR �
 | CHANGE-002 | Migración 0021: `push_subscriptions.active` `text 'true'` → `boolean` | TSK-009 (plan MODE C, MAT-207) | MEDIUM-HIGH | ✅ APLICADO y verificado 2026-08-09 (MAT-505-CHANGE-002, 11/11) |
 | CHANGE-003 | SB-001..003: RLS en findings/assets + publicación realtime + unificar env key | SUPABASE-AUDIT.md | MEDIUM | ✅ APLICADO y verificado 2026-08-09 (MAT-505-CHANGE-003, 4/4) |
 | CHANGE-004 | FASE 1 RLS tablas con project_id (`0024_rls_fase1_project_tables.sql`) | RSK-10 (SB-001) | MEDIUM | ✅ APLICADO y verificado 2026-08-09 (MAT-505-CHANGE-004) |
+| CHANGE-005 | Batch de **19 migraciones pendientes** `0025`…`2026-09-27` (Grupos A RLS · B DDL · C datos) | escritas post-CHANGE-004 | MEDIUM-HIGH | ⏳ Pendiente de aprobación (paquete 2026-10-01) |
 
 ---
 
