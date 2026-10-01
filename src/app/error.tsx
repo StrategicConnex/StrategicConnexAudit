@@ -49,7 +49,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
             Ocurrió un error inesperado al procesar tu solicitud.
           </p>
           <p className="text-xs sm:text-sm text-muted-fg/70 mb-6 sm:mb-8 leading-relaxed">
-            Nuestro equipo ha sido notificado automáticamente. Si el problema persiste,
+            Conserva el Error ID indicado para reportarlo. Si el problema persiste,
             intenta de nuevo más tarde.
           </p>
 

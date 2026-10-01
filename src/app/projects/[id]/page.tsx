@@ -167,7 +167,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </div>
         <h1 className="text-3xl font-extrabold text-foreground tracking-tight relative z-10">Error de Conexión</h1>
         <p className="mt-4 text-base font-medium text-muted-foreground max-w-md leading-relaxed relative z-10">
-          Hubo un problema técnico al recuperar los datos de este proyecto. Nuestro equipo de respuesta a incidentes ha sido notificado automáticamente.
+          Hubo un problema técnico al recuperar los datos de este proyecto. Reintenta en unos minutos; si persiste, reporta el error.
         </p>
         <div className="mt-12 flex gap-4 relative z-10">
           <Link href="/" className="px-8 py-3 bg-surface-muted text-foreground font-bold border border-border rounded-xl hover:bg-surface-elevated transition-all text-sm">

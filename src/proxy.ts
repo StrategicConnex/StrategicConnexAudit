@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { runWithRequestContext } from "@/lib/logger";
+import { NextRequest, NextResponse } from "next/server";
+import { logger, runWithRequestContext } from "@/lib/logger";
 import { updateSession } from "@/shared/lib/supabase/middleware";
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -106,8 +106,44 @@ export default async function proxy(request: NextRequest) {
   // G1 — Correlation IDs: el ALS se popula aquí con el `requestId` que se
   // inyecta en las cabeceras, de modo que todo el trabajo del proxy
   // (session refresh, telemetría, redirecciones) loguea con correlación.
-  return runWithRequestContext({ requestId }, () =>
-    runProxy(request, nonce, requestId, csp)
+  //
+  // Fail-closed: cualquier excepción (p. ej. en updateSession) se captura,
+  // se loguea con correlación y se responde 500 con los headers de seguridad
+  // en lugar de propagar un error sin controlar en el edge.
+  return runWithRequestContext({ requestId }, async () => {
+    try {
+      return await runProxy(request, nonce, requestId, csp);
+    } catch (error) {
+      logger.error("Fallo no controlado en el proxy — respondiendo 500 (fail-closed)", {
+        module: "proxy",
+        path: request.nextUrl.pathname,
+        method: request.method,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return failureResponse(csp, requestId);
+    }
+  });
+}
+
+/** Respuesta 500 controlada con el mismo set de headers de seguridad del proxy. */
+function failureResponse(csp: string, requestId: string): NextResponse {
+  return NextResponse.json(
+    { error: "Internal Server Error", requestId },
+    {
+      status: 500,
+      headers: {
+        "Content-Security-Policy": csp,
+        "X-Request-Id": requestId,
+        "Strict-Transport-Security":
+          "max-age=31536000; includeSubDomains; preload",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy":
+          "geolocation=(), microphone=(), camera=(), payment=(), usb=()",
+        "X-XSS-Protection": "1; mode=block",
+      },
+    }
   );
 }
 

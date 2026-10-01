@@ -4,31 +4,13 @@ import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import fs from "fs";
-import path from "path";
+import { resolveFilePath } from "./resolve-file-path";
 
 /* --- Tipado ------------------------------------------------------------ */
 
 interface Props {
   params: Promise<{ slug: string[] }>;
 }
-
-/* --- Map slug → file path ---------------------------------------------- */
-
-const DOCS_DIR = path.join(process.cwd(), "docs");
-
-// Nota: `api` NO está en el SLUG_MAP a propósito. /docs/api es una ruta estática
-// dedicada (src/app/docs/api/page.tsx — API Reference interactiva con playground
-// y Swagger). Incluirla aquí generaría un static param duplicado para /docs/api,
-// rompiendo el build de lambdas de Vercel con "Unable to find lambda for route".
-const SLUG_MAP: Record<string, string> = {
-  installation: "installation.md",
-  security: "security.md",
-  changelog: "CHANGELOG.md",
-  "architecture/pipeline-history": "architecture/PIPELINE-HISTORY.md",
-  "guides/alerting-setup": "guides/alerting-setup.md",
-  "improvements/roadmap": "improvements/ROADMAP.md",
-  "improvements/competitive-analysis": "improvements/COMPETITIVE-ANALYSIS.md",
-};
 
 /* --- Preprocesamiento Jekyll → Markdown limpio ------------------------ */
 
@@ -57,29 +39,7 @@ function preprocessMarkdown(raw: string): string {
   return content;
 }
 
-/* --- Slug resolution --------------------------------------------------- */
-
-function resolveFilePath(slug: string[]): string | null {
-  const joined = slug.join("/");
-  const relativePath = SLUG_MAP[joined];
-  if (relativePath) {
-    return path.join(DOCS_DIR, relativePath);
-  }
-
-  // Fallback: try direct file match
-  const directPath = path.join(DOCS_DIR, ...slug) + ".md";
-  if (fs.existsSync(directPath)) {
-    return directPath;
-  }
-
-  // Fallback: try file in subdirectory
-  const altPath = path.join(DOCS_DIR, ...slug, "index.md");
-  if (fs.existsSync(altPath)) {
-    return altPath;
-  }
-
-  return null;
-}
+/* --- Extracción de título ---------------------------------------------- */
 
 function extractTitle(raw: string): string {
   // Try to get title from front matter

@@ -195,4 +195,37 @@ describe("Proxy — Security Headers", () => {
     expect(response.headers.get("content-type")).toBe("text/html");
     expect(response.headers.get("content-security-policy")).toBeDefined();
   });
+
+  it("fail-closed: si updateSession lanza, responde 500 con headers de seguridad", async () => {
+    mockUpdateSession.mockReset();
+    mockUpdateSession.mockRejectedValue(new Error("session store caído"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const response = await proxyFn(createMockRequest("/dashboard"));
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-security-policy")).toContain("default-src 'self'");
+    expect(response.headers.get("x-frame-options")).toBe("DENY");
+    expect(response.headers.get("strict-transport-security")).toContain("max-age=31536000");
+    const body = (await response.json()) as { error: string; requestId: string };
+    expect(body.error).toBe("Internal Server Error");
+    expect(body.requestId).toBe(response.headers.get("x-request-id"));
+    // Se loguea el fallo con el mensaje (JSON del logger) para diagnóstico
+    const logged = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(logged).toContain("fail-closed");
+    errorSpy.mockRestore();
+  });
+
+  it("fail-closed: el request NO se despacha cuando el proxy falla", async () => {
+    mockUpdateSession.mockReset();
+    mockUpdateSession.mockRejectedValue(new Error("boom"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const response = await proxyFn(createMockRequest("/admin"));
+
+    expect(response.status).toBe(500);
+    // updateSession nunca completó → no hubo passthrough del request
+    expect(response.headers.get("content-type")).toContain("application/json");
+    vi.restoreAllMocks();
+  });
 });
