@@ -3,8 +3,8 @@ layout: default
 title: Production Database Change Verification Engine
 nav_order: 3.5
 permalink: /docs/database/production-change-verification
-version: 1.0
-fecha: 2026-08-02
+version: 1.1
+fecha: 2026-10-01
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -28,13 +28,16 @@ estado: Aprobado
 
 **Regla absoluta aplicada (§83):** *"Un cambio desplegado no significa un cambio exitoso."* El cambio solo es exitoso cuando **lo aprobado = lo desplegado = lo esperado = lo validado** y no hay regresión funcional, de rendimiento, integridad o seguridad.
 
-**Cambios de producción pendientes que este engine gobierna [PROPOSED] (aún NO desplegados — ver §14):**
+**Cambios de producción gobiernados por este engine (reconciliación 2026-10-01 con evidencia post-push MAT-505 — los 4 aplicados y verificados el 2026-08-09):**
 
 | CHANGE-ID | Contenido | Origen | Riesgo | Estado |
 |-----------|-----------|--------|--------|--------|
-| CHANGE-001 | Migración 0020: DROP `idx_adversary_mitre_id` no-único + 7 índices REC-01..07 + `pg_trgm` | TSK-007/008 (plan MODE C) | MEDIUM | Pendiente de aprobación |
-| CHANGE-002 | Migración 0021: `push_subscriptions.active` `text 'true'` → `boolean` | TSK-009 (plan MODE C, MAT-207) | MEDIUM-HIGH | Pendiente de aprobación |
-| CHANGE-003 | SB-001..003: RLS en findings/assets + publicación realtime + unificar env key | SUPABASE-AUDIT.md | MEDIUM | Pendiente de aprobación |
+| CHANGE-001 | Migración 0020: DROP `idx_adversary_mitre_id` no-único + 7 índices REC-01..07 + `pg_trgm` | TSK-007/008 (plan MODE C) | MEDIUM | ✅ APLICADO 2026-08-09 — MAT-505-CHANGE-002 §11 (11/11) |
+| CHANGE-002 | Migración 0021: `push_subscriptions.active` `text 'true'` → `boolean` | TSK-009 (plan MODE C, MAT-207) | MEDIUM-HIGH | ✅ APLICADO 2026-08-09 — MAT-505-CHANGE-002 §11 (11/11) |
+| CHANGE-003 | SB-001..003: RLS en findings/assets + publicación realtime + unificar env key | SUPABASE-AUDIT.md | MEDIUM | ✅ APLICADO 2026-08-09 — MAT-505-CHANGE-003 (4/4) |
+| CHANGE-004 | FASE 1 RLS tablas con project_id (`0024_rls_fase1_project_tables.sql`) | RSK-10 (SB-001) | MEDIUM | ✅ APLICADO 2026-08-09 — MAT-505-CHANGE-004 (15/58 tablas, 22 policies) |
+
+> **Pendientes reales a 2026-10-01:** (1) confirmación de backup/PITR en el dashboard de Supabase [UNKNOWN]; (2) migraciones `0025+` escritas en repo sin CHANGE-ID ni push documentado → requieren abrir CHANGE-005+ por este proceso antes de tocar producción.
 
 ---
 
@@ -431,11 +434,12 @@ Errores esperados post-cambio: 42501 (RLS denegado) → se verifica que solo ocu
 
 ## 26. Deployment y versionado
 
-**Despliegue de este motor:** documentación-gobernanza; se aplica a partir del próximo DDL aprobado. Los cambios 0020/0021 requieren **aprobación explícita del usuario** antes de tocar producción (regla del plan MODE C) [VERIFIED].
+**Despliegue de este motor:** documentación-gobernanza. Los cambios 0020/0021/0022–0024 se aplicaron con **aprobación explícita del owner** (firma §17 de cada paquete) el 2026-08-09 y verificación MAT-505 [VERIFIED]. Cualquier DDL posterior (migraciones `0025+` sin CHANGE-ID) requiere **aprobación explícita del usuario** antes de tocar producción (regla del plan MODE C).
 
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Creación inicial (PRODUCTION DATABASE CHANGE VERIFICATION ENGINE) | Aprobado |
+| 1.1 | 2026-10-01 | Reconciliación con evidencia post-push: CHANGE-001..004 ✅ APLICADO y verificado 2026-08-09 (MAT-505); pendientes reales: backup/PITR + migraciones 0025+ sin CHANGE-ID | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/PRODUCTION-CHANGE-VERIFICATION.md --min 80` → PASS
 

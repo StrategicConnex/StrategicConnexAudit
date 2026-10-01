@@ -3,8 +3,8 @@ layout: default
 title: Supabase Platform & PostgreSQL Audit
 nav_order: 3.4
 permalink: /docs/database/supabase-audit
-version: 1.0
-fecha: 2026-08-02
+version: 1.1
+fecha: 2026-10-01
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -186,6 +186,7 @@ Pooler de Supabase (puerto 6543/5432) soportado vía `DIRECT_URL`; SSL con CA fi
 - Evidencia: `useRealtimeMetrics.ts` (postgres_changes en findings/assets) [VERIFIED]
 - Recomendación: habilitar RLS + añadir las tablas a la publicación realtime con policies de membresía; filtrar también server-side. **Nota:** `db`/`directDb` se conectan con rol privilegiado (service/postgres) y **bypasean RLS** — habilitar RLS no afecta las escrituras server-side existentes vía `withRLS()`/`directDb`; solo gatea el camino Realtime/PostgREST (anon key).
 - Test: E2E de aislamiento multi-tenant (usuario A no recibe eventos de B).
+- **Estado (2026-10-01): ✅ CERRADO** — CHANGE-003 aplicado en producción 2026-08-09 (`0022_rls_intelligence_realtime.sql`): RLS + 4 policies `member_or_owner` en las 4 tablas Realtime + alta en la publicación; verificación MAT-505-CHANGE-003 **4/4 PASS** y aislamiento (usuario A → 0 filas de B) en su §14 [VERIFIED].
 
 **SB-003 — Env key inconsistente (ANON_KEY vs PUBLISHABLE_KEY)** · Componente: AUTH · Riesgo: LOW
 - Evidencia: `useRealtimeMetrics.ts:12` vs `env.ts` [VERIFIED]
@@ -303,6 +304,7 @@ sequenceDiagram
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Creación inicial (DATABASE ENGINE DETECTION — EXTENDED) | Aprobado |
+| 1.1 | 2026-10-01 | SB-002 CERRADO (CHANGE-003 aplicado 2026-08-09, MAT-505-CHANGE-003 4/4) — anotación de cierre | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/SUPABASE-AUDIT.md --min 80` → PASS
 

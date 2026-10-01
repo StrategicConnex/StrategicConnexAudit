@@ -3,8 +3,8 @@ layout: default
 title: Production Push & Final Validation Engine
 nav_order: 3.6
 permalink: /docs/database/production-push-final-validation
-version: 1.0
-fecha: 2026-08-02
+version: 1.1
+fecha: 2026-10-01
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -32,13 +32,14 @@ estado: Aprobado
 
 La secuencia obligatoria es: **ANALIZAR → MODIFICAR → TESTEAR → APROBAR → BACKUP → PUSH A PRODUCCIÓN → VERIFICAR → MONITORIZAR → ACEPTAR O ROLLBACK.**
 
-**Alcance:** este engine se activa en la **fase final de promoción** de los cambios pendientes gobernados por `PRODUCTION-CHANGE-VERIFICATION.md` (§60–83). Los 3 cambios pendientes que atravesarán este pipeline [PROPOSED — aún NO desplegados]:
+**Alcance:** este engine se activa en la **fase final de promoción** de los cambios gobernados por `PRODUCTION-CHANGE-VERIFICATION.md` (§60–83). Pipeline ejecutado por primera vez el 2026-08-09 (CHANGE-001..004, verificados en MAT-505); estado reconciliado 2026-10-01:
 
 | CHANGE-ID | Contenido | Origen | Riesgo | Estado |
 |-----------|-----------|--------|--------|--------|
-| CHANGE-001 | Migración 0020: DROP `idx_adversary_mitre_id` no-único + 7 índices REC-01..07 + `pg_trgm` | TSK-007/008 (plan MODE C) | MEDIUM | Pendiente de aprobación |
-| CHANGE-002 | Migración 0021: `push_subscriptions.active` `text 'true'` → `boolean` | TSK-009 (plan MODE C, MAT-207) | MEDIUM-HIGH | Pendiente de aprobación |
-| CHANGE-003 | SB-001..003: RLS en findings/assets + publicación realtime + unificar env key | SUPABASE-AUDIT.md | MEDIUM | Pendiente de aprobación |
+| CHANGE-001 | Migración 0020: DROP `idx_adversary_mitre_id` no-único + 7 índices REC-01..07 + `pg_trgm` | TSK-007/008 (plan MODE C) | MEDIUM | ✅ APLICADO y verificado 2026-08-09 (MAT-505-CHANGE-002, 11/11) |
+| CHANGE-002 | Migración 0021: `push_subscriptions.active` `text 'true'` → `boolean` | TSK-009 (plan MODE C, MAT-207) | MEDIUM-HIGH | ✅ APLICADO y verificado 2026-08-09 (MAT-505-CHANGE-002, 11/11) |
+| CHANGE-003 | SB-001..003: RLS en findings/assets + publicación realtime + unificar env key | SUPABASE-AUDIT.md | MEDIUM | ✅ APLICADO y verificado 2026-08-09 (MAT-505-CHANGE-003, 4/4) |
+| CHANGE-004 | FASE 1 RLS tablas con project_id (`0024_rls_fase1_project_tables.sql`) | RSK-10 (SB-001) | MEDIUM | ✅ APLICADO y verificado 2026-08-09 (MAT-505-CHANGE-004) |
 
 ---
 
@@ -259,12 +260,12 @@ Después del push comparar **APPROVED SCHEMA vs PRODUCTION SCHEMA** verificando:
 
 | Object | Approved (esperado) | Production (real) | Status |
 |--------|---------------------|-------------------|--------|
-| `idx_adversary_mitre_id` (no-único, 0012) | ausente | `[POST-PUSH]` | PENDING (CHANGE-001) |
-| Índices REC-01..07 | presentes | `[POST-PUSH]` | PENDING (CHANGE-001) |
-| Extensión `pg_trgm` | instalada | `[POST-PUSH]` | PENDING (CHANGE-001) |
-| `push_subscriptions.active` | `boolean` | `[POST-PUSH]` | PENDING (CHANGE-002) |
-| RLS en `intelligence_findings`/`intelligence_assets` | enabled | `[POST-PUSH]` | PENDING (CHANGE-003) |
-| Publicación Realtime de findings | correcta | `[POST-PUSH]` | PENDING (CHANGE-003) |
+| `idx_adversary_mitre_id` (no-único, 0012) | ausente | ausente (0020 ejecutado) | ✅ PASS 2026-08-09 (MAT-505-CHANGE-002 §11) |
+| Índices REC-01..07 | presentes | 7/7 presentes | ✅ PASS 2026-08-09 (MAT-505-CHANGE-002 §11) |
+| Extensión `pg_trgm` | instalada | instalada | ✅ PASS 2026-08-09 (MAT-505-CHANGE-002 §11) |
+| `push_subscriptions.active` | `boolean` | `boolean NOT NULL, 0 NULLs` | ✅ PASS 2026-08-09 (MAT-505-CHANGE-002 §11) |
+| RLS en `intelligence_findings`/`intelligence_assets` | enabled | enabled (4/4 tablas, 9 policies) | ✅ PASS 2026-08-09 (MAT-505-CHANGE-003 4/4) |
+| Publicación Realtime de findings | correcta | 4 tablas publicadas | ✅ PASS 2026-08-09 (MAT-505-CHANGE-003) |
 
 Resultado: **MATCH / PARTIAL MATCH / MISMATCH**. Cualquier `MISMATCH` no esperado genera un **CRITICAL ISSUE** → §16 (Failure Conditions). [VERIFIED — regla §84.7]
 
@@ -276,12 +277,12 @@ Resultado: **MATCH / PARTIAL MATCH / MISMATCH**. Cualquier `MISMATCH` no esperad
 
 | Validación | Métrica | Before | Expected | After | Status |
 |------------|---------|-------:|---------:|------:|--------|
-| Row counts | `count(*)` por tabla afectada | `[B]` | sin delta (CHANGE-001/003) / 1:1 cast (CHANGE-002) | `[A]` | PENDING |
-| NULL values | NULLs en `push_subscriptions.active` | `[B]` | sin cambio | `[A]` | PENDING |
-| Duplicates | `idx_adversary_mitre_id` no-único → verificar sin duplicados nuevos | `[B]` | 0 nuevos | `[A]` | PENDING |
-| PK / FK | orphan records en FKs afectadas | 0 | 0 | 0 | PENDING |
-| Unique constraints | constraints únicas intactas | — | — | — | PENDING |
-| Business rules | `active` valores `'true'`/`'false'` → `true`/`false` | `[B]` | n→n | `[A]` | PENDING |
+| Row counts | `count(*)` por tabla afectada | `[B]` | sin delta (CHANGE-001/003) / 1:1 cast (CHANGE-002) | `[A]` | ✅ PASS (MAT-505-CHANGE-002: sin regresión tras el push) |
+| NULL values | NULLs en `push_subscriptions.active` | `[B]` | sin cambio | `[A]` | ✅ PASS (0 NULLs, MAT-505 §11) |
+| Duplicates | `idx_adversary_mitre_id` no-único → verificar sin duplicados nuevos | `[B]` | 0 nuevos | `[A]` | ✅ PASS (MAT-505-CHANGE-002: sin regresión) |
+| PK / FK | orphan records en FKs afectadas | 0 | 0 | 0 | ✅ PASS (66 FKs válidas, MAT-505 §11) |
+| Unique constraints | constraints únicas intactas | — | — | — | ✅ PASS (MAT-505-CHANGE-002: sin regresión) |
+| Business rules | `active` valores `'true'`/`'false'` → `true`/`false` | `[B]` | n→n | `[A]` | ✅ PASS (Schema: active=boolean, MAT-505 §11) |
 
 Usar COUNT / SUM / MIN / MAX / DISTINCT / CHECKSUM según corresponda. **El cambio NO se considera exitoso si existen diferencias no explicadas.** [VERIFIED — regla §84.8]
 
@@ -556,6 +557,7 @@ Errores esperados: 42501 (RLS denegado — solo para no-miembros, verificado en 
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Creación inicial (PRODUCTION PUSH & FINAL VALIDATION ENGINE §84.1–84.20) | Aprobado |
+| 1.1 | 2026-10-01 | Pipeline ejecutado 2026-08-09 (CHANGE-001..004): MAT-502/MAT-503 rellenados con evidencia MAT-505 → tablas PASS | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/PRODUCTION-PUSH-FINAL-VALIDATION.md --min 80` → PASS
 

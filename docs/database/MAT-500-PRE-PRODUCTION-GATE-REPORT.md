@@ -3,8 +3,8 @@ layout: default
 title: MAT-500 Pre-Production Final Gate Report
 nav_order: 3.7
 permalink: /docs/database/mat500-pre-production-gate
-version: 1.0
-fecha: 2026-08-02
+version: 1.1
+fecha: 2026-10-01
 autor: StrategicConnex Engineering
 estado: Ejecutado
 ---
@@ -30,11 +30,14 @@ Ejecutar el **PRE-PRODUCTION FINAL GATE (MAT-500)** del engine §84 contra el es
 
 **Cambios gobernados (CHANGE-IDs):**
 
-| CHANGE-ID | Contenido | Origen | Riesgo | Estado |
-|-----------|-----------|--------|--------|--------|
-| CHANGE-001 | Migración 0020: DROP `idx_adversary_mitre_id` no-único + 7 índices REC-01..07 + `pg_trgm` | TSK-007/008 (plan MODE C) | MEDIUM | Pendiente de aprobación |
-| CHANGE-002 | Migración 0021: `push_subscriptions.active` `text 'true'` → `boolean` | TSK-009 (plan MODE C, MAT-207) | MEDIUM-HIGH | Pendiente de aprobación |
-| CHANGE-003 | SB-001..003: RLS en findings/assets + realtime + env key | SUPABASE-AUDIT.md | MEDIUM | Pendiente de aprobación |
+| CHANGE-ID | Contenido | Origen | Riesgo | Estado (reconciliado 2026-10-01) |
+|-----------|-----------|--------|--------|----------------------------------|
+| CHANGE-001 | Migración 0020: DROP `idx_adversary_mitre_id` no-único + 7 índices REC-01..07 + `pg_trgm` | TSK-007/008 (plan MODE C) | MEDIUM | ✅ APLICADO 2026-08-09 (MAT-505-CHANGE-002, 11/11) |
+| CHANGE-002 | Migración 0021: `push_subscriptions.active` `text 'true'` → `boolean` | TSK-009 (plan MODE C, MAT-207) | MEDIUM-HIGH | ✅ APLICADO 2026-08-09 (MAT-505-CHANGE-002, 11/11) |
+| CHANGE-003 | SB-001..003: RLS en findings/assets + realtime + env key | SUPABASE-AUDIT.md | MEDIUM | ✅ APLICADO 2026-08-09 (MAT-505-CHANGE-003, 4/4) |
+| CHANGE-004 | FASE 1 RLS tablas con project_id (`0024_rls_fase1_project_tables.sql`) | RSK-10 (SB-001) | MEDIUM | ✅ APLICADO 2026-08-09 (MAT-505-CHANGE-004) |
+
+> La ejecución original de este gate (2026-08-02) reflejaba los cambios como pendientes; el estado de arriba y el resultado de §11.1 incorporan la evidencia post-push de los pushes reales (2026-08-09).
 
 ---
 
@@ -191,6 +194,22 @@ RESULTADO: 11 PASS · 5 PENDING · 0 FAIL técnico → ⛔ HOLD (no push aún)
 
 **Regla §84.1:** si cualquiera de los puntos críticos falla o está pendiente → **NO REALIZAR EL PUSH A PRODUCCIÓN**. Los 5 PENDING son inherentemente post-push o de aprobación, no bloqueos técnicos de código.
 
+### 11.1 Re-ejecución con evidencia post-push (2026-10-01)
+
+Los pushes de CHANGE-001..004 se ejecutaron y verificaron el **2026-08-09** (MAT-505). Re-mapeo de los 5 PENDING originales con esa evidencia:
+
+| Check | Estado 2026-08-02 | Estado 2026-10-01 | Evidencia |
+|-------|-------------------|-------------------|-----------|
+| 06 Queries (EXPLAIN REC-01..07) | ⛔ PENDING | ✅ PASS | MAT-505-CHANGE-002 §11: "Queries ✅ PASS (índices REC usables, index scan responde)" — queries contra producción 2026-08-09 |
+| 09 Performance (pg_stat_* + EXPLAIN) | ⛔ PENDING | ✅ PASS | MAT-505-CHANGE-002 §11: "Performance ✅ PASS (stats: sec_audit 45, dns 8, siem 0, whois 0 filas)" |
+| 11 Data integrity (counts/FKs/NULLs) | ⛔ PENDING | ✅ PASS | MAT-505-CHANGE-002 §11: "Data Integrity ✅ (0 NULLs) + Constraints ✅ (66 FKs)" |
+| 13 Backup/snapshot | ⛔ PENDING | ⛔ PENDING | plan Supabase confirmado por owner 2026-08-09 (MAT-505 §11), pero PITR/RPO siguen [UNKNOWN] — requiere dashboard Supabase |
+| 15 Aprobación owner | ⛔ PENDING | ✅ PASS | firma del owner (§17) en CHANGE-001..004; ejecuciones MAT-505 de 2026-08-09 con "Aprobación: firma del owner" |
+
+**RESULTADO ACTUALIZADO: 15 PASS · 1 PENDING (13 Backup/PITR) · 0 FAIL** → los pushes de CHANGE-001..004 ya se ejecutaron y verificaron el 2026-08-09 (11/11 y 4/4); el único residuo del gate es la **confirmación de backup/PITR en el dashboard de Supabase**.
+
+**Nuevo pendiente fuera de los 16 checks (2026-10-01):** las migraciones `0025+` (RLS fase 2/core, `ai_usage`, `billing_plans`, `forecasts`… — 19 ficheros posteriores a 2026-08-09) están escritas en el repo **sin CHANGE-ID ni push documentado** → requieren abrir CHANGE-005+ por este proceso antes de tocar producción. Estado en producción: [UNKNOWN — acceso con aprobación].
+
 ---
 
 ## 12. Resultados de los gates (evidencia real de ejecución)
@@ -275,13 +294,15 @@ flowchart TD
 
 ---
 
-## 17. Bloqueadores para el push (5 PENDING)
+## 17. Bloqueadores para el push (reconciliado 2026-10-01: 1 PENDING)
 
-1. **Check 15 — Aprobación del owner.** Requisito absoluto del engine (§84.19): sin aprobación no hay promoción.
-2. **Check 13 — Backup/baseline.** Confirmar PITR/backup de Supabase + `pg_dump --schema-only` previo (§5–6).
-3. **Checks 6/9/11 — Verificaciones post-push.** Inherentemente POST-push (queries, performance, data integrity en producción real).
-4. **Ventana de observación (§15):** T+5m → T+24h con monitoreo de locks/errores/42501.
-5. **Commit del batch P1:** el push de CI dispara sobre lo commiteado; la promoción requiere commit previo del batch P1 (migraciones 0020/0021, schemas, push.ts, routes members/graph, env).
+1. ~~**Check 15 — Aprobación del owner.**~~ ✅ CERRADO — firma del owner (§17) en CHANGE-001..004; ejecuciones MAT-505 de 2026-08-09.
+2. **Check 13 — Backup/baseline.** ⛔ PENDING — plan Supabase confirmado por owner 2026-08-09 (MAT-505 §11); PITR/RPO aún [UNKNOWN] → confirmar en dashboard + `pg_dump --schema-only` previo (§5–6).
+3. ~~**Checks 6/9/11 — Verificaciones post-push.**~~ ✅ CERRADO — MAT-505-CHANGE-002 §11: 11/11 PASS contra producción 2026-08-09.
+4. **Ventana de observación (§15):** T+5m → T+24h con monitoreo de locks/errores/42501 — ✅ cumplida sin regresiones en MAT-505 (2026-08-09).
+5. ~~**Commit del batch P1**~~ ✅ CERRADO — el push de CI dispara sobre lo commiteado.
+
+> **Nuevo pendiente (fuera de los 16 checks):** migraciones `0025+` (19 ficheros posteriores a 2026-08-09: RLS fase 2/core, `ai_usage`, `billing_plans`, `forecasts`…) escritas en repo **sin CHANGE-ID ni push documentado** → abrir CHANGE-005+ por este proceso; estado en producción [UNKNOWN — acceso con aprobación].
 
 ---
 
@@ -321,6 +342,7 @@ flowchart TD
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Ejecución del PRE-PRODUCTION FINAL GATE (MAT-500) sobre CHANGE-001/002/003 — 11 PASS · 5 PENDING · HOLD | Ejecutado |
+| 1.1 | 2026-10-01 | Re-ejecución con evidencia post-push: checks 06/09/11/15 → PASS (MAT-505) — **15 PASS · 1 PENDING** (13 Backup/PITR); CHANGE-001..004 aplicados 2026-08-09 | Ejecutado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/MAT-500-PRE-PRODUCTION-GATE-REPORT.md --min 80` → PASS
 

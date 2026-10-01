@@ -24,7 +24,7 @@ estado: Aprobado
 > | Build PASS | ✅ **PASS** hoy (`pnpm build` exit 0, Next.js 16 Turbopack) |
 > | Observabilidad (§17) "correlation IDs" como target | ✅ **G1–G3 implementados 2026-09-27** — ALS en `proxy.ts` + `withRequestContext` 61/61 rutas, `correlationId` en payloads Trigger.dev y export SIEM, `x-request-id` en fetch salientes |
 >
-> MAT-500 sigue con 5 PENDING (aprobación owner + backup + push de migraciones), pero ya no por cobertura ni por RLS: ambos avanzaron sustancialmente.
+> MAT-500 reconciliado 2026-10-01: **15 PASS · 1 PENDING** (13 Backup/PITR) — CHANGE-001..004 **aplicados y verificados en producción 2026-08-09** (MAT-505: 11/11 y 4/4); SB-002 **CERRADO**. Pendientes reales: confirmar backup/PITR en dashboard y abrir CHANGE-005+ para migraciones `0025+` (sin push documentado).
 
 {: .no_toc }
 
@@ -56,7 +56,7 @@ SCAUDIT Pro es una plataforma enterprise de inteligencia cibernética y monitore
 | Base de datos | 58 tablas · 71 índices · journal 0021 · migraciones 0020/0021 preparadas | DATA-DICTIONARY · journal [VERIFIED] |
 | Testing | 29 archivos · 298 tests (295 OK + 3 ambientales) · Stmts 13.72% | TEST-COVERAGE-MATRIX [VERIFIED] |
 | Docs | 68 docs evaluados · 66 PASS ≥80 · avg 98.5/100 (QUALITY_GATE_REPORT 2026-08-02, incl. T10-04) | QUALITY_GATE_REPORT + docs/ [VERIFIED] |
-| Promoción a prod | CHANGE-001/002/003 PENDING (gate MAT-500: 11 PASS · 5 PENDING → HOLD) | PRODUCTION-PUSH-FINAL-VALIDATION [VERIFIED] |
+| Promoción a prod | CHANGE-001..004 ✅ APLICADO 2026-08-09; gate MAT-500 re-ejecutado 2026-10-01: 15 PASS · 1 PENDING (backup/PITR) → GO condicionado | PRODUCTION-CHANGE-VERIFICATION + MAT-505 [VERIFIED] |
 
 **Veredicto:** la base está documentada, testeada (de forma parcial) y endurecida en seguridad; el siguiente hito es **cerrar los 5 PENDING del MAT-500** (aprobación owner + backup + push de migraciones 0020/0021) y **elevar la cobertura de tests**.
 
@@ -135,7 +135,7 @@ THREAT-REGISTER documenta **15 amenazas STRIDE** [VERIFIED]:
 | Spoofing | Magic link theft, API key reuse | ✅ validación email + hash keys |
 | Tampering | Prompt injection (XSS IA), HMAC webhooks | ✅ escapeHtml + HMAC-SHA256 |
 | Repudiation | Auditoría de eventos | ✅ security_audit_logs + SIEM |
-| Information Disclosure | IDOR cross-tenant, fuga realtime (SB-002) | ✅ auth+RLS / SB-002 pendiente |
+| Information Disclosure | IDOR cross-tenant, fuga realtime (SB-002) | ✅ auth+RLS / SB-002 cerrado (CHANGE-003, 2026-08-09, MAT-505 4/4) |
 | DoS | Rate limit fail-open, sin dependencia externa (limitador local) | ✅ ADR-002 fail-open |
 | Elevation | RLS bypass, Service Role a cliente | ✅ SB-000 server-only |
 
@@ -153,7 +153,7 @@ THREAT-REGISTER documenta **15 amenazas STRIDE** [VERIFIED]:
 | Índices recomendados | REC-01..07 (migración 0020) | INDEX-STRATEGY |
 | Realtime | publicación no verificada (SB-004) | SUPABASE-AUDIT |
 
-**Cambios pendientes:** CHANGE-001 (índices + pg_trgm), CHANGE-002 (`active` boolean), CHANGE-003 (RLS findings/assets). [VERIFIED — PRODUCTION-CHANGE-VERIFICATION]
+**Cambios aplicados:** CHANGE-001 (índices + pg_trgm), CHANGE-002 (`active` boolean), CHANGE-003 (RLS findings/assets) y CHANGE-004 (RLS fase 1) — los 4 ejecutados y verificados el 2026-08-09 (MAT-505). [VERIFIED — PRODUCTION-CHANGE-VERIFICATION]
 
 ---
 
@@ -239,7 +239,7 @@ THREAT-REGISTER documenta **15 amenazas STRIDE** [VERIFIED]:
 |----|--------|-------|---------|------------|
 | RSK-01 | Push de CHANGE-002 (ALTER TYPE) corrompe datos | Baja | Alto | migración con UPDATE normalizador + rollback `::text` |
 | RSK-02 | Cobertura de tests insuficiente enmascara regresión | Media | Medio | TEST-COVERAGE-MATRIX + no-regresión por batch |
-| RSK-03 | Realtime sin RLS (SB-002) filtra datos cross-tenant | Media | Alto | CHANGE-003 pendiente |
+| RSK-03 | Realtime sin RLS (SB-002) filtra datos cross-tenant | Media | Alto | CHANGE-003 aplicado 2026-08-09 (MAT-505 4/4) → cerrado |
 | RSK-04 | Backup/PITR no confirmado antes de DDL | Media | Alto | §6 gate: confirmar antes de push |
 | RSK-05 | httpbin.org caído (3 tests ambientales) | Alta | Bajo | excluido de cobertura, documentado |
 | RSK-06 | Trigger scheduled-scan no operativo silencioso | Media | Medio | TSK-022 cierre |
@@ -255,8 +255,8 @@ THREAT-REGISTER documenta **15 amenazas STRIDE** [VERIFIED]:
 | Cobertura tests | Stmts 13.72% | −11.28pp al umbral | ≥25% | route.test P0/P1 + trigger tests | P0 |
 | Rutas API | 6/42 con test | 36 sin | 42/42 | TSK-022 | P0/P1 |
 | Triggers | 0/12 | 12 sin | 12/12 | siem/uptime/adversary primero | P0 |
-| Migraciones | 0020/0021 preparadas | no aplicadas | push a prod | aprobación + `drizzle-kit push` | P0 |
-| RLS | 5/58 tablas | 53 sin | críticas protegidas | CHANGE-003 | P1 |
+| Migraciones | 0020..0024 aplicadas 2026-08-09 | 0025+ sin CHANGE-ID ni push | push a prod | CHANGE-005+ + aprobación | P0 |
+| RLS | 15/58 tablas en prod (2026-08-09); 69/69 en código | resto sin push | 69/69 protegidas | CHANGE-005+ (fase 2/3) | P1 |
 | Módulos | `src/modules/*` vacíos | 9 dirs sin código | módulos reales | TSK-014 | P1 |
 | PerformanceTab | datos estáticos | sin consumidor real | leer `performance_results` | TSK-015 | P1 |
 | Observabilidad | sin matriz de IDs | sin convención | OBSERVABILITY-MATRIX | B08 | P2 |

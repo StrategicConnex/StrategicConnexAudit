@@ -129,7 +129,7 @@ Auditoría de los 97 cambios pendientes (commit `36ebcf8`) bajo el marco SC Plat
 
 | Riesgo | Categoría OWASP | Control actual |
 |--------|-----------------|----------------|
-| RSK-03 (realtime fuga) | A01 Broken Access Control | RLS `member_or_owner` pendiente en findings/assets (CHANGE-003) |
+| RSK-03 (realtime fuga) | A01 Broken Access Control | RLS `member_or_owner` activo en findings/assets (CHANGE-003, 2026-08-09) |
 | RSK-10 (RLS 5/58) | A01 Broken Access Control | políticas solo en tablas críticas |
 | RSK-02 (cobertura) | A05 Function Level Auth | route.test de security/siem pendientes |
 | RSK-01 (ALTER TYPE) | A02 Cryptographic/Data | migración normalizadora + rollback |
@@ -143,7 +143,7 @@ Auditoría de los 97 cambios pendientes (commit `36ebcf8`) bajo el marco SC Plat
 | RSK-01 | `push.test.ts` (3) boolean semantics + `rls.test.ts` | ✅ |
 | RSK-06 | `egress-guard.test.ts` (31/31, omisión por red) | ✅ |
 | RSK-11 | `egress-guard.test.ts` (31/31, bloqueo `::ffff:`) | ✅ |
-| RSK-03 | `rls.test.ts` (5/5) + members/graph (9/9) | ✅ parcial |
+| RSK-03 | `rls.test.ts` (5/5) + members/graph (9/9) + MAT-505-CHANGE-003 (4/4, aislamiento user-A 0 filas) | ✅ |
 | RSK-08 | `ratelimit.test.ts` + suite AI Router (gap) | 🟡 parcial |
 | RSK-02 | TEST-COVERAGE-MATRIX (documenta el gap) | ✅ documentado |
 
