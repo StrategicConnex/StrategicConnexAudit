@@ -36,9 +36,9 @@ estado: Aprobado
 | CHANGE-002 | Migración 0021: `push_subscriptions.active` `text 'true'` → `boolean` | TSK-009 (plan MODE C, MAT-207) | MEDIUM-HIGH | ✅ APLICADO 2026-08-09 — MAT-505-CHANGE-002 §11 (11/11) |
 | CHANGE-003 | SB-001..003: RLS en findings/assets + publicación realtime + unificar env key | SUPABASE-AUDIT.md | MEDIUM | ✅ APLICADO 2026-08-09 — MAT-505-CHANGE-003 (4/4) |
 | CHANGE-004 | FASE 1 RLS tablas con project_id (`0024_rls_fase1_project_tables.sql`) | RSK-10 (SB-001) | MEDIUM | ✅ APLICADO 2026-08-09 — MAT-505-CHANGE-004 (15/58 tablas, 22 policies) |
-| CHANGE-005 | Batch de **19 migraciones pendientes** `0025`…`2026-09-27` (Grupo A RLS · B DDL aditivo · C datos/fechadas) | escritas tras CHANGE-004 (2026-08-09…09-27) | MEDIUM-HIGH | ⏳ **PENDIENTE DE APROBACIÓN** — `CHANGE-005-APPROVAL-PACKAGE.md` (2026-10-01) |
+| CHANGE-005 | Batch de **19 migraciones pendientes** `0025`…`2026-09-27` (Grupo A RLS · B DDL aditivo · C datos/fechadas) | escritas tras CHANGE-004 (2026-08-09…09-27) | MEDIUM-HIGH | ✅ **APLICADO Y VERIFICADO 2026-10-01** — pre-checks: 19/19 ya aplicadas en prod (drift-check 70/70, 63 RLS/84 policies) + ledger sincronizado (3 hashes); ver `MAT-505-CHANGE-005` |
 
-> **Pendientes reales a 2026-10-01:** (1) ~~backup/PITR~~ ✅ **confirmado por el owner** (2026-10-01) → MAT-500 check 13 PASS (gate 16/16); (2) **CHANGE-005** (migraciones `0025+`) **abierto** → pendiente de firma §17 del paquete, pre-checks baseline y push documentado.
+> **Pendientes reales a 2026-10-01:** (1) ~~backup/PITR~~ ✅ confirmado por owner; (2) ~~migraciones `0025+` sin CHANGE-ID~~ ✅ **CHANGE-005 CERRADO** (verificado + ledger sync 2026-10-01); (3) **nuevo hallazgo de pre-checks:** 5 tablas con policy definido pero **RLS disabled** (`project_members`, `uptime_logs`, `anomaly_detections`, `adversary_engagements`, `adversary_task_nodes`) + `exec_briefs`/`ai_eval_results` sin policy → candidato **CHANGE-006**, pendiente de decisión del owner.
 
 ---
 
@@ -442,6 +442,7 @@ Errores esperados post-cambio: 42501 (RLS denegado) → se verifica que solo ocu
 | 1.0 | 2026-08-02 | Creación inicial (PRODUCTION DATABASE CHANGE VERIFICATION ENGINE) | Aprobado |
 | 1.1 | 2026-10-01 | Reconciliación con evidencia post-push: CHANGE-001..004 ✅ APLICADO y verificado 2026-08-09 (MAT-505); pendientes reales: backup/PITR + migraciones 0025+ sin CHANGE-ID | Aprobado |
 | 1.2 | 2026-10-01 | Backup/PITR confirmado por owner (MAT-500 16/16 PASS → GO); **CHANGE-005 ABIERTO** para migraciones 0025+ (paquete, pendiente de aprobación) | Aprobado |
+| 1.3 | 2026-10-01 | **CHANGE-005 EJECUTADO:** firma §17 + pre-checks prueban **19/19 ya aplicadas en prod** (drift-check 70/70, 63 RLS, 84 policies); ledger sincronizado (+3 hashes, `pending: []`); **0 DDL**. Nuevo hallazgo → CHANGE-006 candidato (5 policies sin RLS enabled) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/PRODUCTION-CHANGE-VERIFICATION.md --min 80` → PASS
 

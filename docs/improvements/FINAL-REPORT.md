@@ -24,7 +24,7 @@ estado: Aprobado
 > | Build PASS | ✅ **PASS** hoy (`pnpm build` exit 0, Next.js 16 Turbopack) |
 > | Observabilidad (§17) "correlation IDs" como target | ✅ **G1–G3 implementados 2026-09-27** — ALS en `proxy.ts` + `withRequestContext` 61/61 rutas, `correlationId` en payloads Trigger.dev y export SIEM, `x-request-id` en fetch salientes |
 >
-> MAT-500 reconciliado 2026-10-01: **16 PASS · 0 PENDING → GO** (13 Backup/PITR ✅ confirmado por owner) — CHANGE-001..004 **aplicados y verificados en producción 2026-08-09** (MAT-505: 11/11 y 4/4); SB-002 **CERRADO**; **CHANGE-005 ABIERTO** para las 19 migraciones `0025+` (paquete pendiente de firma §17).
+> MAT-500 reconciliado 2026-10-01: **16 PASS · 0 PENDING → GO** (13 Backup/PITR ✅ confirmado por owner) — CHANGE-001..004 **aplicados y verificados en producción 2026-08-09** (MAT-505: 11/11 y 4/4); SB-002 **CERRADO**; **CHANGE-005 CERRADO** — las 19 migraciones `0025+` **ya estaban aplicadas** (verificado 2026-10-01: drift 70/70, 63 tablas RLS, 84 policies) y el ledger quedó sincronizado. Nuevo hallazgo: 5 tablas con policy sin RLS enabled → candidato CHANGE-006 (decisión owner).
 
 {: .no_toc }
 
@@ -56,7 +56,7 @@ SCAUDIT Pro es una plataforma enterprise de inteligencia cibernética y monitore
 | Base de datos | 58 tablas · 71 índices · journal 0021 · migraciones 0020/0021 preparadas | DATA-DICTIONARY · journal [VERIFIED] |
 | Testing | 29 archivos · 298 tests (295 OK + 3 ambientales) · Stmts 13.72% | TEST-COVERAGE-MATRIX [VERIFIED] |
 | Docs | 68 docs evaluados · 66 PASS ≥80 · avg 98.5/100 (QUALITY_GATE_REPORT 2026-08-02, incl. T10-04) | QUALITY_GATE_REPORT + docs/ [VERIFIED] |
-| Promoción a prod | CHANGE-001..004 ✅ APLICADO 2026-08-09; gate MAT-500 2026-10-01: **16 PASS · 0 PENDING → GO**; CHANGE-005 (0025+) abierto pendiente de firma | PRODUCTION-CHANGE-VERIFICATION + MAT-505 [VERIFIED] |
+| Promoción a prod | CHANGE-001..004 ✅ APLICADO 2026-08-09; gate MAT-500 2026-10-01: **16 PASS · 0 PENDING → GO**; **CHANGE-005 CERRADO** 2026-10-01 (19/19 ya aplicadas + ledger sync, MAT-505-CHANGE-005) | PRODUCTION-CHANGE-VERIFICATION + MAT-505 [VERIFIED] |
 
 **Veredicto:** la base está documentada, testeada (de forma parcial) y endurecida en seguridad; el siguiente hito es **cerrar los 5 PENDING del MAT-500** (aprobación owner + backup + push de migraciones 0020/0021) y **elevar la cobertura de tests**.
 
@@ -255,8 +255,8 @@ THREAT-REGISTER documenta **15 amenazas STRIDE** [VERIFIED]:
 | Cobertura tests | Stmts 13.72% | −11.28pp al umbral | ≥25% | route.test P0/P1 + trigger tests | P0 |
 | Rutas API | 6/42 con test | 36 sin | 42/42 | TSK-022 | P0/P1 |
 | Triggers | 0/12 | 12 sin | 12/12 | siem/uptime/adversary primero | P0 |
-| Migraciones | 0020..0024 aplicadas 2026-08-09; 0025+ con CHANGE-005 abierto | 19 sin push documentado | push a prod | firma §17 + pre-checks + push CHANGE-005 | P0 |
-| RLS | 15/58 tablas en prod (2026-08-09); 69/69 en código | resto sin push | 69/69 protegidas | CHANGE-005 Grupo A (fase 2/core) | P1 |
+| Migraciones | 0020..0024 aplicadas 2026-08-09; 0025+ **verificadas aplicadas** (CHANGE-005 **CERRADO** 2026-10-01: 19/19 + ledger sync `pending: []`) | 5 tablas con policy sin RLS enabled (hallazgo CHANGE-005) | 69/69 (inventario código) | abrir **CHANGE-006** — decisión owner | P1 |
+| RLS | **63 tablas RLS / 84 policies medidos en prod (2026-10-01)** — CHANGE-005 Grupo A verificado aplicado | 7 tablas sin RLS en prod (5 con policy definido pero `ENABLE` ausente) | reconciliar inventario código (69) vs prod (63) | **CHANGE-006** — decisión owner | P1 |
 | Módulos | `src/modules/*` vacíos | 9 dirs sin código | módulos reales | TSK-014 | P1 |
 | PerformanceTab | datos estáticos | sin consumidor real | leer `performance_results` | TSK-015 | P1 |
 | Observabilidad | sin matriz de IDs | sin convención | OBSERVABILITY-MATRIX | B08 | P2 |
