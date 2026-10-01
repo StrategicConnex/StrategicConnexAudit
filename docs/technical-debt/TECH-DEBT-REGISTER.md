@@ -56,7 +56,7 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 | Categoría | Deudas | Fuente |
 |-----------|--------|--------|
 | TESTING | TD-01, TD-02, TD-03 | TEST-COVERAGE-MATRIX |
-| ARCHITECTURE | TD-04, TD-10 | MASTER-INDEX B04 |
+| ARCHITECTURE | TD-04, TD-10, TD-13 | MASTER-INDEX B04 · auditoría PRE-PROD #3 (2026-10-01) |
 | LEGACY | TD-05, TD-06, TD-07 | PRODUCTION-PUSH-FINAL-VALIDATION · MASTER-INDEX B05 |
 | INFRASTRUCTURE | TD-08, TD-12 | MASTER-INDEX B03 · SUPABASE-AUDIT |
 | DUPLICATION | TD-11 | `find src -name "*tool-registry*"` |
@@ -80,8 +80,9 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 | TD-10 | ~~`integrations`/`integration_sync_logs` sin escritor~~ | ARCHITECTURE | Datos fantasma sin flujo | — | M | P2 | RESUELTO 2026-09-25: `integration-sync-sweep` (`src/trigger/integration-sync.trigger.ts`, cron diario 03:00 UTC, escritura vía `directDb` bypass RLS) inserta log `running`→`success`/`failed` por integración, cuenta filas nuevas desde `last_sync_at` (`recordsSynced`), actualiza `integrations.last_sync_at` y marca `expired` a las >48h sin sync; 8 tests (`integration-sync.trigger.test.ts`) |
 | TD-11 | 2 tool-registries duplicados (`core/` y `registry/`) | DUPLICATION | Divergencia vs ADR-001 (Single Source of Truth) | RSK-09 | M | P1 | RESUELTO 2026-09-25: `registry/tool-registry.ts` es **solo tipos** (C05, 37 líneas, sin datos de tools) y `core/tool-registry.ts` es el único registro runtime — sin divergencia posible; verificado por lectura de ambos archivos |
 | TD-12 | `src/server/db/supabase-live-test.mjs` suelto | INFRASTRUCTURE | Script manual fuera del runner | — | S | P2 | RESUELTO 2026-09-17: scripts movidos a scripts/manual/ (ignores de eslint actualizados) |
+| TD-13 | Queries `findMany` FULL-COVERAGE sin cap (export ×4, `reports/pdf` findings, brief/copilot/compare (LLM), `actions/reports.ts`, `keywords.ts` rank-history) | ARCHITECTURE | OOM/lecturas ilimitadas con datos grandes; cap silencioso rompería counts y export | RSK-02 | M | P2 | 2026-10-01 (PRE-PROD #3): **10 listados LIST cappeados** (runs ×2, investigations ×4, monitoring, members, public/v1/intelligence ×2) — pendiente paginación/streaming explícita para las FULL-COVERAGE (export, PDF, prompts LLM), no resoluble con `limit` silencioso |
 
-> **12 deudas registradas** (1 OPEN: TD-08; 11 RESUELTO: TD-01, TD-02, TD-03, TD-04, TD-05, TD-06, TD-07, TD-09, TD-10, TD-11, TD-12 — TD-02/06/09/12 2026-09-17, TD-04/07/10/11 2026-09-25, TD-01/05 2026-09-26, TD-03 2026-09-27) (≥8 requeridas por T10-02). [VERIFIED]
+> **13 deudas registradas** (2 OPEN: TD-08, TD-13; 11 RESUELTO: TD-01, TD-02, TD-03, TD-04, TD-05, TD-06, TD-07, TD-09, TD-10, TD-11, TD-12 — TD-02/06/09/12 2026-09-17, TD-04/07/10/11 2026-09-25, TD-01/05 2026-09-26, TD-03 2026-09-27) (≥8 requeridas por T10-02). [VERIFIED]
 
 ---
 
@@ -167,7 +168,7 @@ flowchart LR
 | ID | Tipo | Qué cubre |
 |----|------|-----------|
 | REQ-401..404 | Requisito | Gestión de deuda |
-| TD-01..12 | Deuda | 12 deudas consolidadas (§5) |
+| TD-01..13 | Deuda | 13 deudas consolidadas (§5) |
 | TEST-600 | Test | Cobertura documentada (§9) |
 | DEP-500 | Deployment | Promoción (TD-05/08) |
 | TSK-014..022 | Tarea | Resoluciones de MODE C |
@@ -210,6 +211,7 @@ flowchart LR
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Tech Debt Register B10 (T10-02, §49): 12 deudas consolidadas | Aprobado |
+| 1.1 | 2026-10-01 | +TD-13 (findMany FULL-COVERAGE sin cap; 10 listados cappeados en PRE-PROD #3) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/technical-debt/TECH-DEBT-REGISTER.md --min 80` → PASS
 

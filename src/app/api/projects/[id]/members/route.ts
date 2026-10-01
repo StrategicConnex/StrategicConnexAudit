@@ -72,6 +72,7 @@ async function rawGet(
       directDb.query.projectInvitations.findMany({
         where: eq(projectInvitations.projectId, projectId),
         columns: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
+        limit: 100,
       }),
     ]);
 

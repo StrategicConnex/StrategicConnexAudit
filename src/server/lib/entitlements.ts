@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { directDb } from "@/shared/db";
 import { users, subscriptionPlans, projects, projectMembers, keywordTargets } from "@/shared/db/schemas";
 
@@ -67,22 +67,22 @@ export async function getEntitlements(userId: string): Promise<Entitlements> {
   const ownedIds = owned.map((p) => p.id);
 
   let keywordsUsed = 0;
-  for (const pid of ownedIds) {
+  if (ownedIds.length > 0) {
     const [row] = await directDb
       .select({ n: count() })
       .from(keywordTargets)
-      .where(eq(keywordTargets.projectId, pid));
-    keywordsUsed += Number(row?.n ?? 0);
+      .where(inArray(keywordTargets.projectId, ownedIds));
+    keywordsUsed = Number(row?.n ?? 0);
   }
 
   // Asientos: owner + miembros únicos en sus proyectos.
   const seatSet = new Set<string>([userId]);
-  for (const pid of ownedIds) {
-    const rows = await directDb
+  if (ownedIds.length > 0) {
+    const memberRows = await directDb
       .select({ userId: projectMembers.userId })
       .from(projectMembers)
-      .where(eq(projectMembers.projectId, pid));
-    for (const r of rows) seatSet.add(r.userId);
+      .where(inArray(projectMembers.projectId, ownedIds));
+    for (const r of memberRows) seatSet.add(r.userId);
   }
   const seatsUsed = seatSet.size;
 

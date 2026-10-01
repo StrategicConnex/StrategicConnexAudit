@@ -11,7 +11,7 @@ const { txState } = vi.hoisted(() => ({
   txState: {
     projectsFind: null as null | unknown,
     keywordTargetsFindMany: null as null | unknown[],
-    rankHistoryFindFirst: null as null | unknown,
+    rankHistoryFindMany: null as null | unknown[],
     gscTotals: null as null | unknown,
     competitorsFindMany: null as null | unknown[],
     keywordTargetFindFirst: null as null | unknown,
@@ -39,7 +39,7 @@ const { mockWithRLS } = vi.hoisted(() => ({
           findFirst: vi.fn(async () => txState.keywordTargetFindFirst),
         },
         rankHistory: {
-          findFirst: vi.fn(async () => txState.rankHistoryFindFirst),
+          findMany: vi.fn(async () => txState.rankHistoryFindMany ?? []),
         },
         competitors: {
           findMany: vi.fn(async () => txState.competitorsFindMany ?? []),
@@ -86,7 +86,7 @@ vi.mock("@/shared/db", () => ({
         findFirst: vi.fn(async () => txState.keywordTargetFindFirst),
       },
       rankHistory: {
-        findFirst: vi.fn(async () => txState.rankHistoryFindFirst),
+        findMany: vi.fn(async () => txState.rankHistoryFindMany ?? []),
       },
       competitors: {
         findMany: vi.fn(async () => txState.competitorsFindMany ?? []),
@@ -155,7 +155,7 @@ describe("keywords server actions", () => {
 
     txState.projectsFind = null;
     txState.keywordTargetsFindMany = null;
-    txState.rankHistoryFindFirst = null;
+    txState.rankHistoryFindMany = null;
     txState.gscTotals = null;
     txState.competitorsFindMany = null;
     txState.keywordTargetFindFirst = null;
@@ -172,7 +172,10 @@ describe("keywords server actions", () => {
         { id: KEYWORD_ID, keyword: "seo", createdAt: new Date() },
         { id: UUID_NOT_FOUND, keyword: "audit", createdAt: new Date() },
       ];
-      txState.rankHistoryFindFirst = { position: 5, searchVolume: 1000 };
+      txState.rankHistoryFindMany = [
+        { keywordId: KEYWORD_ID, position: 5, searchVolume: 1000 },
+        { keywordId: UUID_NOT_FOUND, position: 8, searchVolume: 500 },
+      ];
       txState.gscTotals = [{ impressions: 5000, clicks: 200, ctr: 0.04, position: 12 }];
       txState.competitorsFindMany = [
         { id: COMPETITOR_ID, domain: "rival.com", name: "Rival" },
@@ -267,7 +270,10 @@ describe("keywords server actions", () => {
   describe("importKeywordCsv", () => {
     it("imports keywords with positions", async () => {
       mockRequirePermission.mockResolvedValue(null);
-      txState.insertReturning = [{ id: KEYWORD_ID }];
+      txState.insertReturning = [
+        { id: KEYWORD_ID, keyword: "seo" },
+        { id: UUID_NOT_FOUND, keyword: "audit" },
+      ];
 
       const result = await importKeywordCsv({
         projectId: PROJECT_ID,
@@ -296,7 +302,7 @@ describe("keywords server actions", () => {
 
     it("handles row with no position (target only, no rank)", async () => {
       mockRequirePermission.mockResolvedValue(null);
-      txState.insertReturning = [{ id: KEYWORD_ID }];
+      txState.insertReturning = [{ id: KEYWORD_ID, keyword: "brand" }];
 
       const result = await importKeywordCsv({
         projectId: PROJECT_ID,
@@ -312,7 +318,9 @@ describe("keywords server actions", () => {
     it("resolves the existing target when the insert conflicts", async () => {
       mockRequirePermission.mockResolvedValue(null);
       txState.insertReturning = [];
-      txState.keywordTargetFindFirst = { id: KEYWORD_ID, projectId: PROJECT_ID, keyword: "seo" };
+      txState.keywordTargetsFindMany = [
+        { id: KEYWORD_ID, projectId: PROJECT_ID, keyword: "seo" },
+      ];
 
       const result = await importKeywordCsv({
         projectId: PROJECT_ID,

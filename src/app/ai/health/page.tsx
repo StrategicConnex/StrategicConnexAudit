@@ -1,9 +1,8 @@
-import { Suspense } from "react";
 import { getRecentHealthChecks, getDailyAggregates, getModelHealthSummary, getLatestHealthCheck, getTaskCostBreakdown } from "./actions";
 import { createClient } from "@/shared/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/server/auth/admin";
-import { AiHealthDashboardClient } from "./health-dashboard.client";
+import { HealthDashboardLazy } from "./health-dashboard.lazy";
 import { PageShellBar } from "@/components/ui/PageShell";
 
 export const dynamic = "force-dynamic";
@@ -35,15 +34,13 @@ export default async function AiHealthPage() {
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
       <PageShellBar />
-      <Suspense fallback={<LoadingSkeleton />}>
-        <AiHealthDashboardClient
-          recent={recent}
-          daily={daily}
-          models={models}
-          latest={latest}
-          taskCosts={taskCosts}
-        />
-      </Suspense>
+      <HealthDashboardLazy
+        recent={recent}
+        daily={daily}
+        models={models}
+        latest={latest}
+        taskCosts={taskCosts}
+      />
     </div>
   );
 }
@@ -67,20 +64,3 @@ function AccessDenied() {
   );
 }
 
-function LoadingSkeleton() {
-  return (
-    <div className="max-w-7xl mx-auto p-8 space-y-8 animate-pulse">
-      <div className="h-8 w-64 bg-surface-muted rounded-lg" />
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-32 bg-surface-muted rounded-xl" />
-        ))}
-      </div>
-      <div className="h-80 bg-surface-muted rounded-xl" />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="h-64 bg-surface-muted rounded-xl" />
-        <div className="h-64 bg-surface-muted rounded-xl" />
-      </div>
-    </div>
-  );
-}

@@ -55,7 +55,8 @@ const rawGetHandler = withErrorHandler(async (req: NextRequest) => {
 
     const alerts = await tx.query.monitoringAlerts.findMany({
       where: eq(monitoringAlerts.projectId, projectId),
-      orderBy: [desc(monitoringAlerts.createdAt)]
+      orderBy: [desc(monitoringAlerts.createdAt)],
+      limit: 100
     });
 
     return { schedule, alerts };

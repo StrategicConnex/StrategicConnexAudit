@@ -51,10 +51,12 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
 
       const findings = await directDb.query.intelligenceFindings.findMany({
         where: eq(intelligenceFindings.investigationId, investigationId),
+        limit: 500,
       });
 
       const assets = await directDb.query.intelligenceAssets.findMany({
         where: eq(intelligenceAssets.investigationId, investigationId),
+        limit: 100,
       });
 
       return apiSuccess({

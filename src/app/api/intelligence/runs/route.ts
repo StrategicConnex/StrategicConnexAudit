@@ -36,14 +36,16 @@ async function rawGet(req: NextRequest) {
       if (investigationId) {
         return await tx.query.intelligenceToolRuns.findMany({
           where: eq(intelligenceToolRuns.investigationId, investigationId),
-          orderBy: [desc(intelligenceToolRuns.completedAt)]
+          orderBy: [desc(intelligenceToolRuns.completedAt)],
+          limit: 100
         });
       }
       
       if (projectId) {
         return await tx.query.intelligenceToolRuns.findMany({
           where: eq(intelligenceToolRuns.projectId, projectId!),
-          orderBy: [desc(intelligenceToolRuns.completedAt)]
+          orderBy: [desc(intelligenceToolRuns.completedAt)],
+          limit: 100
         });
       }
 

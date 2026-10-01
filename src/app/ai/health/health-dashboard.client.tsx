@@ -12,7 +12,7 @@ import type { HealthCheckRecord, DailyAggregate, ModelHealthSummary, TaskCostBre
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-interface Props {
+export interface AiHealthDashboardClientProps {
   recent: HealthCheckRecord[];
   daily: DailyAggregate[];
   models: ModelHealthSummary[];
@@ -566,7 +566,7 @@ function TaskCostTable({ taskCosts }: { taskCosts: TaskCostBreakdown[] }) {
 
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 
-export function AiHealthDashboardClient({ recent, daily, models, latest, taskCosts }: Props) {
+export function AiHealthDashboardClient({ recent, daily, models, latest, taskCosts }: AiHealthDashboardClientProps) {
   const colors = useChartColors();
 
   const failRate = latest && latest.modelsTotal > 0

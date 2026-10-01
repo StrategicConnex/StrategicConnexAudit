@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { unstable_cache } from "next/cache";
 import { directDb } from "@/shared/db";
 import { subscriptionPlans } from "@/shared/db/schemas";
 import { asc } from "drizzle-orm";
@@ -39,16 +40,28 @@ function toView(p: typeof subscriptionPlans.$inferSelect): PlanView {
 }
 
 /**
+ * Planes desde la BD con caché de datos (5 min, tag `pricing-plans`).
+ * Si la query falla el error NO se cachea: el caller renderiza el fallback.
+ */
+const getCachedPlans = unstable_cache(
+  async (): Promise<PlanView[]> => {
+    const rows = await directDb.query.subscriptionPlans.findMany({
+      orderBy: [asc(subscriptionPlans.priceMonthly)],
+    });
+    return rows.map(toView);
+  },
+  ["pricing-plans"],
+  { revalidate: 300, tags: ["pricing-plans"] }
+);
+
+/**
  * GET /pricing — tabla pública de planes desde la BD (A-4).
  * Sin checkout falso: Free arranca con registro; Enterprise por contacto.
  */
 export default async function PricingPage() {
   let plans: PlanView[] = [];
   try {
-    const rows = await directDb.query.subscriptionPlans.findMany({
-      orderBy: [asc(subscriptionPlans.priceMonthly)],
-    });
-    plans = rows.map(toView);
+    plans = await getCachedPlans();
   } catch {
     plans = [];
   }

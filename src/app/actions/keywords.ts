@@ -6,7 +6,7 @@ import { z } from 'zod';
 import {
   keywordTargets, rankHistory, competitors, projects, integrationDataGsc,
 } from '@/shared/db/schemas';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, inArray, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { normalizeDomain } from '@/shared/utils/domain';
 
@@ -67,21 +67,33 @@ export const listKeywordData = authenticatedAction(
       limit: 100,
     });
 
-    const rows: KeywordRow[] = [];
-    for (const target of targets) {
-      const latest = await tx.query.rankHistory.findFirst({
-        where: eq(rankHistory.keywordId, target.id),
+    const latestByKeyword = new Map<string, { position: number | null; searchVolume: number | null }>();
+    if (targets.length > 0) {
+      const historyRows = await tx.query.rankHistory.findMany({
+        where: inArray(rankHistory.keywordId, targets.map((t) => t.id)),
         orderBy: [desc(rankHistory.checkedAt)],
       });
-      rows.push({
+      for (const hr of historyRows) {
+        if (!latestByKeyword.has(hr.keywordId)) {
+          latestByKeyword.set(hr.keywordId, {
+            position: hr.position ?? null,
+            searchVolume: hr.searchVolume ?? null,
+          });
+        }
+      }
+    }
+
+    const rows: KeywordRow[] = targets.map((target) => {
+      const latest = latestByKeyword.get(target.id);
+      return {
         id: target.id,
         keyword: target.keyword,
         projectName: project?.name ?? "",
         volume: latest?.searchVolume ?? null,
         difficulty: null, // Sin proveedor SERP: no inventar KD
         position: latest?.position ?? null,
-      });
-    }
+      };
+    });
 
     const [totals] = await tx
       .select({
@@ -188,37 +200,58 @@ export const importKeywordCsv = authenticatedAction(
     if (denied) return { error: denied };
 
     const today = new Date().toISOString().slice(0, 10);
-    let imported = 0;
+    const normalizedRows = rows.map((row) => ({
+      keyword: row.keyword.toLowerCase(),
+      position: row.position,
+      date: row.date,
+    }));
+    const uniqueKeywords = [...new Set(normalizedRows.map((r) => r.keyword))];
+
+    const inserted = await tx
+      .insert(keywordTargets)
+      .values(uniqueKeywords.map((keyword) => ({ projectId, keyword })))
+      .onConflictDoNothing()
+      .returning({ id: keywordTargets.id, keyword: keywordTargets.keyword });
+
+    const idByKeyword = new Map<string, string>(
+      inserted.map((r) => [r.keyword, r.id] as [string, string])
+    );
+    const missing = uniqueKeywords.filter((k) => !idByKeyword.has(k));
+    if (missing.length > 0) {
+      const existing = await tx.query.keywordTargets.findMany({
+        where: and(eq(keywordTargets.projectId, projectId), inArray(keywordTargets.keyword, missing)),
+      });
+      for (const e of existing) idByKeyword.set(e.keyword, e.id);
+    }
+
     let targets = 0;
-    for (const row of rows) {
-      const keyword = row.keyword.toLowerCase();
-      const [inserted] = await tx
-        .insert(keywordTargets)
-        .values({ projectId, keyword })
-        .onConflictDoNothing()
-        .returning({ id: keywordTargets.id });
-      let targetId = inserted?.id;
-      if (!targetId) {
-        const existing = await tx.query.keywordTargets.findFirst({
-          where: and(eq(keywordTargets.projectId, projectId), eq(keywordTargets.keyword, keyword)),
-        });
-        targetId = existing?.id;
-      }
+    const rankByCell = new Map<string, { keywordId: string; position: number; checkedAt: string }>();
+    for (const row of normalizedRows) {
+      const targetId = idByKeyword.get(row.keyword);
       if (!targetId) continue;
       targets++;
       if (row.position !== undefined) {
-        await tx
-          .insert(rankHistory)
-          .values({ keywordId: targetId, position: row.position, checkedAt: row.date ?? today })
-          .onConflictDoUpdate({
-            target: [rankHistory.keywordId, rankHistory.checkedAt],
-            set: { position: row.position },
-          });
-        imported++;
+        rankByCell.set(`${targetId}|${row.date ?? today}`, {
+          keywordId: targetId,
+          position: row.position,
+          checkedAt: row.date ?? today,
+        });
       }
     }
+
+    const rankRows = [...rankByCell.values()];
+    if (rankRows.length > 0) {
+      await tx
+        .insert(rankHistory)
+        .values(rankRows)
+        .onConflictDoUpdate({
+          target: [rankHistory.keywordId, rankHistory.checkedAt],
+          set: { position: sql`excluded.position` },
+        });
+    }
+
     revalidatePath('/');
-    return { success: true as const, targets, imported };
+    return { success: true as const, targets, imported: rankRows.length };
   }
 );
 

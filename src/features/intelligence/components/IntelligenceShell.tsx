@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useIntelligenceStore } from "../stores/intelligence-store";
 import { useInvestigationRealtime } from "../hooks/useInvestigationRealtime";
 import { useApiHealth } from "../hooks/useApiHealth";
@@ -14,10 +15,21 @@ import { QuickMetricsHud } from "./QuickMetricsHud";
 import { MailHealthScorecard } from "./MailHealthScorecard";
 import { TelemetryTimeline } from "./TelemetryTimeline";
 import { EvidencesList } from "./EvidencesList";
-import { TopologyView } from "./TopologyView";
 import { AiCopilotSidebar } from "./AiCopilotSidebar";
 import { Terminal, ArrowLeft, Download, Sparkles, Menu, X, Loader2 } from "lucide-react";
 import { LiveMetricsBar } from "@/features/dashboard/LiveMetricsBar";
+
+const TopologyView = dynamic(
+  () => import("./TopologyView").then((mod) => ({ default: mod.TopologyView })),
+  {
+    loading: () => (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-4 w-64 bg-surface-muted rounded" />
+        <div className="h-[600px] bg-surface-muted rounded-xl" />
+      </div>
+    ),
+  }
+);
 
 // ─── Demo Data ──────────────────────────────────────────────────────────────
 

@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import fs from "fs";
@@ -51,6 +52,15 @@ function extractTitle(raw: string): string {
   return "Documentación";
 }
 
+const loadDoc = unstable_cache(
+  async (filePath: string) => {
+    const raw = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
+    return { title: extractTitle(raw), content: preprocessMarkdown(raw) };
+  },
+  ["docs-doc"],
+  { revalidate: 300 }
+);
+
 /* --- Página ------------------------------------------------------------ */
 
 export default async function DocPage({ params }: Props) {
@@ -61,10 +71,7 @@ export default async function DocPage({ params }: Props) {
     notFound();
   }
 
-  const rawContent = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
-  const title = extractTitle(rawContent);
-  const content = preprocessMarkdown(rawContent);
-
+  const { title, content } = await loadDoc(filePath);
   return (
     <article className="prose-custom animate-fade-in">
       {/* Mobile breadcrumb */}
@@ -217,8 +224,7 @@ export async function generateMetadata({ params }: Props) {
   const filePath = resolveFilePath(slug);
   if (!filePath) return { title: "Documentación - SCAUDIT Pro" };
 
-  const raw = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
-  const title = extractTitle(raw);
+  const { title } = await loadDoc(filePath);
   return {
     title: `${title} - SCAUDIT Pro`,
     description: `Documentación de SCAUDIT Pro: ${title}`,

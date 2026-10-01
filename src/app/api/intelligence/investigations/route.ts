@@ -54,16 +54,19 @@ async function rawGet(req: NextRequest) {
         }
 
         const findings = await tx.query.intelligenceFindings.findMany({
-          where: eq(intelligenceFindings.investigationId, investigationId)
+          where: eq(intelligenceFindings.investigationId, investigationId),
+          limit: 500
         });
 
         const events = await tx.query.intelligenceRunEvents.findMany({
           where: eq(intelligenceRunEvents.investigationId, investigationId),
-          orderBy: [desc(intelligenceRunEvents.createdAt)]
+          orderBy: [desc(intelligenceRunEvents.createdAt)],
+          limit: 500
         });
 
         const assets = await tx.query.intelligenceAssets.findMany({
-          where: eq(intelligenceAssets.investigationId, investigationId)
+          where: eq(intelligenceAssets.investigationId, investigationId),
+          limit: 100
         });
 
         return {
@@ -79,7 +82,8 @@ async function rawGet(req: NextRequest) {
 
       const list = await tx.query.intelligenceInvestigations.findMany({
         where: eq(intelligenceInvestigations.projectId, projectId),
-        orderBy: [desc(intelligenceInvestigations.createdAt)]
+        orderBy: [desc(intelligenceInvestigations.createdAt)],
+        limit: 50
       });
 
       return {

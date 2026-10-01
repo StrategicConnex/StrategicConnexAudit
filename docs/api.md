@@ -99,7 +99,7 @@ Autenticación: Protegido con `CRON_SECRET`
 
 Lista investigaciones de inteligencia activas.
 
-**Query params:** `projectId`, `status`, `limit`, `offset`
+**Query params:** `projectId` (lista investigaciones, hasta 50) o `investigationId` (detalle con límites de servidor: findings ≤ 500, events ≤ 500, assets ≤ 100)
 
 ### `POST /api/intelligence`
 
