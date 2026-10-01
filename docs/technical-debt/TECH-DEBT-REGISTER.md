@@ -80,9 +80,9 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 | TD-10 | ~~`integrations`/`integration_sync_logs` sin escritor~~ | ARCHITECTURE | Datos fantasma sin flujo | — | M | P2 | RESUELTO 2026-09-25: `integration-sync-sweep` (`src/trigger/integration-sync.trigger.ts`, cron diario 03:00 UTC, escritura vía `directDb` bypass RLS) inserta log `running`→`success`/`failed` por integración, cuenta filas nuevas desde `last_sync_at` (`recordsSynced`), actualiza `integrations.last_sync_at` y marca `expired` a las >48h sin sync; 8 tests (`integration-sync.trigger.test.ts`) |
 | TD-11 | 2 tool-registries duplicados (`core/` y `registry/`) | DUPLICATION | Divergencia vs ADR-001 (Single Source of Truth) | RSK-09 | M | P1 | RESUELTO 2026-09-25: `registry/tool-registry.ts` es **solo tipos** (C05, 37 líneas, sin datos de tools) y `core/tool-registry.ts` es el único registro runtime — sin divergencia posible; verificado por lectura de ambos archivos |
 | TD-12 | `src/server/db/supabase-live-test.mjs` suelto | INFRASTRUCTURE | Script manual fuera del runner | — | S | P2 | RESUELTO 2026-09-17: scripts movidos a scripts/manual/ (ignores de eslint actualizados) |
-| TD-13 | Queries `findMany` FULL-COVERAGE sin cap (export ×4, `reports/pdf` findings, brief/copilot/compare (LLM), `actions/reports.ts`, `keywords.ts` rank-history) | ARCHITECTURE | OOM/lecturas ilimitadas con datos grandes; cap silencioso rompería counts y export | RSK-02 | M | P2 | 2026-10-01 (PRE-PROD #3): **10 listados LIST cappeados** (runs ×2, investigations ×4, monitoring, members, public/v1/intelligence ×2) — pendiente paginación/streaming explícita para las FULL-COVERAGE (export, PDF, prompts LLM), no resoluble con `limit` silencioso |
+| TD-13 | Queries `findMany` FULL-COVERAGE sin cap (export ×4, `reports/pdf` findings, brief/copilot/compare (LLM), `actions/reports.ts`, `keywords.ts` rank-history) | ARCHITECTURE | OOM/lecturas ilimitadas con datos grandes; cap silencioso rompería counts y export | RSK-02 | M | P2 | RESUELTO 2026-10-01: PRE-PROD #3 cappeó 10 listados LIST; hoy **paginación/count explícitos en las 8 rutas FULL-COVERAGE** — export ×4 en streaming keyset (lotes de 1000, `EXPORT_BATCH_SIZE`) con `COUNT(*)` previo; `reports/pdf` findings `limit:500` + totales/severidad reales vía `COUNT(group-by)` + nota de truncado en plantilla; brief/copilot conteos `groupBy(severity)` + listas acotadas a 100 con "mostrando N de M"; compare counts reales + diff acotado a 1000 (columns reducidas) + flag `truncated` + toolIds con `GROUP BY`; `actions/reports.ts` y `keywords.ts` con `selectDistinctOn` (1 fila/keyword) — 8 ficheros + tests, suite 1923/1923 [VERIFIED] |
 
-> **13 deudas registradas** (2 OPEN: TD-08, TD-13; 11 RESUELTO: TD-01, TD-02, TD-03, TD-04, TD-05, TD-06, TD-07, TD-09, TD-10, TD-11, TD-12 — TD-02/06/09/12 2026-09-17, TD-04/07/10/11 2026-09-25, TD-01/05 2026-09-26, TD-03 2026-09-27) (≥8 requeridas por T10-02). [VERIFIED]
+> **13 deudas registradas** (1 OPEN: TD-08; 12 RESUELTO: TD-01, TD-02, TD-03, TD-04, TD-05, TD-06, TD-07, TD-09, TD-10, TD-11, TD-12, TD-13 — TD-02/06/09/12 2026-09-17, TD-04/07/10/11 2026-09-25, TD-01/05 2026-09-26, TD-03 2026-09-27, TD-13 2026-10-01) (≥8 requeridas por T10-02). [VERIFIED]
 
 ---
 
@@ -212,6 +212,7 @@ flowchart LR
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Tech Debt Register B10 (T10-02, §49): 12 deudas consolidadas | Aprobado |
 | 1.1 | 2026-10-01 | +TD-13 (findMany FULL-COVERAGE sin cap; 10 listados cappeados en PRE-PROD #3) | Aprobado |
+| 1.2 | 2026-10-01 | TD-13 RESUELTO: streaming keyset (export) + caps/count explícitos (PDF, prompts LLM, actions reports/keywords) — 8 ficheros | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/technical-debt/TECH-DEBT-REGISTER.md --min 80` → PASS
 

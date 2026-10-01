@@ -7,6 +7,8 @@
    - Investigación inexistente → 404
    - Diff correcto: scoreDelta, newInB/resolvedSinceA/unchanged (clave=title)
      y toolsDiff (newTools/removedTools); score null → scoreDelta null
+   - TD-13: counts con COUNT(*) independientes, diff acotado a 1000 filas
+     (columns reducidas) + flag truncated; toolIds con GROUP BY
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -15,7 +17,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockInvFindFirst = vi.fn();
 const mockFindingsFindMany = vi.fn();
-const mockToolsFindMany = vi.fn();
+const mockCountSelect = vi.fn();
+const mockToolsSelect = vi.fn();
 
 vi.mock("@/shared/lib/auth", () => ({
   getCurrentUserOrThrow: async () => ({ id: "u-1" }),
@@ -31,10 +34,19 @@ vi.mock("@/shared/db/rls", () => ({
         intelligenceFindings: {
           findMany: (...args: unknown[]) => mockFindingsFindMany(...args),
         },
-        intelligenceToolRuns: {
-          findMany: (...args: unknown[]) => mockToolsFindMany(...args),
-        },
       },
+      select: vi.fn((cols: Record<string, unknown>) => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => {
+            if ("n" in cols) return Promise.resolve(mockCountSelect());
+            return {
+              groupBy: vi.fn(() => ({
+                limit: vi.fn(async () => mockToolsSelect()),
+              })),
+            };
+          }),
+        })),
+      })),
     }),
 }));
 
@@ -80,14 +92,17 @@ describe("Intelligence: Compare — GET", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Orden: findFirst(A), findFirst(B); findMany(A), findMany(B); tools A, B
+    // Orden: findFirst(A/B); counts(A/B); findMany(A/B); tools distinct(A/B)
     mockInvFindFirst
       .mockResolvedValueOnce(invA)
       .mockResolvedValueOnce(invB);
+    mockCountSelect
+      .mockResolvedValueOnce([{ n: 2 }])
+      .mockResolvedValueOnce([{ n: 2 }]);
     mockFindingsFindMany
       .mockResolvedValueOnce(findingsA)
       .mockResolvedValueOnce(findingsB);
-    mockToolsFindMany
+    mockToolsSelect
       .mockResolvedValueOnce(toolsA)
       .mockResolvedValueOnce(toolsB);
     const mod = await import("./route");
@@ -152,6 +167,7 @@ describe("Intelligence: Compare — GET", () => {
 
     expect(body.findingsDiff.totalA).toBe(2);
     expect(body.findingsDiff.totalB).toBe(2);
+    expect(body.findingsDiff.truncated).toBe(false);
     expect(body.findingsDiff.newInB).toEqual([
       { title: "Puerto 22 expuesto", severity: "high", status: "new", affectedAsset: "203.0.113.5" },
     ]);

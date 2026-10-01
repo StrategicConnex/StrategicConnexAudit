@@ -20,7 +20,7 @@ const { mockWithRLS } = vi.hoisted(() => ({
           findMany: vi.fn(async () => txState.keywords ?? []),
         },
       },
-      select: vi.fn(() => ({
+      selectDistinctOn: vi.fn(() => ({
         from: vi.fn(() => ({
           leftJoin: vi.fn(() => ({
             where: vi.fn(() => ({
@@ -51,7 +51,7 @@ vi.mock("@/shared/db", () => ({
         findMany: vi.fn(async () => txState.keywords ?? []),
       },
     },
-    select: vi.fn(() => ({
+    selectDistinctOn: vi.fn(() => ({
       from: vi.fn(() => ({
         leftJoin: vi.fn(() => ({
           where: vi.fn(() => ({

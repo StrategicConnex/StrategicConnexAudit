@@ -8,6 +8,8 @@
    - Sin hallazgos high/critical → brief estático sin IA
    - IA ok → brief + modelUsed; sin API key → brief estructurado de fallback;
      fallo IA genérico → mensaje de reintento
+   - TD-13: totales por severity con COUNT(group-by) y lista high/critical
+     acotada a 100 filas (decisión de estado vacío desde los counts)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -18,6 +20,7 @@ const mockQuota = vi.fn();
 const mockFindFirst = vi.fn();
 const mockFindMany = vi.fn();
 const mockCallAI = vi.fn();
+const mockSeverityCounts = vi.fn();
 
 vi.mock("@/shared/lib/ratelimit", () => ({
   withRateLimit: (
@@ -41,6 +44,13 @@ vi.mock("@/shared/db/rls", () => ({
           findMany: (...args: unknown[]) => mockFindMany(...args),
         },
       },
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            groupBy: vi.fn(async () => mockSeverityCounts()),
+          })),
+        })),
+      })),
     }),
 }));
 
@@ -98,6 +108,10 @@ describe("Intelligence: Brief — POST", () => {
     mockQuota.mockResolvedValue(null);
     mockFindFirst.mockResolvedValue(investigation);
     mockFindMany.mockResolvedValue([criticalFinding, mediumFinding]);
+    mockSeverityCounts.mockResolvedValue([
+      { severity: "critical", n: 1 },
+      { severity: "medium", n: 1 },
+    ]);
     mockCallAI.mockResolvedValue({
       success: true,
       content: "# Incident Brief generado",
@@ -141,6 +155,7 @@ describe("Intelligence: Brief — POST", () => {
   });
 
   it("sin hallazgos high/critical → brief estático sin llamar a la IA", async () => {
+    mockSeverityCounts.mockResolvedValue([{ severity: "medium", n: 3 }]);
     mockFindMany.mockResolvedValue([mediumFinding]);
 
     const res = await POST(createRequest({ investigationId: "inv-1" }) as never);

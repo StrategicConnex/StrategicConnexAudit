@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
 import { withRLS } from "@/shared/db/rls";
 import {
@@ -12,6 +12,9 @@ import { ValidationError, NotFoundError } from "@/server/lib/app-error";
 import { withRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
+
+const COMPARE_FINDINGS_LIMIT = 1000;
+const COMPARE_TOOLRUNS_LIMIT = 1000;
 
 interface FindingDiff {
   title: string;
@@ -41,6 +44,7 @@ interface CompareResult {
   findingsDiff: {
     totalA: number;
     totalB: number;
+    truncated: boolean;
     newInB: FindingDiff[];
     resolvedSinceA: FindingDiff[];
     unchanged: FindingDiff[];
@@ -91,26 +95,49 @@ const rawGetHandler = withErrorHandler(async (req: NextRequest) => {
     if (!invA) throw new NotFoundError("Investigación", investigationAId);
     if (!invB) throw new NotFoundError("Investigación", investigationBId);
 
+    const [countARows, countBRows] = await Promise.all([
+      tx
+        .select({ n: count() })
+        .from(intelligenceFindings)
+        .where(eq(intelligenceFindings.investigationId, investigationAId)),
+      tx
+        .select({ n: count() })
+        .from(intelligenceFindings)
+        .where(eq(intelligenceFindings.investigationId, investigationBId)),
+    ]);
+    const totalA = Number(countARows[0]?.n ?? 0);
+    const totalB = Number(countBRows[0]?.n ?? 0);
+
     // Fetch findings for both
     const [findingsA, findingsB] = await Promise.all([
       tx.query.intelligenceFindings.findMany({
         where: eq(intelligenceFindings.investigationId, investigationAId),
+        columns: { title: true, severity: true, affectedAsset: true },
+        orderBy: [asc(intelligenceFindings.severity), asc(intelligenceFindings.title)],
+        limit: COMPARE_FINDINGS_LIMIT,
       }),
       tx.query.intelligenceFindings.findMany({
         where: eq(intelligenceFindings.investigationId, investigationBId),
+        columns: { title: true, severity: true, affectedAsset: true },
+        orderBy: [asc(intelligenceFindings.severity), asc(intelligenceFindings.title)],
+        limit: COMPARE_FINDINGS_LIMIT,
       }),
     ]);
 
     // Fetch tool runs for both
-    const [toolsA, toolsB] = await Promise.all([
-      tx.query.intelligenceToolRuns.findMany({
-        where: eq(intelligenceToolRuns.investigationId, investigationAId),
-        columns: { toolId: true },
-      }),
-      tx.query.intelligenceToolRuns.findMany({
-        where: eq(intelligenceToolRuns.investigationId, investigationBId),
-        columns: { toolId: true },
-      }),
+    const [toolsARows, toolsBRows] = await Promise.all([
+      tx
+        .select({ toolId: intelligenceToolRuns.toolId })
+        .from(intelligenceToolRuns)
+        .where(eq(intelligenceToolRuns.investigationId, investigationAId))
+        .groupBy(intelligenceToolRuns.toolId)
+        .limit(COMPARE_TOOLRUNS_LIMIT),
+      tx
+        .select({ toolId: intelligenceToolRuns.toolId })
+        .from(intelligenceToolRuns)
+        .where(eq(intelligenceToolRuns.investigationId, investigationBId))
+        .groupBy(intelligenceToolRuns.toolId)
+        .limit(COMPARE_TOOLRUNS_LIMIT),
     ]);
 
     // Build finding comparison using title as key
@@ -137,8 +164,8 @@ const rawGetHandler = withErrorHandler(async (req: NextRequest) => {
     }
 
     // Tool comparison
-    const toolSetA = new Set(toolsA.map((t) => t.toolId));
-    const toolSetB = new Set(toolsB.map((t) => t.toolId));
+    const toolSetA = new Set(toolsARows.map((t) => t.toolId));
+    const toolSetB = new Set(toolsBRows.map((t) => t.toolId));
     const newTools = [...toolSetB].filter((t) => !toolSetA.has(t));
     const removedTools = [...toolSetA].filter((t) => !toolSetB.has(t));
 
@@ -149,7 +176,7 @@ const rawGetHandler = withErrorHandler(async (req: NextRequest) => {
         target: invA.target,
         score: invA.score,
         completedAt: invA.completedAt?.toISOString() ?? null,
-        findingsCount: findingsA.length,
+        findingsCount: totalA,
       },
       investigationB: {
         id: invB.id,
@@ -157,12 +184,13 @@ const rawGetHandler = withErrorHandler(async (req: NextRequest) => {
         target: invB.target,
         score: invB.score,
         completedAt: invB.completedAt?.toISOString() ?? null,
-        findingsCount: findingsB.length,
+        findingsCount: totalB,
       },
       scoreDelta: invA.score !== null && invB.score !== null ? invB.score - invA.score : null,
       findingsDiff: {
-        totalA: findingsA.length,
-        totalB: findingsB.length,
+        totalA,
+        totalB,
+        truncated: totalA > findingsA.length || totalB > findingsB.length,
         newInB,
         resolvedSinceA,
         unchanged,

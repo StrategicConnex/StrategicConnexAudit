@@ -51,6 +51,13 @@ const { mockWithRLS } = vi.hoisted(() => ({
           where: vi.fn(async () => txState.gscTotals ?? [{}]),
         })),
       })),
+      selectDistinctOn: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            orderBy: vi.fn(async () => txState.rankHistoryFindMany ?? []),
+          })),
+        })),
+      })),
       insert: vi.fn(() => ({
         values: vi.fn(() => ({
           onConflictDoNothing: vi.fn(() => ({
@@ -96,6 +103,13 @@ vi.mock("@/shared/db", () => ({
     select: vi.fn(() => ({
       from: vi.fn(() => ({
         where: vi.fn(async () => txState.gscTotals ?? [{}]),
+      })),
+    })),
+    selectDistinctOn: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(async () => txState.rankHistoryFindMany ?? []),
+        })),
       })),
     })),
     insert: vi.fn(() => ({

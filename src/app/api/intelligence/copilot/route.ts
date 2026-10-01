@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withRLS } from "@/shared/db/rls";
 import { intelligenceInvestigations, intelligenceFindings } from "@/shared/db/schemas";
-import { eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
 import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from "@/server/ai/ai-router";
@@ -15,6 +15,8 @@ export const dynamic = "force-dynamic";
 // mata la función a los 10s (Hobby) o 60s (Pro) y el copilot se queda sin
 // plan de remediación.
 export const maxDuration = 120;
+
+const COPILOT_FINDINGS_LIMIT = 100;
 
 export const POST = withRateLimit(
   {
@@ -46,20 +48,29 @@ export const POST = withRateLimit(
 
         if (!investigationRecord) return null;
 
+        const severityRows = await tx
+          .select({ severity: intelligenceFindings.severity, n: count() })
+          .from(intelligenceFindings)
+          .where(eq(intelligenceFindings.investigationId, investigationId))
+          .groupBy(intelligenceFindings.severity);
+
         const findingsRecords = await tx.query.intelligenceFindings.findMany({
-          where: eq(intelligenceFindings.investigationId, investigationId)
+          where: eq(intelligenceFindings.investigationId, investigationId),
+          orderBy: [asc(intelligenceFindings.severity), asc(intelligenceFindings.title)],
+          limit: COPILOT_FINDINGS_LIMIT,
         });
 
-        return { investigation: investigationRecord, findings: findingsRecords };
+        return { investigation: investigationRecord, severityRows, findings: findingsRecords };
       });
 
       if (!dbResult) {
         return NextResponse.json({ success: false, error: "Investigación no encontrada o acceso denegado" }, { status: 404 });
       }
 
-      const { investigation, findings } = dbResult;
+      const { investigation, severityRows, findings } = dbResult;
+      const totalFindings = severityRows.reduce((sum, r) => sum + Number(r.n), 0);
 
-      if (!findings || findings.length === 0) {
+      if (totalFindings === 0) {
         return NextResponse.json({
           success: true,
           remediationPlan: "### ✅ No se encontraron vulnerabilidades\n\n¡Felicidades! La infraestructura evaluada no arrojó hallazgos de severidad media, alta o crítica. Sigue monitoreando con regularidad."
@@ -74,7 +85,7 @@ export const POST = withRateLimit(
 
       const userMsg: AIMessage = {
         role: "user",
-        content: `Por favor genera un plan de remediación técnica interactivo para el host "${investigation.target}" (Tipo de objetivo: ${investigation.targetType}).\nLa postura de seguridad calculada es: ${investigation.score}/100.\n\nHallazgos de seguridad encontrados:\n${findings.map((f, i) => `${i + 1}. [Severidad: ${f.severity.toUpperCase()}] **${f.title}**\n   - Descripción: ${f.description}\n   - Recomendación inicial: ${f.recommendation}\n   - Evidencia técnica: ${JSON.stringify(f.evidence)}`).join("\n\n")}`
+        content: `Por favor genera un plan de remediación técnica interactivo para el host "${investigation.target}" (Tipo de objetivo: ${investigation.targetType}).\nLa postura de seguridad calculada es: ${investigation.score}/100.\n\nHallazgos de seguridad encontrados: ${totalFindings}${findings.length < totalFindings ? ` (mostrando ${findings.length} de mayor severidad)` : ""}:\n${findings.map((f, i) => `${i + 1}. [Severidad: ${f.severity.toUpperCase()}] **${f.title}**\n   - Descripción: ${f.description}\n   - Recomendación inicial: ${f.recommendation}\n   - Evidencia técnica: ${JSON.stringify(f.evidence)}`).join("\n\n")}`
       };
 
       // Call AI with model pool and automatic fallback

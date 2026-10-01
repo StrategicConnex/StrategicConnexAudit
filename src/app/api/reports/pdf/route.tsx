@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { renderToStream } from '@react-pdf/renderer';
 import { Readable } from 'stream';
-import { eq, and, asc, desc } from 'drizzle-orm';
+import { eq, and, asc, count, desc } from 'drizzle-orm';
 import { createClient } from '@/shared/lib/supabase/server';
 import { directDb } from '@/shared/db';
 import { withRLS } from '@/shared/db/rls';
@@ -21,6 +21,8 @@ import { PdfReport, type PdfReportData, type PdfFinding, type PdfAsset, type Whi
 import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
+
+const PDF_FINDINGS_LIMIT = 500;
 
 /**
  * POST /api/reports/pdf
@@ -135,10 +137,18 @@ export const POST = withRateLimit(
       // Build sections from investigations
       const sections = await Promise.all(
         investigations.map(async (inv, idx) => {
-          const findings = await directDb.query.intelligenceFindings.findMany({
-            where: eq(intelligenceFindings.investigationId, inv.id),
-            orderBy: [asc(intelligenceFindings.createdAt)],
-          });
+          const [severityRows, findings] = await Promise.all([
+            directDb
+              .select({ severity: intelligenceFindings.severity, n: count() })
+              .from(intelligenceFindings)
+              .where(eq(intelligenceFindings.investigationId, inv.id))
+              .groupBy(intelligenceFindings.severity),
+            directDb.query.intelligenceFindings.findMany({
+              where: eq(intelligenceFindings.investigationId, inv.id),
+              orderBy: [asc(intelligenceFindings.createdAt)],
+              limit: PDF_FINDINGS_LIMIT,
+            }),
+          ]);
 
           const pdfFindings: PdfFinding[] = findings.map((f) => ({
             severity: f.severity ?? 'info',
@@ -149,9 +159,13 @@ export const POST = withRateLimit(
             mitreTechnique: (f.evidence as Record<string, unknown>)?.['_toolId'] as string ?? null,
           }));
 
-          const severeCount = pdfFindings.filter(
-            (f) => f.severity === 'critical' || f.severity === 'high',
-          ).length;
+          const totalFindings = severityRows.reduce(
+            (sum, r) => sum + Number(r.n),
+            0,
+          );
+          const severeCount = severityRows
+            .filter((r) => r.severity === 'critical' || r.severity === 'high')
+            .reduce((sum, r) => sum + Number(r.n), 0);
 
           // Fetch assets per investigation
           const assetRecords = await directDb.query.intelligenceAssets.findMany({
@@ -179,7 +193,7 @@ export const POST = withRateLimit(
             summary: inv.summary,
             findings: pdfFindings,
             assets: pdfAssets,
-            totalFindings: pdfFindings.length,
+            totalFindings,
             severeCount,
           };
         }),

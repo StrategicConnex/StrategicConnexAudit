@@ -3,8 +3,8 @@ layout: default
 title: API Reference
 nav_order: 3
 permalink: /docs/api
-version: 1.2
-fecha: 2026-08-08
+version: 1.3
+fecha: 2026-10-01
 autor: Equipo SCAUDIT
 estado: Aprobado
 ---
@@ -276,6 +276,60 @@ Suscribe un navegador para recibir notificaciones push del SIEM.
 
 ---
 
+## API Pública (public/v1)
+
+Endpoints para integraciones externas (Zapier, Make, CI/CD). Autenticación: `Authorization: Bearer <api_key>` con el scope requerido por endpoint. Rate limit en dos fases: **120 req/min por IP** y **300 req/min por API key** (429 + `Retry-After`).
+
+### `GET /api/public/v1/health`
+
+Health check público: estado de la plataforma, versión y conectividad de servicios.
+
+Autenticación: Ninguna (sin API key) · Rate limit: solo fase IP (120 req/min)
+
+### `GET /api/public/v1/intelligence`
+
+Lista las investigaciones de un proyecto; con `investigationId` devuelve además findings y assets detallados.
+
+**Query params:** `projectId` (requerido), `investigationId` (opcional)
+
+**Caps del servidor (no configurables):** 50 investigaciones · 500 findings · 100 assets
+
+Autenticación: Bearer API key · Scope: `intelligence:read`
+
+### `POST /api/public/v1/intelligence`
+
+Inicia un escaneo de inteligencia sobre un target (dominio, IP o email).
+
+**Rate limit adicional:** 30 scans/min por usuario
+
+Autenticación: Bearer API key · Scope: `intelligence:write`
+
+### `GET /api/public/v1/audits`
+
+Audits recientes de un proyecto (owner o miembro), optimizado para polling desde Zapier/Make.
+
+**Query params:** `projectId` (requerido) · `limit` (opcional, default 20, rango 1–100)
+
+Autenticación: Bearer API key · Scope: `intelligence:read`
+
+### `GET /api/public/v1/uptime`
+
+Resumen de uptime agregado + checks recientes (owner o miembro).
+
+**Query params:** `projectId` (requerido) · `days` (opcional, default 30, rango 1–90)
+
+Autenticación: Bearer API key · Scope: `intelligence:read`
+
+### `GET /api/public/v1/reports`
+
+Últimos reportes ejecutivos completados con contenido (owner o miembro); devuelve como máximo 5 reportes.
+
+**Query params:** `projectId` (requerido)
+
+Autenticación: Bearer API key · Scope: `reports:read`
+
+---
+
 ## Códigos de error
 
 | Código | Significado |
@@ -299,7 +353,7 @@ Todas las respuestas de error incluyen un objeto con `error` y `retryAfter` (cua
 
 ## Alcance y objetivos
 
-Este documento referencia la API pública e interna de SCAUDIT Pro organizada por dominio funcional (AI & Copilot, Inteligencia Cibernética, Seguridad, Autenticación, Monitoreo). Objetivos: documentar método, autenticación, request, response y rate limit de cada endpoint, y servir de contrato para los tests de API (`tests/api-contract`).
+Este documento referencia la API pública e interna de SCAUDIT Pro organizada por dominio funcional (AI & Copilot, Inteligencia Cibernética, Seguridad, Autenticación, Monitoreo, API Pública). Objetivos: documentar método, autenticación, request, response y rate limit de cada endpoint, y servir de contrato para los tests de API (`tests/api-contract`).
 
 ---
 
@@ -419,7 +473,7 @@ flowchart LR
 
 | Campo | Valor |
 |-------|-------|
-| Versión | 1.1 |
-| Fecha | 2026-08-01 |
+| Versión | 1.3 |
+| Fecha | 2026-10-01 |
 | Autor | Equipo SCAUDIT |
 | Estado | Aprobado |

@@ -69,10 +69,18 @@ export const listKeywordData = authenticatedAction(
 
     const latestByKeyword = new Map<string, { position: number | null; searchVolume: number | null }>();
     if (targets.length > 0) {
-      const historyRows = await tx.query.rankHistory.findMany({
-        where: inArray(rankHistory.keywordId, targets.map((t) => t.id)),
-        orderBy: [desc(rankHistory.checkedAt)],
-      });
+      const historyRows = await tx
+        .selectDistinctOn(
+          [rankHistory.keywordId],
+          {
+            keywordId: rankHistory.keywordId,
+            position: rankHistory.position,
+            searchVolume: rankHistory.searchVolume,
+          },
+        )
+        .from(rankHistory)
+        .where(inArray(rankHistory.keywordId, targets.map((t) => t.id)))
+        .orderBy(rankHistory.keywordId, desc(rankHistory.checkedAt));
       for (const hr of historyRows) {
         if (!latestByKeyword.has(hr.keywordId)) {
           latestByKeyword.set(hr.keywordId, {

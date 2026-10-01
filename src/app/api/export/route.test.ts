@@ -7,6 +7,7 @@
    - 200 CSV con cabeceras, escaping de comillas y Content-Disposition
    - Casos borde: recurso sin filas → count 0 (JSON) y "No data" (CSV)
    - Error de BD → 500 con INTERNAL_ERROR
+   - TD-13: paginación keyset en lotes de 1000 (JSON completo sin materializar)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -42,6 +43,8 @@ vi.mock("@/shared/lib/logger", () => ({
   },
 }));
 
+const testState = { rowCount: 0 };
+
 const mockTx = {
   query: {
     intelligenceFindings: { findMany: (...args: unknown[]) => mockFindings(...args) },
@@ -49,6 +52,11 @@ const mockTx = {
     intelligenceToolRuns: { findMany: (...args: unknown[]) => mockToolRuns(...args) },
     auditLogs: { findMany: (...args: unknown[]) => mockAuditLogs(...args) },
   },
+  select: vi.fn(() => ({
+    from: vi.fn(() => ({
+      where: vi.fn(async () => [{ n: testState.rowCount }]),
+    })),
+  })),
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -78,6 +86,7 @@ describe("Export — GET", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    testState.rowCount = 0;
     mockGetCurrentUserOrThrow.mockResolvedValue({ id: "u-1" });
     mockWithRLS.mockImplementation(
       (_userId: unknown, cb: (tx: unknown) => Promise<unknown>) => cb(mockTx),
@@ -129,6 +138,7 @@ describe("Export — GET", () => {
   });
 
   it("findings json → 200 con count y fechas ISO", async () => {
+    testState.rowCount = 1;
     mockFindings.mockResolvedValue([findingRow]);
 
     const res = await GET(createRequest("?projectId=p1&format=json&resource=findings"));
@@ -147,6 +157,7 @@ describe("Export — GET", () => {
   });
 
   it("assets json → 200 con fechas ISO y nulos conservados", async () => {
+    testState.rowCount = 1;
     mockAssets.mockResolvedValue([
       {
         id: "a1",
@@ -222,5 +233,28 @@ describe("Export — GET", () => {
     const body = await res.json();
     expect(body.success).toBe(false);
     expect(body.code).toBe("INTERNAL_ERROR");
+  });
+
+  it("TD-13: lotes keyset — 1001 filas en 2 batches sin materializar el recurso", async () => {
+    testState.rowCount = 1001;
+    const batch1 = Array.from({ length: 1000 }, (_, i) => ({
+      ...findingRow,
+      id: `f${i}`,
+    }));
+    mockFindings
+      .mockResolvedValueOnce(batch1)
+      .mockResolvedValueOnce([{ ...findingRow, id: "f1000" }]);
+
+    const res = await GET(createRequest("?projectId=p1&format=json&resource=findings"));
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.count).toBe(1001);
+    expect(body.data).toHaveLength(1001);
+    expect(body.data[0].id).toBe("f0");
+    expect(body.data[1000].id).toBe("f1000");
+    expect(mockFindings).toHaveBeenCalledTimes(2);
+    // count + lote 1 + lote 2, cada uno en su propia transacción RLS
+    expect(mockWithRLS).toHaveBeenCalledTimes(3);
   });
 });

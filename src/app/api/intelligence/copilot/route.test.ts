@@ -7,6 +7,8 @@
    - Sin hallazgos → plan estático sin IA; IA ok → plan + modelUsed;
      fallo IA → success false con plan de fallback + error
    - Excepción interna → catch devuelve plan de fallback (success true)
+   - TD-13: total de hallazgos con COUNT(group-by) y prompt acotado a 100
+     filas (estado vacío decidido desde los counts, no desde el fetch)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -17,6 +19,7 @@ const mockQuota = vi.fn();
 const mockFindFirst = vi.fn();
 const mockFindMany = vi.fn();
 const mockCallAI = vi.fn();
+const mockSeverityCounts = vi.fn();
 
 vi.mock("@/shared/lib/ratelimit", () => ({
   withRateLimit: (
@@ -40,6 +43,13 @@ vi.mock("@/shared/db/rls", () => ({
           findMany: (...args: unknown[]) => mockFindMany(...args),
         },
       },
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            groupBy: vi.fn(async () => mockSeverityCounts()),
+          })),
+        })),
+      })),
     }),
 }));
 
@@ -88,6 +98,7 @@ describe("Intelligence: Copilot — POST", () => {
     mockQuota.mockResolvedValue(null);
     mockFindFirst.mockResolvedValue(investigation);
     mockFindMany.mockResolvedValue([finding]);
+    mockSeverityCounts.mockResolvedValue([{ severity: "high", n: 1 }]);
     mockCallAI.mockResolvedValue({
       success: true,
       content: "# Plan de remediación",
@@ -129,6 +140,7 @@ describe("Intelligence: Copilot — POST", () => {
   });
 
   it("sin hallazgos → plan estático sin llamar a la IA", async () => {
+    mockSeverityCounts.mockResolvedValue([]);
     mockFindMany.mockResolvedValue([]);
 
     const res = await POST(createRequest({ investigationId: "inv-1" }) as never);

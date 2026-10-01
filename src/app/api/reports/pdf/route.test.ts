@@ -10,6 +10,8 @@
    - fallo inesperado → 500 con success:false
    - casos borde: investigaciones con score null → overallScore null;
      findings vacíos → 200 con totalFindings 0
+   - TD-13: findings con limit 500 y totales/severidad con COUNT(group-by)
+      independientes del fetch acotado
    ========================================================================= */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -18,24 +20,29 @@ import { Readable } from "stream";
 
 // ==== Mocks ====
 
-const mocks = vi.hoisted(() => {
-  interface Chain {
-    from: () => Chain;
-    where: () => Chain;
-    limit: () => Chain;
-    then: (
-      onfulfilled?: ((value: unknown) => unknown) | null,
-      onrejected?: ((reason: unknown) => unknown) | null
-    ) => Promise<unknown>;
-  }
+interface Chain {
+  from: () => Chain;
+  where: () => Chain;
+  groupBy: () => Chain;
+  limit: () => Chain;
+  then: (
+    onfulfilled?: ((value: unknown) => unknown) | null,
+    onrejected?: ((reason: unknown) => unknown) | null
+  ) => Promise<unknown>;
+}
 
-  const state = { txResults: [] as unknown[] };
+const mocks = vi.hoisted(() => {
+  const state = {
+    txResults: [] as unknown[],
+    countResults: [] as unknown[],
+  };
 
   const tx = {
     select: () => {
       const chain: Chain = {
         from: () => chain,
         where: () => chain,
+        groupBy: () => chain,
         limit: () => chain,
         then: (onfulfilled, onrejected) => {
           const next = state.txResults.length > 0 ? state.txResults.shift() : [];
@@ -91,6 +98,23 @@ vi.mock("@/shared/db", () => ({
       intelligenceInvestigations: { findMany: mocks.findInvestigations },
       intelligenceFindings: { findMany: mocks.findFindings },
       intelligenceAssets: { findMany: mocks.findAssets },
+    },
+    select: () => {
+      const chain: Chain = {
+        from: () => chain,
+        where: () => chain,
+        groupBy: () => chain,
+        limit: () => chain,
+        then: (onfulfilled, onrejected) => {
+          const next =
+            mocks.state.countResults.length > 0 ? mocks.state.countResults.shift() : [];
+          return Promise.resolve(next).then(
+            onfulfilled ?? undefined,
+            onrejected ?? undefined,
+          );
+        },
+      };
+      return chain;
     },
   },
   db: {},
@@ -177,7 +201,7 @@ function createRequest(body: Record<string, unknown>): NextRequest {
 
 type ReportData = {
   overallScore: number | null;
-  sections: { totalFindings: number }[];
+  sections: { totalFindings: number; severeCount: number }[];
 };
 
 async function renderedReportData(): Promise<ReportData> {
@@ -195,6 +219,7 @@ describe("POST /api/reports/pdf", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mocks.state.txResults = [[projectRow]];
+    mocks.state.countResults = [[{ severity: "critical", n: 1 }]];
     mocks.findInvestigations.mockResolvedValue([investigationRow]);
     mocks.findFindings.mockResolvedValue([findingRow]);
     mocks.findAssets.mockResolvedValue([assetRow]);
@@ -274,11 +299,27 @@ describe("POST /api/reports/pdf", () => {
 
   it("empty findings still returns 200", async () => {
     mocks.findFindings.mockResolvedValue([]);
+    mocks.state.countResults = [[]];
 
     const res = await POST(createRequest({ projectId: PROJECT_ID }), USER_ID);
     expect(res.status).toBe(200);
     const data = await renderedReportData();
     expect(data.sections[0].totalFindings).toBe(0);
+  });
+
+  it("TD-13: counts por severity reales e independientes del fetch acotado", async () => {
+    mocks.state.countResults = [
+      [
+        { severity: "critical", n: 5 },
+        { severity: "medium", n: 3 },
+      ],
+    ];
+
+    const res = await POST(createRequest({ projectId: PROJECT_ID }), USER_ID);
+    expect(res.status).toBe(200);
+    const data = await renderedReportData();
+    expect(data.sections[0].totalFindings).toBe(8);
+    expect(data.sections[0].severeCount).toBe(5);
   });
 
   it("unexpected error returns 500", async () => {

@@ -456,6 +456,13 @@ function SectionPage({ section }: { section: PdfSection }) {
               )}
             </View>
           ))}
+
+          {(section.totalFindings ?? 0) > Math.min(section.findings.length, 50) && (
+            <Text style={{ fontSize: 9, color: THEME.fgDim, textAlign: 'center', marginTop: 10 }}>
+              Mostrando los primeros {Math.min(section.findings.length, 50)} de{' '}
+              {section.totalFindings} hallazgos.
+            </Text>
+          )}
         </>
       ) : (
         <Text style={{ fontSize: 9, color: THEME.fgDim, textAlign: 'center', marginTop: 20 }}>

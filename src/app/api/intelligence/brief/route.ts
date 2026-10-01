@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withRLS } from "@/shared/db/rls";
 import { intelligenceInvestigations, intelligenceFindings } from "@/shared/db/schemas";
-import { eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
 import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from "@/server/ai/ai-router";
@@ -14,6 +14,8 @@ export const dynamic = "force-dynamic";
 // Cadena de hasta 5 modelos × 20s = 100s peor caso. Sin maxDuration, Vercel
 // mata la función a los 10s (Hobby) o 60s (Pro) y el brief no se genera.
 export const maxDuration = 120;
+
+const BRIEF_FINDINGS_LIMIT = 100;
 
 const handler = withErrorHandler(async (req: NextRequest, _userId: string) => {
   // Cuota diaria P0-1: antes de cualquier trabajo costoso
@@ -31,25 +33,39 @@ const handler = withErrorHandler(async (req: NextRequest, _userId: string) => {
 
     if (!investigationRecord) return null;
 
-    const findingsRecords = await tx.query.intelligenceFindings.findMany({
-      where: eq(intelligenceFindings.investigationId, investigationId)
+    const severityRows = await tx
+      .select({ severity: intelligenceFindings.severity, n: count() })
+      .from(intelligenceFindings)
+      .where(eq(intelligenceFindings.investigationId, investigationId))
+      .groupBy(intelligenceFindings.severity);
+
+    const highPriority = await tx.query.intelligenceFindings.findMany({
+      where: and(
+        eq(intelligenceFindings.investigationId, investigationId),
+        inArray(intelligenceFindings.severity, ["critical", "high"]),
+      ),
+      orderBy: [asc(intelligenceFindings.severity), asc(intelligenceFindings.title)],
+      limit: BRIEF_FINDINGS_LIMIT,
     });
 
-    return { investigation: investigationRecord, findings: findingsRecords };
+    return { investigation: investigationRecord, severityRows, highPriority };
   });
 
   if (!dbResult) {
     throw new NotFoundError("Investigación", investigationId);
   }
 
-  const { investigation, findings } = dbResult;
-
-  // Filter to high + critical findings only
-  const highPriorityFindings = findings.filter(f =>
-    f.severity === "critical" || f.severity === "high"
+  const { investigation, severityRows, highPriority } = dbResult;
+  const severityCounts = new Map<string, number>(
+    severityRows.map((r) => [r.severity, Number(r.n)] as [string, number]),
   );
+  const criticalCount = severityCounts.get("critical") ?? 0;
+  const highCount = severityCounts.get("high") ?? 0;
+  const mediumCount = severityCounts.get("medium") ?? 0;
+  const totalHighPriority = criticalCount + highCount;
+  const highPriorityFindings = highPriority;
 
-  if (highPriorityFindings.length === 0) {
+  if (totalHighPriority === 0) {
     return NextResponse.json({
       success: true,
       brief: `## Resumen Ejecutivo\n\nNo se detectaron hallazgos de severidad alta o crítica en el objetivo **${investigation.target}**. La postura de seguridad actual (${investigation.score}/100) no requiere generación de un Incident Brief de emergencia.\n\n## Recomendación\n\nContinuar con el monitoreo periódico y revisar hallazgos de severidad media para mejora continua.`
@@ -66,7 +82,7 @@ const handler = withErrorHandler(async (req: NextRequest, _userId: string) => {
 
   const userMsg: AIMessage = {
     role: "user",
-    content: `Genera un Incident Brief ejecutivo para el objetivo "${investigation.target}" con fecha ${today}.\n\nScore de Postura de Seguridad: ${investigation.score ?? "N/A"}/100\nTipo de objetivo: ${investigation.targetType}\nTotal hallazgos críticos: ${findings.filter(f => f.severity === "critical").length}\nTotal hallazgos altos: ${findings.filter(f => f.severity === "high").length}\nTotal hallazgos medios: ${findings.filter(f => f.severity === "medium").length}\n\nHallazgos de Alta Severidad (${highPriorityFindings.length}):\n${highPriorityFindings.map((f, i) =>
+    content: `Genera un Incident Brief ejecutivo para el objetivo "${investigation.target}" con fecha ${today}.\n\nScore de Postura de Seguridad: ${investigation.score ?? "N/A"}/100\nTipo de objetivo: ${investigation.targetType}\nTotal hallazgos críticos: ${criticalCount}\nTotal hallazgos altos: ${highCount}\nTotal hallazgos medios: ${mediumCount}\n\nHallazgos de Alta Severidad (${highPriorityFindings.length}${highPriorityFindings.length < totalHighPriority ? ` de ${totalHighPriority}` : ""}):\n${highPriorityFindings.map((f, i) =>
       `${i + 1}. [${f.severity.toUpperCase()}] ${f.title}\n   Descripción: ${f.description}\n   Activo afectado: ${f.affectedAsset || "Infraestructura principal"}\n   Recomendación: ${f.recommendation || "Revisar con equipo técnico"}`
     ).join("\n\n")}\n\nEl Incident Brief debe incluir las siguientes secciones en este orden exacto:\n## Resumen Ejecutivo\n## Timeline del Incidente\n## Activos Afectados\n## Vector de Ataque Principal\n## Acciones Inmediatas (Primeras 48h)\n## Impacto Estimado en Negocio`
   };
@@ -84,7 +100,7 @@ const handler = withErrorHandler(async (req: NextRequest, _userId: string) => {
     // No API key — return findings in a structured brief without AI
     return NextResponse.json({
       success: true,
-      brief: `## ⚠️ Motor de IA No Configurado\n\n${getNoApiKeyResponse("incident-brief")}\n\n## Hallazgos de Alta Severidad Detectados (${highPriorityFindings.length})\n\n${highPriorityFindings.map((f, i) => `### ${i + 1}. [${f.severity.toUpperCase()}] ${f.title}\n\n${f.description}\n\n**Acción recomendada:** ${f.recommendation || "Revisar con el equipo de seguridad."}`).join("\n\n---\n\n")}`
+      brief: `## ⚠️ Motor de IA No Configurado\n\n${getNoApiKeyResponse("incident-brief")}\n\n## Hallazgos de Alta Severidad Detectados (${highPriorityFindings.length}${highPriorityFindings.length < totalHighPriority ? ` de ${totalHighPriority}` : ""})\n\n${highPriorityFindings.map((f, i) => `### ${i + 1}. [${f.severity.toUpperCase()}] ${f.title}\n\n${f.description}\n\n**Acción recomendada:** ${f.recommendation || "Revisar con el equipo de seguridad."}`).join("\n\n---\n\n")}`
     });
   }
 
