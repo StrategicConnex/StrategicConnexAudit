@@ -180,16 +180,16 @@ pnpm build   →  exit 0 (Next.js 16.3.3 + Turbopack; 23 rutas de página + API)
 
 ## 6. Hallazgos y recomendaciones priorizadas
 
-| # | Prioridad | Hallazgo | Evidencia | Recomendación |
-|---|---|---|---|---|
-| H-01 | **P0** | TBT de 1336 ms en `/login` y 857 ms en `/`; 6,1 s de trabajo en main thread | §3.1 | Dividir la hidratación del shell con `next/dynamic` + `<Suspense>` (pestañas del dashboard, copiloto) y reducir el trabajo sincrónico en el primer paint |
-| H-02 | **P0** | JS inicial de `/` = 1.026 KB raw / 316 KB gzip y de `/login` = 978 KB / 292 KB | §4.1 | Revisar por qué `/login` arrastra `19irr3q37y45i.js` (210 KB, cliente `supabase`) y evaluar moverlo a lazy si el login no lo necesita en el primer render |
-| H-03 | **P1** | `recharts` **eager** en `/ai/health`: 6 chunks + 232 KB en el HTML inicial | §5.1 | Envolver los gráficos con `next/dynamic({ ssr:false, loading })` (patrón ya aplicado en `PerformanceTab`) |
-| H-04 | **P1** | `reactflow` (143 KB) **eager** en `/intelligence` | manifest `async=false` | Confirmar y, si procede, pasar a carga diferida del grafo |
-| H-05 | **P1** | CSS global de **217,6 KB raw (29,2 KB gzip) en todas las rutas** | §4.1, §5 | Audit de utilidades no usadas (Tailwind) y separar CSS por ruta |
-| H-06 | **P2** | Fuentes: **110 KB de transfer en las 4 rutas** | §3.2 | `font-display: swap`, `unicode-range`/subsetting, reducir familias (baseline ya lo señalaba) |
-| H-07 | **P2** | `/swagger` sigue con 610 KB de first-load JS (sin contar el chunk lazy de 1,13 MB) | §4.2 | Prefetch en hover del link a `/swagger` (recomendación 4 del reporte de julio, sigue abierta) |
-| H-08 | **P2** | No existe medición continua | §7 | Lighthouse CI en el pipeline + este informe por release para detectar regresiones de bundle |
+| # | Prioridad | Hallazgo | Evidencia | Recomendación | Estado |
+|---|---|---|---|---|---|
+| H-01 | **P0** | TBT de 1336 ms en `/login` y 857 ms en `/`; 6,1 s de trabajo en main thread | §3.1 | Dividir la hidratación del shell con `next/dynamic` + `<Suspense>` (pestañas del dashboard, copiloto) y reducir el trabajo sincrónico en el primer paint | ✅ 2026-10-01 — `NeuralNetworkBackground` (loop rAF canvas) diferido con `ssr:false` en `/`, `/login` y su skeleton; pestañas y copiloto ya lazy. TBT sin re-medir (→ H-08) |
+| H-02 | **P0** | JS inicial de `/` = 1.026 KB raw / 316 KB gzip y de `/login` = 978 KB / 292 KB | §4.1 | Revisar por qué `/login` arrastra `19irr3q37y45i.js` (210 KB, cliente `supabase`) y evaluar moverlo a lazy si el login no lo necesita en el primer render | ✅ 2026-10-01 — supabase bajo `import()` en los handlers del login; HTML de `/login` sin `createBrowserClient` (18 scripts): **748,1 KB raw (−229,9 KB / −23,5%)**; `19irr3q37y45i.js` solo vía loader async |
+| H-03 | **P1** | `recharts` **eager** en `/ai/health`: 6 chunks + 232 KB en el HTML inicial | §5.1 | Envolver los gráficos con `next/dynamic({ ssr:false, loading })` (patrón ya aplicado en `PerformanceTab`) | ✅ 2026-10-01 (lote PRE-PROD #3) |
+| H-04 | **P1** | `reactflow` (143 KB) **eager** en `/intelligence` | manifest `async=false` | Confirmar y, si procede, pasar a carga diferida del grafo | ✅ 2026-10-01 — `TopologyView` lazy (lote PRE-PROD #3) |
+| H-05 | **P1** | CSS global de **217,6 KB raw (29,2 KB gzip) en todas las rutas** | §4.1, §5 | Audit de utilidades no usadas (Tailwind) y separar CSS por ruta | ⬜ abierto |
+| H-06 | **P2** | Fuentes: **110 KB de transfer en las 4 rutas** | §3.2 | `font-display: swap`, `unicode-range`/subsetting, reducir familias (baseline ya lo señalaba) | ⬜ abierto |
+| H-07 | **P2** | `/swagger` sigue con 610 KB de first-load JS (sin contar el chunk lazy de 1,13 MB) | §4.2 | Prefetch en hover del link a `/swagger` (recomendación 4 del reporte de julio, sigue abierta) | ⬜ abierto |
+| H-08 | **P2** | No existe medición continua | §7 | Lighthouse CI en el pipeline + este informe por release para detectar regresiones de bundle | ⬜ abierto |
 
 **REQ del baseline — estado actual:**
 

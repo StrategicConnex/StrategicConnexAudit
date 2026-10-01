@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, Suspense, useCallback, useRef, useEffect } from 'react';
-import { createClient } from '@/shared/lib/supabase/client';
+import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
 import { Mail, Loader2, CheckCircle2, AlertCircle, ArrowRight, Shield, Sparkles } from 'lucide-react';
@@ -9,7 +9,10 @@ import { useTranslations } from 'next-intl';
 import { LanguageSwitcher } from '@/features/dashboard/LanguageSwitcher';
 import { ThemeSwitcher } from '@/shared/design-system';
 import AiCoreVisual from '@/features/dashboard/AiCoreVisual';
-import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
+const NeuralNetworkBackground = dynamic(
+  () => import('@/components/NeuralNetworkBackground').then(mod => ({ default: mod.NeuralNetworkBackground })),
+  { ssr: false, loading: () => null }
+);
 
 // ─── Placeholder rotativo ──────────────────────────────────────────
 const PLACEHOLDER_TEXTS = [
@@ -62,7 +65,6 @@ const [showPasswordLogin, setShowPasswordLogin] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/';
-  const supabase = createClient();
   const t = useTranslations('login');
 
   // ─── Entrance stagger ───────────────────────────────────────────
@@ -152,6 +154,8 @@ const [showPasswordLogin, setShowPasswordLogin] = useState(false);
     setLoading(true);
     setMessage(null);
 
+    const { createClient } = await import('@/shared/lib/supabase/client');
+    const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
@@ -185,6 +189,8 @@ const handlePasswordLogin = async (e: React.FormEvent) => {
   setLoading(true);
   setMessage(null);
 
+  const { createClient } = await import('@/shared/lib/supabase/client');
+  const supabase = createClient();
   const { error } = await supabase.auth.signInWithPassword({
     email: email.trim(),
     password,

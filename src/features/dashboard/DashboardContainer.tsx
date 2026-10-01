@@ -6,7 +6,6 @@ import { DashboardSidebar, type DashboardTab } from './DashboardSidebar';
 import { MobileNav, MobileBottomNav } from './MobileNav';
 import { DashboardHeader } from './DashboardHeader';
 import { CommandPalette } from '@/components/CommandPalette';
-import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
 import { OverviewTab } from './tabs/OverviewTab';
 import { TabSkeleton } from './TabSkeleton';
 import { loadIntelligenceTab } from './tab-loaders';
@@ -71,6 +70,11 @@ const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mo
 });
 
 const AiCopilot = dynamic(() => import('./AiCopilot').then(mod => mod.AiCopilot), { ssr: false });
+
+const NeuralNetworkBackground = dynamic(
+  () => import('@/components/NeuralNetworkBackground').then(mod => ({ default: mod.NeuralNetworkBackground })),
+  { ssr: false, loading: () => null }
+);
 
 import { ProjectWithNested, type ProjectRow } from '@/shared/db/types';
 

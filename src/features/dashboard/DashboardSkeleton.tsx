@@ -1,6 +1,11 @@
 'use client';
 
-import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
+import dynamic from 'next/dynamic';
+
+const NeuralNetworkBackground = dynamic(
+  () => import('@/components/NeuralNetworkBackground').then(mod => ({ default: mod.NeuralNetworkBackground })),
+  { ssr: false, loading: () => null }
+);
 
 export function DashboardSkeleton() {
   return (
