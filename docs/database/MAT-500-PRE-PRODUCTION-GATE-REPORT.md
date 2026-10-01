@@ -206,9 +206,9 @@ Los pushes de CHANGE-001..004 se ejecutaron y verificaron el **2026-08-09** (MAT
 | 13 Backup/snapshot | ⛔ PENDING | ✅ PASS | plan confirmado por owner 2026-08-09 (MAT-505 §11) + **PITR/backup confirmado por owner 2026-10-01** (dashboard Supabase) |
 | 15 Aprobación owner | ⛔ PENDING | ✅ PASS | firma del owner (§17) en CHANGE-001..004; ejecuciones MAT-505 de 2026-08-09 con "Aprobación: firma del owner" |
 
-**RESULTADO ACTUALIZADO (2026-10-01): 16 PASS · 0 PENDING · 0 FAIL → GO** → los pushes de CHANGE-001..004 se ejecutaron y verificaron el 2026-08-09 (11/11 y 4/4) y el último residuo (13 Backup/PITR) quedó cerrado con la **confirmación del owner el 2026-10-01**. Único trabajo fuera del gate: **CHANGE-005** (migraciones `0025+`, abierto y a la espera de firma).
+**RESULTADO ACTUALIZADO (2026-10-01): 16 PASS · 0 PENDING · 0 FAIL → GO** → los pushes de CHANGE-001..004 se ejecutaron y verificaron el 2026-08-09 (11/11 y 4/4) y el último residuo (13 Backup/PITR) quedó cerrado con la **confirmación del owner el 2026-10-01**. CHANGE-005 (migraciones `0025+`) **CERRADO** el 2026-10-01 (19/19 verificadas + ledger sync). Único trabajo fuera del gate: **CHANGE-006** (habilitar RLS en 7 tablas — paquete abierto, pendiente de firma §17).
 
-**Cierre del pendiente (2026-10-01):** **CHANGE-005 ejecutado y verificado** (firma §17 + pre-checks + verificación): las 19 migraciones `0025+` **ya estaban aplicadas en producción** (aplicación out-of-band previa — `db:drift-check` 70/70 sin drift duro, 63 tablas RLS, 84 policies, seeds/índices/columnas presentes) → **0 DDL necesario**; único remanente (ledger con 3 hashes sin registrar) → **sincronizado** (`create-migration-ledger`, `pending: []`, 46 filas = 44 journal + 2 stale). Evidencia: `MAT-505-CHANGE-005-POST-PUSH-REPORT.md`. **Nuevo hallazgo:** 5 tablas con policy definido pero RLS disabled (`project_members`, `uptime_logs`, `anomaly_detections`, `adversary_engagements`, `adversary_task_nodes`) → candidato CHANGE-006 (decisión owner).
+**Cierre del pendiente (2026-10-01):** **CHANGE-005 ejecutado y verificado** (firma §17 + pre-checks + verificación): las 19 migraciones `0025+` **ya estaban aplicadas en producción** (aplicación out-of-band previa — `db:drift-check` 70/70 sin drift duro, 63 tablas RLS, 84 policies, seeds/índices/columnas presentes) → **0 DDL necesario**; único remanente (ledger con 3 hashes sin registrar) → **sincronizado** (`create-migration-ledger`, `pending: []`, 46 filas = 44 journal + 2 stale). Evidencia: `MAT-505-CHANGE-005-POST-PUSH-REPORT.md`. **Nuevo hallazgo:** 5 tablas con policy definido pero RLS disabled (`project_members`, `uptime_logs`, `anomaly_detections`, `adversary_engagements`, `adversary_task_nodes`) + `exec_briefs`/`ai_eval_results` sin policy → **CHANGE-006 ABIERTO** (paquete `CHANGE-006-APPROVAL-PACKAGE.md`, pendiente de firma §17).
 
 ---
 
@@ -302,7 +302,7 @@ flowchart TD
 4. **Ventana de observación (§15):** T+5m → T+24h con monitoreo de locks/errores/42501 — ✅ cumplida sin regresiones en MAT-505 (2026-08-09).
 5. ~~**Commit del batch P1**~~ ✅ CERRADO — el push de CI dispara sobre lo commiteado.
 
-> **Pendiente (fuera de los 16 checks):** ~~migraciones `0025+`~~ ✅ **CERRADO 2026-10-01** — firma §17 → pre-checks (19/19 ya aplicadas en prod) → sync de ledger (`pending: []`) → verificación (63 RLS / 84 policies / drift 70/70) → `MAT-505-CHANGE-005-POST-PUSH-REPORT.md`. **0 DDL ejecutado.** Nuevo pendiente: **CHANGE-006 candidato** (5 tablas con policy sin RLS enabled, decisión del owner).
+> **Pendiente (fuera de los 16 checks):** ~~migraciones `0025+`~~ ✅ **CERRADO 2026-10-01** — firma §17 → pre-checks (19/19 ya aplicadas en prod) → sync de ledger (`pending: []`) → verificación (63 RLS / 84 policies / drift 70/70) → `MAT-505-CHANGE-005-POST-PUSH-REPORT.md`. **0 DDL ejecutado.** Nuevo pendiente: **CHANGE-006 ABIERTO** (paquete `CHANGE-006-APPROVAL-PACKAGE.md`, pendiente de firma §17 — 7 × ENABLE RLS).
 
 ---
 
@@ -345,6 +345,7 @@ flowchart TD
 | 1.1 | 2026-10-01 | Re-ejecución con evidencia post-push: checks 06/09/11/15 → PASS (MAT-505) — **15 PASS · 1 PENDING** (13 Backup/PITR); CHANGE-001..004 aplicados 2026-08-09 | Ejecutado |
 | 1.2 | 2026-10-01 | Backup/PITR confirmado por owner → check 13 PASS: **16 PASS · 0 PENDING → GO**; CHANGE-005 abierto para migraciones 0025+ (paquete pendiente de firma) | Ejecutado |
 | 1.3 | 2026-10-01 | **CHANGE-005 ejecutado y verificado:** firma §17 → pre-checks (19/19 ya aplicadas en prod, drift 70/70) → sync ledger (+3 hashes, `pending: []`) → verificación (63 RLS / 84 policies); §11.1/§17 cerrados; nuevo hallazgo → CHANGE-006 candidato | Ejecutado |
+| 1.4 | 2026-10-01 | **CHANGE-006 abierto:** paquete de aprobación (7 × ENABLE RLS en prod, MEDIUM-LOW, 0 grants/0 policies) — pendiente de firma §17 | Ejecutado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/MAT-500-PRE-PRODUCTION-GATE-REPORT.md --min 80` → PASS
 

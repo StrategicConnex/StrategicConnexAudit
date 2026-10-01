@@ -24,7 +24,7 @@ estado: Aprobado
 > | Build PASS | ✅ **PASS** hoy (`pnpm build` exit 0, Next.js 16 Turbopack) |
 > | Observabilidad (§17) "correlation IDs" como target | ✅ **G1–G3 implementados 2026-09-27** — ALS en `proxy.ts` + `withRequestContext` 61/61 rutas, `correlationId` en payloads Trigger.dev y export SIEM, `x-request-id` en fetch salientes |
 >
-> MAT-500 reconciliado 2026-10-01: **16 PASS · 0 PENDING → GO** (13 Backup/PITR ✅ confirmado por owner) — CHANGE-001..004 **aplicados y verificados en producción 2026-08-09** (MAT-505: 11/11 y 4/4); SB-002 **CERRADO**; **CHANGE-005 CERRADO** — las 19 migraciones `0025+` **ya estaban aplicadas** (verificado 2026-10-01: drift 70/70, 63 tablas RLS, 84 policies) y el ledger quedó sincronizado. Nuevo hallazgo: 5 tablas con policy sin RLS enabled → candidato CHANGE-006 (decisión owner).
+> MAT-500 reconciliado 2026-10-01: **16 PASS · 0 PENDING → GO** (13 Backup/PITR ✅ confirmado por owner) — CHANGE-001..004 **aplicados y verificados en producción 2026-08-09** (MAT-505: 11/11 y 4/4); SB-002 **CERRADO**; **CHANGE-005 CERRADO** — las 19 migraciones `0025+` **ya estaban aplicadas** (verificado 2026-10-01: drift 70/70, 63 tablas RLS, 84 policies) y el ledger quedó sincronizado. Nuevo hallazgo: 5 tablas con policy sin RLS enabled → **CHANGE-006 ABIERTO** (paquete pendiente de firma §17).
 
 {: .no_toc }
 
@@ -255,8 +255,8 @@ THREAT-REGISTER documenta **15 amenazas STRIDE** [VERIFIED]:
 | Cobertura tests | Stmts 13.72% | −11.28pp al umbral | ≥25% | route.test P0/P1 + trigger tests | P0 |
 | Rutas API | 6/42 con test | 36 sin | 42/42 | TSK-022 | P0/P1 |
 | Triggers | 0/12 | 12 sin | 12/12 | siem/uptime/adversary primero | P0 |
-| Migraciones | 0020..0024 aplicadas 2026-08-09; 0025+ **verificadas aplicadas** (CHANGE-005 **CERRADO** 2026-10-01: 19/19 + ledger sync `pending: []`) | 5 tablas con policy sin RLS enabled (hallazgo CHANGE-005) | 69/69 (inventario código) | abrir **CHANGE-006** — decisión owner | P1 |
-| RLS | **63 tablas RLS / 84 policies medidos en prod (2026-10-01)** — CHANGE-005 Grupo A verificado aplicado | 7 tablas sin RLS en prod (5 con policy definido pero `ENABLE` ausente) | reconciliar inventario código (69) vs prod (63) | **CHANGE-006** — decisión owner | P1 |
+| Migraciones | 0020..0024 aplicadas 2026-08-09; 0025+ **verificadas aplicadas** (CHANGE-005 **CERRADO** 2026-10-01: 19/19 + ledger sync `pending: []`) | 5 tablas con policy sin RLS enabled (hallazgo CHANGE-005) | 69/69 (inventario código) | **CHANGE-006** abierto (pendiente firma §17) | P1 |
+| RLS | **63 tablas RLS / 84 policies medidos en prod (2026-10-01)** — CHANGE-005 Grupo A verificado aplicado | 7 tablas sin RLS en prod (5 con policy definido pero `ENABLE` ausente) | reconciliar inventario código (69) vs prod (63) | **CHANGE-006** abierto (pendiente firma §17) | P1 |
 | Módulos | `src/modules/*` vacíos | 9 dirs sin código | módulos reales | TSK-014 | P1 |
 | PerformanceTab | datos estáticos | sin consumidor real | leer `performance_results` | TSK-015 | P1 |
 | Observabilidad | sin matriz de IDs | sin convención | OBSERVABILITY-MATRIX | B08 | P2 |
