@@ -142,6 +142,40 @@ pnpm build   →  exit 0 (Next.js 16.3.3 + Turbopack; 23 rutas de página + API)
 | Desglose | JS 8.821.354 B / CSS 426.868 B / WOFF2 353.224 B / ICO+PNG 29.351 B |
 | Con todos los ficheros (199) | 9.630.798 B |
 
+*(§4.1, §4.3 y §5 reflejan el build pre-auditoría H-05; las cifras posteriores a la auditoría están en §4.4.)*
+
+### 4.4 Auditoría H-05 — composición del CSS global (2026-10-01)
+
+**Composición del chunk eager en todas las rutas (build pre-auditoría, `2d0rji8dmxh87.css`, 222.781 B; §5.8):**
+
+| Bloque | Bytes | % | Contenido |
+|---|---|---|---|
+| Infraestructura Tailwind v4 | 14.604 | 6,6% | `properties` 1.989 + `theme` 8.995 + preflight 3.602 + `components` 18 |
+| Utilities | 190.970 | 85,7% | 2.485 reglas (media ~77 B/regla). Top familias: `bg` 32,9 KB, `border` 19,6, `shadow` 18,9, `text` 12,7, `transition` 12,6, gradientes `from/via/to` 12,2, `ring` 5,5. Variantes: `hover` 15,6 KB, `focus` 4,8, `sm` 4,0 |
+| CSS de usuario | 17.207 | 7,7% | Tokens corporativos, temas dark/light OKLCH, view-transitions, glass, scrollbar, reduced-motion — global por diseño |
+
+Además, `1usbhoulxz6_c.css` = 9.282 B de `@font-face` (Inter) también es eager en todas las rutas.
+
+**Método del audit de utilities no usadas:** cada selector del `@layer utilities` se clasificó contra un corpus concatenado de `src/**` (4,17 MB) frente al resto del repositorio (8,07 MB). Resultado: **66 reglas / 5.203 B (2,3%) existían solo fuera de `src/`** (casi todas artefactos de parsing). Verificación manual: `transition-[all]` solo aparece en `docs/architecture/WEB-UI-GUIDELINES.md` (tabla de anti-patrones que lo bloquea) y `text-emerald-400/500` en `docs/archive/SCAUDIT-THEME.md` → **Tailwind v4 escaneaba `docs/`, `tests/` y `e2e/` como fuentes** y generaba utilidades huérfanas desde prosa y desde `docs/vendor/*.min.js` (vendor minificado).
+
+**Acción aplicada:** `@source not` en `src/app/globals.css` para `../../docs`, `../../tests` y `../../e2e`.
+
+| Métrica | Antes | Después | Δ |
+|---|---|---|---|
+| Chunk global raw | 222.781 B | 218.814 B (`1_idn1kpb-v_v.css`) | **−3.967 B (−1,8%)** |
+| Chunk global gzip9 | 29.898 B | 29.382 B | **−516 B** |
+| Reglas de utilities | 2.485 | 2.444 | −41 |
+| CSS por ruta raw (global + fuentes) | 232.063 B | 228.096 B | −3.967 B |
+| CSS por ruta gzip9 | 31.183 B | 30.667 B | −516 B |
+
+*Validación del método de gzip:* el chunk de fuentes (inalterado) mide 1.285 B gzip9, exactamente el valor implícito en §4.1 (31.183 − 29.898) → las cifras son comparables método a método.
+
+**Nota de build:** la caché persistente de Turbopack (`.next/cache`) **no invalidó el CSS** al cambiar solo las directivas `@source not`: el primer build sirvió el chunk antiguo byte a byte. Tras limpiar `.next/cache`, el build (`BUILD_EXIT=0`) aplicó la exclusión. Cualquier cambio de fuentes Tailwind requiere invalidar esa caché.
+
+**"Separar CSS por ruta" — resultado: sin candidatos.** Inventario completo de `globals.css` (455 líneas): todo el CSS de usuario es global por diseño (tokens de tema, view-transitions, glass, scrollbar, reduced-motion); no hay bloques específicos de ruta. El CSS de vendor ya está por ruta/demand y no es eager: Swagger 177.243 B, Leaflet 10.572 B, React Flow 6.990 B. Trocear las utilities de Tailwind v4 por ruta no es viable en la arquitectura actual (pipeline único en el root layout; duplicaría infraestructura y añadiría riesgo de regresión visual sin soporte de la herramienta). Pool residual no-src tras la exclusión: 40 reglas / 2.928 B, casi todo artefactos de parsing (residual genuino < 0,5 KB) → sin más exclusiones.
+
+**Conclusión:** CSS global de 217,6 → **213,7 KB raw** y 29,2 → **28,7 KB gzip9** por ruta. El resto son utilities genuinamente usadas por `src/` (97,7% verificado); reducir más exige refactor de diseño a nivel de app, no de build.
+
 ---
 
 ## 5. Chunks pesados — top-12 y estado lazy/eager
@@ -186,7 +220,7 @@ pnpm build   →  exit 0 (Next.js 16.3.3 + Turbopack; 23 rutas de página + API)
 | H-02 | **P0** | JS inicial de `/` = 1.026 KB raw / 316 KB gzip y de `/login` = 978 KB / 292 KB | §4.1 | Revisar por qué `/login` arrastra `19irr3q37y45i.js` (210 KB, cliente `supabase`) y evaluar moverlo a lazy si el login no lo necesita en el primer render | ✅ 2026-10-01 — supabase bajo `import()` en los handlers del login; HTML de `/login` sin `createBrowserClient` (18 scripts): **748,1 KB raw (−229,9 KB / −23,5%)**; `19irr3q37y45i.js` solo vía loader async |
 | H-03 | **P1** | `recharts` **eager** en `/ai/health`: 6 chunks + 232 KB en el HTML inicial | §5.1 | Envolver los gráficos con `next/dynamic({ ssr:false, loading })` (patrón ya aplicado en `PerformanceTab`) | ✅ 2026-10-01 (lote PRE-PROD #3) |
 | H-04 | **P1** | `reactflow` (143 KB) **eager** en `/intelligence` | manifest `async=false` | Confirmar y, si procede, pasar a carga diferida del grafo | ✅ 2026-10-01 — `TopologyView` lazy (lote PRE-PROD #3) |
-| H-05 | **P1** | CSS global de **217,6 KB raw (29,2 KB gzip) en todas las rutas** | §4.1, §5 | Audit de utilidades no usadas (Tailwind) y separar CSS por ruta | ⬜ abierto |
+| H-05 | **P1** | CSS global de **217,6 KB raw (29,2 KB gzip) en todas las rutas** | §4.1, §5 | Audit de utilidades no usadas (Tailwind) y separar CSS por ruta | ✅ 2026-10-01 — audit completo en §4.4: 97,7% de las utilities usadas por `src`; `@source not` (docs/tests/e2e) → global **222.781→218.814 B raw / 29.898→29.382 gzip9**; separación por ruta sin candidatos (vendor ya lazy) |
 | H-06 | **P2** | Fuentes: **110 KB de transfer en las 4 rutas** | §3.2 | `font-display: swap`, `unicode-range`/subsetting, reducir familias (baseline ya lo señalaba) | ⬜ abierto |
 | H-07 | **P2** | `/swagger` sigue con 610 KB de first-load JS (sin contar el chunk lazy de 1,13 MB) | §4.2 | Prefetch en hover del link a `/swagger` (recomendación 4 del reporte de julio, sigue abierta) | ⬜ abierto |
 | H-08 | **P2** | No existe medición continua | §7 | Lighthouse CI en el pipeline + este informe por release para detectar regresiones de bundle | ⬜ abierto |

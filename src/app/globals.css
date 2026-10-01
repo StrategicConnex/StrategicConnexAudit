@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@source not "../../docs";
+@source not "../../tests";
+@source not "../../e2e";
 @import "../styles/design-tokens.css";
 
 /* ═══════════════════════════════════════════════════════════════════════════
