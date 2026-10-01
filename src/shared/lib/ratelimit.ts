@@ -242,6 +242,19 @@ async function checkRateLimitInternal(identifier: string, config: RateLimitConfi
 }
 
 /**
+ * API pública del verificador de rate limit, para wrappers que aplican el
+ * límite en fases distintas de la request (p. ej. `withPublicApi`: por IP
+ * antes de autenticar y por API key después). Misma semántica que
+ * `withRateLimit`: consume un slot por llamada y devuelve el presupuesto.
+ */
+export async function checkRateLimit(
+  identifier: string,
+  config: RateLimitConfig
+): Promise<RateLimitResult> {
+  return checkRateLimitInternal(identifier, config);
+}
+
+/**
  * withRateLimit — Middleware/decorador genérico para envolver cualquier route handler
  * con rate limiting configurable.
  *

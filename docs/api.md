@@ -308,7 +308,7 @@ Este documento referencia la API pública e interna de SCAUDIT Pro organizada po
 | REQ | Requisito | Verificación |
 |-----|-----------|--------------|
 | REQ-001 | Endpoints autenticados con sesión Supabase | `createClient` + cookies |
-| REQ-002 | Rate limit distribuido en endpoints sensibles | `checkAiRateLimit` / `withRateLimit` |
+| REQ-002 | Rate limit en endpoints sensibles (en memoria por instancia, ADR-002) | `checkAiRateLimit` / `withRateLimit` / `withPublicApi` (fases IP + key) |
 | REQ-003 | Errores con formato uniforme (`error`, `retryAfter`) | Sección de códigos de error |
 | REQ-004 | CORS/CSP compatibles | `src/proxy.ts` |
 | REQ-005 | Cron protegido con `CRON_SECRET` | Header `x-cron-secret` |

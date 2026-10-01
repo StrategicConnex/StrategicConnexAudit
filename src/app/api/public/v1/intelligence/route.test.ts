@@ -33,7 +33,8 @@ vi.mock("@/shared/lib/api-keys", () => ({
   API_SCOPES: { intelligenceRead: "intelligence:read", intelligenceWrite: "intelligence:write" },
 }));
 
-vi.mock("@/shared/lib/ratelimit", () => ({
+vi.mock("@/shared/lib/ratelimit", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/lib/ratelimit")>()),
   checkIntelScanRateLimit: mockCheckRateLimit,
 }));
 

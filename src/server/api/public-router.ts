@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiKey, apiKeyHasScope, type ApiKeyAuthResult, type ApiScope } from '@/shared/lib/api-keys';
 import { directDb } from '@/shared/db';
 import { securityAuditLogs } from '@/shared/db/schemas';
+import {
+  checkRateLimit,
+  extractClientIp,
+  rateLimitResponse,
+  type RateLimitConfig,
+  type RateLimitResult,
+} from '@/shared/lib/ratelimit';
+import { logSecurityEvent } from '@/shared/lib/audit-log';
 import { runWithRequestContext } from '@/lib/logger';
 import { readRequestId } from '@/lib/request-context';
 
@@ -21,6 +29,24 @@ export interface PublicApiOptions {
    */
   scope?: ApiScope;
 }
+
+/**
+ * Presupuestos de rate limiting de la API pública: sliding window en
+ * memoria por instancia (ADR-002 — sin Upstash, ver `ratelimit.ts`).
+ *
+ * - `ip` se consume en cada request ANTES de autenticar: acota volumen
+ *   anónimo y fuerza bruta de keys sin llegar a la BD (la autenticación
+ *   es un lookup por hash). 120 req/min por origen es cómodo incluso
+ *   tras NAT de oficina.
+ * - `key` se consume DESPUÉS de autenticar, identificado por key id:
+ *   acota el abuso de una key válida con independencia de la IP de
+ *   origen (p. ej. una key robada distribuida entre muchos orígenes).
+ *   300 req/min por key.
+ */
+export const PUBLIC_API_RATE_LIMITS = {
+  ip: { limit: 120, window: 60, prefix: 'public_api_ip' },
+  key: { limit: 300, window: 60, prefix: 'public_api_key' },
+} as const;
 
 interface ApiErrorResponse {
   success: false;
@@ -51,6 +77,12 @@ async function runPublicRoute(
   req: NextRequest,
   params: unknown
 ): Promise<NextResponse> {
+  const clientIp = extractClientIp(req);
+  const ipBudget = await checkRateLimit(clientIp, PUBLIC_API_RATE_LIMITS.ip);
+  if (!ipBudget.success) {
+    return rateLimitExceeded(req, clientIp, undefined, PUBLIC_API_RATE_LIMITS.ip, ipBudget);
+  }
+
   const authResult = await authenticateApiKey(req);
 
   if (!authResult.authenticated) {
@@ -81,17 +113,29 @@ async function runPublicRoute(
     );
   }
 
+  const keyId = authResult.keyRecord?.id;
+  let budget = ipBudget;
+  if (keyId) {
+    const keyBudget = await checkRateLimit(`key:${keyId}`, PUBLIC_API_RATE_LIMITS.key);
+    if (!keyBudget.success) {
+      return rateLimitExceeded(
+        req,
+        clientIp,
+        authResult.userId ?? undefined,
+        PUBLIC_API_RATE_LIMITS.key,
+        keyBudget
+      );
+    }
+    budget = keyBudget;
+  }
+
   // Attach auth info to request and pass to handler
   const authedReq = req as AuthenticatedRequest;
   authedReq.apiKeyAuth = authResult;
 
   // Fire-and-forget: log API key usage to security audit logs
   // This powers the GET /api/api-keys/:id/usage endpoint for real usage counts
-  const keyId = authResult.keyRecord?.id;
   if (keyId) {
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-      || req.headers.get('x-real-ip')
-      || 'unknown';
     directDb.insert(securityAuditLogs).values({
       eventType: 'api_key_usage',
       ip: clientIp,
@@ -109,13 +153,58 @@ async function runPublicRoute(
     });
   }
 
-  return runWithRequestContext(
+  const response = await runWithRequestContext(
     {
       requestId: readRequestId(req),
       userId: authResult.userId ?? undefined,
     },
     () => handler(authedReq, params)
   );
+
+  return withBudgetHeaders(response, budget);
+}
+
+function rateLimitExceeded(
+  req: NextRequest,
+  ip: string,
+  userId: string | undefined,
+  config: RateLimitConfig,
+  result: RateLimitResult
+): NextResponse {
+  logSecurityEvent('rate_limit_hit', {
+    ip,
+    userId,
+    path: req.url || '/',
+    method: req.method || 'UNKNOWN',
+    userAgent: req.headers?.get('user-agent') || undefined,
+    metadata: {
+      prefix: config.prefix,
+      limit: config.limit,
+      window: config.window,
+      remaining: result.remaining,
+      reset: result.reset,
+      retryAfter: result.retryAfter,
+    },
+  });
+  return rateLimitResponse(result, {
+    success: false,
+    documentation_url: 'https://scaudit.vercel.app/docs/api',
+  });
+}
+
+function withBudgetHeaders(response: NextResponse, budget: RateLimitResult): NextResponse {
+  const headers = new Headers(response.headers);
+  headers.set('RateLimit-Limit', String(budget.limit));
+  headers.set('RateLimit-Remaining', String(budget.remaining));
+  headers.set('RateLimit-Reset', String(budget.reset));
+  headers.set('X-RateLimit-Limit', String(budget.limit));
+  headers.set('X-RateLimit-Remaining', String(budget.remaining));
+  headers.set('X-RateLimit-Reset', String(budget.reset));
+  return new NextResponse(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 /**

@@ -205,3 +205,77 @@ describe("apiError / apiSuccess", () => {
     expect(body).toEqual({ success: true, items: [1, 2] });
   });
 });
+
+/**
+ * PRE-PROD #2 — Rate limiting de la API pública (fase IP + fase key).
+ * Los loops agotan el presupuesto real en memoria; cada test usa
+ * identificadores (IP/key) únicos para no interferir entre sí ni con el
+ * resto del archivo.
+ */
+describe("withPublicApi — rate limiting", () => {
+  let withPublicApi: typeof import("./public-router").withPublicApi;
+  let limits: typeof import("./public-router").PUBLIC_API_RATE_LIMITS;
+
+  beforeEach(async () => {
+    const mod = await import("./public-router");
+    withPublicApi = mod.withPublicApi;
+    limits = mod.PUBLIC_API_RATE_LIMITS;
+  });
+
+  function requestFrom(ip: string): NextRequest {
+    return new NextRequest(
+      new Request("http://localhost/api/public/v1/reports", {
+        headers: { "x-forwarded-for": ip },
+      })
+    );
+  }
+
+  it("límite por IP: excede el presupuesto → 429 sin llegar a autenticar", async () => {
+    mockAuthenticateApiKey.mockResolvedValue({
+      authenticated: false,
+      userId: null,
+      error: "no key",
+    });
+
+    const wrapped = withPublicApi(handler);
+    let last: NextResponse | undefined;
+    for (let i = 0; i <= limits.ip.limit; i++) {
+      last = await wrapped(requestFrom("198.51.100.42"));
+    }
+
+    expect(last!.status).toBe(429);
+    expect(last!.headers.get("Retry-After")).toBeTruthy();
+    expect(last!.headers.get("RateLimit-Remaining")).toBe("0");
+    expect(mockAuthenticateApiKey).toHaveBeenCalledTimes(limits.ip.limit);
+    expect(handler).not.toHaveBeenCalled();
+
+    const body = await last!.json();
+    expect(body.success).toBe(false);
+    expect(body.documentation_url).toBeDefined();
+  });
+
+  it("límite por key: excede el presupuesto por key → 429 y headers RateLimit en el éxito", async () => {
+    mockAuthenticateApiKey.mockResolvedValue({
+      authenticated: true,
+      userId: "user-1",
+      keyRecord: { ...keyRecord([]), id: "key-rl-test" },
+    });
+
+    const wrapped = withPublicApi(handler);
+
+    const okRes = await wrapped(requestFrom("10.100.0.1"));
+    expect(okRes.status).toBe(200);
+    expect(okRes.headers.get("RateLimit-Limit")).toBe(String(limits.key.limit));
+    expect(okRes.headers.get("RateLimit-Remaining")).toBe(String(limits.key.limit - 1));
+
+    let last: NextResponse | undefined;
+    for (let i = 1; i <= limits.key.limit; i++) {
+      last = await wrapped(requestFrom(`10.100.${Math.floor(i / 256)}.${i % 256}`));
+    }
+
+    expect(last!.status).toBe(429);
+    expect(last!.headers.get("RateLimit-Remaining")).toBe("0");
+    expect(handler).toHaveBeenCalledTimes(limits.key.limit);
+    expect(mockAuthenticateApiKey).toHaveBeenCalledTimes(limits.key.limit + 1);
+  });
+});
