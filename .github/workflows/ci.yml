@@ -217,12 +217,21 @@ jobs:
     # para que el job nunca falle por configuración ausente (lección del
     # fallo "Your project's URL and Key are required to create a Supabase
     # client!" — el job no tenía NINGÚN env y el dev server no arrancaba).
+    #
+    # DATABASE_URL / DIRECT_URL / OPENROUTER_API_KEY también son requeridas,
+    # pero por `validateEnv()` de `src/instrumentation.ts` (fail-fast): sin
+    # ellas `pnpm dev` aborta y todo el job acaba en ECONNREFUSED :3000.
+    # Los fallbacks tienen formato válido y ningún test toca Postgres (los
+    # guards de auth redirigen en middleware y las APIs devuelven 401/JSON).
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://qwebfomwtwxxbkxbrrwm.supabase.co' }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ci_placeholder' }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_ci_placeholder' }}
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_PUBLIC_DEV_BYPASS_AUTH: 'false'
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/strategicaudit_ci' }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/strategicaudit_ci' }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || 'sk-or-ci-placeholder' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
