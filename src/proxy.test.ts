@@ -109,6 +109,7 @@ describe("Proxy — Security Headers", () => {
     const response = await proxyFn(createMockRequest("/login"));
     const csp = response.headers.get("content-security-policy");
     expect(csp).toContain("https://*.supabase.co");
+    expect(csp).toContain("wss://*.supabase.co");
     // Los LLM/SIEM corren server-side: allowlistarlos aquí solo ampliaría la
     // superficie de exfiltración de datos del navegador.
     expect(csp).not.toContain("apifreellm.com");

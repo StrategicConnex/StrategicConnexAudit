@@ -42,7 +42,7 @@ function buildCsp(nonce: string): string {
       `object-src 'none'`,
       `img-src 'self' data: https:`,
       `font-src 'self' data:`,
-      `connect-src 'self' https://*.supabase.co`,
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co`,
       `frame-ancestors 'none'`,
       `base-uri 'self'`,
       `form-action 'self'`,
@@ -71,7 +71,7 @@ function buildCsp(nonce: string): string {
     // called server-side and are not governed by this policy, so their
     // domains (apifreellm.com, *.vercel.app, …) must NOT be allowlisted here
     // — they would only widen the data-exfiltration surface.
-    `connect-src 'self' https://*.supabase.co`,
+    `connect-src 'self' https://*.supabase.co wss://*.supabase.co`,
     // Prevent clickjacking
     `frame-ancestors 'none'`,
     // Block mixed content in production

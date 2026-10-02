@@ -67,7 +67,7 @@
 | RISK | MEDIUM (según PRODUCTION-CHANGE-VERIFICATION §3, fila CHANGE-003) |
 | ROLLBACK PLAN | §5.3 de este documento |
 | APPROVAL | ✅ **FIRMADO** (owner, 2026-08-09) |
-| EXECUTION WINDOW | `[UNKNOWN]` — ventana de baja actividad a definir |
+| EXECUTION WINDOW | **EJECUTADO 2026-08-09** (push 0022 + ALTER PUBLICATION; MAT-505-CHANGE-003) |
 
 **Fuente:** plantilla MAT-400 de `PRODUCTION-CHANGE-VERIFICATION.md` §3 [VERIFIED].
 
@@ -140,7 +140,7 @@ flowchart LR
 
 | # | Límite | Riesgo | Control | Estado |
 |---|--------|--------|---------|--------|
-| TB-1 | Realtime findings/assets/investigations/run_events | Fuga cross-tenant (RSK-03) | RLS `member_or_owner` + publicación con RLS activa | ⏳ pendiente aprobación |
+| TB-1 | Realtime findings/assets/investigations/run_events | Fuga cross-tenant (RSK-03) | RLS `member_or_owner` + publicación con RLS activa + CSP con `wss://*.supabase.co` (proxy/layout) | ✅ PASS — DDL desde 2026-08-09; re-verificado 2026-10-02 (4/4 tablas, RLS 4×true, 9 policies); transporte `wss` corregido (estaba bloqueado por CSP) |
 | TB-2 | Escrituras server-side | Bloqueo por RLS nuevo | `db`/`directDb` bypasean RLS (rol privilegiado); `withRLS()` ya corre como `authenticated` y sus policies coinciden con las nuevas | ✅ sin impacto previsto |
 | TB-3 | Grants `authenticated` | Exponer columnas de más | Solo `GRANT SELECT` (sin UPDATE/INSERT/DELETE en clientes) | ✅ diseño |
 | TB-4 | Publicación realtime | Datos servidos sin filtro | RLS **antes** de añadir a la publicación (orden en FLOW-801) | ✅ diseño |
@@ -245,12 +245,13 @@ flowchart LR
 | "run_events no tiene project_id" | `intelligence.ts:115-127` (solo investigationId) | ✅ CONFIRMADO — policy requiere subquery vía investigations |
 | "SB-003 ya corregido en código" | `env.ts:12-15`, `useRealtimeMetrics.ts:12` | ✅ CONFIRMADO — CS-301 fix; resta solo env de despliegue |
 | "La publicación realtime está gestionada en migraciones" | `grep publication drizzle/*.sql` → sin matches | ✅ REFUTADO — gestión por SQL raw/plataforma |
+| "El WebSocket `wss://*.supabase.co` está bloqueado por la CSP de `proxy.ts`" | Sonda Chrome en prod (2026-10-02): `new WebSocket(...)` → violación `connect-src` en consola | ✅ CONFIRMADO — bloqueado en producción → **corregido**: `wss://*.supabase.co` añadido a `proxy.ts` (ramas prod+dev) y `layout.tsx`; re-verificación de la sonda WS tras push |
 
 ---
 
 ## 15. Unknowns y supuestos
 
-- [UNKNOWN] Estado real de la publicación `supabase_realtime` en producción (plataforma; verificar en §10.2).
+- **[RESUELTO 2026-10-02]** Estado de la publicación `supabase_realtime` en producción: **4/4 tablas** (findings/assets/investigations/run_events), `pubinsert/update/delete=true`, RLS 4×`true` y 9 policies `member_or_owner` [VERIFIED — BD leída].
 - [UNKNOWN] Estado del backup/PITR de Supabase (RSK-04) — requisito previo del checklist §10; requiere dashboard.
 - [UNKNOWN] Ventana de ejecución — a definir por el owner.
 - [ASSUMPTION] `authenticated` no tiene hoy grants sobre las 4 tablas (verificado solo por ausencia en 0016/0017); el GRANT SELECT de la migración es seguro e idempotente.
@@ -278,11 +279,16 @@ flowchart LR
 |---|-----------|--------|
 | 1 | Backup/PITR confirmado en dashboard Supabase (RSK-04) | ⬜ |
 | 2 | `pg_dump --schema-only` ejecutado (baseline MAT-401) | ⬜ |
-| 3 | Existencia de `supabase_realtime` verificada | ⬜ |
+| 3 | Existencia de `supabase_realtime` verificada | ✅ (2026-08-09 y re-verificación 2026-10-02: 4/4 tablas) |
 | 4 | `drizzle-kit push --dry-run` sin errores | ⬜ |
 | 5 | Ventana de ejecución aprobada (baja actividad) | ⬜ |
 | 6 | Rollback plan revisado (§5.3 de este doc) | ⬜ |
-| 7 | **FIRMA DE APROBACIÓN** (owner + fecha) | ⬜ |
+| 7 | **FIRMA DE APROBACIÓN** (owner + fecha) | ✅ firmado 2026-08-09 (§4) |
+
+> **Nota (2026-10-02):** checklist histórica pre-ejecución. La ejecución y su
+> verificación constan en §18 v1.1 + `MAT-505-CHANGE-003`. Los ítems 1/2/4/5/6
+> no conservan evidencia registrada en el paquete (condición cubierta por la
+> ejecución efectiva; no re-abiertos).
 
 ---
 
@@ -292,12 +298,13 @@ flowchart LR
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-08 | Creación del paquete de aprobación CHANGE-003 (evidencia SB-001/002/003 + plan de verificación) | Aprobado |
 | 1.1 | 2026-08-09 | **Ejecutado en producción**: push 0022 (17 statements, COMMIT) + ALTER PUBLICATION + verificación 4/4 (policies 9, publicación 4/4, RLS activo) | ✅ APLICADO |
+| 1.2 | 2026-10-02 | Re-verificación en prod (publicación 4/4, RLS 4×`true`, 9 policies) + cierre de TB-1 y §15 + fix CSP `wss://*.supabase.co` (transporte Realtime bloqueado en navegador) | ✅ |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/CHANGE-003-APPROVAL-PACKAGE.md --min 80` → resultado en la tabla siguiente.
 
 | Check | Resultado |
 |-------|-----------|
-| Quality gate `--min 80` | (completar tras ejecución) |
+| Quality gate `--min 80` | 90/100 ✅ (2026-10-02) |
 | Cross-check con PRODUCTION-CHANGE-VERIFICATION | CHANGE-003 ya registrado (§3, fila SB-001..003, riesgo MEDIUM) |
 | Cross-check con RISK-REGISTER | RSK-03 y RSK-10 referenciados (mitigación CHANGE-003) |
 
