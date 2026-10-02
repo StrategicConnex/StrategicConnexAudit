@@ -85,7 +85,7 @@ flowchart LR
     subgraph DATA["Data Access"]
         SH_DB["shared/db/<br/>schemas/ · rls.ts · index.ts"]
         SB["shared/lib/supabase/<br/>server.ts · admin.ts · middleware.ts"]
-        RL["shared/lib/ratelimit.ts<br/>(in-memory + allowlist)"]
+        RL["shared/lib/ratelimit.ts<br/>(Postgres prod / memoria dev + allowlist)"]
     end
 
     subgraph EXT["Servicios externos"]
@@ -286,7 +286,7 @@ Los 42 route handlers de `src/app/api` son el contrato HTTP del sistema. Los mé
 
 **Notas [VERIFIED]:**
 - La sesión se gestiona en `src/proxy.ts` → `updateSession()`; rutas protegidas redirigen a login si no hay sesión.
-  - El rate limit global se aplica vía `src/shared/lib/ratelimit.ts` (in-memory, fail-open; `EMAIL_ALLOWLIST` exime a `palacios_juan@hotmail.com`). Respuestas 429 con cabeceras `RateLimit-Limit/Remaining/Reset` + `X-RateLimit-*`.
+  - El rate limit global se aplica vía `src/shared/lib/ratelimit.ts` (Postgres en producción — tabla `rate_limit_windows` — y memoria en dev/test, fail-open; `EMAIL_ALLOWLIST` exime a `palacios_juan@hotmail.com`). Respuestas 429 con cabeceras `RateLimit-Limit/Remaining/Reset` + `X-RateLimit-*`.
 - API pública v1: `src/app/api/public/v1/intelligence/route.ts` usa `withPublicApi()` de `src/server/api/public-router.ts`; resuelve el usuario desde `req.apiKeyAuth.userId`.
 - Webhooks CI/CD: `src/app/api/webhooks/cicd/route.ts` verifica firma con `verifyWebhookSignature()` de `src/server/security/cicd-helper.ts`.
 

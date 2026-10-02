@@ -393,7 +393,7 @@ erDiagram
 ├─────────────────────────────────────────────────────────┤
 │ Capa 2 — API                                            │
 │   · withErrorHandler + AppError                         │
-│   · Rate limit en memoria (fail-open)                   │
+│   · Rate limit Postgres prod (fail-open)                │
 │   · Email allowlist bypass                              │
 ├─────────────────────────────────────────────────────────┤
 │ Capa 3 — Engine                                         │
@@ -515,7 +515,7 @@ flowchart TD
 | Tampering | Requests HTTP | HSTS + `upgrade-insecure-requests` + egress-guard |
 | Repudiation | Acciones de usuario | `security_audit_logs` + SIEM |
 | Information Disclosure | APIs | RLS + auth + `service_role` solo server |
-| DoS | Endpoints | rate limit en memoria + semáforos de concurrencia + timeouts |
+| DoS | Endpoints | rate limit fail-open (Postgres en prod) + semáforos de concurrencia + timeouts |
 | Elevation of Privilege | Multi-tenant | RLS por `request.jwt.claims.sub` + `SET LOCAL ROLE authenticated` |
 | SSRF | Engine de escaneo | egress-guard CIDR + DNS rebinding |
 | Prompt injection | IA | Prompts con contexto acotado + modelo específico por tarea |

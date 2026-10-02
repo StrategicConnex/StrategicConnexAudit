@@ -96,7 +96,7 @@ Las violaciones CSP se envían a `/api/security/csp-report` y se persisten en `s
 ### Arquitectura
 
 ```
-Request → extractClientIp() → Rate limiter (in-memory) → Handler | 429
+Request → extractClientIp() → Rate limiter (Postgres prod / memoria dev) → Handler | 429
                 │
                 ▼
          security_audit_logs
@@ -393,7 +393,7 @@ flowchart LR
 
 ## 14. Validación cruzada (inconsistencias resueltas)
 
-- **Fail-open vs fail-closed**: la sección §2 documentaba ambos comportamientos en el mismo párrafo sin distinguir entorno y contradecía ADR-002. Se corrigió: el comportamiento es **fail-open en todos los entornos** (el limitador vive en memoria; un fallo nunca bloquea la operación).
+- **Fail-open vs fail-closed**: la sección §2 documentaba ambos comportamientos en el mismo párrafo sin distinguir entorno y contradecía ADR-002. Se corrigió: el comportamiento es **fail-open en todos los entornos** (store Postgres en prod / memoria en dev; un fallo nunca bloquea la operación).
 - **Umbrales de email**: el texto decía "20 req/60s" en la tabla de límites y "40 intentos/minuto" en §5. Corregido: `POST /api/auth/validate-email` = 20/60s por IP; el "40" corresponde al decorador `withRateLimit` de auth. [VERIFIED]
 
 ---

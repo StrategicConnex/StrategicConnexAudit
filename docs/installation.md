@@ -838,7 +838,7 @@ flowchart LR
 |-----|-----------|------|--------|
 | REQ-001 Node.js ≥ 20 | Toolchain | TEST-001 | `.github/workflows/ci.yml` (node-version: 22) |
 | REQ-002 Supabase configurado | `src/shared/lib/supabase` | TEST-001 | Env vars de Vercel |
-| REQ-003 Rate limiting en memoria | `src/shared/lib/ratelimit.ts` | TEST-001 | Sin env vars |
+| REQ-003 Rate limiting fail-open | `src/shared/lib/ratelimit.ts` | TEST-001 | Sin env vars |
 | REQ-004 OpenRouter key | `src/server/ai/ai-router.ts` | TEST-001 | Env vars de Vercel |
 | REQ-005 Migraciones aplicadas | `drizzle/` (0017, 0018) | TEST-001 | `pnpm db:push` en deploy |
 

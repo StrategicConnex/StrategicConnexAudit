@@ -113,7 +113,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 
 ### 🛡️ Seguridad & SIEM
 - **CSP dinámico**: Content-Security-Policy con nonce por request (Next.js 16 proxy)
-- **Rate limiting**: `withRateLimit` decorator genérico con contador en memoria por instancia (por IP o user)
+- **Rate limiting**: `withRateLimit` decorator genérico con contador en Postgres (producción) o memoria (dev/test), fail-open, por IP o user
 - **Headers estándar**: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` en todas las respuestas
 - **Audit logging**: eventos estructurados en `security_audit_logs` con persistencia en Supabase
 - **SIEM Exporter**: detección de patrones sospechosos (open redirect attacks, rate limit bypass, CSP spikes)

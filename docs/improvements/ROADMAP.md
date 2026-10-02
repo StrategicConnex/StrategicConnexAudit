@@ -29,7 +29,7 @@ Lo que ya tenemos y funciona:
 |---------|--------|----------------|
 | Magic Link Auth + email validation | ✅ | `src/app/login/`, `src/app/auth/` |
 | Security headers (CSP, HSTS) | ✅ | `src/proxy.ts`, `src/app/layout.tsx` |
-| Rate limiting (en memoria, por instancia) | ✅ | `src/shared/lib/ratelimit.ts` |
+| Rate limiting fail-open (Postgres en prod / memoria en dev) | ✅ | `src/shared/lib/ratelimit.ts` |
 | AI Router con fallback multi-modelo | ✅ | `src/server/ai/ai-router.ts` |
 | Intelligence scanning (21 tools) | ✅ | `src/server/intelligence/executors/` |
 | Attack Surface Graph | ✅ | `src/app/components/AttackSurfaceGraph.tsx` |
@@ -673,7 +673,7 @@ flowchart TD
 ### Stack a mantener:
 - **Next.js 16** (Turbopack, RSC, Server Actions)
 - **Supabase** (Auth, PostgreSQL, RLS)
-- **Rate limit + circuit breaker en memoria** (sin servicio externo; progreso PDF en Postgres)
+- **Rate limit (Postgres en prod / memoria en dev) + circuit breaker en memoria** (sin servicio externo; progreso PDF en Postgres)
 - **Trigger.dev** (Background jobs, cron)
 - **OpenRouter** (Modelos de IA gratuitos)
 - **Drizzle ORM** (Type-safe SQL)

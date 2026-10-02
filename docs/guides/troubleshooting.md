@@ -845,7 +845,7 @@ curl -s -o /dev/null -w "[4/4] Dev server: HTTP %{http_code}\n" \
 
 ## Alcance y objetivos
 
-Esta guía documenta los errores más comunes al instalar, ejecutar y desplegar SCAUDIT Pro, con causa raíz, síntomas y soluciones verificadas. Alcance: errores de instalación, Supabase, autenticación, rate limiting en memoria, OpenRouter, dev server, build, SIEM, engine de inteligencia, React/Next.js, Playwright, Trigger.dev y CI. Objetivo: reducir el tiempo de resolución a menos de 10 minutos por escenario.
+Esta guía documenta los errores más comunes al instalar, ejecutar y desplegar SCAUDIT Pro, con causa raíz, síntomas y soluciones verificadas. Alcance: errores de instalación, Supabase, autenticación, rate limiting, OpenRouter, dev server, build, SIEM, engine de inteligencia, React/Next.js, Playwright, Trigger.dev y CI. Objetivo: reducir el tiempo de resolución a menos de 10 minutos por escenario.
 
 ---
 
@@ -908,7 +908,7 @@ flowchart LR
 |-----|-----------|------|--------|
 | REQ-001 Node ≥ 20 | Toolchain | TEST-001 (instalación) | CI `node-version: 22` |
 | REQ-002 Supabase configurado | `src/shared/lib/supabase` | `test-db` | Env vars Vercel |
-| REQ-003 Rate limit en memoria | `src/shared/lib/ratelimit.ts` | `ratelimit.test.ts` | Sin env vars |
+| REQ-003 Rate limit fail-open | `src/shared/lib/ratelimit.ts` | `ratelimit.test.ts` | Sin env vars |
 | REQ-004 AI key | `src/server/ai/ai-router.ts` | Fallback resiliente | Env vars Vercel |
 
 ---

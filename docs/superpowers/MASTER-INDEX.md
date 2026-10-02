@@ -203,7 +203,7 @@ El inventario de **42 rutas** está en `docs/architecture/PROJECT-INVENTORY.md` 
 
 ## Seguridad
 
-Trust boundaries: el middleware autentica rutas protegidas; RLS multi-tenant cubre 5/58 tablas (SB-001) — ver `docs/database/SUPABASE-AUDIT.md`. **VULN-001..007 remediados en P0** (XSS IA, secretToken webhooks, middleware /intelligence, looker fail-closed, pdf progress, gitleaks fail-hard). Threat register: 15 amenazas STRIDE en `docs/security/THREAT-REGISTER.md`. Controles: rate limiting en memoria (fail-open, ADR-002), egress-guard SSRF, escapeHtml antes del render. [VERIFIED]
+Trust boundaries: el middleware autentica rutas protegidas; RLS multi-tenant cubre 5/58 tablas (SB-001) — ver `docs/database/SUPABASE-AUDIT.md`. **VULN-001..007 remediados en P0** (XSS IA, secretToken webhooks, middleware /intelligence, looker fail-closed, pdf progress, gitleaks fail-hard). Threat register: 15 amenazas STRIDE en `docs/security/THREAT-REGISTER.md`. Controles: rate limiting fail-open (Postgres en prod / memoria en dev, ADR-002), egress-guard SSRF, escapeHtml antes del render. [VERIFIED]
 
 ## Testing
 

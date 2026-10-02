@@ -337,7 +337,7 @@ flowchart TB
     APP["Next.js 16 App"] --> API["42 Route Handlers"]
     API --> DB[(Supabase + Drizzle)]
     API --> IA["AI Router :free + cache"]
-    API --> RL["Rate limit en memoria (fail-open)"]
+    API --> RL["Rate limit Postgres prod (fail-open)"]
     TR["12 Trigger.dev Jobs"] --> DB
     SEC["Seguridad: RLS + egress-guard + CSP"] --> API
     TST["Testing: 29 files · 13.72% Stmts"] --> APP

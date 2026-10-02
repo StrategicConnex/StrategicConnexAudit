@@ -39,7 +39,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | REQ-103 | Rutas de inteligencia protegidas por middleware | SECURITY-AUDIT VULN-003 [VERIFIED] |
 | REQ-104 | RLS multi-tenant (member_or_owner) | SECURITY-AUDIT + rls.test.ts [VERIFIED] |
 | REQ-105 | Egress-guard SSRF en toda salida HTTP del engine | ADR-005 [VERIFIED] |
-| REQ-106 | Rate limiting fail-open (in-memory + fallback) | ADR-002 [VERIFIED] |
+| REQ-106 | Rate limiting fail-open (Postgres en prod / memoria dev-test — ADR-002 enm. 15) | ADR-002 [VERIFIED] |
 | REQ-107 | API pública con API key hash SHA-256 | api.md + idx_developer_api_keys_hashed [VERIFIED] |
 | REQ-108 | Jobs Trigger.dev idempotentes | docs/jobs/* (B05) [VERIFIED] |
 | REQ-109 | Notificaciones push con `active` boolean | TSK-009 / migración 0021 [VERIFIED] |
@@ -178,8 +178,9 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | 10 | **API pública** | REQ-107 | `src/server/intelligence/enterprise/api-auth.ts` | `/api/public/v1/intelligence` | `developer_api_keys` | — | `contract.test.ts` (10) ✅ | api.md |
 | 11 | **Push notifications** | REQ-109 | `src/server/notifications/push.ts` | `/api/notifications/push-subscribe` | `push_subscriptions` | `monitoring.trigger.ts` | `push.test.ts` (3) ✅ | JOB-CONTRACT-monitoring |
 | 12 | **Benchmarking** | — | `src/app/api/benchmarking/route.ts` | `/api/benchmarking` | `performance_results` | — | ❌ [GAP] | MODULE-CONTRACT-performance |
+| 13 | **Error sink (app_logs)** | REQ-405 | `src/server/observability/app-logs-sink.ts` | health `services.errorSink` | `app_logs` | — | `app-logs-sink.test.ts` (10) ✅ | ADR-007 |
 
-> **12 funcionalidades trazadas** (≥10 requeridas por T10-01) — 11 con test existente verificado; 1 con GAP documentado (benchmarking).
+> **13 funcionalidades trazadas** (≥10 requeridas por T10-01) — 12 con test existente verificado; 1 con GAP documentado (benchmarking).
 
 ---
 

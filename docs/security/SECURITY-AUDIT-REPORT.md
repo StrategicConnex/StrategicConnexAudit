@@ -171,7 +171,7 @@ flowchart TB
 |---|---|---|
 | `/api/public/v1/health` | GET | Estado público (booleano de service role, sin valores) |
 | `/api/security/csp-report` | POST | 204, intake CSP |
-| `/api/telemetry/vitals` | POST | RUM público con zod-validate (rate-limit in-memory) |
+| `/api/telemetry/vitals` | POST | RUM público con zod-validate (rate-limit global fail-open) |
 | `/api/auth/validate-email` | POST | Público + rate limit (magic link) |
 
 ### 6.5 🔴 SIN AUTENTICACIÓN (hallazgos)
@@ -296,7 +296,7 @@ flowchart TB
 | `/api/public/v1/intelligence` POST | API key + `eq(projects.ownerId, userId)` antes de insertar | ✅ Seguro |
 | `webhooks/cicd` | HMAC `crypto.timingSafeEqual` + prefijo `sha256=` | ✅ Seguro (ver fallback dev en §14) |
 | `/api/security/csp-report` | Intake público por diseño (204), sin datos sensibles | ✅ Seguro |
-| `/api/telemetry/vitals` | Público por diseño; zod-validate + rate-limit in-memory | ✅ Seguro |
+| `/api/telemetry/vitals` | Público por diseño; zod-validate + rate-limit global fail-open | ✅ Seguro |
 
 ---
 
