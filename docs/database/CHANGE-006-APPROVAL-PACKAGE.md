@@ -35,7 +35,7 @@
 | REQ-402 | Migraciones versionadas y aprobadas | ✅ Fichero `drizzle/0038_enable_rls_change006.sql` + journal idx 44 (45/45) + ledger 47 (`hash_match=true`) |
 | REQ-403 | Rollback plan obligatorio | ✅ §5.4 (`DISABLE` ×7) |
 | REQ-404 | Sin drift schema↔journal antes del push | ✅ `drizzle-kit check` "Everything's fine" (pre y post, 2026-10-01) |
-| REQ-405 | Ventana de observación post-push | ⏳ §6 — T+5m completada (verificación PASS); **T+24h en curso** |
+| REQ-405 | Ventana de observación post-push | ✅ §6/§18 — T+5m y T+24h completadas (recheck 2026-10-02T21:23Z, MAT-505 §18 v1.2) |
 | REQ-406 | Verificación de RLS efectiva post-push | ✅ §10.2 **10/10 PASS** (`relrowsecurity=true` ×7 + aislamiento medido) |
 
 ---
@@ -88,7 +88,7 @@
 | RISK | **MEDIUM-LOW** (solo lecturas autenticadas cambian; escrituras intactas; precedente 0022 afectaba a escrituras) |
 | ROLLBACK PLAN | §5.4 (`DISABLE` ×7, segundos) — no procedió |
 | APPROVAL | ✅ **FIRMA del owner en §17 (2026-10-01)** |
-| EXECUTION WINDOW | **EJECUTADO 2026-10-01** (`db:migrate`, ventana T+24h en curso) |
+| EXECUTION WINDOW | **EJECUTADO 2026-10-01** (`db:migrate`; ventana T+24h cerrada 2026-10-02, MAT-505 §18 v1.2) |
 
 **Fuente:** plantilla MAT-400 de `PRODUCTION-CHANGE-VERIFICATION.md` §3 [VERIFIED].
 
@@ -184,7 +184,7 @@ flowchart LR
 | Preflight | quals adversary + recuentos baseline | ✅ §10.1 PASS (2026-10-01) |
 | `rls.test.ts` | policies member/owner | ✅ **5/5 re-ejecutado post-push** |
 | Smoke members (aislamiento) | emulación `authenticated`: negativo + positivo | ✅ 0 filas (sub aleatorio) / **2974/2974** (owner) |
-| Smoke uptime | lectura `directDb` + escritura cron | ✅ lectura 24.868 intacta; ⏳ ciclo cron [NO EJECUTADO — escrituras bypassan RLS por rol `postgres`] |
+| Smoke uptime | lectura `directDb` + escritura cron | ✅ lectura 24.868 intacta; ✅ ciclo cron manual T+1h (200/200) y cron programado continuo 31 h en `uptime_logs` (MAT-505 §18) |
 | `db:drift-check` / `drizzle-kit check` | schema↔BD y journal | ✅ sin drift duro y "fine" (pre y post) |
 | Suite completa | sin cambios de código | ✅ 1.923/1.923 (HEAD) — no re-obligatoria |
 
@@ -207,7 +207,7 @@ flowchart LR
 
 **Resultado (2026-10-01): todos PASS** — 7×`false` + force `false` ×7 · **63/84/70** · quals `adversary_*` leídas (member-or-owner correctas: `adversary_engagements` filtra por `project_id` owner/membership; `adversary_task_nodes` encadena `engagement_id → engagement.project_id`) · grants SELECT→`authenticated` ×5, Group B solo `postgres` · `has_table_privilege` 5 true / 2 false · conteos baseline (`uptime_logs` 24.868, `exec_briefs` 4, `ai_eval_results` 4, resto 0) · `drizzle-kit check` verde (pre y post idx 44) · **ledger preflight: 46 filas, `max(created_at)=1790596804000` → "SEGURO PARA db:migrate"** · Backup/PITR ✅.
 
-### 10.2. Verificación post-push (T+5m y T+24h) — EJECUTADA 2026-10-01 (T+24h en curso)
+### 10.2. Verificación post-push (T+5m y T+24h) — EJECUTADA (T+5m 2026-10-01 · T+24h cerrada 2026-10-02)
 
 | Check | Esperado |
 |-------|----------|
@@ -220,7 +220,7 @@ flowchart LR
 | `rls.test.ts` | 5/5 |
 | `db:drift-check` / `drizzle-kit check` | sin drift / fine |
 
-**Resultado (2026-10-01): 10/10 PASS** — `relrowsecurity` **7× true**, `relforcerowsecurity` 7× false · **70 RLS / 84 policies / 70 tablas** · policies sin cambios (5 Group A, 0 nuevas) · grants idénticos (0 nuevos) · conteos = baseline (0 tocar filas) · **NEGATIVO:** sub aleatorio → **0 filas en las 5** (antes: `uptime_logs` 24.868 visibles) · **Group B:** 42501 ×2 (transacción propia por tabla) · **POSITIVO:** owner real vio **2974/2974** · **directDb (postgres):** 24.868 intactas · **ledger:** 47 filas, `hash=sha256(fichero)`, `created_at=when` · `rls.test.ts` **5/5** · `drift-check` sin drift duro · `drizzle-kit check` fine. Smoke de ciclo cron: ⏳ no ejecutado (escrituras bypassan RLS por diseño — rol `postgres`); queda para la ventana T+24h junto al smoke HTTP.
+**Resultado (2026-10-01): 10/10 PASS** — `relrowsecurity` **7× true**, `relforcerowsecurity` 7× false · **70 RLS / 84 policies / 70 tablas** · policies sin cambios (5 Group A, 0 nuevas) · grants idénticos (0 nuevos) · conteos = baseline (0 tocar filas) · **NEGATIVO:** sub aleatorio → **0 filas en las 5** (antes: `uptime_logs` 24.868 visibles) · **Group B:** 42501 ×2 (transacción propia por tabla) · **POSITIVO:** owner real vio **2974/2974** · **directDb (postgres):** 24.868 intactas · **ledger:** 47 filas, `hash=sha256(fichero)`, `created_at=when` · `rls.test.ts` **5/5** · `drift-check` sin drift duro · `drizzle-kit check` fine. Smoke de ciclo cron: ✅ ejecutado a T+1h (ciclo manual `/api/cron/uptime` + `/api/cron/siem` → 200/200) y cron programado continuo 31 h en `uptime_logs` a T+24h; smoke HTTP ✅ 9 rutas 200 (MAT-505 §18 v1.2).
 
 ---
 
@@ -233,7 +233,7 @@ flowchart LR
 | Prohibido | `drizzle-kit push` (drift de policies) · `FORCE` · grants nuevos — ✅ respetado |
 | Ambientes | production (directo, con backup/PITR confirmado) |
 | CI/CD | No bloqueado (docs + SQL; sin cambios de código) |
-| Rollout | 7 statements en una transacción; observación T+5m ✅ (verificación PASS) / T+24h ⏳ |
+| Rollout | 7 statements en una transacción; observación T+5m ✅ (verificación PASS) / T+24h ✅ (cerrada 2026-10-02) |
 
 **Fuente:** `PRODUCTION-PUSH-FINAL-VALIDATION.md` §7 [VERIFIED] · lección CHANGE-002.
 
@@ -243,7 +243,7 @@ flowchart LR
 
 | Área | Mecanismo |
 |------|-----------|
-| Monitoring post-push | Recuento §10.2 ✅ (T+5m PASS) + revisión de errores 42501/500 en logs de app (T+24h ⏳) — un aumento de 42501 en lecturas **legítimas** sería la señal de regresión |
+| Monitoring post-push | Recuento §10.2 ✅ (T+5m PASS) + revisión de errores 42501/500 en logs de app ✅ (T+24h cerrada 2026-10-02: 0 entradas, MAT-505 §18 v1.2) — un aumento de 42501 en lecturas **legítimas** sería la señal de regresión |
 | Runbook | `docs/guides/troubleshooting.md` §Supabase (RLS) |
 | Recovery | §5.4: `DISABLE` ×7 (segundos) |
 | Alerting | SIEM/uptime exporter sin cambios |
@@ -297,7 +297,7 @@ flowchart LR
 - **[ASSUMPTION]** Causa raíz: `0016` editado tras su aplicación (los `ENABLE` nunca corrieron); coherente con los 2 hashes stale del ledger.
 - **[ASSUMPTION]** PostgREST está expuesto con la publishable key (estándar Supabase; no probado directamente — el aislamiento se probó por emulación de rol equivalente a `withRLS`).
 - **[ASSUMPTION]** Ninguna ruta `withRLS` futura necesita leer `project_members` más allá de la propia (si surge, añadir policy member/owner en su propio cambio).
-- **[UNKNOWN]** Resultado de la ventana T+24h (logs de app, smoke HTTP, ciclo cron) — pendiente de observación.
+- **[RESUELTO 2026-10-02]** Resultado de la ventana T+24h (logs de app, smoke HTTP, ciclo cron): 0 `5xx`/`42501`/`error`, smoke 9 rutas 200, `uptime_logs` continuo 31 h — MAT-505 §18 v1.2.
 
 ---
 
@@ -309,7 +309,7 @@ flowchart LR
 | 2 | Análisis de rutas de acceso: 0 escrituras autenticadas (§3) | ✅ |
 | 3 | Grupos, riesgo y rollback definidos (§5.4) | ✅ |
 | 4 | Pre-checks baseline ejecutados (§10.1) | ✅ **EJECUTADOS 2026-10-01 — todos PASS** |
-| 5 | Ventana de rollout y plan de rollback revisados (§6/§11) | ✅ **revisados y ejecutados — T+24h en curso** |
+| 5 | Ventana de rollout y plan de rollback revisados (§6/§11) | ✅ **revisados y ejecutados — T+24h completada 2026-10-02** |
 | 6 | Backup/PITR confirmado | ✅ 2026-10-01 (heredado) |
 | 7 | **FIRMA DE APROBACIÓN** (owner + fecha) | ✅ **FIRMADO — owner, 2026-10-01** (aprobación explícita: push de `1b3966d` + ejecución de los 7 `ENABLE`) |
 

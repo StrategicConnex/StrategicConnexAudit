@@ -54,7 +54,7 @@ Documentar la **ejecución y verificación de CHANGE-006**: habilitar `ROW LEVEL
 | REQ-402 | Migraciones versionadas y aprobadas | ✅ Fichero `0038` + journal 45/45 + ledger 47 (`hash_match=true`) |
 | REQ-403 | Rollback plan obligatorio | ✅ §13 (`DISABLE` ×7) |
 | REQ-404 | Sin drift schema↔journal antes del push | ✅ `drizzle-kit check` "Everything's fine" (pre y post) |
-| REQ-405 | Ventana de observación post-push | ⏳ T+5m..T+24h iniciada (§10) |
+| REQ-405 | Ventana de observación post-push | ✅ T+5m..T+24h completada (§18 v1.2, recheck 2026-10-02T21:23Z) |
 | REQ-406 | Verificación de RLS efectiva post-push | ✅ §6.2 (**10/10 PASS**) |
 
 ---
@@ -125,7 +125,7 @@ Documentar la **ejecución y verificación de CHANGE-006**: habilitar `ROW LEVEL
 | Control: fail-closed Group B | `exec_briefs`/`ai_eval_results` sin grant → 42501 | ✅ medido ×2 |
 | Control: sin expansión | **0 grants, 0 policies, nunca `FORCE`** | ✅ verificado (§6.2, checks 3-4) |
 | Trust boundary | Rol de conexión `DIRECT_URL` (postgres) bypassa RLS igual que `directDb` | ✅ sin cambios |
-| Amenaza residual | Ventana T+24h: rutas `withRLS` que lean estas tablas y esperen ver todo | ⏳ §10 (monitoring) |
+| Amenaza residual | Ventana T+24h: rutas `withRLS` que lean estas tablas y esperen ver todo | ✅ cerrada sin incidencias (§18 v1.2) |
 
 ---
 
@@ -156,7 +156,7 @@ Documentar la **ejecución y verificación de CHANGE-006**: habilitar `ROW LEVEL
 | `rls.test.ts` (contrato `withRLS`) | 5 tests | ✅ **5/5** |
 | Drift schema ↔ BD | `db:drift-check` | ✅ sin drift duro |
 | Integridad journal | `drizzle-kit check` | ✅ "Everything's fine" (pre y post) |
-| Smoke de runtime de app | endpoints HTTP con sesión | ⏳ [NO EJECUTADO] — sin cambios de código; queda para la ventana T+24h |
+| Smoke de runtime de app | endpoints HTTP con sesión | ⏳ [NO EJECUTADO] — requiere credenciales `TEST_AUTH_*` (fuera del alcance de la ventana T+24h, §18) |
 
 ---
 
@@ -164,7 +164,7 @@ Documentar la **ejecución y verificación de CHANGE-006**: habilitar `ROW LEVEL
 
 | Área | Mecanismo |
 |------|-----------|
-| Monitoring post-push | Verificación completada el mismo día (§6.2); ventana **T+5m..T+24h**: revisar logs de app por errores 42501/500 inesperados en lecturas legítimas |
+| Monitoring post-push | Verificación completada el mismo día (§6.2); ventana **T+5m..T+24h**: revisar logs de app por errores 42501/500 inesperados en lecturas legítimas — **ventana cerrada 2026-10-02 (§18 v1.2)** |
 | Runbook | `docs/guides/troubleshooting.md` §Supabase (RLS) |
 | Recovery | §13: `DISABLE ROW LEVEL SECURITY` ×7 (segundos) |
 | Alerting | SIEM/uptime exporter sin cambios |
@@ -245,7 +245,7 @@ Cross-check interno: paquete ↔ este reporte ↔ gate MAT-500 sin contradiccion
 
 - **[ASSUMPTION]** Causa raíz histórica: `0016` editado tras su aplicación (sus `ENABLE` nunca corrieron) — coherente con los 2 hashes stale del ledger.
 - **[ASSUMPTION]** Ninguna ruta `withRLS` futura necesita leer estas 7 tablas *sin* filtro member/own (si surge, añadir policy en su propio cambio).
-- **[UNKNOWN]** Ventana T+24h completa de logs (42501/500) — **parcialmente cerrada** en §18: smoke HTTP + ciclo cron manual a T+1h ✅ y 0 entradas `5xx`/`42501`/`error` en la ventana recuperable de `vercel logs`; falta el recheck a las ~2026-10-02T20:00Z.
+- **[RESUELTO 2026-10-02T21:23Z]** Ventana T+24h de logs (42501/500): recheck completado en §18 v1.2 — 0 entradas `5xx`/`42501`/`error` con control sin filtro (12 líneas → filtros operativos), smoke 9 rutas 200 y `uptime_logs` continuo 31 h (2026-10-01T15:00Z→10-02T21:00Z); persiste la ⚠️ de retención sin sink externo.
 - **[ASSUMPTION]** PostgREST expuesto con publishable key (estándar Supabase; el aislamiento se probó por emulación de rol, equivalente al mecanismo de `withRLS`).
 
 ---
@@ -256,6 +256,7 @@ Cross-check interno: paquete ↔ este reporte ↔ gate MAT-500 sin contradiccion
 |---------|-------|---------|--------|
 | 1.0 | 2026-10-01 | Reporte de cierre: firma §17 + pre-checks (7×false, quals leídas) + `db:migrate` (0038) + verificación 10/10 + ledger 47 | ✅ Ejecutado |
 | 1.1 | 2026-10-02 | +§18 verificación post-despliegue T+1h (deploy @67ccc99, smoke, ciclo cron manual, logs) | ✅ Ejecutado |
+| 1.2 | 2026-10-02 | +§18 recheck T+24h (0 logs críticos, smoke 9×200, cron continuo 31 h) y cierre de REQ-405 | ✅ Ejecutado |
 
 | Check | Resultado |
 |-------|-----------|
@@ -263,10 +264,11 @@ Cross-check interno: paquete ↔ este reporte ↔ gate MAT-500 sin contradiccion
 | Cross-check con el paquete | v1.1 §10.1/§10.2 = mismo relato y mismas cifras |
 | Cross-check con gate MAT-500 | 16/16 GO; CHANGE-006 cerrado |
 | Post-despliegue T+1h (§18) | ✅ deploy `67ccc99`, 9 rutas 200, cron 200/200, 0 entradas `5xx`/`42501` |
+| Ventana T+24h (§18 v1.2) | ✅ recheck 2026-10-02T21:23Z: 0 `5xx`/`42501`/`error` (control 12 líneas), smoke 9×200, `uptime_logs` continuo 31 h |
 
 ---
 
-## 18. Verificación post-despliegue (T+1h — 2026-10-02)
+## 18. Verificación post-despliegue (T+1h y T+24h — 2026-10-02)
 
 Ejecutada sobre producción tras el auto-deploy del fix de env (opción 2: `src/env.ts` acepta `PUBLISHABLE` canónica o alias `ANON`).
 
@@ -277,7 +279,7 @@ Ejecutada sobre producción tras el auto-deploy del fix de env (opción 2: `src/
 | Ciclo cron manual (prod) | `GET /api/cron/uptime` con `Authorization: Bearer $CRON_SECRET` → **200** `{"success":true}` (9 proyectos comprobados, 5 up / 4 down); `GET /api/cron/siem` → **200** `{"success":true,"errors":[]}` | ✅ |
 | Sin errores `5xx` / `42501` en logs | `vercel logs --json --since 24h` con `--status-code 5xx`, `--query "42501"` y `--level error` → **0 entradas** (control: 15 líneas sin filtro → el filtro funciona) | ✅ |
 | Retención de logs | La ventana recuperable por CLI cubrió solo los minutos del smoke (00:58–00:59Z): no hay sink externo (sin Sentry/Axiom) | ⚠️ Limitación |
-| Ventana T+24h completa | Re-ejecutar los 3 queries de logs a las ~2026-10-02T20:00Z | ⏳ Pendiente |
+| Ventana T+24h (objetivo ~20:00Z, ejecutado 21:23Z) | 3 queries `vercel logs` → **0** `5xx`, **0** `42501`, **0** `error` con control sin filtro de **12 líneas** (tráfico del smoke, nivel `info`); smoke 9 rutas → **200** (`/security` → 404 esperado); `uptime_logs` **continuo 31 h** (2026-10-01T15:00Z→10-02T21:00Z, 36 filas/h, sin huecos, últimas filas 21:15Z); `audit_logs 24h=2`, `security_audit_logs 24h=5` | ✅ Cerrada |
 
 - **Por qué el cron manual cuenta como "ciclo cron":** invoca exactamente el mismo handler y credencial que Vercel Cron (`Bearer CRON_SECRET`), con escritura real en `uptime_logs` → demuestra además que el path de escritura con service role sigue funcionando tras el `ENABLE ROW LEVEL SECURITY` (CHANGE-006).
 
