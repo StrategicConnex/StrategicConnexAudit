@@ -522,3 +522,4 @@ export * from "./user-logs";
 export * from "./pdf-progress";
 // ─── 44. Rate limit distribuido (ADR-002 enmienda 15)
 export * from "./rate-limit-windows";
+export * from "./app-logs";

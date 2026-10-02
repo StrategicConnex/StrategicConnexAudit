@@ -38,6 +38,17 @@ describe("Health público — /api/public/v1/health", () => {
     expect(body.status).toBe("ok");
     expect(body.services.dbConfigured).toBe(true);
     expect(body.services.rateLimitStore).toMatch(/^(postgres|memory)$/);
+    expect(body.services.errorSink).toMatch(/^(app_logs|disabled)$/);
+  });
+
+  it("NODE_ENV=production → errorSink es app_logs (ADR-007)", async () => {
+    vi.stubEnv("DATABASE_URL", "postgres://user:pass@host:5432/db");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc.supabase.co");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const res = await GET();
+    const body = await res.json();
+    expect(body.services.errorSink).toBe("app_logs");
   });
 
   it("REGRESIÓN: SUPABASE_SERVICE_ROLE_KEY NO hace dbConfigured true (var muerta)", async () => {

@@ -652,12 +652,16 @@ Error: {
 ### Logs
 
 ```bash
-# Ver logs en tiempo real (Vercel CLI)
+# Ver logs en tiempo real (Vercel CLI) — sólo la ventana de minutos más reciente
 vercel logs
 
 # Filtrar por tipo
 vercel logs --status fail
 vercel logs --limit 50
+
+# Historial de errores de la app con retención ilimitada (ADR-007):
+# fuente de verdad de los rechecks T+5m/T+24h post-push
+node scripts/db/app-logs-check.mjs --hours 24 --fail-on-error
 ```
 
 ### Alertas de deploy

@@ -20,6 +20,8 @@ interface HealthCheckResult {
     dbConfigured: boolean;
     /** Rate limit store activo (ADR-002 enmienda 15): postgres en producción, memory fuera */
     rateLimitStore: "postgres" | "memory";
+    /** Sink de observabilidad de errores (ADR-007): app_logs en producción, disabled fuera */
+    errorSink: "app_logs" | "disabled";
   };
   environment: string;
 }
@@ -56,6 +58,7 @@ async function rawGet() {
     services: {
       dbConfigured: hasDbConfig,
       rateLimitStore: resolveRateLimitStore(),
+      errorSink: process.env.NODE_ENV === "production" ? "app_logs" : "disabled",
     },
     environment: process.env.NODE_ENV || 'development',
   };

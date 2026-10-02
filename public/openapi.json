@@ -1208,7 +1208,8 @@
             "type": "object",
             "required": [
               "dbConfigured",
-              "rateLimitStore"
+              "rateLimitStore",
+              "errorSink"
             ],
             "properties": {
               "dbConfigured": {
@@ -1222,6 +1223,14 @@
                   "memory"
                 ],
                 "description": "Active rate limit store (ADR-002 amendment 15): postgres in production, memory elsewhere"
+              },
+              "errorSink": {
+                "type": "string",
+                "enum": [
+                  "app_logs",
+                  "disabled"
+                ],
+                "description": "Error observability sink (ADR-007): app_logs in production, disabled elsewhere"
               }
             }
           },
