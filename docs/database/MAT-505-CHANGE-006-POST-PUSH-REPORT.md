@@ -245,7 +245,7 @@ Cross-check interno: paquete ↔ este reporte ↔ gate MAT-500 sin contradiccion
 
 - **[ASSUMPTION]** Causa raíz histórica: `0016` editado tras su aplicación (sus `ENABLE` nunca corrieron) — coherente con los 2 hashes stale del ledger.
 - **[ASSUMPTION]** Ninguna ruta `withRLS` futura necesita leer estas 7 tablas *sin* filtro member/own (si surge, añadir policy en su propio cambio).
-- **[UNKNOWN]** Resultado de la ventana T+24h (logs de app, smoke HTTP) — pendiente de observación.
+- **[UNKNOWN]** Ventana T+24h completa de logs (42501/500) — **parcialmente cerrada** en §18: smoke HTTP + ciclo cron manual a T+1h ✅ y 0 entradas `5xx`/`42501`/`error` en la ventana recuperable de `vercel logs`; falta el recheck a las ~2026-10-02T20:00Z.
 - **[ASSUMPTION]** PostgREST expuesto con publishable key (estándar Supabase; el aislamiento se probó por emulación de rol, equivalente al mecanismo de `withRLS`).
 
 ---
@@ -255,12 +255,31 @@ Cross-check interno: paquete ↔ este reporte ↔ gate MAT-500 sin contradiccion
 | Versión | Fecha | Cambios | Estado |
 |---------|-------|---------|--------|
 | 1.0 | 2026-10-01 | Reporte de cierre: firma §17 + pre-checks (7×false, quals leídas) + `db:migrate` (0038) + verificación 10/10 + ledger 47 | ✅ Ejecutado |
+| 1.1 | 2026-10-02 | +§18 verificación post-despliegue T+1h (deploy @67ccc99, smoke, ciclo cron manual, logs) | ✅ Ejecutado |
 
 | Check | Resultado |
 |-------|-----------|
 | Quality gate `--min 80` | ✅ 95/100 PASS (2026-10-01) |
 | Cross-check con el paquete | v1.1 §10.1/§10.2 = mismo relato y mismas cifras |
 | Cross-check con gate MAT-500 | 16/16 GO; CHANGE-006 cerrado |
+| Post-despliegue T+1h (§18) | ✅ deploy `67ccc99`, 9 rutas 200, cron 200/200, 0 entradas `5xx`/`42501` |
+
+---
+
+## 18. Verificación post-despliegue (T+1h — 2026-10-02)
+
+Ejecutada sobre producción tras el auto-deploy del fix de env (opción 2: `src/env.ts` acepta `PUBLISHABLE` canónica o alias `ANON`).
+
+| Chequeo | Evidencia | Resultado |
+|---------|-----------|-----------|
+| Deploy en producción con el fix | `vercel inspect` → clone `main @ 67ccc99` (2026-10-02T00:42:26Z), estado `Ready`, alias `https://scaudit.vercel.app` | ✅ |
+| Smoke HTTP (9 rutas) | `GET /`, `/login`, `/pricing`, `/docs`, `/mitre-coverage`, `/swagger`, `/offline`, `/dashboard`, `/projects` → **200**; `/security` → 404 esperado (solo existe `/security/audit`) | ✅ |
+| Ciclo cron manual (prod) | `GET /api/cron/uptime` con `Authorization: Bearer $CRON_SECRET` → **200** `{"success":true}` (9 proyectos comprobados, 5 up / 4 down); `GET /api/cron/siem` → **200** `{"success":true,"errors":[]}` | ✅ |
+| Sin errores `5xx` / `42501` en logs | `vercel logs --json --since 24h` con `--status-code 5xx`, `--query "42501"` y `--level error` → **0 entradas** (control: 15 líneas sin filtro → el filtro funciona) | ✅ |
+| Retención de logs | La ventana recuperable por CLI cubrió solo los minutos del smoke (00:58–00:59Z): no hay sink externo (sin Sentry/Axiom) | ⚠️ Limitación |
+| Ventana T+24h completa | Re-ejecutar los 3 queries de logs a las ~2026-10-02T20:00Z | ⏳ Pendiente |
+
+- **Por qué el cron manual cuenta como "ciclo cron":** invoca exactamente el mismo handler y credencial que Vercel Cron (`Bearer CRON_SECRET`), con escritura real en `uptime_logs` → demuestra además que el path de escritura con service role sigue funcionando tras el `ENABLE ROW LEVEL SECURITY` (CHANGE-006).
 
 ---
 
