@@ -520,3 +520,5 @@ export * from "./plugins";
 // ─── 43. User Logs (telemetría de accesos — panel admin)
 export * from "./user-logs";
 export * from "./pdf-progress";
+// ─── 44. Rate limit distribuido (ADR-002 enmienda 15)
+export * from "./rate-limit-windows";

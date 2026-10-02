@@ -6,6 +6,9 @@ describe("checkAiRateLimit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
+    // Este archivo valida la ventana en memoria: fuerza el store local aunque
+    // un test simule NODE_ENV=production (el store de producción es postgres).
+    vi.stubEnv("RATE_LIMIT_STORE", "memory");
     // Cada test recarga el módulo: el Map de ventanas vuelve a estar vacío
     vi.resetModules();
   });

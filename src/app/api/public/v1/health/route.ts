@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withRequestContext } from "@/lib/request-context";
+import { resolveRateLimitStore } from "@/shared/lib/ratelimit";
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,8 @@ interface HealthCheckResult {
   services: {
     /** Whether DATABASE_URL + NEXT_PUBLIC_SUPABASE_URL are configured */
     dbConfigured: boolean;
+    /** Rate limit store activo (ADR-002 enmienda 15): postgres en producción, memory fuera */
+    rateLimitStore: "postgres" | "memory";
   };
   environment: string;
 }
@@ -37,8 +40,10 @@ async function rawGet() {
   // NEXT_PUBLIC_SUPABASE_URL (cliente Supabase Auth). SUPABASE_SERVICE_ROLE_KEY
   // no se usa en ninguna ruta del app (la fábrica admin fue eliminada) — no es
   // un indicador de configuración válido para el health público.
-  // El stack de Upstash se eliminó (etapa 2026-09-27): el rate limit y el
-  // progreso de PDF ya no dependen de ningún servicio externo.
+  // El stack de Upstash se eliminó (etapa 2026-09-27): ni el rate limit ni el
+  // progreso de PDF dependen de servicios externos. El rate limit corre sobre
+  // Postgres (mismo DATABASE_URL) en producción desde la enmienda 15 de
+  // ADR-002; el progreso de PDF vive en su propia tabla.
   const hasPgConfig = !!process.env.DATABASE_URL;
   const hasSupabaseConfig = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
   const hasDbConfig = hasPgConfig && hasSupabaseConfig;
@@ -50,6 +55,7 @@ async function rawGet() {
     uptime: Math.floor((Date.now() - START_TIME) / 1000),
     services: {
       dbConfigured: hasDbConfig,
+      rateLimitStore: resolveRateLimitStore(),
     },
     environment: process.env.NODE_ENV || 'development',
   };

@@ -210,7 +210,8 @@ flowchart LR
     R2 --> AR
     R3 --> AR
     AR -->|"HTTPS /chat/completions"| OR["OpenRouter<br/>(free models)"]
-    AR -->|"rate limit + breaker"| MEM["Memoria por instancia"]
+    AR -->|"rate limit"| RL[("Postgres<br/>rate_limit_windows")]
+    AR -->|"breaker"| MEM["Memoria por instancia"]
     AR -->|"persiste"| DB[("Supabase<br/>ai_health_logs")]
 ```
 

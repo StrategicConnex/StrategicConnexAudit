@@ -150,7 +150,7 @@ sequenceDiagram
 | Engine | `src/server/intelligence/core/dispatcher.ts` | Orquestación de scans | [VERIFIED] |
 | Ejecutores | `src/server/intelligence/executors/*.ts` (14 archivos de ejecución) | DNS, OSINT, CVE, TLS, email, tech-profiler, bucket, subdomain-takeover, network, website | [VERIFIED] |
 | SSRF guard | `src/server/intelligence/security/egress-guard.ts` | Bloqueo de IPs privadas (16 CIDRs v4 + 7 v6) + IPv4-mapped IPv6 (`::ffff:x.x.x.x`, RFC 4291) | [VERIFIED] |
-| Rate limit | `src/shared/lib/ratelimit.ts` | Contador en memoria + allowlist + headers IETF | [VERIFIED] |
+| Rate limit | `src/shared/lib/ratelimit.ts` | Contador distribuido en Postgres (memoria en dev/test) + allowlist + headers IETF | [VERIFIED] |
 | Circuit breaker | `src/shared/lib/circuit-breaker.ts` | Fail-open, estado en memoria por instancia | [VERIFIED] |
 | RLS | `src/shared/db/rls.ts` | `withRLS()` → `SET LOCAL ROLE authenticated` + JWT claims | [VERIFIED] |
 | Supabase admin | `src/shared/lib/supabase/admin.ts` | Client service-role solo server | [VERIFIED] |

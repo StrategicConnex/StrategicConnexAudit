@@ -32,7 +32,7 @@ SCAUDIT (StrategicAudit Pro) es una plataforma **enterprise-grade de inteligenci
 | **Repo** | [StrategicConnex/StrategicConnexAudit](https://github.com/StrategicConnex/StrategicConnexAudit) |
 | **Frontend** | Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript 5 |
 | **Backend** | Next.js Route Handlers, Drizzle ORM, Supabase (PostgreSQL + Auth + RLS) |
-| **Cache/Rate Limit** | En memoria por instancia (sin servicios externos), fail-open |
+| **Cache/Rate Limit** | Rate limit en Postgres propio (producción) o memoria (dev/test); circuit breaker y caché IA en memoria — fail-open |
 | **IA** | OpenRouter (pool de modelos `:free` + meta-modelo `openrouter/free`) |
 | **Jobs** | Vercel Cron (mecanismo garantizado: SIEM 5 min, uptime 15 min) + Trigger.dev **opcional** (12 tasks; deploy no verificado) |
 | **Docs** | GitHub Pages + Jekyll (just-the-docs) |
@@ -424,7 +424,7 @@ erDiagram
 | Clickjacking | `X-Frame-Options: DENY` | `src/proxy.ts` |
 | MIME sniffing | `X-Content-Type-Options: nosniff` | `src/proxy.ts` |
 | SSRF | egress-guard CIDR + DNS rebinding + redirects validados | `egress-guard.ts` |
-| Rate limiting | sliding window en memoria (por instancia) | `ratelimit.ts` |
+| Rate limiting | sliding window distribuido en Postgres (memoria en dev/test; ADR-002 enm. 15) | `ratelimit.ts` |
 | RLS | `withRLS()` por query multi-tenant | `db/rls.ts` |
 | Open redirect | `safeNext()` en callback auth | `auth/callback` |
 | Secrets | env vars server-only, `.env*` gitignored | `.gitignore` |
@@ -532,7 +532,7 @@ flowchart TD
 | R2 | Outage de modelos IA | Media | Medio | Pool `:free` con cadena de fallback + template resiliente | Bajo |
 | R3 | Fuga multi-tenant | Baja | Crítico | RLS por `request.jwt.claims.sub` + `SET LOCAL ROLE` | Bajo |
 | R4 | SSRF desde el engine | Media | Alto | egress-guard CIDR + DNS rebinding + redirects validados | Bajo |
-| R5 | Rate limit evadido | Media | Medio | Sliding window en memoria (por instancia) + allowlist de email | Medio |
+| R5 | Rate limit evadido | Media | Medio | Sliding window distribuido en Postgres (memoria en dev/test) + allowlist de email | Medio |
 | R6 | Dependencias vulnerables | Media | Medio | CI con SCA (en `ci.yml`) + upgrade tracking | Medio |
 | R7 | Pérdida de datos Postgres | Baja | Alto | Backups automáticos de Supabase + PITR | Bajo |
 | R8 | Credenciales expuestas | Baja | Crítico | `.env*` gitignored + env encryptados en Vercel | Bajo |
@@ -550,7 +550,7 @@ flowchart TD
 | Pérdida de secrets | < 30 min | 0 | Regenerar en dashboards (Supabase, OpenRouter, Trigger.dev) + Vercel env |
 
 **Redundancia:**
-- Rate limit / circuit breaker: estado local por instancia — sin RPO y sin dependencia de servicio externo (el trade-off es que no está distribuido; ADR-002).
+- Rate limit: contadores globales en la tabla propia `rate_limit_windows` (mismo Postgres, sin servicio externo) con fail-open; circuit breaker: estado local por instancia — sin RPO (ADR-002 enm. 15).
 - IA: pool multi-modelo - sin punto único de fallo.
 - Base de datos: managed por Supabase (HA + backups + PITR).
 - App: serverless en Vercel (múltiples regiones, auto-escalado).
@@ -734,7 +734,7 @@ Durante la cross-check de este documento se detectó que la tabla §5 (Architect
 | fail-open | Degradación que prioriza disponibilidad: servicios auxiliares o IA caídos no tumban la app |
 | ToolOutputMap | Mapa tipado tool → output concreto, reemplazó `Map<string, any>` en scan-response |
 | dispatcher | Pipeline central de ejecución de tools: policy → validate → cache → semaphore → exec |
-| sliding window | Algoritmo de rate limiting en ventanas de tiempo (implementado en memoria por instancia) |
+| sliding window | Algoritmo de rate limiting en ventanas de tiempo (store Postgres en producción, memoria en dev/test) |
 | tool-registry | Única fuente de verdad del catálogo de tools (consolidación C05) |
 | sequenceDiagram | Diagrama de secuencia Mermaid para flujos request/response |
 

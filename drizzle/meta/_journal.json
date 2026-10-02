@@ -316,6 +316,13 @@
       "when": 1790895013413,
       "tag": "0038_enable_rls_change006",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1790954965574,
+      "tag": "2026-10-02_rate_limit_windows",
+      "breakpoints": true
     }
   ]
 }

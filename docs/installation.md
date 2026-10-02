@@ -239,7 +239,7 @@ Desde la etapa 2026-09-27 **no hay ningún servicio de Redis**: se eliminaron
 
 | Función | Implementación | Alcance |
 |---------|----------------|---------|
-| Rate limiting (`withRateLimit`) | `src/shared/lib/ratelimit.ts` | memoria por instancia, fail-open |
+| Rate limiting (`withRateLimit`) | `src/shared/lib/ratelimit.ts` | Postgres en producción / memoria en dev, fail-open |
 | Circuit breaker IA | `src/shared/lib/circuit-breaker.ts` | memoria por instancia |
 | Caché semántica IA (L1) | `src/server/ai/ai-cache.ts` | memoria por instancia |
 | Progreso de PDF (SSE) | tabla Postgres `pdf_progress` + RLS | compartido, sobrevive deploys |

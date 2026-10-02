@@ -169,14 +169,17 @@ export interface RateLimitConfig {
 }
 
 /**
- * Rate limiting con sliding window en memoria por instancia.
+ * Rate limiting distribuido con sliding window (ADR-002 enmienda 15).
  *
- * Tras eliminar `@upstash/ratelimit`/`@upstash/redis` esta es la ÚNICA
- * estrategia: nunca hay red, nunca puede haber fail-closed masivo por un
- * outage externo, y el coste por request es O(1) de CPU. Tradeoff aceptado
- * (ADR-002): el límite es por instancia serverless, no global — en Vercel
- * pueden existir N instancias calientes. Para abuso distribuido la defensa
- * son el WAF/edge y las cuotas diarias por usuario.
+ * Dos stores intercambiables con la MISMA semántica de ventana:
+ * - `postgres` (producción): upsert atómico sobre `rate_limit_windows` vía
+ *   `directDb` — todas las instancias serverless cuentan contra la misma
+ *   fila. Cualquier fallo del store hace fail-open (allowed=true): la
+ *   operación nunca se bloquea por el limitador.
+ * - `memory` (desarrollo/test): sliding window local por instancia, sin red.
+ *
+ * Selección: `RATE_LIMIT_STORE` (override de emergencia) o, si no aplica,
+ * `postgres` sólo cuando `NODE_ENV === "production"`.
  * ═════════════════════════════════════════════════════════════════════════════
  */
 
@@ -231,13 +234,110 @@ function checkRateLimitInMemory(identifier: string, config: RateLimitConfig): Ra
 }
 
 /**
+ * Store activo del rate limit. `RATE_LIMIT_STORE=postgres|memory` fuerza la
+ * elección (operaciones); fuera de producción el default es `memory` y en
+ * producción `postgres` (distribuido — ADR-002 enmienda 15).
+ */
+export function resolveRateLimitStore(): "postgres" | "memory" {
+  const override = process.env.RATE_LIMIT_STORE;
+  if (override === "postgres" || override === "memory") return override;
+  return process.env.NODE_ENV === "production" ? "postgres" : "memory";
+}
+
+let pruneScheduled = false;
+
+/**
+ * Sliding window distribuido: upsert atómico sobre `rate_limit_windows`
+ * (una fila por prefix+identifier). El upsert poda los timestamps fuera de
+ * la ventana y sólo anexa el actual si la ventana no está llena, de modo que
+ * el recuento es correcto aunque N instancias corran en paralelo (el lock
+ * de fila del ON CONFLICT serializa). Falla abierta ante cualquier error.
+ */
+async function checkRateLimitPostgres(
+  identifier: string,
+  config: RateLimitConfig
+): Promise<RateLimitResult> {
+  const now = Date.now();
+  const windowMs = config.window * 1000;
+  try {
+    const [{ directDb }, { sql }] = await Promise.all([import("@/shared/db"), import("drizzle-orm")]);
+
+    // Sweep oportunista: una vez por proceso se descartan las filas con la
+    // ventana ya vencida (sólo esas; la fila que va a usarse se actualiza).
+    if (!pruneScheduled) {
+      pruneScheduled = true;
+      void directDb
+        .execute(sql`DELETE FROM rate_limit_windows WHERE expires_at < ${new Date(now)}`)
+        .catch(() => undefined);
+    }
+
+    const res = await directDb.execute(sql`
+      INSERT INTO rate_limit_windows (prefix, identifier, ts, expires_at)
+      VALUES (${config.prefix}, ${identifier}, ARRAY[${now}::bigint], ${new Date(now + windowMs)})
+      ON CONFLICT (prefix, identifier) DO UPDATE SET
+        ts = (
+          SELECT CASE
+            WHEN COALESCE(array_length(p.in_window, 1), 0) >= ${config.limit} THEN p.in_window
+            ELSE COALESCE(p.in_window, '{}'::bigint[]) || ${now}::bigint
+          END
+          FROM (
+            SELECT array_agg(t ORDER BY t) AS in_window
+            FROM unnest(rate_limit_windows.ts) AS u(t)
+            WHERE t > ${now - windowMs}::bigint
+          ) AS p
+        ),
+        expires_at = GREATEST(rate_limit_windows.expires_at, ${new Date(now + windowMs)})
+      RETURNING ts
+    `);
+
+    const rows = res.rows as Array<{ ts: Array<string | number> | null }>;
+    const ts = (rows[0]?.ts ?? []).map(Number).sort((a, b) => a - b);
+    const count = ts.length;
+
+    if (count >= config.limit) {
+      const reset = (ts[0] ?? now) + windowMs;
+      return {
+        success: false,
+        limit: config.limit,
+        remaining: 0,
+        reset,
+        retryAfter: Math.max(1, Math.ceil((reset - now) / 1000)),
+      };
+    }
+
+    return {
+      success: true,
+      limit: config.limit,
+      remaining: config.limit - count,
+      reset: now + windowMs,
+      retryAfter: 0,
+    };
+  } catch (error) {
+    logger.error(
+      `[rate-limit:postgres] Store no disponible para "${config.prefix}" — fail-open (ADR-002):`,
+      error
+    );
+    return {
+      success: true,
+      limit: config.limit,
+      remaining: config.limit,
+      reset: now + windowMs,
+      retryAfter: 0,
+    };
+  }
+}
+
+/**
  * Verifica rate limit para un identificador con la configuración dada.
  *
- * Sliding window en memoria por instancia: sin I/O de red y sin servicio
- * externo del que degradar, por lo que jamás puede convertirse en un
- * fail-closed masivo. El alcance es por instancia serverless (ADR-002).
+ * Despacha al store resuelto por `resolveRateLimitStore()`: postgres en
+ * producción (distribuido, fail-open), memoria fuera de ella. Ningún fallo
+ * del store puede convertirse en fail-closed masivo (ADR-002).
  */
 async function checkRateLimitInternal(identifier: string, config: RateLimitConfig): Promise<RateLimitResult> {
+  if (resolveRateLimitStore() === "postgres") {
+    return checkRateLimitPostgres(identifier, config);
+  }
   return checkRateLimitInMemory(identifier, config);
 }
 
@@ -395,7 +495,7 @@ export async function checkAiRateLimit(userId: string) {
 // Frecuencia ≠ volumen: los sliding-window por minuto no impiden que un
 // loop agote el free-tier del proveedor para toda la plataforma. Estas
 // cuotas diarias por usuario acotan el gasto total. Ventana 86400 s,
-// contada en memoria por instancia (misma estrategia que los sliding-window).
+// contada por el store activo (postgres en producción — ADR-002 enmienda 15).
 
 export const AI_DAILY_QUOTAS = {
   "seo-report": 20,

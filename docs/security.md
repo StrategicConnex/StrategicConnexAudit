@@ -137,15 +137,17 @@ export const POST = withRateLimit(
 El decorador:
 1. Extrae la IP del cliente
 2. Autentica opcionalmente al usuario
-3. Verifica el contador en memoria (por IP o usuario)
+3. Verifica el contador distribuido (por IP o usuario; store Postgres en producción)
 4. Si excede → responde 429 con headers estándar + audit log
 5. Si ok → ejecuta handler + adjunta headers `X-RateLimit-*`
 
 ### Fail-open en todo entorno
 
-El limitador corre en memoria por instancia (sin Redis): si un cálculo falla
-por cualquier motivo, **permite** el request (fail-open) — nunca genera 429
-masivos por un fallo de infraestructura (ADR-002).
+El limitador corre sobre un store distribuido en Postgres (tabla
+`rate_limit_windows`) en producción y en memoria fuera de ella — sin Redis ni
+otros servicios externos: si una consulta falla por cualquier motivo,
+**permite** el request (fail-open) — nunca genera 429 masivos por un fallo de
+infraestructura (ADR-002).
 
 ---
 
@@ -360,7 +362,7 @@ flowchart TB
 ```mermaid
 flowchart LR
   A[Request] --> B[extractClientIp]
-  B --> C{Contador en memoria}
+  B --> C{Contador en Postgres o memoria}
   C -->|bajo limite| D[Handler]
   C -->|excede| E[429 + X-RateLimit-*]
   C -->|error interno| F[Fail-open: continuar]
@@ -398,7 +400,7 @@ flowchart LR
 
 ## 15. Unknowns y supuestos
 
-- [VERIFIED] El rate limit y el circuit breaker viven en memoria por instancia (sin dependencias externas) y hacen fail-open ante cualquier error; `circuit-breaker.ts` no descarta resultados de IA exitosos. El progreso de PDF persiste en Postgres con RLS por usuario.
+- [VERIFIED] El rate limit corre en Postgres (tabla `rate_limit_windows`) en producción y en memoria en dev/test, con fail-open ante cualquier error (ADR-002 enm. 15); el circuit breaker vive en memoria por instancia y también hace fail-open, y `circuit-breaker.ts` no descarta resultados de IA exitosos. El progreso de PDF persiste en Postgres con RLS por usuario.
 - [ASSUMPTION] Los rangos bloqueados del egress guard (16 IPv4 + 7 IPv6) cubren todos los rangos privados actuales de IANA.
 - [UNKNOWN] La latencia real de los webhooks SIEM depende de la disponibilidad de los proveedores externos.
 

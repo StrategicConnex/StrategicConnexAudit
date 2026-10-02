@@ -55,7 +55,7 @@ Matriz unificada de trazabilidad **REQUISITO → MÓDULO → API → BD → JOB 
 | Componente | Archivos reales | Dependencia |
 |------------|-----------------|-------------|
 | Auth | `src/app/login/`, `src/app/auth/`, `src/shared/lib/supabase/` | Supabase Auth |
-| Rate limit | `src/shared/lib/ratelimit.ts` | Contador en memoria (fail-open) |
+| Rate limit | `src/shared/lib/ratelimit.ts` | Contador en Postgres (producción) o memoria, fail-open |
 | Egress-guard | `src/server/intelligence/security/egress-guard.ts` | network utils |
 | SIEM | `src/server/security/siem-exporter.ts` | `src/trigger/siem.trigger.ts` |
 | Adversary | `src/app/api/intelligence/adversary/route.ts` | scenario-runner + sandbox-executor |

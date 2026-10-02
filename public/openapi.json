@@ -1207,12 +1207,21 @@
           "services": {
             "type": "object",
             "required": [
-              "dbConfigured"
+              "dbConfigured",
+              "rateLimitStore"
             ],
             "properties": {
               "dbConfigured": {
                 "type": "boolean",
                 "description": "Supabase env vars are configured"
+              },
+              "rateLimitStore": {
+                "type": "string",
+                "enum": [
+                  "postgres",
+                  "memory"
+                ],
+                "description": "Active rate limit store (ADR-002 amendment 15): postgres in production, memory elsewhere"
               }
             }
           },

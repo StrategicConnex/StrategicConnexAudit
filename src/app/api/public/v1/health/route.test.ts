@@ -7,6 +7,9 @@
    - SUPABASE_SERVICE_ROLE_KEY ya NO cuenta: la fábrica admin client fue
      eliminada y ninguna ruta usa service-role; la var nunca estuvo en Vercel
      → producía un 503 `degraded` permanente en el health público.
+   - rateLimitStore expone el store del rate limit activo (ADR-002 enm. 15):
+     `postgres` en producción, `memory` fuera de ella (o el override
+     RATE_LIMIT_STORE).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -33,7 +36,8 @@ describe("Health público — /api/public/v1/health", () => {
 
     const body = await res.json();
     expect(body.status).toBe("ok");
-    expect(body.services).toEqual({ dbConfigured: true });
+    expect(body.services.dbConfigured).toBe(true);
+    expect(body.services.rateLimitStore).toMatch(/^(postgres|memory)$/);
   });
 
   it("REGRESIÓN: SUPABASE_SERVICE_ROLE_KEY NO hace dbConfigured true (var muerta)", async () => {
@@ -45,7 +49,8 @@ describe("Health público — /api/public/v1/health", () => {
 
     const body = await res.json();
     expect(body.status).toBe("down");
-    expect(body.services).toEqual({ dbConfigured: false });
+    expect(body.services.dbConfigured).toBe(false);
+    expect(body.services.rateLimitStore).toMatch(/^(postgres|memory)$/);
   });
 
   it("DATABASE_URL presente sin NEXT_PUBLIC_SUPABASE_URL → degraded (faltan ambas de la pareja)", async () => {
@@ -68,6 +73,7 @@ describe("Health público — /api/public/v1/health", () => {
 
     const body = await res.json();
     expect(body.status).toBe("down");
-    expect(body.services).toEqual({ dbConfigured: false });
+    expect(body.services.dbConfigured).toBe(false);
+    expect(body.services.rateLimitStore).toMatch(/^(postgres|memory)$/);
   });
 });

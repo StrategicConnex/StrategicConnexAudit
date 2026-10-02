@@ -3,20 +3,26 @@ layout: default
 title: ADR-002
 nav_order: 3.4.2
 permalink: /docs/architecture/adr/002
-version: 1.1
+version: 1.2
 fecha: 2026-08-02
 autor: StrategicConnex Engineering
-estado: Aprobado (enmendado 2026-09-27)
+estado: Aprobado (enmendado 2026-10-02)
 ---
 
 # ADR-002 — Fail-open en rate limit y circuit breaker (Redis)
 
 {: .warning }
+**Enmienda 2026-10-02 (v1.2):** el rate limit pasa a un **store distribuido en
+Postgres** (tabla propia `rate_limit_windows`, mismo `DATABASE_URL`, sin
+servicios externos ni coste nuevo) en producción; fuera de ella sigue en
+memoria. El circuit breaker y la caché IA permanecen **en memoria por
+instancia**. El invariante —**nunca bloquear por un fallo del limitador**
+(fail-open)— se conserva. Ver §15.
+
+{: .note }
 **Enmienda 2026-09-27 (v1.1):** se eliminaron `@upstash/redis` y
-`@upstash/ratelimit`. El rate limit, el circuit breaker y la caché IA ahora
-corren **en memoria por instancia**; no hay cliente Redis, ni `Proxy` lazy, ni
-`safeRedis` con timeout. La decisión original —**nunca bloquear por un fallo de
-infraestructura auxiliar**— se conserva y se cumple por construcción. Ver §14.
+`@upstash/ratelimit`: no hay cliente Redis, ni `Proxy` lazy, ni `safeRedis`
+con timeout. Ver §14.
 
 {: .no_toc }
 
@@ -137,6 +143,7 @@ N/A — decisión ya aplicada. Los consumidores importan safeRedis/rateLimit sin
 |---------|-------|---------|--------|
 | 1.0 | 2026-08-02 | Registro de la decisión fail-open (T01-04) | Aprobado |
 | 1.1 | 2026-09-27 | Enmienda: eliminación de Upstash Redis; store en memoria | Aprobado |
+| 1.2 | 2026-10-02 | Enmienda: rate limit distribuido en Postgres (`rate_limit_windows`); circuit breaker y caché IA siguen en memoria | Aprobado |
 
 **Resultado quality gate:** 100/100 (PASS, `--min 80`, 2026-08-02).
 
@@ -188,3 +195,66 @@ reproducir el journal completo habría sido inseguro.
 Nota: el `pnpm-lock.yaml` aún lista `@upstash/redis@1.38.0` como **dependencia
 opcional transitiva de `drizzle-orm`** (no es dependencia del proyecto ni se
 importa en el código). `@upstash/ratelimit` ya no aparece en el lockfile.
+
+---
+
+## 15. Enmienda (2026-10-02) — rate limit distribuido en Postgres
+
+**Contexto de la enmienda:** la enmienda 14 aceptó el trade-off de "no
+distribuido" como transitorio y documentado (§14). Se decide resolverlo de
+raíz —sin parche—: el store del rate limit pasa a **Postgres, el mismo
+`DATABASE_URL` de la app**, sin servicios externos ni coste nuevo y
+conservando el invariante fail-open. El circuit breaker y la caché IA
+permanecen en memoria: su estado es de baja consecuencia (un circuito por
+instancia y un L1 que sólo afecta a coste, no a seguridad).
+
+**Qué cambió (v1.1 → v1.2):**
+
+| Antes (v1.1) | Ahora (v1.2) |
+|--------------|-------------|
+| `checkRateLimitInMemory()` único store (Map por instancia) | Dos stores intercambiables con la misma semántica sliding window: `postgres` (producción) y `memory` (dev/test) |
+| Límite efectivo = límite × instancias calientes | Recuento **global atómico**: upsert sobre `rate_limit_windows` (PK `prefix, identifier`) |
+| Ventana perdida al reciclar la instancia | Ventana persistente compartida por todas las instancias |
+| — | Sweep de filas vencidas (una vez por proceso) |
+
+**Diseño:**
+
+- Tabla `public.rate_limit_windows`: `ts bigint[]` (timestamps dentro de la
+  ventana) + `expires_at timestamptz`, índice de vencimiento y **RLS
+  habilitada sin policies** → sólo el backend accede (dueño vía `directDb`).
+  Migración manual `drizzle/2026-10-02_rate_limit_windows.sql` (patrón
+  `pdf_progress`, journal idx 45), aplicada directamente a Supabase sin
+  `drizzle-kit migrate` — la BD no tiene `__drizzle_migrations` (§14).
+- Upsert atómico de una sola sentencia: poda los timestamps fuera de la
+  ventana y sólo anexa el actual si `length < limit`; el lock de fila del
+  `ON CONFLICT` serializa instancias concurrentes → recuento correcto bajo
+  carga distribuida.
+- Los valores (IP, usuario, límites) viajan como **parámetros ligados** de
+  drizzle; un identificador hostil nunca se concatena en el SQL
+  [VERIFIED: test de inyección en `ratelimit-store.test.ts`].
+- Selección de store: `RATE_LIMIT_STORE=postgres|memory` (override de
+  emergencia) o, sin override, `postgres` sólo si `NODE_ENV=production`
+  (dev/test sin I/O: suites rápidas y aisladas).
+- Observabilidad: si el store falla → `logger.error` con firma
+  `[rate-limit:postgres] ... fail-open (ADR-002)` y `allowed=true`; el health
+  público expone `services.rateLimitStore` (y `public/openapi.json`) para
+  verificar en producción qué store está activo.
+
+**Qué NO cambió (invariante del ADR):** cualquier fallo del limitador devuelve
+`allowed=true` — la operación nunca se bloquea por el store. Siguen intactos
+los headers IETF `RateLimit-*` + `X-RateLimit-*`, `isEmailAllowlisted()`, las
+cuotas diarias IA y el circuit breaker en memoria.
+
+**Nuevo trade-off explícito (aceptado):** en producción cada comprobación en
+un endpoint protegido añade un roundtrip a Postgres (pool `directDb` propio);
+ante indisponibilidad de la BD el limitador degrada a fail-open durante el
+fallo (el resto de la app depende de la misma BD). En dev/test no hay I/O
+(store memoria).
+
+**Verificación (2026-10-02):** `npx tsc --noEmit` (0 errores), `pnpm lint` (0),
+`pnpm test` (210 archivos / **1.939 tests en verde** — 12 nuevos en
+`ratelimit-store.test.ts`: selección de store, éxito/rechazo sliding window,
+fail-open, sweep y parametrización), `pnpm build`, guards (`guard:secrets`,
+`guard:cdn`, `guard:i18n` 642/642, `contrast-guard`), `npx drizzle-kit check`
+(*Everything's fine*) y `pnpm db:drift-check` (**sin drift duro, 71/71
+tablas** — `rate_limit_windows` incluida, con RLS y sin drift).

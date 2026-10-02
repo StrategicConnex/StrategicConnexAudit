@@ -260,10 +260,11 @@ Error: Email rate limit exceeded. Please try again later.
 
 {: .note }
 **Resuelto (etapa 2026-09-27):** se eliminaron `@upstash/redis` y
-`@upstash/ratelimit`. El rate limit, el circuit breaker IA y la caché IA corren
-**en memoria por instancia** y el progreso de PDF vive en la tabla Postgres
-`pdf_progress`. Ya no existe ninguna variable `UPSTASH_*` ni el error
-`UPSTASH_REDIS_REST_URL not configured`.
+`@upstash/ratelimit`. El circuit breaker IA y la caché IA corren **en memoria
+por instancia**; el rate limit corre sobre la tabla Postgres
+`rate_limit_windows` desde 2026-10-02 (ADR-002 enm. 15; memoria en dev/test) y
+el progreso de PDF vive en la tabla `pdf_progress`. Ya no existe ninguna
+variable `UPSTASH_*` ni el error `UPSTASH_REDIS_REST_URL not configured`.
 
 Si en `.env.local` todavía quedan credenciales de Upstash, bórralas: no tienen
 ningún efecto. Si tu app antigua respondía `429` / `x-ratelimit-*`, sigue
@@ -871,9 +872,9 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  A[429 Too Many Requests] --> B{¿Instancia nueva?}
-  B -->|No| C[Límite real alcanzado: esperar 60s]
-  B -->|Sí| D[Contador en memoria por instancia: revisar IP / usuario]
+  A[429 Too Many Requests] --> B{¿Respuesta con cabeceras RateLimit-*?}
+  B -->|Sí| C[Límite real alcanzado: esperar la ventana]
+  B -->|No| D[429 de otro origen: revisar WAF / proxy]
 ```
 
 ---
@@ -915,7 +916,7 @@ flowchart LR
 ## Validación cruzada (inconsistencias resueltas)
 
 - **Umbral de rate limit de email**: se documenta 20 req/60s en validate-email (tabla de límites) y 40 intentos/minuto en la sección de autenticación — corresponde al decorador `withRateLimit` del endpoint de auth, mientras que el rate limit anti-spam es de 20/60s [VERIFIED].
-- **Rate limit sin Redis**: desde 2026-09-27 el contador vive en memoria por instancia (ADR-002): un 429 significa límite real alcanzado en esa instancia, no un fallo de infraestructura [VERIFIED].
+- **Rate limit sin Redis**: desde 2026-10-02 el contador vive en Postgres (tabla `rate_limit_windows`, ADR-002 enm. 15; memoria en dev/test): un 429 es límite real global —no de una instancia— y si el store fallara el limitador hace fail-open [VERIFIED].
 
 ---
 
