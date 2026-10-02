@@ -7,6 +7,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "line",
+  // El arranque de Chrome (channel: "chrome") puede tardar ~30 s en local,
+  // por encima del timeout por defecto de 30 s: el test fallaba en el setup.
+  timeout: 90_000,
   use: {
     trace: "retain-on-failure",
     video: "retain-on-failure",
@@ -24,6 +27,6 @@ export default defineConfig({
     command: "pnpm dev",
     port: 3000,
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });

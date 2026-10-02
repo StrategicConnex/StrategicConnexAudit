@@ -29,19 +29,21 @@ const BASE_URL = process.env.PLAYWRIGHT_TEST_BASE_URL || "http://localhost:3000"
    use the Supabase REST API password grant directly, then embed the session
    cookie so that subsequent page navigations are authenticated.
    
-   This function is called ONCE at the describe-block level for all
-   auth-gated tests via test.beforeAll + test.skip().
+   This function runs per test inside beforeEach for all auth-gated tests,
+   followed by test.skip() cuando faltan credenciales (Playwright no admite
+   fixtures `page`/`context` en beforeAll: se crean por test).
    ─────────────────────────────────────────────────────────────────────────── */
 
 async function tryAuthenticate(page: Page): Promise<boolean> {
   const email = process.env.TEST_AUTH_EMAIL;
   const password = process.env.TEST_AUTH_PASSWORD;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!email || !password || !supabaseUrl || !supabaseAnonKey) {
+  if (!email || !password || !supabaseUrl || !supabaseKey) {
     console.warn(
-      "[SKIP] TEST_AUTH_EMAIL / TEST_AUTH_PASSWORD / NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY not set"
+      "[SKIP] TEST_AUTH_EMAIL / TEST_AUTH_PASSWORD / NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (o alias ANON) not set"
     );
     return false;
   }
@@ -51,7 +53,7 @@ async function tryAuthenticate(page: Page): Promise<boolean> {
     const authUrl = `${supabaseUrl}/auth/v1/token?grant_type=password`;
     const authRes = await page.request.post(authUrl, {
       headers: {
-        apikey: supabaseAnonKey,
+        apikey: supabaseKey,
         "Content-Type": "application/json",
       },
       data: { email, password },
@@ -103,7 +105,7 @@ async function tryAuthenticate(page: Page): Promise<boolean> {
 function skipUnlessAuthed(authed: boolean): void {
   test.skip(
     !authed,
-    "Requires TEST_AUTH_EMAIL / TEST_AUTH_PASSWORD + NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY in .env"
+    "Requires TEST_AUTH_EMAIL / TEST_AUTH_PASSWORD + NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (o alias ANON) in .env"
   );
 }
 
@@ -120,8 +122,13 @@ test.describe("Visual Regression: Login Page", () => {
   test("full login page renders with correct design system", async ({ page }) => {
     await expect(page).toHaveScreenshot("login-full-page.png", {
       fullPage: true,
-      maxDiffPixels: 200,
+      // El fondo NeuralNetworkBackground (canvas 2D de baja opacidad) anima
+      // con requestAnimationFrame, que `animations: "disabled"` no detiene:
+      // se enmascara y se tolera el ruido residual (~1.3 k px de ~1.28 M = 0.1 %).
+      maxDiffPixels: 3000,
       animations: "disabled",
+      mask: [page.locator("canvas")],
+      timeout: 15_000,
     });
   });
 
@@ -133,15 +140,22 @@ test.describe("Visual Regression: Login Page", () => {
     });
   });
 
-  test("AiCoreVisual Three.js canvas renders without errors", async ({ page }) => {
-    await page.waitForTimeout(1000);
-    // AiCoreVisual uses @react-three/fiber which renders to a <canvas>
-    await expect(page.locator("canvas")).toBeVisible({ timeout: 5000 });
-    const canvas = page.locator("canvas").first();
-    await expect(canvas).toHaveScreenshot("login-aicore-logo.png", {
-      animations: "disabled",
-      maxDiffPixels: 100,
-    });
+  test("AiCoreVisual logo renders without errors", async ({ page }) => {
+    // AiCoreVisual renderiza `next/image` (`/logo_reina.png`), no WebGL: se
+    // valida que la imagen cargue (sin errores de red/decode). El único canvas
+    // de la página es el fondo NeuralNetworkBackground, que sí anima por rAF.
+    const logo = page.locator('img[src*="logo_reina"]').first();
+    await expect(logo).toBeVisible({ timeout: 5000 });
+
+    const img = await logo.evaluate((el: HTMLImageElement) => ({
+      complete: el.complete,
+      width: el.naturalWidth,
+      height: el.naturalHeight,
+    }));
+
+    expect(img.complete).toBe(true);
+    expect(img.width).toBeGreaterThan(0);
+    expect(img.height).toBeGreaterThan(0);
   });
 
   test("email input has correct DS border and focus ring", async ({ page }) => {
@@ -160,11 +174,15 @@ test.describe("Visual Regression: Login Page", () => {
       animations: "disabled",
     });
 
-    // Valid state after filling email
+    // Valid state after filling email: la validación es asíncrona
+    // (debounce 400 ms + /api/auth/validate-email), así que se espera al
+    // estado `valid` (clase del borde) y a que asienten transición y check.
     await input.fill("test@gmail.com");
-    await page.waitForTimeout(800);
+    await expect(input).toHaveClass(/border-chartreuse\/50/, { timeout: 20_000 });
+    await page.waitForTimeout(600);
     await expect(input).toHaveScreenshot("login-input-valid.png", {
       animations: "disabled",
+      timeout: 10_000,
     });
   });
 
@@ -193,13 +211,10 @@ test.describe("Visual Regression: Login Page", () => {
 test.describe("Visual Regression: ScoreGauge", () => {
   let authed = false;
 
-  test.beforeAll(async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    test.setTimeout(60_000);
     authed = await tryAuthenticate(page);
     skipUnlessAuthed(authed);
-  });
-
-  test.beforeEach(() => {
-    test.setTimeout(60_000);
   });
 
   test("ScoreGauge renders with DS colors on intelligence page", async ({ page }) => {
@@ -231,13 +246,10 @@ test.describe("Visual Regression: ScoreGauge", () => {
 test.describe("Visual Regression: AttackSurfaceGraph", () => {
   let authed = false;
 
-  test.beforeAll(async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    test.setTimeout(60_000);
     authed = await tryAuthenticate(page);
     skipUnlessAuthed(authed);
-  });
-
-  test.beforeEach(() => {
-    test.setTimeout(60_000);
   });
 
   test("AttackSurfaceGraph SVG renders with DS node colors", async ({ page }) => {
@@ -279,13 +291,10 @@ test.describe("Visual Regression: AttackSurfaceGraph", () => {
 test.describe("Visual Regression: IntelligenceTab Neural SVGs", () => {
   let authed = false;
 
-  test.beforeAll(async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    test.setTimeout(60_000);
     authed = await tryAuthenticate(page);
     skipUnlessAuthed(authed);
-  });
-
-  test.beforeEach(() => {
-    test.setTimeout(60_000);
   });
 
   test("neural network animated lines render with DS colors", async ({ page }) => {
@@ -374,13 +383,10 @@ test.describe("Design System: Token Verification", () => {
 test.describe("Visual Regression: Dashboard Container", () => {
   let authed = false;
 
-  test.beforeAll(async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    test.setTimeout(60_000);
     authed = await tryAuthenticate(page);
     skipUnlessAuthed(authed);
-  });
-
-  test.beforeEach(() => {
-    test.setTimeout(60_000);
   });
 
   test("dashboard header renders with correct DS tokens", async ({ page }) => {

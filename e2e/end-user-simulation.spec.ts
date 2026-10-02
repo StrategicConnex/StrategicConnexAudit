@@ -1,9 +1,10 @@
 import { test, type Page } from "@playwright/test";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 
-const SCREENSHOTS_DIR = "C:\\Users\\Juan\\AppData\\Local\\Temp\\opencode";
-const BASE_URL = "http://localhost:3000";
+const SCREENSHOTS_DIR = path.join(os.tmpdir(), "scaudit-ux");
+const BASE_URL = process.env.PLAYWRIGHT_TEST_BASE_URL || "http://localhost:3000";
 
 interface UxFinding {
   id: string;

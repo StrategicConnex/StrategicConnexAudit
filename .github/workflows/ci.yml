@@ -235,7 +235,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - name: Run auth + smoke E2E (webServer levanta pnpm dev)
-        run: pnpm exec playwright test e2e/app.spec.ts e2e/pentest-auth-ratelimit.spec.ts --workers=1
+        run: pnpm exec playwright test e2e/home.spec.ts e2e/app.spec.ts e2e/pentest-auth-ratelimit.spec.ts --workers=1
+      # Los specs de auditoría UX y regresión visual corren también, pero como
+      # señal informativa: el primero genera hallazgos (no aserciones duras) y
+      # el segundo tiene baselines versionadas solo para win32 (`*-win32.png`),
+      # por lo que en Linux no hay con qué comparar hasta generarlos allí.
+      - name: Run UX simulation + visual regression (informativo, no bloquea)
+        continue-on-error: true
+        run: pnpm exec playwright test e2e/end-user-simulation.spec.ts e2e/visual-regression.spec.ts --workers=1
 
   api-contract-test:
     name: API Contract Test
