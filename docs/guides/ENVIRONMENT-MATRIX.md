@@ -1,6 +1,6 @@
 ---
-version: 1.1
-date: 2026-08-08
+version: 1.2
+date: 2026-10-01
 author: Equipo SCAUDIT — Plataforma/DevOps
 status: Aprobado
 ---
@@ -76,7 +76,8 @@ flowchart LR
 | Variable | Fuente | LOCAL | TEST/CI | PREVIEW | STAGING | PROD | Notas |
 |---|---|---|---|---|---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | env.ts | ✅ | ✅ | ✅ | ✅ | ✅ | pública |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | env.ts | ✅ | ✅ | ✅ | ✅ | ✅ | pública |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | env.ts | ✅ | ✅ | ✅ | ✅ | ✅ | pública · **canónica** (CS-301) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` (alias legacy) | env.ts | ✅ | ✅ | ✅ | ✅ | ✅ | pública · alias de la PUBLISHABLE — basta con definir **una de las dos** (fail-fast `instrumentation.ts`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | env.ts/admin.ts | ✅ | 🔴 no | ✅ | ✅ | ✅ | server-only |
 | `DATABASE_URL` | db/index.ts | ✅ | 🔴 no | ✅ | ✅ | ✅ | server-only |
 | `DIRECT_URL` | db/index.ts | ✅ | 🔴 no | ✅ | ✅ | ✅ | server-only (workers) |
@@ -176,6 +177,8 @@ Ver §3 — 1 bloque mermaid, válido.
 
 ~~**DOCUMENTATION CONSISTENCY ISSUE** — `Bearer_API_KEY` (camel-case) vs convención `SCREAMING_SNAKE`~~ **RESUELTO (CS-302, 2026-09)**: nombre canónico `BEARER_API_KEY` con alias legacy `Bearer_API_KEY` en `src/shared/config/env-secrets.ts:19-20` (+ tests en `env-secrets.test.ts`). [RESUELTO]
 
+~~**DOCUMENTATION CONSISTENCY ISSUE** — `src/env.ts` exigía `NEXT_PUBLIC_SUPABASE_ANON_KEY` como requerida, mientras `.env.example` y el runtime usaban `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (CS-301): un despliegue con solo la canónica abortaba en el fail-fast de `instrumentation.ts`~~ **RESUELTO (2026-10-01, decisión de despliegue Vercel)**: `src/env.ts` valida `PUBLISHABLE_KEY || ANON_KEY` con `z.refine` "al menos una" (canónica PUBLISHABLE, ANON como alias legacy), `env.test.ts` e `instrumentation.test.ts` cubren ambos caminos y el caso sin ninguna clave. [RESUELTO]
+
 **DOCUMENTATION CONSISTENCY ISSUE** — `NEXT_PUBLIC_DEV_BYPASS_AUTH` y `DB_ALLOW_INSECURE_SSL` documentadas como peligrosas: ambas tienen guard `NODE_ENV === 'development'` / warning en consola; matríz las marca 🔴 no en prod. [VERIFIED]
 
 ---
@@ -198,6 +201,7 @@ Ver §3 — 1 bloque mermaid, válido.
 | Ambientes Vercel | [VERIFIED] `vercel.json` + `docs/guides/deployment.md` |
 | Flujo deploy manual | [VERIFIED] `docs/guides/deployment.md` §6 — esperar al auto-deploy antes de `vercel --prod` |
 | Inconsistencia ANON_KEY | [RESUELTO] `useRealtimeMetrics.ts` → `env.supabaseAnonKey` con fallback (CS-301) |
+| Fail-fast `env.ts` vs clave PUBLISHABLE | [RESUELTO] `src/env.ts` acepta PUBLISHABLE canónica **o** alias ANON (`z.refine`) + tests `env.test.ts` / `instrumentation.test.ts` (2026-10-01) |
 | Gitleaks en CI | [VERIFIED] `.github/workflows/ci.yml` (job `secret-scan`) |
 
 ---
@@ -215,4 +219,4 @@ Ver §3 — 1 bloque mermaid, válido.
 
 ## 16. Resumen ejecutivo
 
-**37 variables inventariadas por ambiente.** `NEXT_PUBLIC_*` (5) son públicas; el resto (32) son server-side y deben permanecer fuera del bundle cliente y del repo. De las 3 inconsistencias originales, **2 quedaron resueltas** (ANON_KEY → fallback canónico CS-301; `Bearer_API_KEY` → `BEARER_API_KEY` con alias CS-302); **queda 1 abierta** (STAGING no dedicado). Sobre riesgos operativos: `LOOKER_STUDIO_API_KEY` ausente ahora solo deshabilita el endpoint (VULN-006 fail-closed); `SCAUDIT_WEBHOOK_SECRET` ausente → fallback dev sigue [UNKNOWN]. El CI corre gitleaks (`secret-scan`) para blindar REQ-001/007 en cada push.
+**37 variables inventariadas por ambiente.** `NEXT_PUBLIC_*` (5) son públicas; el resto (32) son server-side y deben permanecer fuera del bundle cliente y del repo. De las 3 inconsistencias originales, **2 quedaron resueltas** (ANON_KEY → fallback canónico CS-301; `Bearer_API_KEY` → `BEARER_API_KEY` con alias CS-302); **queda 1 abierta** (STAGING no dedicado). A esto se suma la **4ª inconsistencia resuelta (2026-10-01)**: el fail-fast de `src/env.ts` ya acepta la clave canónica `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` con `NEXT_PUBLIC_SUPABASE_ANON_KEY` como alias (al menos una requerida), de modo que un despliegue en Vercel configurado solo con la canónica arranca sin abortar. Sobre riesgos operativos: `LOOKER_STUDIO_API_KEY` ausente ahora solo deshabilita el endpoint (VULN-006 fail-closed); `SCAUDIT_WEBHOOK_SECRET` ausente → fallback dev sigue [UNKNOWN]. El CI corre gitleaks (`secret-scan`) para blindar REQ-001/007 en cada push.

@@ -2,7 +2,8 @@
    Env Validation — Tests del esquema Zod de src/env.ts
 
    Verifica que:
-   - validateEnv() acepta un entorno completo y devuelve las 8 variables.
+   - validateEnv() acepta un entorno completo y devuelve las 9 variables.
+   - La clave Supabase es obligatoria: PUBLISHABLE (canónica) o ANON (alias).
    - Una requerida faltante produce un ZodError que nombra el campo.
    - Las opcionales pueden ausentarse sin romper la validación.
    - Importar el módulo NO lanza en import-time (build en CI/Vercel).
@@ -19,13 +20,18 @@ const REQUIRED_VARS = [
   "DATABASE_URL",
   "DIRECT_URL",
   "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "OPENROUTER_API_KEY",
+] as const;
+
+/** Al menos una de las dos debe existir (PUBLISHABLE canónica ↔ ANON alias). */
+const SUPABASE_KEY_VARS = [
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
 ] as const;
 
 const OPTIONAL_VARS = ["RESEND_API_KEY", "SLACK_WEBHOOK_URL", "TEAMS_WEBHOOK_URL"] as const;
 
-const ALL_VARS = [...REQUIRED_VARS, ...OPTIONAL_VARS] as const;
+const ALL_VARS = [...REQUIRED_VARS, ...SUPABASE_KEY_VARS, ...OPTIONAL_VARS] as const;
 
 type VarKey = (typeof ALL_VARS)[number];
 
@@ -33,6 +39,7 @@ const VALID_VALUES: Record<VarKey, string> = {
   DATABASE_URL: "postgresql://user:pass@localhost:5432/strategicaudit",
   DIRECT_URL: "postgresql://user:pass@localhost:5432/strategicaudit",
   NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_key",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiJ9.test-anon-key",
   OPENROUTER_API_KEY: "sk-or-v1-test-key",
   RESEND_API_KEY: "re_test_key",
@@ -64,10 +71,42 @@ afterEach(() => {
 // ─── validateEnv() ──────────────────────────────────────────────────────────
 
 describe("validateEnv", () => {
-  it("acepta un entorno completamente válido y devuelve las 8 variables", () => {
+  it("acepta un entorno completamente válido y devuelve las 9 variables", () => {
     stubEnvFixture();
 
     expect(validateEnv()).toEqual(VALID_VALUES);
+  });
+
+  it("acepta solo la clave PUBLISHABLE (canónica) sin el alias ANON", () => {
+    stubEnvFixture(["NEXT_PUBLIC_SUPABASE_ANON_KEY"]);
+
+    const parsed = validateEnv();
+
+    expect(parsed.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBe(
+      VALID_VALUES.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    );
+    expect(parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBeUndefined();
+  });
+
+  it("acepta solo el alias ANON (legacy) sin la PUBLISHABLE", () => {
+    stubEnvFixture(["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"]);
+
+    const parsed = validateEnv();
+
+    expect(parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe(VALID_VALUES.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    expect(parsed.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBeUndefined();
+  });
+
+  it("lanza ZodError si faltan las dos claves Supabase", () => {
+    stubEnvFixture(SUPABASE_KEY_VARS);
+
+    const error = catchFrom(() => validateEnv());
+
+    expect(error).toBeInstanceOf(ZodError);
+    const issues = (error as ZodError).issues;
+    expect(issues.some((issue) => issue.path.includes("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"))).toBe(
+      true,
+    );
   });
 
   it.each(REQUIRED_VARS)("lanza ZodError nombrando el campo cuando falta %s", (key) => {
@@ -100,7 +139,7 @@ describe("validateEnv", () => {
 
     const parsed = validateEnv();
 
-    expect(Object.keys(parsed).sort()).toEqual([...REQUIRED_VARS].sort());
+    expect(Object.keys(parsed).sort()).toEqual([...REQUIRED_VARS, ...SUPABASE_KEY_VARS].sort());
     for (const key of OPTIONAL_VARS) {
       expect(parsed[key]).toBeUndefined();
     }
@@ -127,7 +166,7 @@ describe("src/env.ts", () => {
     await expect(import("./env")).resolves.toBeDefined();
   });
 
-  it("exporta `env` con las 8 claves esperadas", () => {
+  it("exporta `env` con las 9 claves esperadas", () => {
     expect(Object.keys(env).sort()).toEqual([...ALL_VARS].sort());
   });
 

@@ -12,7 +12,7 @@ const REQUIRED_VALID = {
   DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
   DIRECT_URL: "postgresql://user:pass@localhost:5432/db",
   NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_key",
   OPENROUTER_API_KEY: "sk-or-test",
 };
 
@@ -20,6 +20,7 @@ function stubValidEnv(): void {
   for (const [key, value] of Object.entries(REQUIRED_VALID)) {
     vi.stubEnv(key, value);
   }
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", undefined);
 }
 
 describe("instrumentation register — validación de env", () => {
@@ -36,6 +37,21 @@ describe("instrumentation register — validación de env", () => {
 
   it("arranca con las variables requeridas válidas", async () => {
     await expect(register()).resolves.toBeUndefined();
+  });
+
+  it("arranca con el alias ANON legacy cuando falta la PUBLISHABLE", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", undefined);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key");
+
+    await expect(register()).resolves.toBeUndefined();
+  });
+
+  it("aborta el arranque si faltan las dos claves Supabase", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", undefined);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", undefined);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(register()).rejects.toThrow();
   });
 
   it("aborta el arranque si falta una variable requerida", async () => {
