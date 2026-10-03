@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { setCookie } from "@/shared/lib/cookie-utils";
 import { Globe, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -17,6 +17,7 @@ const LOCALE_MAP: Record<string, { label: string; flag: string; switchTo: string
  */
 export function LanguageSwitcher({ mini = false }: { mini?: boolean }) {
   const locale = useLocale();
+  const t = useTranslations("language");
   const [isPending, setPending] = useState(false);
 
   const nextLocale = locale === "es" ? "en" : "es";
@@ -34,7 +35,7 @@ export function LanguageSwitcher({ mini = false }: { mini?: boolean }) {
         onClick={handleSwitch}
         disabled={isPending}
         className="flex items-center gap-1.5 text-2xs font-medium text-muted-fg/60 hover:text-foreground transition-[color,opacity] cursor-pointer disabled:opacity-50"
-        title="Cambiar idioma"
+        title={t("switchLanguage")}
       >
         {isPending ? (
           <Loader2 size={12} className="animate-spin shrink-0" />
@@ -60,6 +61,7 @@ export function LanguageSwitcher({ mini = false }: { mini?: boolean }) {
       ) : (
         <Globe size={14} className="shrink-0" />
       )}
+      <span className="sr-only">{t("label")}</span>
       <span className="font-bold uppercase tracking-wider text-2xs">{nextInfo.flag}</span>
       <span>{nextInfo.switchTo}</span>
     </button>

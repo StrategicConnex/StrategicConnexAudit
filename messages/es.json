@@ -87,6 +87,9 @@
     "apis": "APIs",
     "copilotEngine": "Copilot Engine",
     "active": "ACTIVE",
+    "copilotStatus": {
+      "noData": "SIN DATOS"
+    },
     "continuousAudit": "Continuous Audit",
     "securityIndex": "Security Index: {index}%",
     "monitoringProjects": "Monitoreando: {count}",
@@ -135,7 +138,8 @@
   "language": {
     "switchTo": "English",
     "current": "Español",
-    "label": "Idioma"
+    "label": "Idioma",
+    "switchLanguage": "Cambiar idioma"
   },
   "common": {
     "loading": "Cargando...",
@@ -153,7 +157,14 @@
     "next": "Siguiente",
     "retry": "Reintentar",
     "offline": "Sin Conexión",
-    "offlineDescription": "No pudimos conectar con nuestros servidores. Verificá tu conexión a internet y volvé a intentarlo."
+    "offlineDescription": "No pudimos conectar con nuestros servidores. Verificá tu conexión a internet y volvé a intentarlo.",
+    "theme": {
+      "group": "Tema de la interfaz",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema",
+      "optionLabel": "Tema {name}"
+    }
   },
   "intelligence": {
     "activeProject": "Proyecto Activo",
@@ -299,7 +310,16 @@
     "createProject": "Nuevo Proyecto",
     "createdOk": "Proyecto creado correctamente",
     "createdDesc": "Ya puedes verlo en tu lista de proyectos.",
-    "viewProject": "Ver proyecto"
+    "viewProject": "Ver proyecto",
+    "addDomain": "Agregar Dominio",
+    "addDomainDesc": "Agrega tu sitio web y empezaremos a vigilarlo por ti.",
+    "projectName": "Nombre del Proyecto",
+    "projectNamePlaceholder": "Ej: Mi Startup Ecommerce…",
+    "baseUrl": "URL Base (Dominio)",
+    "baseUrlPlaceholder": "https://ejemplo.com…",
+    "cancel": "Cancelar",
+    "create": "Crear Proyecto",
+    "unexpectedError": "Ocurrió un error inesperado. Intenta de nuevo."
   },
   "reports": {
     "pageTitle": "Exportación e Inteligencia IA",

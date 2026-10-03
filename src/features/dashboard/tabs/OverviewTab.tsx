@@ -175,6 +175,8 @@ function OverviewSummary({
 export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitials }: OverviewTabProps) {
   const t = useTranslations('overview');
   const [hero, setHero] = useState<HeroLive>({ ...HERO_EMPTY, status: 'loading' });
+  const auditedCount = dashboardData.filter((p) => p.latestAudit != null).length;
+  const failedChecks = hero.checks.filter((c) => c.isUp === false).length;
 
   // Telemetría real del hero: últimos chequeos de uptime (24h) + salud de IA.
   // 401/sin datos → estado vacío honesto, nunca cifras inventadas.
@@ -237,7 +239,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
         projectCount={dashboardData.length}
         auditedCount={dashboardData.filter((p) => p.latestAudit != null).length}
         uptimePercent={hero.uptimePercent}
-        failedChecks={hero.checks.filter((c) => c.isUp === false).length}
+        failedChecks={failedChecks}
         checksLoading={hero.status === 'loading'}
         events={buildTimelineEvents({
           projects: dashboardData.map((p) => ({
@@ -509,9 +511,16 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
           </div>
           <div className="text-center px-4 py-1">
             <p className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest">{t('status')}</p>
-            <p className="text-xs font-bold text-chartreuse mt-0.5 flex items-center justify-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> {t('secure')}
-            </p>
+            {/* Antes decÃ­a "Seguro" incondicionalmente, incluso con 0 proyectos
+                y 0 auditorÃ­as. Ahora solo se afirma cuando hay auditorÃ­as
+                reales y ninguna fallida; si no hay datos, se muestra "—". */}
+            {auditedCount > 0 && failedChecks === 0 ? (
+              <p className="text-xs font-bold text-chartreuse mt-0.5 flex items-center justify-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> {t('secure')}
+              </p>
+            ) : (
+              <p className="text-xs font-bold text-muted-fg mt-0.5">—</p>
+            )}
           </div>
         </div>
       </Card>

@@ -98,7 +98,7 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
         onCreated?.();
       }
     } catch {
-      setState({ success: false, message: "Ocurrió un error inesperado. Intenta de nuevo." });
+      setState({ success: false, message: t('unexpectedError') });
     } finally {
       setIsPending(false);
     }
@@ -111,7 +111,7 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
         className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/80 text-primary-foreground rounded-full transition-[color,background-color,border-color,box-shadow] shadow-[0_4px_12px_rgba(98,113,196,0.2)] hover:shadow-[0_4px_16px_rgba(98,113,196,0.3)] border border-primary/20 font-bold text-2xs uppercase tracking-widest"
       >
         <Plus size={14} strokeWidth={3} />
-        <span>Nuevo Proyecto</span>
+        <span>{t('createProject')}</span>
       </button>
 
       <Dialog
@@ -134,44 +134,48 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
             <DialogCloseButton />
             
             <div className="mb-6 pointer-events-none select-none">
-              <DialogTitle>Agregar Dominio</DialogTitle>
-              <DialogDescription>Agrega tu sitio web y empezaremos a vigilarlo por ti.</DialogDescription>
+              <DialogTitle>{t('addDomain')}</DialogTitle>
+              <DialogDescription>{t('addDomainDesc')}</DialogDescription>
             </div>
             
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-5 cursor-auto">
               <div className="space-y-2">
-                <label htmlFor="name" className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest ml-1">Nombre del Proyecto</label>
+                <label htmlFor="name" className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest ml-1">{t('projectName')}</label>
                 <input 
                   type="text" 
                   id="name" 
                   name="name" 
                   ref={firstInputRef}
                   className="w-full bg-muted/60 border border-border focus:border-primary/40 rounded-xl px-4 py-3 text-foreground text-xs font-semibold focus:outline-none transition-[color,background-color,border-color,box-shadow] duration-300 shadow-sm"
-                  placeholder="Ej: Mi Startup Ecommerce…"
+                  placeholder={t('projectNamePlaceholder')}
                   required
+                  aria-invalid={state?.errors?.name ? true : undefined}
+                  aria-describedby={state?.errors?.name ? 'name-error' : undefined}
                 />
                 {state?.errors?.name && (
-                  <p className="text-destructive text-2xs font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.name[0]}</p>
+                  <p id="name-error" role="alert" className="text-destructive text-2xs font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.name[0]}</p>
                 )}
               </div>
               
               <div className="space-y-2">
-                <label htmlFor="baseUrl" className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest ml-1">URL Base (Dominio)</label>
+                <label htmlFor="baseUrl" className="text-2xs font-extrabold text-muted-fg uppercase tracking-widest ml-1">{t('baseUrl')}</label>
                 <input 
                   type="url" 
                   id="baseUrl" 
                   name="baseUrl" 
                   className="w-full bg-muted/60 border border-border focus:border-primary/40 rounded-xl px-4 py-3 text-foreground text-xs font-semibold focus:outline-none transition-[color,background-color,border-color,box-shadow] duration-300 shadow-sm"
-                  placeholder="https://ejemplo.com…"
+                  placeholder={t('baseUrlPlaceholder')}
                   required
+                  aria-invalid={state?.errors?.baseUrl ? true : undefined}
+                  aria-describedby={state?.errors?.baseUrl ? 'baseurl-error' : undefined}
                 />
                 {state?.errors?.baseUrl && (
-                  <p className="text-destructive text-2xs font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.baseUrl[0]}</p>
+                  <p id="baseurl-error" role="alert" className="text-destructive text-2xs font-extrabold mt-1.5 ml-1 uppercase tracking-tight">{state.errors.baseUrl[0]}</p>
                 )}
               </div>
 
               {state?.message && !state?.success && (
-                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs font-semibold">
+                <div role="alert" className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs font-semibold">
                   {state.message}
                 </div>
               )}
@@ -183,14 +187,14 @@ export function NewProjectModal({ onCreated }: { onCreated?: () => void }) {
                   className="text-2xs font-extrabold uppercase tracking-widest text-muted-fg hover:text-white transition-colors"
                   disabled={isPending}
                 >
-                  Cancelar
+                  {t('cancel')}
                 </button>
                 <button 
                   type="submit" 
                   disabled={isPending}
                   className="flex items-center gap-2 px-6 py-2.5 bg-foreground text-background font-extrabold rounded-full hover:bg-foreground/90 transition-[color,background-color,opacity,box-shadow] disabled:opacity-50 text-2xs uppercase tracking-widest shadow-md hover:shadow-[0_2px_15px_rgba(255,255,255,0.1)]"
                 >
-                  {isPending ? <Loader2 size={14} className="animate-spin text-black" /> : 'Crear Proyecto'}
+                  {isPending ? <Loader2 size={14} className="animate-spin text-black" /> : t('create')}
                 </button>
               </div>
             </form>

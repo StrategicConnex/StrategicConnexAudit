@@ -55,10 +55,53 @@ You are a small-business owner who just wants to know "¿mi sitio está bien?". 
 
 This skill bundles the following to automate execution:
 
-- **`scripts/run-j1.ts`** — Full J1 journey automation (Playwright): login, dashboard assessment, project creation with invalid data, validation errors, valid creation, verification, cleanup.
-- **`scripts/run-j2.ts`** — Full J2 journey automation: mobile viewport (390px), drawer navigation, content visibility check.
-- **`scripts/run-j3.ts`** — Full J3 journey automation: bad route, empty form submission, session-less access to protected routes.
-- **`scripts/run-j4.ts`** — Full J4 journey automation: generate or attempt to generate the main deliverable.
+- **`scripts/run-journeys.ts`** — Playwright driver for J1–J4. `E2E_BASE_URL`, `SCREENSHOTS_DIR`, `PROJECT_REF` are env-overridable.
+  ⚠️ **Sus findings `B-1xx` están HARDCODEADOS como texto fijo.** No los copies a un informe
+  como si fueran observaciones: el script *planta* los hallazgos, no los deduce del DOM.
+  Úsalo para captura de pantallas y navegación; **verifica cada hallazgo a mano**
+  (ver "Regla de oro" más abajo) antes de reportarlo.
+- **`scripts/i18n-hardcoded.mjs`** — detector de literales en español fuera del sistema i18n.
+  Complementa a `scripts/i18n-parity.mjs` del repo, que sólo compara claves y por eso
+  aprueba con paridad 0.00% mientras la UI en inglés muestra español.
+  `node scripts/i18n-hardcoded.mjs --max 40` · `--fail-over N` para usarlo como gate de CI.
 - **`references/report-template.md`** — Structured markdown template for the final report.
 - **`references/gap-checklist.md`** — Checklist of common non-technical user friction points to verify during each journey.
 - **`references/persona-cards.md`** — Detailed persona descriptions with behavioral patterns and decision heuristics.
+- **`references/ux-final-report.md`** — informe de una campaña anterior (referencia de formato, no de veracidad).
+
+## Regla de oro: verificar, no asumir
+
+Este es el fallo #1 de los QA que reportan hallazgos inventados. Antes de escribir un `B-xxx`:
+
+1. **Que el bug sea real, no una suposición sobre el código.** Ejemplo real: el service worker
+   appeared registrado dos veces en consola; `getRegistrations()` devolvió **1** — era doble
+   efecto de StrictMode en dev, no un bug de producción. Se descartó.
+2. **Separar "parece roto" de "está roto".** Para bugs de datos, **consulta la BD** y contrasta
+   con lo que ve la UI. Ejemplo real: el proyecto no aparecía tras crearse; el `SELECT` demostró
+   que la fila **sí** existía → el bug era de lectura, no de escritura.
+3. **Citar evidencia objetiva**: medidas del DOM (`getBoundingClientRect`, `scrollWidth > clientWidth`),
+   líneas de código, filas de BD, status HTTP. Un hallazgo sin número es una opinión.
+4. **Marcar el ámbito**: si sólo ocurre con `NEXT_PUBLIC_DEV_BYPASS_AUTH` o sólo en dev,
+   no lo reportes como bug de producción.
+
+## Bypass de auth: escribir ≠ leer (trap conocido)
+
+`NEXT_PUBLIC_DEV_BYPASS_AUTH=true` **sólo cubre las escrituras**.
+`authenticatedAction` → `handleDevBypass` usa `directDb` (bypassa RLS) y el alta SÍ se persiste.
+Pero **todas las lecturas** van por `getCurrentUser()` (`src/shared/lib/auth.ts`), que llama
+`supabase.auth.getUser()` → `null` sin sesión real → `AuthError`.
+
+Consecuencia: creas un proyecto, el toast dice "Proyecto creado correctamente", y al recargar
+el listado está vacío. **No lo reportes como bug de persistencia** sin comprobar la BD primero,
+y no confíes en este modo para validar flujos de lectura.
+
+## Revisar el estado real, no el declarado
+
+La UI afirma estados que no consultan nada. Antes de creerte un "ACTIVO"/"Seguro"/"Live":
+
+- Busca el literal en el código (`grep -rn "active\|Safe\|Seguro" src`). Si está hardcodeado
+  en el JSX, es una **afirmación falsa** → hallazgo de confianza (B2), no un dato.
+- Contrasta con la red: `preview_logs` / `curl`. Si la API responde 401/500 y la UI dice
+  "ACTIVE", es un B2 de confianza.
+- Distingue lo que sí es honesto: los estados vacíos que muestran "—" y "Sin datos" están bien
+  hechos; no los reportes como bugs.

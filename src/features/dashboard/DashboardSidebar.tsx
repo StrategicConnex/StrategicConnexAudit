@@ -231,15 +231,30 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         </NavSection>
       </nav>
 
-      {/* Live AI Scanner Status Card — hidden when collapsed */}
+      {/* Live AI Scanner Status Card — hidden when collapsed.
+          El badge NO puede decir "ACTIVE" con 0 proyectos: era texto fijo y
+          afirmaba un estado que nunca se consultaba. Ahora refleja el único
+          dato real que el sidebar tiene (projectCount). La salud real del
+          motor IA la muestra OverviewTab vía /api/ai/healthcheck — no se
+          duplica aquí porque esa ruta testeja cada modelo contra OpenRouter
+          y no es gratis repetirla en cada render del sidebar. */}
       {!collapsed && (
         <div className="mx-4 my-2 p-4 rounded-xl border border-border bg-muted/10 space-y-3 relative overflow-hidden group z-10">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-chartreuse/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="flex items-center justify-between relative z-10">
             <span className="text-2xs text-muted-fg font-extrabold tracking-widest uppercase">{t('copilotEngine')}</span>
             <div className="flex items-center gap-1">
-              <span className="text-2xs text-chartreuse font-bold">{t('active')}</span>
-              <span className="flex h-1.5 w-1.5 rounded-full bg-chartreuse scan-pulse" />
+              {projectCount > 0 ? (
+                <>
+                  <span className="text-2xs text-chartreuse font-bold">{t('active')}</span>
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-chartreuse scan-pulse" />
+                </>
+              ) : (
+                <>
+                  <span className="text-2xs text-muted-fg font-bold">{t('copilotStatus.noData')}</span>
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-muted-fg/40" aria-hidden="true" />
+                </>
+              )}
             </div>
           </div>
           <div className="space-y-1 relative z-10">

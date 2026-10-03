@@ -210,9 +210,17 @@ async function persistResult(result: HealthCheckResult, triggerSource: string): 
 async function rawGet(request: Request) {
   const startTime = Date.now();
 
+  // El dashboard del producto consume esta ruta desde el navegador (ver
+  // OverviewTab), sin header Authorization. Con CRON_SECRET seteada en
+  // .env.local el gate rechazaba con 401 incluso en desarrollo, así que el
+  // panel mostraba siempre estado vacío. Solo se abre bajo la opt-in
+  // explícita de dev-bypass; en producción el gate de cron sigue mandando.
+  const DEV_BYPASS = process.env.NODE_ENV === 'development' &&
+    process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
+
   try {
     // 1. Auth check (timing-safe, fail-closed en producción sin CRON_SECRET)
-    if (!isCronAuthorized(request)) {
+    if (!DEV_BYPASS && !isCronAuthorized(request)) {
       const hasSecret = !!process.env.CRON_SECRET;
       logger.error("AI Healthcheck: Rechazada invocación no autorizada", { hasSecret });
       return NextResponse.json({

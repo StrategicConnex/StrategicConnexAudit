@@ -87,6 +87,9 @@
     "apis": "APIs",
     "copilotEngine": "Copilot Engine",
     "active": "ACTIVE",
+    "copilotStatus": {
+      "noData": "NO DATA"
+    },
     "continuousAudit": "Continuous Audit",
     "securityIndex": "Security Index: {index}%",
     "monitoringProjects": "Monitoring: {count}",
@@ -135,7 +138,8 @@
   "language": {
     "switchTo": "Español",
     "current": "English",
-    "label": "Language"
+    "label": "Language",
+    "switchLanguage": "Change language"
   },
   "common": {
     "loading": "Loading...",
@@ -153,7 +157,14 @@
     "next": "Next",
     "retry": "Retry",
     "offline": "Offline",
-    "offlineDescription": "We couldn't connect to our servers. Check your internet connection and try again."
+    "offlineDescription": "We couldn't connect to our servers. Check your internet connection and try again.",
+    "theme": {
+      "group": "Interface theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "optionLabel": "{name} theme"
+    }
   },
   "intelligence": {
     "activeProject": "Active Project",
@@ -299,7 +310,16 @@
     "createProject": "New Project",
     "createdOk": "Project created successfully",
     "createdDesc": "You can now see it in your project list.",
-    "viewProject": "View project"
+    "viewProject": "View project",
+    "addDomain": "Add Domain",
+    "addDomainDesc": "Add your website and we'll start monitoring it for you.",
+    "projectName": "Project Name",
+    "projectNamePlaceholder": "e.g. My Ecommerce Startup…",
+    "baseUrl": "Base URL (Domain)",
+    "baseUrlPlaceholder": "https://example.com…",
+    "cancel": "Cancel",
+    "create": "Create Project",
+    "unexpectedError": "Something unexpected happened. Please try again."
   },
   "reports": {
     "pageTitle": "Export & AI Intelligence",

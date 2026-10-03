@@ -23,12 +23,18 @@ export function formatEventTime(at: string | Date): { at: string; display: strin
   const d = typeof at === 'string' ? new Date(at) : at;
   return {
     at: d.toISOString(),
-    display: d.toLocaleString([], {
+    // Locale FIJO a propósito. Con `[]` Node y el navegador eligen locale y
+    // zona distintos y el texto renderizado en servidor no coincide con el
+    // del cliente → "Hydration failed because the server rendered text
+    // didn't match the client", que tumba el árbol entero a render en
+    // cliente. La zona se resuelve en <time> con suppressHydrationWarning.
+    display: new Intl.DateTimeFormat('es-ES', {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
-    }),
+      timeZone: 'UTC',
+    }).format(d),
   };
 }
 
@@ -98,7 +104,13 @@ export function ActivityTimeline({
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={e.tone}>{e.title}</Badge>
-              <time dateTime={e.at} className="text-2xs tabular-nums text-muted-fg/70">
+              {/* La hora se formatea en UTC para que servidor y cliente coincidan; el
+                  <time> conserva el ISO real en dateTime. */}
+              <time
+                dateTime={e.at}
+                suppressHydrationWarning
+                className="text-2xs tabular-nums text-muted-fg/70"
+              >
                 {e.display}
               </time>
             </div>
