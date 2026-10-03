@@ -32,6 +32,12 @@ vi.mock("@/shared/db/schemas", () => ({
 }));
 
 vi.mock("@/lib/logger", () => ({
+  // El mock debe exponer tambien las utilidades de contexto: las rutas usan
+  // withRequestContext (src/lib/request-context.ts), que llama a
+  // runWithRequestContext desde este mismo modulo. Sin ellas el Partial mock
+  // rompe la peticion antes de llegar al handler.
+  getRequestContext: vi.fn(() => undefined),
+  runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(),
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
