@@ -10,8 +10,11 @@
    - Espaciado §3.3 (escala 4–64px): lo cubre el spacing dinámico de
      Tailwind v4 (múltiplos de --spacing); sin tokens extra.
    - Fuente §3.2: `--font-corporate` declara "DM Sans" con fallback a
-     Inter. La carga de la face (next/font en layout.tsx) queda pendiente;
-     @fontsource/dm-sans ya es dependencia del proyecto.
+     Inter. La face se carga con `next/font` en layout.tsx; hasta que eso
+     se conecte, "DM Sans" no resuelve y cae al fallback de Inter.
+     (@fontsource/dm-sans se uninstalló: estaba en package.json pero
+     ninguna fuente la importaba, y mantener una dependencia que el
+     comentario daba por activa era peor que quitarla.)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root,
