@@ -12,6 +12,7 @@
  *   await sendPushNotification({ title: "Alerta", body: "..." });
  */
 
+import { logger } from "@/lib/logger";
 import { eq, and, desc } from "drizzle-orm";
 import { directDb } from "@/shared/db";
 import { pushSubscriptions } from "@/shared/db/schemas/push-subscriptions";
@@ -51,7 +52,7 @@ function getVapidKeys(): { publicKey: string; privateKey: string } {
   const privateKey = process.env.VAPID_PRIVATE_KEY || "";
 
   if (!publicKey || !privateKey) {
-    console.warn(
+    logger.warn(
       "[Push] VAPID keys not configured. Configure en vars de entorno:\n" +
       "  1. npx web-push generate-vapid-keys\n" +
       "  2. Copiar VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY a .env.local o Vercel env vars"
@@ -89,7 +90,7 @@ export async function sendPushNotification(
   try {
     const { publicKey, privateKey } = getVapidKeys();
     if (!publicKey || !privateKey) {
-      console.warn("[Push] Cannot send: VAPID keys not configured");
+      logger.warn("[Push] Cannot send: VAPID keys not configured");
       return false;
     }
 
@@ -114,9 +115,13 @@ export async function sendPushNotification(
     const pushErr = err as { statusCode?: number; message?: string };
     // Si el error es 410 (Gone) o 404 (Not Found), el endpoint expiró
     if (pushErr.statusCode === 410 || pushErr.statusCode === 404) {
-      console.warn("[Push] Subscription expired, will mark inactive:", pushErr.message?.slice(0, 100));
+      logger.warn("[Push] Subscription expired, will mark inactive", {
+        message: pushErr.message?.slice(0, 100),
+      });
     } else {
-      console.error("[Push] Failed to send:", pushErr.message?.slice(0, 200) || pushErr);
+      logger.error("[Push] Failed to send", {
+        message: pushErr.message?.slice(0, 200) || pushErr,
+      });
     }
     return false;
   }

@@ -48,6 +48,25 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // En codigo de produccion no se escribe directo a consola: se usa el
+    // logger estructurado de `@/lib/logger`, que sale como JSON con
+    // requestId y es lo que aggregation (Vercel Logs, Datadog) sabe parsear.
+    // Un console.log suelto en produccion es una linea que nadie correlaciona.
+    //
+    // `console.error` se permite a proposito: los tests de rutas lo mockean
+    // para asertar que se reporto el fallo, y some catch de codigo heredado
+    // lo usa como ultimo recurso. Lo que se prohibe es la traza
+    // informational, que es la que se pierde.
+    //
+    // Nota de friccion: el CI corre `eslint src/ --max-warnings=0`, asi que
+    // esta regla va en `error` y no en `warn`; un `warn` aqui haria fallar
+    // el pipeline igual que un error pero sin señalar nada.
+    files: ["src/app/**/*.{ts,tsx}", "src/server/**/*.{ts,tsx}"],
+    rules: {
+      "no-console": ["error", { allow: ["error"] }],
+    },
+  },
+  {
     // UI components with intentional mount-time state patterns (fetch,
     // localStorage hydration, poll intervals, pulse animations).
     // MitreRealCoverage + RealAssessmentSection: fetch inicial + polling 5s

@@ -15,6 +15,7 @@ import { withRLS } from '@/shared/db/rls';
 import { ExportCsvButton } from '@/features/dashboard/ExportCsvButton';
 import { RumIntegrationCard } from './components/RumIntegrationCard';
 import { computeVitalsAverages } from '@/shared/utils/rum';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -111,7 +112,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           .orderBy(desc(uptimeLogs.checkedAt))
           .limit(10);
       } catch (e) {
-        console.warn("Uptime logs table not ready or accessible:", e);
+        logger.warn("Uptime logs table not ready or accessible", {
+          projectId,
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
       
       const currentUptimeStatus = recentUptimes.length > 0 ? (recentUptimes[0]!.isUp ? 'up' : 'down') : 'unknown';
@@ -126,7 +130,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         .orderBy(desc(webVitalsLogs.recordedAt))
         .limit(100);
       } catch (e) {
-        console.warn("WebVitals logs table not ready or accessible:", e);
+        logger.warn("WebVitals logs table not ready or accessible", {
+          projectId,
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
 
       // Compute sophisticated RUM averages and counters using extracted engine
