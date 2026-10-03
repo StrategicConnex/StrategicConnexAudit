@@ -32,6 +32,18 @@ export interface RequestContext {
   requestId?: string;
   userId?: string;
   correlationId?: string;
+  /**
+   * IP y user-agent de la petición ENTRANTE, capturados en el borde
+   * (`withRequestContext`) y propagados por AsyncLocalStorage.
+   *
+   * Existen para que el código que audita en profundidad (p. ej.
+   * `src/shared/lib/logger.ts` → tabla `audit_logs`) NO tenga que llamar a
+   * `headers()` de `next/headers` en mitad de su propio stack: esa llamada
+   * lanza fuera del scope de petición (jobs de Trigger.dev, cron, tests) y
+   * su `catch` degradaba la persistencia a silencio.
+   */
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 interface RequestContextStore {

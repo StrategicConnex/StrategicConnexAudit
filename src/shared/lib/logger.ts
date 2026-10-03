@@ -2,8 +2,7 @@ import 'server-only';
 
 import { directDb } from "@/shared/db";
 import { auditLogs } from "@/shared/db/schemas";
-import { headers } from "next/headers";
-import { logger as consoleLogger } from "@/lib/logger";
+import { getRequestContext, logger as consoleLogger } from "@/lib/logger";
 
 type LogLevel = 'info' | 'warn' | 'error' | 'security';
 
@@ -15,6 +14,17 @@ interface LogOptions {
   entityId?: string;
   metadata?: Record<string, unknown> | unknown;
   error?: Error | unknown;
+  /**
+   * IP y user-agent. Si no se pasan, se toman del contexto de petición
+   * (AsyncLocalStorage, poblado en `withRequestContext`). Antes este módulo
+   * llamaba a `headers()` de `next/headers` por su cuenta, lo que LANZA fuera
+   * del scope de petición (jobs de Trigger.dev, cron, tests, server actions
+   * desacopladas) y hacía que el `catch` se tragase la excepción: el INSERT en
+   * `audit_logs` no se ejecutaba NUNCA y el evento de seguridad se perdía en
+   * silencio. Ver `src/lib/request-context.ts` y `RequestContext`.
+   */
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 /**
@@ -47,9 +57,10 @@ export const logger = {
     // 2. Persistencia en Base de Datos para eventos crticos
     if (level === 'security' || level === 'error') {
       try {
-        const headerList = await headers();
-        const ip = headerList.get("x-forwarded-for") || "unknown";
-        const ua = headerList.get("user-agent") || "unknown";
+        // Metadatos de petición desde el contexto propagado (NO headers()).
+        const ctx = getRequestContext();
+        const ip = options.ipAddress ?? ctx?.ipAddress ?? 'unknown';
+        const ua = options.userAgent ?? ctx?.userAgent ?? 'unknown';
 
         const errObj = options.error instanceof Error ? options.error : null;
 
@@ -63,14 +74,31 @@ export const logger = {
           entityId: options.entityId,
           newData: {
             metadata: options.metadata as Record<string, unknown>,
-            error: errObj ? errObj.message : (typeof options.error === 'string' ? options.error : String(options.error)),
+            // Antes `String(options.error)` guardaba literalmente "undefined"
+            // cuando no venia error; ahora el campo se omite si no hay.
+            ...(options.error !== undefined
+              ? {
+                  error:
+                    errObj
+                      ? errObj.message
+                      : (typeof options.error === 'string' ? options.error : String(options.error)),
+                }
+              : {}),
             stack: isProd ? undefined : (errObj ? errObj.stack : undefined)
           },
           ipAddress: ip,
           userAgent: ua
         });
       } catch (logError) {
-        consoleLogger.error("🚨 FALLO CRITICO AL GUARDAR AUDIT LOG:", { error: logError instanceof Error ? logError.message : String(logError) });
+        // Un fallo de auditoria NO debe tumbar la peticion, pero debe quedar
+        // registrado con contexto suficiente para investigarlo.
+        consoleLogger.error("🚨 FALLO CRITICO AL GUARDAR AUDIT LOG:", {
+          error: logError instanceof Error ? logError.message : String(logError),
+          action: options.action,
+          level,
+          userId: options.userId,
+          projectId: options.projectId
+        });
       }
     }
   },

@@ -23,19 +23,49 @@ export function readRequestId(source: Request | Headers | undefined | null): str
   return headers.get("x-request-id") ?? undefined;
 }
 
+/** Lee la IP del cliente desde la cabecera que inyecta el proxy/CDN. */
+function readIpAddress(source: Request | Headers | undefined | null): string | undefined {
+  if (!source) return undefined;
+  const headers = source instanceof Headers ? source : source.headers;
+  if (!headers || typeof headers.get !== "function") return undefined;
+  // `x-forwarded-for` puede ser "ip, proxy1, proxy2" → el primero es el cliente.
+  const forwarded = headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0]!.trim() || undefined;
+  return headers.get("x-real-ip") ?? undefined;
+}
+
+/** Lee el user-agent de la petición entrante. */
+function readUserAgent(source: Request | Headers | undefined | null): string | undefined {
+  if (!source) return undefined;
+  const headers = source instanceof Headers ? source : source.headers;
+  if (!headers || typeof headers.get !== "function") return undefined;
+  return headers.get("user-agent") ?? undefined;
+}
+
 /**
  * Wraps a route handler so every `logger.*` call made while it runs merges
  * `requestId` into the JSON line. The wrapper is type-preserving: the wrapped
  * function keeps the exact signature of the original.
+ *
+ * Also captures `ipAddress` and `userAgent` at the boundary so deeper code can
+ * persist them without calling `headers()` (which throws outside request scope).
  *
  * @example
  *   export const GET = withRequestContext(async (req: NextRequest, ctx) => { ... });
  */
 export function withRequestContext<T extends (...args: never[]) => unknown>(handler: T): T {
   return ((...args: unknown[]) => {
-    const requestId = readRequestId(args[0] as Request | undefined);
-    if (!requestId) return handler(...(args as Parameters<T>));
-    return runWithRequestContext({ requestId }, () => handler(...(args as Parameters<T>)));
+    const source = args[0] as Request | undefined;
+    const requestId = readRequestId(source);
+    const context = {
+      ...(requestId ? { requestId } : {}),
+      ...(readIpAddress(source) ? { ipAddress: readIpAddress(source) } : {}),
+      ...(readUserAgent(source) ? { userAgent: readUserAgent(source) } : {}),
+    };
+    if (Object.keys(context).length === 0) {
+      return handler(...(args as Parameters<T>));
+    }
+    return runWithRequestContext(context, () => handler(...(args as Parameters<T>)));
   }) as unknown as T;
 }
 

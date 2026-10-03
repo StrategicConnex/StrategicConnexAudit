@@ -1,118 +1,147 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+/**
+ * @vitest-environment node
+ *
+ * Se ejecuta en entorno `node` (no el `jsdom` por defecto del proyecto)
+ * porque el AsyncLocalStorage que propaga el contexto de petición solo se
+ * construye cuando `typeof window === "undefined"` — igual que en producción.
+ * Misma convención que `src/lib/request-context.test.ts`.
+ *
+ * Regresión del logger de auditoría (Bache #1 del audit de producción).
+ *
+ * ANTES: este módulo llamaba a `headers()` de `next/headers` por su cuenta.
+ * Esa llamada LANZA fuera del scope de petición —jobs de Trigger.dev, cron,
+ * tests, server actions desacopladas— y el `catch` se tragaba la excepción.
+ * Consecuencia: el INSERT en `audit_logs` NO se ejecutaba nunca y cada evento
+ * `security`/`error` se perdía en silencio, dejando solo una línea de consola.
+ *
+ * AHORA: la IP y el user-agent viajan por AsyncLocalStorage
+ * (`withRequestContext` → `getRequestContext`), así que el insert se ejecuta
+ * tanto dentro como fuera del scope.
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const insertMock = vi.hoisted(() => vi.fn());
-const headersMock = vi.hoisted(() => vi.fn());
+const insertValues = vi.fn(async () => undefined);
 
 vi.mock("@/shared/db", () => ({
-  directDb: { insert: insertMock },
-}));
-vi.mock("@/shared/db/schemas", () => ({ auditLogs: {} }));
-vi.mock("next/headers", () => ({
-  headers: headersMock,
+  directDb: {
+    insert: vi.fn(() => ({ values: insertValues })),
+  },
 }));
 
-import { logger } from "./logger";
+vi.mock("@/lib/logger", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/logger")>(
+    "@/lib/logger"
+  );
+  return {
+    ...actual,
+    logger: {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+    },
+  };
+});
 
-describe("logger — security & performance logger", () => {
+import { logger as auditLogger } from "@/shared/lib/logger";
+import { getRequestContext, runWithRequestContext } from "@/lib/logger";
+
+describe("logger de auditoría — persistencia en audit_logs", () => {
   beforeEach(() => {
+    insertValues.mockClear();
     vi.clearAllMocks();
-    insertMock.mockImplementation(() => ({
-      values: vi.fn(async () => undefined),
-    }));
-    headersMock.mockResolvedValue({
-      get: (n: string) => (n === "x-forwarded-for" ? "203.0.113.7" : "TestAgent/1.0"),
+  });
+
+  it("persiste el evento security SIN scope de petición (el bug que se existía)", async () => {
+    await auditLogger.security({
+      action: "UNAUTHORIZED_ACTION_ATTEMPT",
+      metadata: { motivo: "sin sesión" },
     });
-    vi.unstubAllEnvs();
+
+    // Este es el aserto que fallaba antes: sin `headers()` no debe haber
+    // excepción y el insert debe haberse ejecutado.
+    expect(insertValues).toHaveBeenCalledTimes(1);
+
+    const row = insertValues.mock.calls[0]![0] as Record<string, unknown>;
+    expect(row.action).toBe("SECURITY: UNAUTHORIZED_ACTION_ATTEMPT");
+    // Sin contexto y sin override explícito, degrada a "unknown" en vez de fallar.
+    expect(row.ipAddress).toBe("unknown");
+    expect(row.userAgent).toBe("unknown");
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("persiste el evento error sin lanzar fuera de scope", async () => {
+    await auditLogger.error({
+      action: "SERVER_ACTION_EXCEPTION",
+      error: new Error("boom"),
+    });
+
+    expect(insertValues).toHaveBeenCalledTimes(1);
+    const row = insertValues.mock.calls[0]![0] as {
+      action: string;
+      newData: { error?: string; stack?: string };
+    };
+    expect(row.action).toBe("ERROR: SERVER_ACTION_EXCEPTION");
+    expect(row.newData.error).toBe("boom");
   });
 
-  it("info loguea a consola sin persistir en DB", async () => {
-    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
-    await logger.info({ action: "PROJECT_CREATED", projectId: "p1" });
-    expect(spy).toHaveBeenCalled();
-    expect(insertMock).not.toHaveBeenCalled();
-    spy.mockRestore();
+  it("hereda IP y user-agent del contexto de petición (AsyncLocalStorage)", async () => {
+    await runWithRequestContext(
+      { ipAddress: "203.0.113.9", userAgent: "vitest-agent/1.0" },
+      async () => {
+        await auditLogger.security({ action: "LOGIN_FAILED" });
+      }
+    );
+
+    expect(insertValues).toHaveBeenCalledTimes(1);
+    const row = insertValues.mock.calls[0]![0] as Record<string, unknown>;
+    expect(row.ipAddress).toBe("203.0.113.9");
+    expect(row.userAgent).toBe("vitest-agent/1.0");
   });
 
-  it("security persiste en auditLogs con IP y User-Agent del request", async () => {
-    const valuesSpy = vi.fn(async (_values: {
-      action?: string; ipAddress?: string; userAgent?: string; userId?: string;
-      newData?: Record<string, unknown>;
-    }) => undefined);
-    insertMock.mockImplementation(() => ({ values: valuesSpy }));
+  it("permite override explícito sobre el contexto", async () => {
+    await runWithRequestContext(
+      { ipAddress: "203.0.113.9" },
+      async () => {
+        await auditLogger.security({
+          action: "RATE_LIMIT_BREACH",
+          ipAddress: "198.51.100.4",
+        });
+      }
+    );
 
-    await logger.security({ action: "LOGIN_FAILED", userId: "u1", projectId: "p1" });
-
-    expect(insertMock).toHaveBeenCalled();
-    const values = valuesSpy.mock.calls[0]![0]!;
-    expect(values.action).toContain("LOGIN_FAILED");
-    expect(values.ipAddress).toBe("203.0.113.7");
-    expect(values.userAgent).toBe("TestAgent/1.0");
-    expect(values.userId).toBe("u1");
+    const row = insertValues.mock.calls[0]![0] as Record<string, unknown>;
+    expect(row.ipAddress).toBe("198.51.100.4");
   });
 
-  it("error persiste el mensaje del Error y el stack solo fuera de producción", async () => {
-    vi.stubEnv("NODE_ENV", "development");
-    const valuesSpy = vi.fn(async (_values: {
-      action?: string; ipAddress?: string; userAgent?: string; userId?: string;
-      newData?: Record<string, unknown>;
-    }) => undefined);
-    insertMock.mockImplementation(() => ({ values: valuesSpy }));
-
-    await logger.error({ action: "EXECUTOR_FAILED", error: new Error("boom detallado") });
-
-    const values = valuesSpy.mock.calls[0]![0]!;
-    expect(values.newData?.error).toBe("boom detallado");
-    expect(values.newData?.stack).toBeTruthy();
+  it("NO persiste en BD los niveles info y warn (solo security/error)", async () => {
+    await auditLogger.info({ action: "ACTION_SUCCESS" });
+    expect(insertValues).not.toHaveBeenCalled();
   });
 
-  it("error NO incluye stack en producción", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    const valuesSpy = vi.fn(async (_values: {
-      action?: string; ipAddress?: string; userAgent?: string; userId?: string;
-      newData?: Record<string, unknown>;
-    }) => undefined);
-    insertMock.mockImplementation(() => ({ values: valuesSpy }));
+  it("omite el campo error en vez de guardar el string 'undefined'", async () => {
+    await auditLogger.security({ action: "SITUACION_SIN_ERROR" });
 
-    await logger.error({ action: "EXECUTOR_FAILED", error: new Error("boom") });
-
-    const values = valuesSpy.mock.calls[0]![0]!;
-    expect(values.newData?.error).toBe("boom");
-    expect(values.newData?.stack).toBeUndefined();
+    const row = insertValues.mock.calls[0]![0] as {
+      newData: Record<string, unknown>;
+    };
+    expect("error" in row.newData).toBe(false);
   });
 
-  it("un fallo de DB NO rompe el log (fail-safe catch interno)", async () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    insertMock.mockImplementation(() => ({
-      values: vi.fn(async () => { throw new Error("db down"); }),
-    }));
+  it("un fallo de BD no rompe la llamada, pero se reporta con contexto", async () => {
+    insertValues.mockRejectedValueOnce(new Error("db caída"));
+    const { logger: consoleLogger } = await import("@/lib/logger");
 
-    await expect(logger.security({ action: "X" })).resolves.toBeUndefined();
-    spy.mockRestore();
+    await expect(
+      auditLogger.security({ action: "TOLERANCIA_A_FALLO" })
+    ).resolves.toBeUndefined();
+
+    expect(consoleLogger.error).toHaveBeenCalledWith(
+      "🚨 FALLO CRITICO AL GUARDAR AUDIT LOG:",
+      expect.objectContaining({ action: "TOLERANCIA_A_FALLO", level: "security" })
+    );
   });
 
-  it("serializa errores no-Error como string en newData", async () => {
-    const valuesSpy = vi.fn(async (_values: {
-      action?: string; ipAddress?: string; userAgent?: string; userId?: string;
-      newData?: Record<string, unknown>;
-    }) => undefined);
-    insertMock.mockImplementation(() => ({ values: valuesSpy }));
-
-    await logger.security({ action: "X", error: "error plano" });
-    expect(valuesSpy.mock.calls[0]![0]!.newData?.error).toBe("error plano");
-  });
-
-  it("error instanceof Error vs string: usa .message cuando es Error", async () => {
-    const valuesSpy = vi.fn(async (_values: {
-      action?: string; ipAddress?: string; userAgent?: string; userId?: string;
-      newData?: Record<string, unknown>;
-    }) => undefined);
-    insertMock.mockImplementation(() => ({ values: valuesSpy }));
-
-    await logger.error({ action: "X", error: new Error("mensaje real") });
-    expect(valuesSpy.mock.calls[0]![0]!.newData?.error).toBe("mensaje real");
+  it("getRequestContext() es undefined fuera de scope (no lanza)", () => {
+    expect(getRequestContext()).toBeUndefined();
   });
 });
