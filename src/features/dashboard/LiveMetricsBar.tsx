@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Activity, Wifi, WifiOff, Clock, AlertTriangle, TrendingUp } from "lucide-react";
+import { formatTime } from '@/shared/utils/datetime';
 export type LiveMetrics = {
   connected: boolean;
   uptimePercent: number | null;
@@ -110,7 +111,7 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
               </div>
             </div>
             <div className="text-2xs font-mono text-muted-fg text-center pt-1 border-t border-border/30">
-              {metrics.lastCheckTimestamp ? t("updated") + new Date(metrics.lastCheckTimestamp).toLocaleTimeString() : t("waiting")}
+              {metrics.lastCheckTimestamp ? t("updated") + formatTime(metrics.lastCheckTimestamp) : t("waiting")}
             </div>
           </div>
         )}

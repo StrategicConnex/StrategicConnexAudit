@@ -21,6 +21,7 @@ import { ForecastCard } from '../ForecastCard';
 import { Card } from '@/components/ui/Card';
 import type { ProjectWithNested } from '@/shared/db/types';
 import type { TimelineEvent } from '@/components/ActivityTimeline';
+import { formatTime, formatTimeWithSeconds } from '@/shared/utils/datetime';
 
 /**
  * BenchmarkingSection pulls in recharts (~570KB) — defer the chunk until the
@@ -322,7 +323,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
                     return (
                       <div
                         key={i}
-                        title={`${c.responseTimeMs ?? '—'}ms · ${new Date(c.checkedAt).toLocaleTimeString()}`}
+                        title={`${c.responseTimeMs ?? '—'}ms · ${formatTime(c.checkedAt)}`}
                         className="flex-1 rounded-t-sm transition-opacity duration-300 hover:opacity-80"
                         style={{
                           height: `${h}%`,
@@ -335,7 +336,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
                   })}
                 </div>
                 <div className="flex justify-between text-2xs font-mono text-muted-fg">
-                  <span>{hero.checks.length > 0 ? new Date([...hero.checks].reverse()[0]!.checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                  <span>{hero.checks.length > 0 ? formatTime([...hero.checks].reverse()[0]!.checkedAt) : ''}</span>
                   <span>{t('heroChecks')} · 24h</span>
                   <span>{t('online')}</span>
                 </div>
@@ -457,7 +458,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
             ) : (
               [...hero.checks].reverse().map((c, i) => (
                 <div key={i} className={`flex gap-2.5 ${c.isUp === false ? 'text-destructive' : 'text-chartreuse'}`}>
-                  <span className="text-muted-fg shrink-0">{new Date(c.checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                  <span className="text-muted-fg shrink-0">{formatTimeWithSeconds(c.checkedAt)}</span>
                   <span>{c.isUp === false ? `[FAIL] Chequeo fallido` : `[OK] Chequeo completado${c.responseTimeMs != null ? ` (${c.responseTimeMs}ms)` : ''}`}</span>
                 </div>
               ))

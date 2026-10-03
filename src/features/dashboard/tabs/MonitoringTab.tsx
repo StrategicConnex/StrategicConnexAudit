@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { logger } from "@/lib/logger";
 import { TelegramDigestCard } from '../TelegramDigestCard';
+import { formatDate, formatDateTime, formatNumber } from '@/shared/utils/datetime';
 
 interface MonitoringProject {
   id: string;
@@ -518,7 +519,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
               {schedule.enabled && schedule.nextRunAt && (
                 <div className="text-2xs text-muted-fg flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-primary animate-pulse" />
-                  {t('scheduleNextRunLabel')} {new Date(schedule.nextRunAt).toLocaleDateString()}
+                  {t('scheduleNextRunLabel')} {formatDate(schedule.nextRunAt)}
                 </div>
               )}
 
@@ -688,7 +689,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                       </div>
                       <p className="text-xs text-muted-fg leading-relaxed">{alert.message}</p>
                       <div className="text-2xs text-muted-fg">
-                        {new Date(alert.createdAt).toLocaleString()}
+                        {formatDateTime(alert.createdAt)}
                       </div>
                     </div>
 
@@ -810,7 +811,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                     <div className="flex items-center gap-1.5">
                       {key.expiresAt && (
                         <span className="text-2xs text-muted-fg bg-muted/10 border border-border/40 px-1.5 py-0.5 rounded">
-                          Expira: {new Date(key.expiresAt).toLocaleDateString()}
+                          Expira: {formatDate(key.expiresAt)}
                         </span>
                       )}
                       <button
@@ -970,7 +971,7 @@ export function MonitoringTab({ initialProjects, selectedProjectId, setSelectedP
                       </div>
                       <ul className="text-xs text-muted-fg space-y-2.5 pt-2">
                         <li className="flex items-center gap-2">✓ {plan.maxProjects} proyectos</li>
-                        <li className="flex items-center gap-2">✓ {plan.maxKeywords.toLocaleString()} keywords</li>
+                        <li className="flex items-center gap-2">✓ {formatNumber(plan.maxKeywords)} keywords</li>
                         {plan.seats !== undefined && (
                           <li className="flex items-center gap-2">✓ {plan.seats} asientos</li>
                         )}

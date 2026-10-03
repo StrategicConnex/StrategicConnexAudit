@@ -23,6 +23,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { logger } from "@/lib/logger";
+import { formatDate } from '@/shared/utils/datetime';
 import { TeamSettingsTab } from '../TeamSettingsTab';
 import { AgencySection } from '../AgencySection';
 
@@ -632,11 +633,11 @@ export function SettingsTab({
                                 {key.scope?.join(', ') || 'read, write'}
                               </span>
                             </td>
-                            <td className="p-4 text-muted-fg">{new Date(key.createdAt).toLocaleDateString()}</td>
+                            <td className="p-4 text-muted-fg">{formatDate(key.createdAt)}</td>
                             <td className="p-4">
                               {key.expiresAt ? (
                                 <span className={new Date(key.expiresAt) < new Date() ? 'text-destructive' : 'text-muted-fg'}>
-                                  {new Date(key.expiresAt).toLocaleDateString()}
+                                  {formatDate(key.expiresAt)}
                                 </span>
                               ) : (
                                 <span className="text-muted-fg italic">{t('apiKeysNeverExpires')}</span>

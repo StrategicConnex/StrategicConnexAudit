@@ -23,6 +23,7 @@ import { NetworkOsintSection } from './intelligence/NetworkOsintSection';
 import { MailSecurityPanel } from './intelligence/MailSecurityPanel';
 import { CopilotConsole } from './intelligence/CopilotConsole';
 import { logger } from "@/lib/logger";
+import { formatTime } from '@/shared/utils/datetime';
 
 interface IntelligenceTabProps {
   initialProjects: Project[];
@@ -951,7 +952,7 @@ export function IntelligenceTab({
                         
                         <div className="flex flex-col gap-1">
                           <span className="text-2xs font-bold text-primary uppercase tracking-widest bg-primary/10 border border-primary/20 px-2 py-0.5 rounded w-fit">
-                            {new Date(evt.createdAt).toLocaleTimeString()} · {evt.eventType}
+                            {formatTime(evt.createdAt)} · {evt.eventType}
                           </span>
                           <span className="text-xs font-medium text-foreground/80">
                             {evt.message}

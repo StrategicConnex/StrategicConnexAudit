@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { UserPlus, Shield, Trash2, Mail, CheckCircle2, Clock } from "lucide-react";
 import { useProjectTeam } from "@/shared/hooks/use-project-team";
+import { formatDate } from '@/shared/utils/datetime';
 
 interface Member {
   id: string;
@@ -190,7 +191,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
                 <div>
                   <p className="text-sm font-medium text-slate-200">{inv.email}</p>
                   <p className="text-xs text-slate-400">
-                    Rol {inv.role} · vence {new Date(inv.expiresAt).toLocaleDateString()}
+                    Rol {inv.role} · vence {formatDate(inv.expiresAt)}
                   </p>
                 </div>
                 {canManage && (

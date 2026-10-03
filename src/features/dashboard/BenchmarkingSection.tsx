@@ -8,6 +8,7 @@ import {
   Zap, Loader2, AlertCircle, Radar, LockKeyhole, RotateCcw
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { formatDateTime } from '@/shared/utils/datetime';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   Radar as RechartsRadar, ResponsiveContainer, Tooltip
@@ -186,7 +187,7 @@ export function BenchmarkingSection({ projectId }: { projectId?: string }) {
             {t("yourVs", { count: benchmarks.totalProjects, plural: benchmarks.totalProjects !== 1 ? "s" : "" })}
           </p>
         </div>
-        <span className="text-2xs font-mono text-muted-fg">{new Date(benchmarks.computedAt).toLocaleString()}</span>
+        <span className="text-2xs font-mono text-muted-fg">{formatDateTime(benchmarks.computedAt)}</span>
       </div>
 
       {/* 3 metric cards */}

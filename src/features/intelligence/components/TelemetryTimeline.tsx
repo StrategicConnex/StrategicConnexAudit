@@ -3,6 +3,7 @@
 import React from "react";
 import { History } from "lucide-react";
 import type { RunEventData } from "../hooks/useInvestigationRealtime";
+import { formatTime } from '@/shared/utils/datetime';
 
 interface TimelineItem {
   id: string;
@@ -56,7 +57,7 @@ export function TelemetryTimeline({ events, isActive, isDemo, demoEvents }: Tele
             const eventType = item.eventType || item.type || 'info';
             const eventClass = EVENT_STYLES[eventType] || EVENT_STYLES.info;
             const timestamp = item.createdAt
-              ? new Date(item.createdAt).toLocaleTimeString()
+              ? formatTime(item.createdAt)
               : item.time || "";
             const tool = item.tool || "";
 
