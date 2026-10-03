@@ -235,7 +235,7 @@ flowchart TB
 
         subgraph DOMAIN["Domain Engine (server-only)"]
             CORE["dispatcher · rate-limiter<br/>circuit-breaker (fail-open)"]
-            EXEC["14 ejecutores<br/>DNS · OSINT · CVE · TLS · email<br/>tech-profiler · bucket · takeover"]
+            EXEC["13 ejecutores registrados<br/>DNS · OSINT · CVE · TLS · email<br/>tech-profiler · takeover"]
             EG["🔒 egress-guard.ts (SSRF)<br/>16 CIDRs v4 + 7 v6 + ::ffff:"]
             SEC["security/ · siem-exporter<br/>cicd-helper (HMAC) · api-auth"]
         end

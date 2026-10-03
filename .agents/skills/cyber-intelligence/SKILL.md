@@ -178,6 +178,10 @@ const changes = await whoisHistory.detectChanges("example.com");
 
 ### Drift Analysis (`core/drift-analyzer.ts`)
 
+> ⚠️ Nota: `drift-analyzer.ts` fue eliminado por no estar registrado en
+> `tool-registry.ts` (no era alcanzable en runtime). Este apartado describe el
+> patrón, no una capacidad disponible.
+
 Compares current state against expected state:
 
 ```typescript

@@ -59,7 +59,6 @@ const eslintConfig = defineConfig([
       "src/features/dashboard/tabs/MitreRealCoverage.tsx",
       "src/features/dashboard/tabs/RealAssessmentSection.tsx",
       "src/features/dashboard/tabs/OverviewTab.tsx",
-      "src/features/dashboard/CustomDashboardGrid.tsx",
       "src/features/dashboard/HistoryPanel.tsx",
       "src/features/dashboard/InstallPwaButton.tsx",
       "src/features/dashboard/LiveMetricsBar.tsx",
