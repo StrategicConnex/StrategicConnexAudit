@@ -174,7 +174,10 @@ flowchart LR
 | Quality gate `--min 80` sobre este documento | ✅ PASS (SCORE ≥ 80 — ver §13) |
 | Verificación en producción (2026-10-02) | Tabla creada · `rls=true` · `idx_app_logs_created_at` ✓ · 0 policies (sólo rol dueño) · canary insert+delete ✓ · `app-logs-check.mjs --json` → `total: 0` |
 
-**Runbook de recheck (post-push):**
+**Runbook de recheck (post-push):** `--fail-on-error` sólo falla con
+**errores reales** (`real_errors`): excluye los warnings de proceso de Node
+(`(node:<pid>) …Warning:`), que se reportan como `runtime_noise` sin romper
+el gate. `request_error_5xx` y `permission_denied_42501` se reportan siempre.
 
 ```bash
 node scripts/db/app-logs-check.mjs --hours 24 --fail-on-error   # T+24h

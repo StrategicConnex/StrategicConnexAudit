@@ -245,7 +245,7 @@ flowchart LR
 | "run_events no tiene project_id" | `intelligence.ts:115-127` (solo investigationId) | ✅ CONFIRMADO — policy requiere subquery vía investigations |
 | "SB-003 ya corregido en código" | `env.ts:12-15`, `useRealtimeMetrics.ts:12` | ✅ CONFIRMADO — CS-301 fix; resta solo env de despliegue |
 | "La publicación realtime está gestionada en migraciones" | `grep publication drizzle/*.sql` → sin matches | ✅ REFUTADO — gestión por SQL raw/plataforma |
-| "El WebSocket `wss://*.supabase.co` está bloqueado por la CSP de `proxy.ts`" | Sonda Chrome en prod (2026-10-02): `new WebSocket(...)` → violación `connect-src` en consola | ✅ CONFIRMADO — bloqueado en producción → **corregido**: `wss://*.supabase.co` añadido a `proxy.ts` (ramas prod+dev) y `layout.tsx`; re-verificación de la sonda WS tras push |
+| "El WebSocket `wss://*.supabase.co` está bloqueado por la CSP de `proxy.ts`" | Sonda Chrome en prod (2026-10-02): `new WebSocket(...)` → violación `connect-src` en consola | ✅ CONFIRMADO — bloqueado en producción → **corregido**: `wss://*.supabase.co` añadido a `proxy.ts` (ramas prod+dev) y `layout.tsx`; **re-verificación pos-push ✅** (23:41Z: sonda WS en prod sin violación `connect-src`, handshake 101 + `phx_reply {status:"ok"}` con `postgres_changes` suscrito en `intelligence_findings`) |
 
 ---
 
@@ -299,6 +299,7 @@ flowchart LR
 | 1.0 | 2026-08-08 | Creación del paquete de aprobación CHANGE-003 (evidencia SB-001/002/003 + plan de verificación) | Aprobado |
 | 1.1 | 2026-08-09 | **Ejecutado en producción**: push 0022 (17 statements, COMMIT) + ALTER PUBLICATION + verificación 4/4 (policies 9, publicación 4/4, RLS activo) | ✅ APLICADO |
 | 1.2 | 2026-10-02 | Re-verificación en prod (publicación 4/4, RLS 4×`true`, 9 policies) + cierre de TB-1 y §15 + fix CSP `wss://*.supabase.co` (transporte Realtime bloqueado en navegador) | ✅ |
+| 1.3 | 2026-10-02 | **Verificación pos-push**: deploy en prod (23:41Z) con CSP `wss` activo; sonda WS sin violación `connect-src` y `phx_reply {status:"ok"}` E2E (`vsn=2.0.0`, `postgres_changes` suscrito); auth prod 400≠401 (clave válida) | ✅ |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/database/CHANGE-003-APPROVAL-PACKAGE.md --min 80` → resultado en la tabla siguiente.
 
