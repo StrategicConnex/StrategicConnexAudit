@@ -35,6 +35,8 @@ vi.mock("@/shared/lib/ratelimit", () => ({
 }));
 
 vi.mock("@/lib/logger", () => ({
+  getRequestContext: vi.fn(() => undefined),
+  runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(),
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 

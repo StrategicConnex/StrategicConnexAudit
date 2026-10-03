@@ -34,6 +34,8 @@ vi.mock("@/shared/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/logger", () => ({
+  getRequestContext: vi.fn(() => undefined),
+  runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(),
   logger: { error: mocks.loggerError, warn: vi.fn(), info: vi.fn() },
 }));
 

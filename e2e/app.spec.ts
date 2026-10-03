@@ -45,9 +45,15 @@ test.describe("Login Page", () => {
   test("does not submit with empty or invalid email", async ({ page }) => {
     const submit = page.locator('button[type="submit"]').first();
     await expect(submit).toBeDisabled();
-    // Con '@' pero formato inválido → backend responde 400 → botón deshabilitado
+    // Con '@' pero formato inválido → backend responde 400 → botón deshabilitado.
+    // El estado `invalid` NO es local: login/page.tsx solo deshabilita el submit
+    // tras el POST a /api/auth/validate-email. Con `.next` frío, Next compila esa
+    // ruta en la primera petición y el ciclo entero se pasa de los 5 s por
+    // defecto de expect(), así que la aserción fallaba por latencia de compilación
+    // y no por comportamiento. 20 s es el margen para el cold-start; no se relaja
+    // la aserción, solo el reloj.
     await page.locator("#login-email").fill("malformed@");
-    await expect(submit).toBeDisabled();
+    await expect(submit).toBeDisabled({ timeout: 20_000 });
     await expect(page).toHaveURL(/\/login/);
   });
 

@@ -34,6 +34,14 @@ async function handleDevBypass<Schema extends z.ZodTypeAny, T>(
   formData: z.infer<Schema> | FormData,
   action: (data: z.infer<Schema>, context: { user: User; tx: DbTransaction }) => Promise<T>
 ): Promise<ActionState<T>> {
+  // Defensa en profundidad: esta funcion ejecuta con `directDb`, que bypasea
+  // RLS, y con un usuario sintetico. Que hoy solo la llame authenticatedAction
+  // tras comprobar NODE_ENV es una convencion, no una garantia: un llamante
+  // nuevo que se olvide del gate abriria escritura sin RLS en produccion.
+  // Fallar aqui es lo unico que no depende de la disciplina del llamante.
+  if (process.env.NODE_ENV !== 'development') {
+    throw new Error('handleDevBypass called outside development');
+  }
   try {
     // Parsear datos de entrada
     let rawData: unknown;

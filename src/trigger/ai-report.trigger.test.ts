@@ -19,7 +19,7 @@ vi.mock("@trigger.dev/sdk", () => ({ task: vi.fn((config: unknown) => config) })
 vi.mock("@/shared/db", () => ({ directDb: { select, update } }));
 vi.mock("@/shared/db/schemas", () => ({ aiReportJobs: { id: "id" } }));
 vi.mock("@/server/ai/seo-report-service", () => ({ generateSeoReport }));
-vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/logger", () => ({getRequestContext: vi.fn(() => undefined), runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(),  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { runAiSeoReport } from "./ai-report.trigger";
 

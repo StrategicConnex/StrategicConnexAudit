@@ -10,6 +10,8 @@ const { insertMock, loggerMock, scopeHolder } = vi.hoisted(() => ({
 vi.mock("@/shared/db", () => ({ directDb: { insert: insertMock } }));
 vi.mock("@/shared/db/schemas", () => ({ securityAuditLogs: {} }));
 vi.mock("@/lib/logger", () => ({
+  getRequestContext: vi.fn(() => undefined),
+  runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(),
   logger: loggerMock,
   getRequestContext: () => scopeHolder.current,
 }));

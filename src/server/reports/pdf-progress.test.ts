@@ -55,7 +55,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("@/shared/db", () => ({ directDb: mocks.directDb }));
-vi.mock("@/lib/logger", () => ({ logger: { warn: mocks.warn } }));
+vi.mock("@/lib/logger", () => ({getRequestContext: vi.fn(() => undefined), runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(),  logger: { warn: mocks.warn } }));
 
 const USER = "11111111-1111-4111-8111-111111111111";
 const GEN = "gen-12345678";

@@ -33,7 +33,7 @@ vi.mock("@/server/auth/cron", () => ({
   isCronAuthorized: (...args: unknown[]) => mockIsCronAuthorized(...args),
 }));
 
-vi.mock("@/lib/logger", () => ({
+vi.mock("@/lib/logger", () => ({getRequestContext: vi.fn(() => undefined), runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(), 
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 

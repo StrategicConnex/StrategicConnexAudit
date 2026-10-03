@@ -32,7 +32,7 @@ vi.mock("@/shared/db/schemas", () => ({
 }));
 
 vi.mock("@/server/intelligence/anomaly/forecast-math", () => ({ linearForecast }));
-vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/logger", () => ({getRequestContext: vi.fn(() => undefined), runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(),  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("drizzle-orm", () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),

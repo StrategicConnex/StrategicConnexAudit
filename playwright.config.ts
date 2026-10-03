@@ -33,7 +33,16 @@ export default defineConfig({
     // entorno. CI no exporta PORT, por eso el pipeline nunca lo detectó.
     command: "pnpm dev --port 3000",
     port: 3000,
-    reuseExistingServer: !process.env.CI,
+    // Antes `!process.env.CI`: en local reutilizaba cualquier dev server ya
+    // vivo en el 3000, y el bloque `env` de abajo SOLO aplica al servidor que
+    // Playwright arranca. Un dev server del desarrollador lee `.env.local` con
+    // NEXT_PUBLIC_DEV_BYPASS_AUTH=true, asi que la corrida reutilizadaizaba
+    // el bypass de DX y el `env` no lo corregia: los guards de auth se
+    // ejecutaban contra un servidor con la sesion falsa puesta y el resultado
+    // no significaba nada. `false` hace que Playwright levante siempre su
+    // propio servidor; si el puerto esta ocupado, falla con un error claro en
+    // vez de dar un verde engañoso.
+    reuseExistingServer: false,
     timeout: 120_000,
     // Los specs de auth guards asertan comportamiento SIN sesión
     // (`/` → /login, APIs → 401). El `.env.local` del desarrollador trae

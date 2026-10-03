@@ -91,6 +91,8 @@ vi.mock("@/i18n/request", () => ({
 }));
 
 vi.mock("@/lib/logger", () => ({
+  getRequestContext: vi.fn(() => undefined),
+  runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(),
   logger: {
     info: mocks.loggerInfo,
     warn: mocks.loggerWarn,
