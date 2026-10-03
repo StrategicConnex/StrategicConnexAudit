@@ -14,6 +14,7 @@
 
 import { envSecrets } from "@/shared/config/env-secrets";
 import { CircuitBreaker } from "@/shared/lib/circuit-breaker";
+import { logger } from "@/lib/logger";
 import { recordAiUsage } from "./ai-usage";
 import { buildSemanticKey, getSemanticCache, setSemanticCache } from "./ai-cache";
 import { callAnthropicText, anthropicDefaultModel, isAnthropicConfigured } from "./providers";
@@ -144,7 +145,12 @@ const FREE_META_MODEL = "openrouter/free";
  *     pero devuelve 200 vacío con frecuencia → el chain lo absorbe; sigue
  *     PRIMERO en cadenas de chat (identidad irrelevante) y FUERA de las
  *     JSON-críticas (router aleatorio inaceptable ahí).
- *   - nex-agi/nex-n2.5-pro:free      → "OK" estricto + respuesta correcta (633/913ms) ✅ NUEVO
+ *   - nex-agi/nex-n2.5-pro:free      → FUERA del pool: el catálogo de OpenRouter solo
+ *                                     ofrece `nex-agi/nex-n2.5-pro` SIN sufijo :free, y
+ *                                     esa variante es de pago. Como el pool es
+ *                                     solo-gratuito, el id no se sustituye: cada
+ *                                     cadena perdia una posicion y un 404 por
+ *                                     intento. Verificado contra /api/v1/models.
  *   - cohere/north-mini-code:free    → respuesta correcta, rápido (326/388ms) ✅ NUEVO
  *   - nvidia/nemotron-3.5-lightning:free → 2× timeout (15s y 20s) hoy ⬇ DEMOTADO
  *   - nvidia/nemotron-3-ultra-550b-a55b:free → 404 del provider 2× hoy (16-sep)
@@ -211,20 +217,17 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
     FREE_META_MODEL,
     "nvidia/nemotron-3-super-120b-a12b:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "nex-agi/nex-n2.5-pro:free",
     "cohere/north-mini-code:free",
   ],
   "incident-brief": [
     FREE_META_MODEL,
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "nex-agi/nex-n2.5-pro:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
     "cohere/north-mini-code:free",
   ],
   "general-chat": [
     FREE_META_MODEL,
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "nex-agi/nex-n2.5-pro:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
     "cohere/north-mini-code:free",
   ],
@@ -249,7 +252,6 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
   "anomaly-narrative": [
     FREE_META_MODEL,
     "cohere/north-mini-code:free",
-    "nex-agi/nex-n2.5-pro:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   ],
   // Cadena JSON-crítica: solo modelos con json_schema verificado en vivo
@@ -273,7 +275,6 @@ export const TASK_ROUTING: Record<AITaskType, string[]> = {
   "narrated-alert": [
     FREE_META_MODEL,
     "cohere/north-mini-code:free",
-    "nex-agi/nex-n2.5-pro:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   ],
 };
@@ -609,7 +610,7 @@ export async function callAIWithFallback(
         void setSemanticCache(cacheKey, message.content ?? "", modelId!, taskType);
       }
 
-      console.log(
+      logger.info(
         `[AI Router] ${taskType} → ${modelId} (${latencyMs}ms)` +
           `${toolCalls?.length ? ` [${toolCalls.length} tool_calls]` : ""} ` +
           `[attempt ${i + 1}/${modelChain.length}]`
@@ -640,9 +641,7 @@ export async function callAIWithFallback(
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       errors.push(`[${modelId}] ${errorMsg}`);
-      console.warn(
-        `[AI Router] Model ${modelId} failed: ${errorMsg}. Trying fallback...`
-      );
+      logger.warn(`[AI Router] Model ${modelId} failed: ${errorMsg}. Trying fallback...`);
     }
   }
 
@@ -674,7 +673,9 @@ export async function callAIWithFallback(
         });
       }
       void setSemanticCache(cacheKey, alt.content ?? "", alt.modelUsed, taskType);
-      console.log(`[AI Router] ${taskType} → ${alt.modelUsed} (${latencyMs}ms) [failover inter-proveedor]`);
+      logger.info(
+        `[AI Router] ${taskType} → ${alt.modelUsed} (${latencyMs}ms) [failover inter-proveedor]`
+      );
       return {
         success: true,
         content: alt.content ?? "",
@@ -781,7 +782,9 @@ async function tryJsonSelfHeal(
     });
     const retryError = tryParseJson(message.content ?? "");
     if (!retryError) {
-      console.log(`[AI Router] JSON self-heal OK en ${modelId} (error original: ${parseError.slice(0, 80)})`);
+      logger.info(
+        `[AI Router] JSON self-heal OK en ${modelId} (error original: ${parseError.slice(0, 80)})`
+      );
       return { content: message.content ?? "", usage: message.usage ?? null };
     }
     return null;

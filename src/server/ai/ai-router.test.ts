@@ -291,4 +291,29 @@ describe("TASK_ROUTING & MODEL_TIMEOUTS", () => {
       expect(MODEL_TIMEOUTS[tt]).toBeGreaterThan(0);
     }
   });
+
+  it("solo encadena modelos :free o el meta-modelo — nunca uno de pago", () => {
+    // El pool es una decisión de producto (solo modelos gratuitos), y por eso
+    // este guard mira el SUFIJO. `nex-agi/nex-n2.5-pro` se coló sin `:free` y
+    // el catálogo de OpenRouter no tiene ninguna variante gratuita de ese
+    // modelo: cada cadena que lo llevaba gastaba una posicion en un 404.
+    // Este aserto no puede detectar un id retirado del catálogo (eso exige
+    // red), pero si detecta que alguien anade un modelo de pago al pool.
+    const pagados: string[] = [];
+    for (const [taskType, chain] of Object.entries(TASK_ROUTING)) {
+      for (const model of chain) {
+        if (model === "openrouter/free") continue;
+        if (!model.endsWith(":free")) pagados.push(`${taskType} -> ${model}`);
+      }
+    }
+    expect(pagados).toEqual([]);
+  });
+
+  it("no repite el mismo modelo dentro de una cadena", () => {
+    // Repetir un id solo gasta un intento del circuit breaker en el mismo
+    // 404, reduciendo la cobertura real del failover.
+    for (const [taskType, chain] of Object.entries(TASK_ROUTING)) {
+      expect(new Set(chain).size, `cadena ${taskType} con modelos repetidos`).toBe(chain.length);
+    }
+  });
 });
