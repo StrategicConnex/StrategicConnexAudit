@@ -117,6 +117,13 @@ test.describe("Visual Regression: Login Page", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/login", { waitUntil: "networkidle" });
     await page.waitForTimeout(600); // entrance animation
+    // Esperar a que las webfonts estén aplicadas antes de capturar. `networkidle`
+    // NO cubre la fuente: next/font pide las faces a su propio loader y, si estas
+    // tardan (o no llegan, como en un sandbox sin salida a fonts.googleapis.com),
+    // el placeholder se dibuja con la fallback en unas corridas y con la
+    // tipografia definitiva en otras. Mismo codigo, mismos pixels distintos:
+    // 611 px (4%) en el input de email, de forma intermitente.
+    await page.evaluate(() => document.fonts.ready);
   });
 
   test("full login page renders with correct design system", async ({ page }) => {
