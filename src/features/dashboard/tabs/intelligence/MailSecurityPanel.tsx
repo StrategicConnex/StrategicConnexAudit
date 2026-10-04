@@ -375,7 +375,7 @@ export function MailSecurityPanel({
                   Protocolo BIMI
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className={`text-xs font-extrabold ${meta?.bimiSuccess ? 'text-chartreuse' : 'text-muted-fg'}`}>
+                  <span className={`text-xs font-extrabold ${meta?.bimiSuccess ? 'text-chart-success' : 'text-muted-fg'}`}>
                     {meta?.bimiSuccess ? 'Certificado' : 'No detectado'}
                   </span>
                 </div>

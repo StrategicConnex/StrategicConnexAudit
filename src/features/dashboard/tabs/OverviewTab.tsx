@@ -369,7 +369,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
                   <span className="text-2xs uppercase tracking-widest font-bold text-muted-fg">{t('aiModels')}</span>
                   <span className="font-display text-xl font-extrabold text-foreground mt-0.5">
                     {hero.aiHealthy != null ? hero.aiHealthy : '—'}
-                    {hero.aiHealthy != null && <span className="text-xs font-mono text-chartreuse ml-0.5">{t('activeLabel')}</span>}
+                    {hero.aiHealthy != null && <span className="text-xs font-mono text-chart-success ml-0.5">{t('activeLabel')}</span>}
                   </span>
                 </div>
               </div>
@@ -457,7 +457,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
               <div className="text-muted-fg">{t('terminalEmpty')}</div>
             ) : (
               [...hero.checks].reverse().map((c, i) => (
-                <div key={i} className={`flex gap-2.5 ${c.isUp === false ? 'text-destructive' : 'text-chartreuse'}`}>
+                <div key={i} className={`flex gap-2.5 ${c.isUp === false ? 'text-destructive' : 'text-chart-success'}`}>
                   <span className="text-muted-fg shrink-0">{formatTimeWithSeconds(c.checkedAt)}</span>
                   <span>{c.isUp === false ? `[FAIL] Chequeo fallido` : `[OK] Chequeo completado${c.responseTimeMs != null ? ` (${c.responseTimeMs}ms)` : ''}`}</span>
                 </div>
@@ -516,7 +516,7 @@ export function OverviewTab({ dashboardData, setActiveTab, projectId, userInitia
                 y 0 auditorÃ­as. Ahora solo se afirma cuando hay auditorÃ­as
                 reales y ninguna fallida; si no hay datos, se muestra "—". */}
             {auditedCount > 0 && failedChecks === 0 ? (
-              <p className="text-xs font-bold text-chartreuse mt-0.5 flex items-center justify-center gap-1">
+              <p className="text-xs font-bold text-chart-success mt-0.5 flex items-center justify-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> {t('secure')}
               </p>
             ) : (

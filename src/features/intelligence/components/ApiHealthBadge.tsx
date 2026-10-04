@@ -9,7 +9,7 @@ interface ApiHealthBadgeProps {
 }
 
 const COLORS: Record<string, string> = {
-  healthy: "text-chartreuse bg-chartreuse/10 border-chartreuse/20",
+  healthy: "text-chart-success bg-chart-success/10 border-chart-success/20",
   degraded: "text-chart-warning bg-chart-warning/10 border-chart-warning/20",
   down: "text-red-400 bg-red-500/10 border-red-500/20",
 };

@@ -127,7 +127,7 @@ export function TeamSettingsTab({ projectId }: TeamSettingsTabProps) {
         )}
 
         {successMsg && (
-          <div className="mt-3 p-3 bg-chartreuse/10 border border-chartreuse/20 text-chartreuse rounded-lg text-sm flex items-center gap-2">
+          <div className="mt-3 p-3 bg-chart-success/10 border border-chart-success/20 text-chart-success rounded-lg text-sm flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
             <span>{successMsg}</span>
           </div>

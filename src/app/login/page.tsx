@@ -326,7 +326,7 @@ const handlePasswordLogin = async (e: React.FormEvent) => {
                 <div className="absolute inset-y-0 left-0 pl-3 sm:pl-3.5 flex items-center pointer-events-none">
                   <Mail className={`h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300 ${
                     validationState === 'valid'
-                      ? 'text-chartreuse scale-110'
+                      ? 'text-chart-success scale-110'
                       : validationState === 'invalid'
                       ? 'text-destructive'
                       : validationState === 'validating'
@@ -349,7 +349,7 @@ const handlePasswordLogin = async (e: React.FormEvent) => {
                   aria-describedby={validationReason ? 'email-validation-msg' : undefined}
                   className={`block w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 bg-input/50 border rounded-xl text-sm sm:text-base text-foreground placeholder-transparent focus:outline-none focus:ring-2 transition-all duration-300 ${
                     validationState === 'valid'
-                      ? 'border-chartreuse/50 focus:ring-chartreuse/30 focus:border-chartreuse shadow-[0_0_20px_-8px_oklch(0.78_0.18_140/0.15)]'
+                      ? 'border-chart-success/50 focus:ring-chart-success/30 focus:border-chart-success shadow-[0_0_20px_-8px_oklch(0.78_0.18_140/0.15)]'
                       : validationState === 'invalid'
                       ? 'border-destructive/50 focus:ring-destructive/30 focus:border-destructive shadow-[0_0_20px_-8px_oklch(0.55_0.22_25/0.15)]'
                       : validationState === 'validating'

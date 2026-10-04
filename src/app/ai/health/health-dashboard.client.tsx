@@ -307,7 +307,7 @@ function ModelTable({ models }: { models: ModelHealthSummary[] }) {
               <tr key={m.modelId} className="border-b border-border hover:bg-surface-muted transition-colors">
                 <td className="p-3 font-mono text-2xs">{shortModelId(m.modelId)}</td>
                 <td className="p-3 text-right">{m.totalChecks}</td>
-                <td className="p-3 text-right text-chartreuse">{m.healthyCount}</td>
+                <td className="p-3 text-right text-chart-success">{m.healthyCount}</td>
                 <td className="p-3 text-right text-chart-warning">{m.degradedCount}</td>
                 <td className="p-3 text-right text-destructive">{m.failedCount}</td>
                 <td className="p-3 text-right">
@@ -315,7 +315,7 @@ function ModelTable({ models }: { models: ModelHealthSummary[] }) {
                 </td>
                 <td className="p-3 text-right">
                   <span className={`inline-flex items-center gap-1 ${
-                    m.lastStatus === "healthy" ? "text-chartreuse" :
+                    m.lastStatus === "healthy" ? "text-chart-success" :
                     m.lastStatus === "degraded" ? "text-chart-warning" : "text-destructive"
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${
@@ -373,7 +373,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                     <td className="p-3">
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-bold ${
                         r.overallStatus === "healthy"
-                          ? "bg-chartreuse/10 text-chartreuse"
+                          ? "bg-chart-success/10 text-chart-success"
                           : r.overallStatus === "degraded"
                           ? "bg-chart-warning/10 text-chart-warning"
                           : "bg-destructive/10 text-destructive"
@@ -385,7 +385,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                         {r.overallStatus}
                       </span>
                     </td>
-                    <td className="p-3 text-right text-chartreuse">{r.modelsHealthy}</td>
+                    <td className="p-3 text-right text-chart-success">{r.modelsHealthy}</td>
                     <td className="p-3 text-right text-destructive">{r.modelsFailed}</td>
                     <td className="p-3 text-right">{r.modelsTotal}</td>
                     <td className="p-3 text-right">
@@ -408,7 +408,7 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                               }`} />
                               <span className="text-muted-foreground w-40 truncate">{shortModelId(mr.modelId)}</span>
                               <span className={
-                                mr.status === "healthy" ? "text-chartreuse" :
+                                mr.status === "healthy" ? "text-chart-success" :
                                 mr.status === "degraded" ? "text-chart-warning" : "text-destructive"
                               }>
                                 {mr.status}
@@ -540,7 +540,7 @@ function TaskCostTable({ taskCosts }: { taskCosts: TaskCostBreakdown[] }) {
                 <tr key={t.taskType} className="border-b border-border hover:bg-surface-muted transition-colors">
                   <td className="p-3 font-mono text-2xs">{t.taskType}</td>
                   <td className="p-3 text-right">{t.calls}</td>
-                  <td className="p-3 text-right text-chartreuse">
+                  <td className="p-3 text-right text-chart-success">
                     {t.calls > 0 ? `${((t.successCalls / t.calls) * 100).toFixed(0)}%` : "—"}
                   </td>
                   <td className="p-3 text-right text-muted-foreground" title="hit-rate de caché">

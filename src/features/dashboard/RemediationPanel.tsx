@@ -25,7 +25,7 @@ const STATUS_STYLE: Record<string, string> = {
   proposed: 'text-chart-warning bg-chart-warning/10 border-chart-warning/20',
   approved: 'text-primary bg-primary/10 border-primary/20',
   executing: 'text-primary bg-primary/10 border-primary/20',
-  verified: 'text-chartreuse bg-chartreuse/10 border-chartreuse/20',
+  verified: 'text-chart-success bg-chart-success/10 border-chart-success/20',
   failed: 'text-destructive bg-destructive/10 border-destructive/20',
 };
 
