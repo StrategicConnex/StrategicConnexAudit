@@ -204,6 +204,10 @@
   --selection-fg: oklch(93% 0.005 260);
   --scroll-thumb: oklch(30% 0.015 260);
   --scroll-thumb-hover: oklch(38% 0.015 260);
+
+  /* ScoreGauge — pista y ticks del anillo (visibles en ambos temas) */
+  --gauge-track: oklch(100% 0 0 / 0.07);
+  --gauge-tick: oklch(100% 0 0 / 0.18);
 }
 
 /* ─── LIGHT THEME — superficies limpias, contraste controlado ────────── */
@@ -281,6 +285,9 @@
   --selection-fg: oklch(20% 0.015 260);
   --scroll-thumb: oklch(78% 0.008 260);
   --scroll-thumb-hover: oklch(68% 0.01 260);
+
+  --gauge-track: oklch(20% 0.02 260 / 0.09);
+  --gauge-tick: oklch(20% 0.02 260 / 0.28);
 }
 
 /* ─── Red neuronal — opacidad del canvas por breakpoint ───────────────

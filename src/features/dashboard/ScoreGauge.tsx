@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
 import { useRealtimeMetrics } from '../../shared/hooks/useRealtimeMetrics';
+import { useChartColors } from '../../shared/design-system/charts/use-chart-colors';
+import { getScoreConfig } from './score-config';
 
 interface ScoreGaugeProps {
   score: number;
@@ -12,19 +14,12 @@ interface ScoreGaugeProps {
   benchmark?: { value: number; label: string; rank: 'top' | 'above' | 'below' | 'bottom' } | null;
 }
 
-function getScoreConfig(score: number) {
-  if (score >= 85) return { label: 'Excelente', color: '#8BC34A', glow: 'rgba(140,200,80,0.5)', textColor: 'text-chartreuse', bg: 'bg-chartreuse/10 border-chartreuse/20' };
-  if (score >= 70) return { label: 'Bueno', color: '#6271C4', glow: 'rgba(98,113,196,0.5)', textColor: 'text-primary', bg: 'bg-primary/10 border-primary/20' };
-  if (score >= 50) return { label: 'Advertencia', color: '#EBA52D', glow: 'rgba(235,165,45,0.5)', textColor: 'text-[oklch(75% 0.13 80)]', bg: 'bg-[oklch(75% 0.13 80)]/10 border-[oklch(75% 0.13 80)]/20' };
-  if (score >= 30) return { label: 'Crítico', color: '#D4373C', glow: 'rgba(212,55,60,0.5)', textColor: 'text-destructive', bg: 'bg-destructive/10 border-destructive/20' };
-  return { label: 'Peligro', color: '#D4373C', glow: 'rgba(212,55,60,0.5)', textColor: 'text-destructive', bg: 'bg-destructive/10 border-destructive/20' };
-}
-
 export function ScoreGauge({ score, previousScore, size = 'md', projectId, benchmark }: ScoreGaugeProps) {
   const [animatedScore, setAnimatedScore] = useState(0);
   const [animatedDash, setAnimatedDash] = useState(0);
   
   const { latestFinding, assetsDiscovered } = useRealtimeMetrics(projectId);
+  const chartColors = useChartColors();
   const [pulse, setPulse] = useState(false);
 
   useEffect(() => {
@@ -35,7 +30,11 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
     }
   }, [latestFinding, assetsDiscovered]);
 
-  const config = getScoreConfig(score);
+  const config = getScoreConfig(score, {
+    success: chartColors.healthy,
+    warning: chartColors.degraded,
+    danger: chartColors.unhealthy,
+  });
 
   // Arc math: radius=54, circumference = 2*PI*r = ~339.3, but we only use 75% of the circle (270°)
   const radius = 54;
@@ -80,7 +79,7 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
         >
           <defs>
             <linearGradient id={`gauge-grad-${score}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={score < 50 ? '#D4373C' : score < 70 ? '#EBA52D' : '#8BC34A'} />
+              <stop offset="0%" stopColor={score < 50 ? chartColors.unhealthy : score < 70 ? chartColors.degraded : chartColors.healthy} />
               <stop offset="100%" stopColor={config.color} />
             </linearGradient>
             <filter id="gauge-glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -98,7 +97,7 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
             cy="70"
             r={radius}
             fill="none"
-            stroke="rgba(255,255,255,0.04)"
+            style={{ stroke: 'var(--gauge-track)' }}
             strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={`${arcLength} ${circumference}`}
@@ -134,7 +133,7 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
               <line
                 key={tick}
                 x1={x1} y1={y1} x2={x2} y2={y2}
-                stroke="rgba(255,255,255,0.15)"
+                style={{ stroke: 'var(--gauge-tick)' }}
                 strokeWidth="2"
               />
             );
@@ -156,7 +155,7 @@ export function ScoreGauge({ score, previousScore, size = 'md', projectId, bench
         <div
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{
-            background: `radial-gradient(circle at center, ${config.glow.replace('0.5', '0.12')} 0%, transparent 70%)`,
+            background: `radial-gradient(circle at center, ${config.glowSoft} 0%, transparent 70%)`,
           }}
         />
       </div>
