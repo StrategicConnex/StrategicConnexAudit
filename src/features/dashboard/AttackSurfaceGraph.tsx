@@ -47,7 +47,7 @@ interface AttackSurfaceGraphProps {
 const NODE_COLORS: Record<string, { stroke: string; fill: string; glow: string; label: string }> = {
   domain:  { stroke: '#6271C4', fill: 'rgba(98,113,196,0.12)',   glow: 'rgba(98,113,196,0.6)',   label: 'Dominio' },
   ip:      { stroke: '#6271C4', fill: 'rgba(98,113,196,0.12)', glow: 'rgba(98,113,196,0.6)', label: 'IP' },
-  mx:      { stroke: '#EBA52D', fill: 'rgba(235,165,45,0.12)',  glow: 'rgba(235,165,45,0.6)',  label: 'MX' },
+  mx:      { stroke: '#3B82F6', fill: 'rgba(59,130,246,0.12)', glow: 'rgba(59,130,246,0.6)', label: 'MX' },
   ns:      { stroke: '#6271C4', fill: 'rgba(98,113,196,0.12)',  glow: 'rgba(98,113,196,0.6)',  label: 'NS' },
   cdn:     { stroke: '#8BC34A', fill: 'rgba(140,200,80,0.12)',  glow: 'rgba(140,200,80,0.6)',  label: 'CDN/WAF' },
   asn:     { stroke: '#D4373C', fill: 'rgba(212,55,60,0.12)',  glow: 'rgba(212,55,60,0.6)',  label: 'ASN' },

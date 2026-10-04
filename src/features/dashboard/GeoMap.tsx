@@ -26,10 +26,12 @@ interface GeoMapProps {
 
 type LeafletNS = typeof import('leaflet');
 
+// Colores categóricos de data-viz (atributos SVG: no admiten var(), literales
+// elegidos para pasar 3:1 sobre ambos temas; equivalentes a los tokens).
 const TYPE_COLORS: Record<string, string> = {
   target: '#6271C4',
   asn: '#D4373C',
-  hop: '#EBA52D',
+  hop: '#0891B2',
   cdn: '#8BC34A',
   reverse: '#71717A',
 };
