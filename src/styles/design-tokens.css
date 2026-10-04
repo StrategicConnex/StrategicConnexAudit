@@ -22,7 +22,7 @@
   /* §3.1 Paleta corporativa */
   --corporate-primary: #1E3A5F;
   --corporate-primary-light: #2563EB;
-  --corporate-accent: #D4A843;
+  --corporate-accent: #2563EB;
   --corporate-success: #059669;
   --corporate-warning: #D97706;
   --corporate-danger: #DC2626;
@@ -49,7 +49,7 @@
 [data-theme="dark"] {
   --corporate-primary: #7AA2D7;
   --corporate-primary-light: #60A5FA;
-  --corporate-accent: #E3C167;
+  --corporate-accent: #60A5FA;
   --corporate-success: #34D399;
   --corporate-warning: #FBBF24;
   --corporate-danger: #F87171;

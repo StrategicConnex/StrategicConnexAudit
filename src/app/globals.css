@@ -5,13 +5,14 @@
 @import "../styles/design-tokens.css";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SCAUDIT — Enterprise Cyber Intelligence Design System v4
+   SCAUDIT — Enterprise Cyber Intelligence Design System v5
    Tailwind CSS v4 with OKLCH color tokens.
 
-   Design DNA: Olive + Gold + Teal NOC — the war-room of a network
-   operations center at night. Near-black olive backgrounds, gold as the
-   single saturated accent (live signals, primary actions, focus), teal as
-   the secondary data hue. Multi-hue accents are reserved for data-viz.
+   Design DNA: Slate + Indigo + Teal NOC — the war-room of a network
+   operations center at night. Graphite-slate backgrounds (not pure black),
+   indigo as the single saturated accent (live signals, primary actions,
+   focus), teal as the secondary data hue. Multi-hue accents are reserved
+   for data-viz. Severity hues (red/amber/green) are semantic and stable.
 
    Font stack: Space Grotesk (display/data), Inter (body/UI), JetBrains Mono
    (terminal/code).
@@ -125,72 +126,69 @@
 
 :root,
 [data-theme="dark"] {
-  --bg: oklch(4% 0.015 100);
-  --fg: oklch(92% 0.008 100);
-  --card: oklch(6% 0.018 100);
-  --card-fg: oklch(92% 0.008 100);
-  --popover: oklch(6% 0.018 100);
-  --popover-fg: oklch(92% 0.008 100);
-  --primary: oklch(72% 0.14 85);
-  --primary-fg: oklch(12% 0.02 85);
+  --bg: oklch(14% 0.012 260);
+  --fg: oklch(93% 0.005 260);
+  --card: oklch(18% 0.014 260);
+  --card-fg: oklch(93% 0.005 260);
+  --popover: oklch(18% 0.014 260);
+  --popover-fg: oklch(93% 0.005 260);
+  --primary: oklch(71% 0.14 258);
+  --primary-fg: oklch(16% 0.04 262);
   --secondary: oklch(55% 0.08 185);
-  --secondary-fg: oklch(95% 0.005 100);
-  --muted: oklch(8% 0.012 100);
-  /* text-muted-fg/text-muted-foreground — AA sobre --bg (≈5.5:1).
-     El valor original (35%) daba ~2:1 con text-muted-fg activo. */
-  --muted-fg: oklch(58% 0.02 100);
+  --secondary-fg: oklch(95% 0.005 260);
+  --muted: oklch(21% 0.014 260);
+  /* text-muted-fg/text-muted-foreground — AA sobre --bg (≈5.5:1). */
+  --muted-fg: oklch(65% 0.015 260);
   --accent: oklch(58% 0.10 185);
-  --accent-fg: oklch(95% 0.005 100);
-  /* AA sobre --bg (5.1:1): el valor anterior (55%) daba 3.85:1 y se usa en
-     texto de 11-12px en 100+ lugares. */
+  --accent-fg: oklch(95% 0.005 260);
   --destructive: oklch(60% 0.22 25);
   --destructive-fg: oklch(98% 0.005 265);
-  --border: oklch(14% 0.012 100);
-  --input: oklch(10% 0.01 100);
-  --ring: oklch(72% 0.14 85);
+  --border: oklch(26% 0.015 260);
+  --input: oklch(19% 0.013 260);
+  --ring: oklch(71% 0.14 258);
   --radius: 12px;
 
   /* Superficies — jerarquía background → surface → elevated → muted → overlay */
-  --surface: oklch(5% 0.015 100);
-  --surface-elevated: oklch(7% 0.018 100);
-  --surface-muted: oklch(9% 0.018 100);
-  --surface-overlay: oklch(5% 0.015 100 / 0.75);
-  --overlay: oklch(0% 0 0 / 0.6);
+  --surface: oklch(15.5% 0.013 260);
+  --surface-elevated: oklch(19% 0.014 260);
+  --surface-muted: oklch(21.5% 0.014 260);
+  --surface-overlay: oklch(16% 0.013 260 / 0.78);
+  --overlay: oklch(0% 0 0 / 0.55);
 
-  /* Acento chartreuse — theme-scoped (light usa un chartreuse oscuro) */
-  --chartreuse: oklch(72% 0.14 85);
+  /* Acento de marca (nombre histórico --chartreuse, valor índigo Signal) */
+  --chartreuse: oklch(71% 0.14 258);
 
   /* Charts / data-viz */
-  --chart-grid: oklch(14% 0.012 100 / 0.5);
-  /* Ejes 50%: 3.5:1 sobre --bg (elementos no-texto, umbral 3:1). */
-  --chart-axis: oklch(50% 0.02 100);
-  --chart-label: oklch(60% 0.02 100);
-  --chart-primary: oklch(72% 0.14 85);
-  --chart-secondary: oklch(55% 0.10 185);
-  --chart-success: oklch(60% 0.12 145);
-  --chart-warning: oklch(72% 0.12 85);
-  --chart-danger: oklch(55% 0.22 25);
-  --chart-tooltip: oklch(8% 0.012 100 / 0.95);
+  --chart-grid: oklch(30% 0.012 260 / 0.5);
+  /* Ejes 50%: ≥3:1 sobre --bg (elementos no-texto). */
+  --chart-axis: oklch(58% 0.015 260);
+  --chart-label: oklch(68% 0.012 260);
+  --chart-primary: oklch(71% 0.14 258);
+  --chart-secondary: oklch(60% 0.10 185);
+  --chart-success: oklch(65% 0.13 150);
+  --chart-warning: oklch(75% 0.13 85);
+  --chart-danger: oklch(60% 0.20 25);
+  --chart-tooltip: oklch(12% 0.014 260 / 0.95);
 
   /* Glass + shadows + gradients */
-  --glass-border: oklch(14% 0.012 100 / 0.5);
-  --glass-border-strong: oklch(72% 0.14 85 / 0.08);
-  --shadow-card: 0 8px 30px -8px oklch(0% 0 0 / 0.8);
-  --shadow-hero: 0 12px 40px -12px oklch(72% 0.14 85 / 0.08),
-                inset 0 1px 0 oklch(100% 0 0 / 0.02);
-  --gradient-surface: linear-gradient(160deg, oklch(5.5% 0.015 100 / 0.7), oklch(4% 0.012 100 / 0.8));
-  --gradient-surface-hero: linear-gradient(160deg, oklch(6% 0.018 100 / 0.8), oklch(4% 0.015 100 / 0.9));
-  --gradient-primary: linear-gradient(135deg, oklch(65% 0.12 85), oklch(50% 0.10 100));
+  --glass-border: oklch(30% 0.015 260 / 0.5);
+  --glass-border-strong: oklch(71% 0.14 258 / 0.10);
+  --shadow-card: 0 8px 30px -8px oklch(0% 0 0 / 0.75);
+  --shadow-hero: 0 12px 40px -12px oklch(71% 0.14 258 / 0.10),
+                inset 0 1px 0 oklch(100% 0 0 / 0.03);
+  --gradient-surface: linear-gradient(160deg, oklch(19% 0.013 260 / 0.75), oklch(15% 0.011 260 / 0.85));
+  --gradient-surface-hero: linear-gradient(160deg, oklch(20% 0.014 260 / 0.85), oklch(16% 0.012 260 / 0.9));
+  --gradient-primary: linear-gradient(135deg, oklch(64% 0.14 260), oklch(50% 0.12 265));
   --gradient-accent: linear-gradient(135deg, oklch(55% 0.10 185), oklch(45% 0.08 170));
 
-  /* Fondo de red neuronal — violeta luminoso visible sobre dark.
+  /* Fondo de red neuronal — índigo Signal.
      Opacidad base = móvil (menos densa); sm/lg la suben vía media query. */
-  --neural-node: #D4A843;
-  --neural-node-glow: rgba(212, 168, 67, 0.55);
-  --neural-line: rgba(212, 168, 67, 0.4);
+  --neural-node: #60A5FA;
+  --neural-node-glow: rgba(96, 165, 250, 0.55);
+  --neural-line: rgba(96, 165, 250, 0.35);
   --neural-canvas-opacity: 0.35;
 
-  /* Acentos multi-hue — brillantes sobre dark (todos ≥4.5:1 salvo indigo 4.8) */
+  /* Acentos multi-hue — brillantes sobre dark (sin cambio) */
   --accent-blue: oklch(68% 0.10 240);
   --accent-purple: oklch(60% 0.10 300);
   --accent-cyan: oklch(65% 0.10 190);
@@ -198,92 +196,91 @@
   --accent-violet: oklch(55% 0.12 285);
 
   /* Efectos atmosféricos */
-  --grid-line: oklch(100% 0 0 / 0.008);
-  --shimmer-a: oklch(100% 0 0 / 0.02);
-  --shimmer-b: oklch(100% 0 0 / 0.06);
-  --scan-line: rgba(255, 255, 255, 0.008);
-  --selection-bg: oklch(72% 0.14 85 / 0.15);
-  --selection-fg: oklch(92% 0.008 100);
-  --scroll-thumb: oklch(14% 0.012 100);
-  --scroll-thumb-hover: oklch(20% 0.015 100);
+  --grid-line: oklch(100% 0 0 / 0.012);
+  --shimmer-a: oklch(100% 0 0 / 0.025);
+  --shimmer-b: oklch(100% 0 0 / 0.07);
+  --scan-line: rgba(255, 255, 255, 0.01);
+  --selection-bg: oklch(71% 0.14 258 / 0.18);
+  --selection-fg: oklch(93% 0.005 260);
+  --scroll-thumb: oklch(30% 0.015 260);
+  --scroll-thumb-hover: oklch(38% 0.015 260);
 }
 
 /* ─── LIGHT THEME — superficies limpias, contraste controlado ────────── */
 /* Misma arquitectura semántica; profundidad por sombras sutiles + bordes. */
 
 [data-theme="light"] {
-  --bg: oklch(96% 0.008 100);
-  --fg: oklch(15% 0.018 100);
-  --card: oklch(100% 0 0);
-  --card-fg: oklch(15% 0.018 100);
-  --popover: oklch(100% 0 0);
-  --popover-fg: oklch(15% 0.018 100);
-  --primary: oklch(45% 0.13 85);
-  --primary-fg: oklch(99% 0.003 100);
-  --secondary: oklch(90% 0.015 185);
-  --secondary-fg: oklch(20% 0.02 100);
-  --muted: oklch(92% 0.01 100);
+  --bg: oklch(92% 0.006 260);
+  --fg: oklch(20% 0.015 260);
+  --card: oklch(97% 0.003 260);
+  --card-fg: oklch(20% 0.015 260);
+  --popover: oklch(97% 0.003 260);
+  --popover-fg: oklch(20% 0.015 260);
+  --primary: oklch(54% 0.20 262);
+  --primary-fg: oklch(98.5% 0.002 260);
+  --secondary: oklch(88% 0.015 185);
+  --secondary-fg: oklch(20% 0.02 260);
+  --muted: oklch(88.5% 0.006 260);
   /* AA sobre superficies claras (≈5:1) */
-  --muted-fg: oklch(42% 0.02 100);
+  --muted-fg: oklch(38% 0.02 260);
   --accent: oklch(40% 0.08 185);
-  --accent-fg: oklch(98% 0.003 100);
+  --accent-fg: oklch(98% 0.003 260);
   --destructive: oklch(52% 0.21 25);
   --destructive-fg: oklch(99% 0.003 100);
-  --border: oklch(86% 0.012 100);
-  --input: oklch(92% 0.01 100);
-  --ring: oklch(45% 0.13 85);
+  --border: oklch(83% 0.008 260);
+  --input: oklch(88% 0.006 260);
+  --ring: oklch(54% 0.20 262);
   --radius: 12px;
 
-  --surface: oklch(100% 0 0);
-  --surface-elevated: oklch(100% 0 0);
-  --surface-muted: oklch(93% 0.01 100);
-  --surface-overlay: oklch(98% 0.005 100 / 0.8);
-  --overlay: oklch(12% 0.01 100 / 0.45);
+  --surface: oklch(96.5% 0.004 260);
+  --surface-elevated: oklch(98% 0.003 260);
+  --surface-muted: oklch(89% 0.006 260);
+  --surface-overlay: oklch(96% 0.004 260 / 0.85);
+  --overlay: oklch(20% 0.02 260 / 0.45);
 
-  --chartreuse: oklch(45% 0.10 85);
+  --chartreuse: oklch(54% 0.20 262);
 
-  --chart-grid: oklch(87% 0.012 265 / 0.7);
-  --chart-axis: oklch(55% 0.02 260);
-  --chart-label: oklch(45% 0.02 260);
-  --chart-primary: oklch(45% 0.13 85);
+  --chart-grid: oklch(84% 0.01 260 / 0.7);
+  --chart-axis: oklch(52% 0.015 260);
+  --chart-label: oklch(42% 0.015 260);
+  --chart-primary: oklch(54% 0.20 262);
   --chart-secondary: oklch(40% 0.08 185);
-  --chart-success: oklch(42% 0.12 145);
+  --chart-success: oklch(42% 0.12 150);
   --chart-warning: oklch(55% 0.14 85);
   --chart-danger: oklch(52% 0.21 25);
-  --chart-tooltip: oklch(100% 0 0 / 0.97);
+  --chart-tooltip: oklch(98% 0.003 260 / 0.97);
 
-  --glass-border: oklch(87% 0.012 265 / 0.75);
-  --glass-border-strong: oklch(45% 0.13 85 / 0.14);
-  --shadow-card: 0 8px 24px -8px oklch(20% 0.02 265 / 0.14);
-  --shadow-hero: 0 12px 40px -12px oklch(45% 0.13 85 / 0.18),
+  --glass-border: oklch(83% 0.008 260 / 0.75);
+  --glass-border-strong: oklch(54% 0.20 262 / 0.16);
+  --shadow-card: 0 8px 24px -8px oklch(25% 0.02 260 / 0.12);
+  --shadow-hero: 0 12px 40px -12px oklch(54% 0.20 262 / 0.16),
                  inset 0 1px 0 oklch(100% 0 0 / 0.85);
-  --gradient-surface: linear-gradient(160deg, oklch(100% 0 0 / 0.85), oklch(96% 0.008 100 / 0.9));
-  --gradient-surface-hero: linear-gradient(160deg, oklch(100% 0 0 / 0.9), oklch(95% 0.01 100 / 0.95));
-  --gradient-primary: linear-gradient(135deg, oklch(45% 0.13 85), oklch(38% 0.10 100));
+  --gradient-surface: linear-gradient(160deg, oklch(98% 0.003 260 / 0.9), oklch(93.5% 0.005 260 / 0.92));
+  --gradient-surface-hero: linear-gradient(160deg, oklch(98.5% 0.003 260 / 0.92), oklch(94% 0.005 260 / 0.95));
+  --gradient-primary: linear-gradient(135deg, oklch(54% 0.20 262), oklch(44% 0.16 265));
   --gradient-accent: linear-gradient(135deg, oklch(40% 0.08 185), oklch(35% 0.07 170));
 
-  /* Fondo de red neuronal — azul eléctrico intenso, legible sobre light.
-     Opacidad base = móvil (menos densa); sm/lg la suben vía media query. */
-  --neural-node: #8B6F1A;
-  --neural-node-glow: rgba(139, 111, 26, 0.5);
-  --neural-line: rgba(139, 111, 26, 0.35);
+  /* Fondo de red neuronal — índigo Signal, legible sobre light. */
+  --neural-node: #2563EB;
+  --neural-node-glow: rgba(37, 99, 235, 0.45);
+  --neural-line: rgba(37, 99, 235, 0.30);
   --neural-canvas-opacity: 0.25;
 
-  /* Acentos multi-hue — oscuros sobre light (AA) */
+  /* Acentos multi-hue — oscuros sobre light (AA, sin cambio) */
   --accent-blue: oklch(42% 0.10 240);
   --accent-purple: oklch(38% 0.10 300);
   --accent-cyan: oklch(38% 0.08 190);
   --accent-indigo: oklch(35% 0.12 265);
   --accent-violet: oklch(35% 0.12 285);
 
-  --grid-line: oklch(15% 0.02 100 / 0.06);
-  --shimmer-a: oklch(15% 0.02 100 / 0.04);
-  --shimmer-b: oklch(15% 0.02 100 / 0.09);
-  --scan-line: oklch(15% 0.02 100 / 0.05);
-  --selection-bg: oklch(45% 0.13 85 / 0.16);
-  --selection-fg: oklch(15% 0.02 100);
-  --scroll-thumb: oklch(80% 0.012 100);
-  --scroll-thumb-hover: oklch(70% 0.015 100);
+  --grid-line: oklch(15% 0.02 260 / 0.06);
+  --shimmer-a: oklch(15% 0.02 260 / 0.04);
+  --shimmer-b: oklch(15% 0.02 260 / 0.09);
+  --scan-line: oklch(15% 0.02 260 / 0.05);
+  --selection-bg: oklch(54% 0.20 262 / 0.16);
+  --selection-fg: oklch(20% 0.015 260);
+  --scroll-thumb: oklch(78% 0.008 260);
+  --scroll-thumb-hover: oklch(68% 0.01 260);
 }
 
 /* ─── Red neuronal — opacidad del canvas por breakpoint ───────────────
@@ -334,7 +331,7 @@
 }
 
 @utility hero-scan {
-  background: linear-gradient(90deg, transparent, oklch(72% 0.14 85 / 0.10) 45%, oklch(72% 0.14 85 / 0.16) 50%, oklch(72% 0.14 85 / 0.10) 55%, transparent);
+  background: linear-gradient(90deg, transparent, oklch(71% 0.14 258 / 0.10) 45%, oklch(71% 0.14 258 / 0.16) 50%, oklch(71% 0.14 258 / 0.10) 55%, transparent);
   animation: hero-scan 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both;
 }
 
