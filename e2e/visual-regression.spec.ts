@@ -64,24 +64,38 @@ async function tryAuthenticate(page: Page): Promise<boolean> {
       return false;
     }
 
-    const { access_token, refresh_token, expires_in } = await authRes.json();
+    const { access_token, refresh_token, expires_in, token_type, user } =
+      await authRes.json();
 
-    // Set Supabase auth cookies on the browser context so subsequent requests
-    // include the session (matches Supabase SSR cookie names used by middleware)
+    // Cookie de sesión REAL que lee el proxy (@supabase/ssr):
+    //   nombre  : sb-<project-ref>-auth-token
+    //   valor   : "base64-" + base64url(JSON de la sesión)
+    //
+    // Antes se ponían `sb-access-token` / `sb-refresh-token`, que no lee
+    // NINGÚN código (único grep en src/+e2e: este fichero). Consecuencia:
+    // `updateSession()` no encontraba sesión y `/intelligence` respondía
+    // 307 -> /login, así que los 9 tests autenticados capturaban la login
+    // page (icono de mail como "primer svg", header/nav inexistentes,
+    // página de 720 px en vez de 1266 px) — puro ruido, no regresión.
+    // Verificado con sonda contra `next start`: cookie correcta ->
+    // /intelligence 200 (120 KB); cookies legadas -> 307 /login.
+    const ref = new URL(supabaseUrl).hostname.split(".")[0];
     const expiresAt = Math.floor(Date.now() / 1000) + expires_in;
+    const session = {
+      access_token,
+      token_type: token_type ?? "bearer",
+      expires_in,
+      expires_at: expiresAt,
+      refresh_token,
+      user,
+    };
+    const cookieValue =
+      "base64-" + Buffer.from(JSON.stringify(session)).toString("base64url");
+
     await page.context().addCookies([
       {
-        name: "sb-access-token",
-        value: access_token,
-        domain: new URL(BASE_URL).hostname,
-        path: "/",
-        httpOnly: true,
-        sameSite: "Lax" as const,
-        expires: expiresAt,
-      },
-      {
-        name: "sb-refresh-token",
-        value: refresh_token,
+        name: `sb-${ref}-auth-token`,
+        value: cookieValue,
         domain: new URL(BASE_URL).hostname,
         path: "/",
         httpOnly: true,
@@ -200,7 +214,9 @@ test.describe("Visual Regression: Login Page", () => {
     // (debounce 400 ms + /api/auth/validate-email), así que se espera al
     // estado `valid` (clase del borde) y a que asienten transición y check.
     await input.fill("test@gmail.com");
-    await expect(input).toHaveClass(/border-chartreuse\/50/, { timeout: 20_000 });
+    // chart-success (verde semántico) desde la migración chartreuse->chart-success
+    // del DS v5 (commit 507f90d): el estado `valid` es semántica de éxito.
+    await expect(input).toHaveClass(/border-chart-success\/50/, { timeout: 20_000 });
     await page.waitForTimeout(600);
     await expect(input).toHaveScreenshot("login-input-valid.png", {
       animations: "disabled",
