@@ -121,9 +121,24 @@ test.describe("Visual Regression: Login Page", () => {
     // NO cubre la fuente: next/font pide las faces a su propio loader y, si estas
     // tardan (o no llegan, como en un sandbox sin salida a fonts.googleapis.com),
     // el placeholder se dibuja con la fallback en unas corridas y con la
-    // tipografia definitiva en otras. Mismo codigo, mismos pixels distintos:
-    // 611 px (4%) en el input de email, de forma intermitente.
+    // tipografia definitiva en otras.
     await page.evaluate(() => document.fonts.ready);
+    // Congelar transiciones y animaciones ANTES de cualquier captura.
+    //
+    // El estado de focus del input trae `transition-all duration-300`, y el spec
+    // lo fotografiaba tras `focus()` + `waitForTimeout(200)` usando
+    // `animations: "disabled"`. Ese flag de Playwright solo actua en el momento
+    // de la captura, asi que el anillo de focus podia pillarse a medias: daba
+    // SIEMPRE los mismos 611 px (4%) cuando la transicion no habia terminado y 0
+    // cuando si, de forma intermitente entre corridas identicas. No era un
+    // problema de fuentes: se arreglo eso y el fallo siguio apareciendo.
+    //
+    // Anular la transicion hace el estado FINAL determinista y no depende de
+    // ningun reloj. El pixel de destino es el mismo: una transicion no cambia el
+    // estado final, solo el camino hasta el.
+    await page.addStyleTag({
+      content: "*, *::before, *::after { transition: none !important; animation: none !important; }",
+    });
   });
 
   test("full login page renders with correct design system", async ({ page }) => {
