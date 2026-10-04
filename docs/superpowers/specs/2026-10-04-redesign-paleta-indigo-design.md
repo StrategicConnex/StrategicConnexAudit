@@ -5,6 +5,9 @@
 **Producto:** StrategicAudit Pro (`strategicaudit-pro`)
 **Alcance elegido:** Tokens + barrido del dorado (sin adopción de primitivas ni refactor de accesibilidad — eso es Fase 3 del Plan de Mejoras)
 
+**Spec de referencia del mockup:** los hex de los mockups aprobados son la fuente de verdad de la intención.
+**ERRATUM (2026-10-04, post-merge):** los valores OKLCH de §3/§4 se redactaron con una conversión estimada incorrecta — `oklch(14% 0.012 260)` renderiza `#07090e` (casi negro), NO el `#1A1E26` aprobado. Valores correctos calculados: dark bg `oklch(23.5% 0.016 264)` = #1A1E26, card `oklch(28% 0.026 265)` = #232936, border `oklch(34.5% 0.030 264)` = #313949, light bg `oklch(93.3% 0.0075 261)` = #E6E9EE. `src/app/globals.css` (commit de corrección) es la fuente de verdad vigente; el erratum elevó también la familia dark completa (superficies, charts, glass) para mantener la jerarquía del mockup.
+
 ---
 
 ## 1. Contexto y problema

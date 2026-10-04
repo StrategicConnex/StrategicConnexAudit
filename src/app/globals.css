@@ -120,64 +120,66 @@
 
 /* ─── Design Tokens (OKLCH) ───────────────────────────────────────────── */
 
-/* ─── DARK THEME (default — Olive + Gold + Teal NOC palette) ────────── */
+/* ─── DARK THEME (default — Slate + Indigo + Teal NOC palette) ───────── */
 /* `:root` + `[data-theme="dark"]`: el script anti-FOUC fija data-theme en
    <html> antes del paint; sin JS, :root garantiza el look actual. */
 
 :root,
 [data-theme="dark"] {
-  --bg: oklch(14% 0.012 260);
+  /* Valores anclados a los mockups aprobados (brainstorming 2026-10-04):
+     bg #1A1E26, card #232936, border #313949 — oklch calculado, no estimado. */
+  --bg: oklch(23.5% 0.016 264);
   --fg: oklch(93% 0.005 260);
-  --card: oklch(18% 0.014 260);
+  --card: oklch(28% 0.026 265);
   --card-fg: oklch(93% 0.005 260);
-  --popover: oklch(18% 0.014 260);
+  --popover: oklch(28% 0.026 265);
   --popover-fg: oklch(93% 0.005 260);
   --primary: oklch(71% 0.14 258);
   --primary-fg: oklch(16% 0.04 262);
   --secondary: oklch(55% 0.08 185);
   --secondary-fg: oklch(95% 0.005 260);
-  --muted: oklch(21% 0.014 260);
-  /* text-muted-fg/text-muted-foreground — AA sobre --bg (≈5.5:1). */
-  --muted-fg: oklch(65% 0.015 260);
+  --muted: oklch(31% 0.018 264);
+  /* text-muted-fg/text-muted-foreground — AA sobre --bg (≥5:1). */
+  --muted-fg: oklch(70% 0.015 260);
   --accent: oklch(58% 0.10 185);
   --accent-fg: oklch(95% 0.005 260);
   --destructive: oklch(60% 0.22 25);
   --destructive-fg: oklch(98% 0.005 265);
-  --border: oklch(26% 0.015 260);
-  --input: oklch(19% 0.013 260);
+  --border: oklch(34.5% 0.030 264);
+  --input: oklch(27% 0.020 264);
   --ring: oklch(71% 0.14 258);
   --radius: 12px;
 
   /* Superficies — jerarquía background → surface → elevated → muted → overlay */
-  --surface: oklch(15.5% 0.013 260);
-  --surface-elevated: oklch(19% 0.014 260);
-  --surface-muted: oklch(21.5% 0.014 260);
-  --surface-overlay: oklch(16% 0.013 260 / 0.78);
+  --surface: oklch(25.5% 0.017 264);
+  --surface-elevated: oklch(29% 0.027 265);
+  --surface-muted: oklch(31.5% 0.024 264);
+  --surface-overlay: oklch(26% 0.020 264 / 0.80);
   --overlay: oklch(0% 0 0 / 0.55);
 
   /* Acento de marca (nombre histórico --chartreuse, valor índigo Signal) */
   --chartreuse: oklch(71% 0.14 258);
 
   /* Charts / data-viz */
-  --chart-grid: oklch(30% 0.012 260 / 0.5);
-  /* Ejes 50%: ≥3:1 sobre --bg (elementos no-texto). */
-  --chart-axis: oklch(58% 0.015 260);
-  --chart-label: oklch(68% 0.012 260);
+  --chart-grid: oklch(37% 0.012 264 / 0.5);
+  /* Ejes ≥3:1 sobre --bg (elementos no-texto). */
+  --chart-axis: oklch(60% 0.015 260);
+  --chart-label: oklch(70% 0.012 260);
   --chart-primary: oklch(71% 0.14 258);
-  --chart-secondary: oklch(60% 0.10 185);
-  --chart-success: oklch(65% 0.13 150);
-  --chart-warning: oklch(75% 0.13 85);
-  --chart-danger: oklch(60% 0.20 25);
-  --chart-tooltip: oklch(12% 0.014 260 / 0.95);
+  --chart-secondary: oklch(62% 0.10 185);
+  --chart-success: oklch(67% 0.13 150);
+  --chart-warning: oklch(77% 0.13 85);
+  --chart-danger: oklch(62% 0.20 25);
+  --chart-tooltip: oklch(20% 0.014 264 / 0.95);
 
   /* Glass + shadows + gradients */
-  --glass-border: oklch(30% 0.015 260 / 0.5);
+  --glass-border: oklch(37% 0.020 264 / 0.5);
   --glass-border-strong: oklch(71% 0.14 258 / 0.10);
   --shadow-card: 0 8px 30px -8px oklch(0% 0 0 / 0.75);
   --shadow-hero: 0 12px 40px -12px oklch(71% 0.14 258 / 0.10),
                 inset 0 1px 0 oklch(100% 0 0 / 0.03);
-  --gradient-surface: linear-gradient(160deg, oklch(19% 0.013 260 / 0.75), oklch(15% 0.011 260 / 0.85));
-  --gradient-surface-hero: linear-gradient(160deg, oklch(20% 0.014 260 / 0.85), oklch(16% 0.012 260 / 0.9));
+  --gradient-surface: linear-gradient(160deg, oklch(29% 0.024 264 / 0.75), oklch(24.5% 0.016 264 / 0.85));
+  --gradient-surface-hero: linear-gradient(160deg, oklch(30% 0.026 264 / 0.85), oklch(25.5% 0.018 264 / 0.9));
   --gradient-primary: linear-gradient(135deg, oklch(64% 0.14 260), oklch(50% 0.12 265));
   --gradient-accent: linear-gradient(135deg, oklch(55% 0.10 185), oklch(45% 0.08 170));
 
@@ -202,8 +204,8 @@
   --scan-line: rgba(255, 255, 255, 0.01);
   --selection-bg: oklch(71% 0.14 258 / 0.18);
   --selection-fg: oklch(93% 0.005 260);
-  --scroll-thumb: oklch(30% 0.015 260);
-  --scroll-thumb-hover: oklch(38% 0.015 260);
+  --scroll-thumb: oklch(37% 0.018 264);
+  --scroll-thumb-hover: oklch(45% 0.018 264);
 
   /* ScoreGauge — pista y ticks del anillo (visibles en ambos temas) */
   --gauge-track: oklch(100% 0 0 / 0.07);
@@ -214,7 +216,7 @@
 /* Misma arquitectura semántica; profundidad por sombras sutiles + bordes. */
 
 [data-theme="light"] {
-  --bg: oklch(92% 0.006 260);
+  --bg: oklch(93.3% 0.0075 261);
   --fg: oklch(20% 0.015 260);
   --card: oklch(97% 0.003 260);
   --card-fg: oklch(20% 0.015 260);
