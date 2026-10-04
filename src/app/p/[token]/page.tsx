@@ -66,7 +66,7 @@ export default async function ClientPortalPage({
 
   const branding = ((project.settings ?? {}) as { branding?: Branding }).branding ?? {};
   const brandName = branding.brandName || project.name;
-  const accent = branding.primaryColor || "#D4A843";
+  const accent = branding.primaryColor || "#2563EB";
 
   const since = thirtyDaysAgo();
   const [up] = await directDb

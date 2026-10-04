@@ -116,7 +116,7 @@ const BrandingSchema = z.object({
   logoUrl: z.string().trim().url().max(2048).optional().or(z.literal("")),
   primaryColor: z
     .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, "Color hex inválido (ej: #D4A843)")
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color hex inválido (ej: #2563EB)")
     .optional()
     .or(z.literal("")),
 });

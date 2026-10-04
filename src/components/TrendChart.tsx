@@ -36,7 +36,7 @@ export function trendCoords(points: TrendPoint[]): string {
 export function TrendChart({
   points,
   ariaLabel,
-  accent = '#D4A843',
+  accent = '#2563EB',
   emptyLabel,
 }: {
   points: TrendPoint[];

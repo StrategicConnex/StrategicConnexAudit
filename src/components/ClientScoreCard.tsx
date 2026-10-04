@@ -16,7 +16,7 @@ export function ClientScoreCard({
   overall,
   overallLabel,
   categories,
-  accent = '#D4A843',
+  accent = '#2563EB',
 }: {
   overall: number | null;
   overallLabel: string;

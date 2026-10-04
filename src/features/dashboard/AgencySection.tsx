@@ -13,7 +13,7 @@ export function AgencySection({ projectId }: { projectId: string }) {
   const t = useTranslations('settings');
   const [brandName, setBrandName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#D4A843');
+  const [primaryColor, setPrimaryColor] = useState('#2563EB');
   const [canEdit, setCanEdit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -126,7 +126,7 @@ export function AgencySection({ projectId }: { projectId: string }) {
             <div className="flex gap-3">
               <input
                 type="color"
-                value={/^#[0-9a-fA-F]{6}$/.test(primaryColor) ? primaryColor : '#D4A843'}
+                value={/^#[0-9a-fA-F]{6}$/.test(primaryColor) ? primaryColor : '#2563EB'}
                 onChange={(e) => setPrimaryColor(e.target.value)}
                 className="w-12 h-12 rounded-xl border border-border bg-card cursor-pointer p-1"
                 aria-label={t('agencyColor')}
@@ -135,7 +135,7 @@ export function AgencySection({ projectId }: { projectId: string }) {
                 type="text"
                 value={primaryColor}
                 onChange={(e) => setPrimaryColor(e.target.value)}
-                placeholder="#D4A843"
+                placeholder="#2563EB"
                 maxLength={7}
                 className="flex-1 bg-card border border-border focus:border-primary rounded-xl px-5 py-3 text-sm text-foreground/80 font-mono focus:outline-none"
               />
