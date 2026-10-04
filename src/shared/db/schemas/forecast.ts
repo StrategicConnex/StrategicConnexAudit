@@ -1,6 +1,6 @@
 import {
   pgTable, uuid, text, timestamp, integer,
-  numeric, jsonb, index
+  numeric, jsonb, index, uniqueIndex
 } from "drizzle-orm/pg-core";
 import { projects } from "./index";
 
@@ -27,5 +27,10 @@ export const forecasts = pgTable("forecasts", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
+  // Único por (projectId, metric): paridad con uq_forecasts_project_metric
+  // de 0031_forecasts.sql. El upsert del weekly-forecast usa este arbiter
+  // en onConflictDoUpdate; declararlo unique evita que drizzle-kit generate
+  // proponga dropearlo.
+  uniqueIndex("uq_forecasts_project_metric").on(t.projectId, t.metric),
   index("idx_forecasts_project_metric").on(t.projectId, t.metric),
 ]);

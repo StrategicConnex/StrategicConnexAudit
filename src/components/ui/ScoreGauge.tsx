@@ -16,12 +16,10 @@ function gaugeColor(value: number) {
   return 'text-corporate-danger';
 }
 
-/** Tono semántico compartido (gauge + barras). Fuente única de umbrales. */
-export function scoreTone(value: number): 'success' | 'warning' | 'danger' {
-  if (value >= 80) return 'success';
-  if (value >= 50) return 'warning';
-  return 'danger';
-}
+/** Tono semántico compartido. Re-exportado desde módulo sin 'use client'
+ * para no romper importadores existentes. Fuente: ./score-tone. */
+export { scoreTone } from './score-tone';
+export type { ScoreTone } from './score-tone';
 
 function gaugeStroke(value: number) {
   if (value >= 80) return 'var(--corporate-success)';

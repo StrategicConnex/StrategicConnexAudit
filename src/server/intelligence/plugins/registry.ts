@@ -140,10 +140,15 @@ export async function installPlugin(
 }
 
 export async function uninstallPlugin(instanceId: string, userId: string): Promise<boolean> {
-  await withRLS(userId, async (tx) => {
-    await tx.delete(pluginInstances).where(eq(pluginInstances.id, instanceId));
+  // Scoping explícito por userId: las instancias son por usuario (install y
+  // list filtran por userId); la policy RLS es solo por proyecto, así que sin
+  // este filtro un miembro podría borrar instancias de otro miembro.
+  const rows = await withRLS(userId, async (tx) => {
+    return tx.delete(pluginInstances).where(
+      and(eq(pluginInstances.id, instanceId), eq(pluginInstances.userId, userId))
+    ).returning({ id: pluginInstances.id });
   });
-  return true;
+  return rows.length > 0;
 }
 
 export async function listUserPlugins(userId: string): Promise<(PluginInstance & { pluginPackage: PluginPackage })[]> {
@@ -174,9 +179,11 @@ export async function updatePluginConfig(
   config: Record<string, unknown>
 ): Promise<PluginInstance | null> {
   const [updated] = await withRLS(userId, async (tx) => {
+    // Scoping por userId (igual que uninstallPlugin): sin esto, cualquier
+    // miembro del proyecto podría reconfigurar instancias ajenas.
     return tx.update(pluginInstances)
       .set({ config })
-      .where(eq(pluginInstances.id, instanceId))
+      .where(and(eq(pluginInstances.id, instanceId), eq(pluginInstances.userId, userId)))
       .returning();
   });
   return updated || null;

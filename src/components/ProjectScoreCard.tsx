@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/Card';
-import { ScoreGauge, scoreTone } from '@/components/ui/ScoreGauge';
+import { ScoreGauge } from '@/components/ui/ScoreGauge';
+import { scoreTone } from '@/components/ui/score-tone';
 import { cn } from '@/lib/utils';
 
 /* ═══════════════════════════════════════════════════════════════════════

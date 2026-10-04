@@ -57,8 +57,9 @@ export async function findLatestBrief(projectId: string) {
 /**
  * Persiste un brief: cierra la fila viva previa (replaced_at=now) e inserta
  * la nueva. Idempotente ante carreras: si el índice único parcial rechaza la
- * inserción (otra fila viva ganó la carrera), se re-intenta cerrando de nuevo
- * y devolviendo la ganadora. Devuelve la fila viva resultante.
+ * inserción con 23505 (otra fila viva ganó la carrera entre nuestro cierre
+ * y nuestro insert), se devuelve la ganadora sin tocarla —cerrarla dejaría
+ * cero filas vivas—. Devuelve la fila viva resultante.
  */
 export async function upsertExecBrief(input: {
   projectId: string;
@@ -77,17 +78,26 @@ export async function upsertExecBrief(input: {
     .where(and(eq(execBriefs.projectId, input.projectId), isNull(execBriefs.replacedAt)));
 
   // 2. Insertar la nueva.
-  const [row] = await directDb
-    .insert(execBriefs)
-    .values({
-      projectId: input.projectId,
-      content: input.content,
-      isFallback: input.isFallback,
-      modelUsed: input.modelUsed,
-      promptVersion: input.promptVersion,
-      auditId: input.auditId,
-    })
-    .returning();
+  try {
+    const [row] = await directDb
+      .insert(execBriefs)
+      .values({
+        projectId: input.projectId,
+        content: input.content,
+        isFallback: input.isFallback,
+        modelUsed: input.modelUsed,
+        promptVersion: input.promptVersion,
+        auditId: input.auditId,
+      })
+      .returning();
 
-  return [row];
+    return [row];
+  } catch (err) {
+    // Carrera perdida contra uq_exec_briefs_project_live: la ganadora ya es
+    // la fila viva; devolverla en vez de propagar el 23505.
+    if ((err as { code?: string }).code !== "23505") throw err;
+    const winner = await findLatestBrief(input.projectId);
+    if (!winner) throw err;
+    return [winner];
+  }
 }

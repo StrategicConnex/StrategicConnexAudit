@@ -163,9 +163,11 @@ export async function listApiKeys(userId: string): Promise<ApiKeyRecord[]> {
 
 export async function revokeApiKey(keyId: string, userId: string): Promise<boolean> {
   try {
-    await directDb.delete(developerApiKeys).where(
+    // returning: delete sin filas (id inexistente o de otro usuario) debe
+    // reportar false, no un éxito silencioso.
+    const rows = await directDb.delete(developerApiKeys).where(
       and(eq(developerApiKeys.id, keyId), eq(developerApiKeys.userId, userId))
-    );
-    return true;
+    ).returning({ id: developerApiKeys.id });
+    return rows.length > 0;
   } catch { return false; }
 }

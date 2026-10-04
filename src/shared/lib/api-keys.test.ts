@@ -181,14 +181,19 @@ describe("api-keys — createApiKey / listApiKeys / revokeApiKey", () => {
     expect(await listApiKeys("u_1")).toEqual([]);
   });
 
-  it("revokeApiKey borra y devuelve true; false si la DB falla", async () => {
+  it("revokeApiKey borra y devuelve true; false si la DB falla o no hay filas", async () => {
     dbMock.delete.mockImplementationOnce(() => ({
-      where: vi.fn(async () => undefined),
+      where: vi.fn(() => ({ returning: vi.fn(async () => [{ id: "k_1" }]) })),
     }));
     expect(await revokeApiKey("k_1", "u_1")).toBe(true);
 
     dbMock.delete.mockImplementationOnce(() => ({
-      where: vi.fn(async () => { throw new Error("down"); }),
+      where: vi.fn(() => ({ returning: vi.fn(async () => []) })),
+    }));
+    expect(await revokeApiKey("k_1", "u_1")).toBe(false);
+
+    dbMock.delete.mockImplementationOnce(() => ({
+      where: vi.fn(() => ({ returning: vi.fn(async () => { throw new Error("down"); }) })),
     }));
     expect(await revokeApiKey("k_1", "u_1")).toBe(false);
   });
