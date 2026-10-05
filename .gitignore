@@ -90,3 +90,6 @@ next-env.d.ts
 .unblock-*
 .mig-*
 .portal-*
+
+# Sentry Config File
+.env.sentry-build-plugin
