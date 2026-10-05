@@ -1,8 +1,9 @@
 import { logger } from "@/lib/logger";
-import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets } from '@/shared/db/schemas';
+import { projects, audits, integrationDataGsc, integrationDataGa4, keywordTargets, crawlResults, issues } from '@/shared/db/schemas';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { withRLS } from '@/shared/db/rls';
 import { callAIWithFallback, type AIMessage } from '@/server/ai/ai-router';
+import { healthFromIssueCounts } from '@/shared/utils/health-score';
 
 interface ResilientReportData {
   totalClicks: number;
@@ -71,12 +72,44 @@ export async function generateSeoReport(
           .where(eq(keywordTargets.projectId, project.id))
       ]);
 
+      // Salud técnica y cobertura del rastreo: conteos REALES de la última
+      // auditoría completada. Antes se publicaban constantes inventadas
+      // (score 85/45 y 142 URLs) que el informe Tomato como medidas.
+      const latestAudit = latestAudits[0];
+      let healthScore: number | null = null;
+      let crawledCount = 0;
+
+      if (latestAudit && latestAudit.status === 'completed') {
+        const [crawlCountResult, issueSeverityCounts] = await Promise.all([
+          tx
+            .select({ count: sql<number>`count(*)` })
+            .from(crawlResults)
+            .where(eq(crawlResults.auditId, latestAudit.id)),
+          tx
+            .select({ severity: issues.severity, count: sql<number>`count(*)` })
+            .from(issues)
+            .where(eq(issues.auditId, latestAudit.id))
+            .groupBy(issues.severity),
+        ]);
+
+        crawledCount = Number(crawlCountResult[0]?.count || 0);
+        const bySeverity = new Map(
+          issueSeverityCounts.map((r) => [r.severity, Number(r.count)]),
+        );
+        healthScore = healthFromIssueCounts(
+          bySeverity.get('critical') ?? 0,
+          bySeverity.get('warning') ?? 0,
+        );
+      }
+
       return {
         project,
         gscRecords,
         ga4Records,
         latestAudits,
-        keywordsCount: Number(keywordsCountResult[0]?.count || 0)
+        keywordsCount: Number(keywordsCountResult[0]?.count || 0),
+        healthScore,
+        crawledCount,
       };
     });
 
@@ -84,7 +117,7 @@ export async function generateSeoReport(
       return { ok: false, error: 'Proyecto no encontrado o acceso denegado', status: 404 };
     }
 
-    const { project, gscRecords, ga4Records, latestAudits, keywordsCount } = dbData;
+    const { project, gscRecords, ga4Records, latestAudits, keywordsCount, healthScore, crawledCount } = dbData;
 
     // Calculate stats — no synthetic fallbacks
     const hasGscData = gscRecords.length > 0;
@@ -105,9 +138,6 @@ export async function generateSeoReport(
       ? (ga4Records.reduce((sum, r) => sum + Number(r.engagementRate || 0), 0) / ga4Records.length) * 100
       : null;
 
-    const latestAudit = latestAudits[0];
-    const healthScore = latestAudit?.status === 'completed' ? 85 : (latestAudit ? 45 : null);
-    const crawledCount = latestAudit?.status === 'completed' ? 142 : 0;
     const isNewProject = latestAudits.length === 0;
 
     // Try AI with free model pool; fallback to resilient report on failure
@@ -176,7 +206,18 @@ function generateResilientReport(
   const avgCtrVal = data.avgCtr !== null ? data.avgCtr : 0;
   const avgPositionVal = data.avgPosition !== null ? data.avgPosition : 0;
   const avgEngagementRateVal = data.avgEngagementRate !== null ? data.avgEngagementRate : 0;
-  const healthScoreVal = data.healthScore !== null ? data.healthScore : 0;
+  const healthScoreVal = data.healthScore;
+  // Bloque de salud: solo se publica si hay una auditoría completada de la que
+  // salga el dato. Antes se imprimía un score fijo y unas Core Web Vitals
+  // escritas a mano (LCP 1.8s, INP 210ms, CLS 0.03) que nunca se midieron.
+  const healthBlock = healthScoreVal === null
+    ? ` todavia no hay una auditoria tecnica completada para este proyecto, por lo que no se publica puntuacion de salud ni cobertura de rastreo.`
+    : `
+
+Nuestros algoritmos de rastreo profundo han verificado un total de **${data.crawledCount} URLs** pertenecientes a su dominio, asignando una puntuación de salud de:
+
+# 🏆 ${healthScoreVal} / 100
+*Clasificacion: ${healthScoreVal >= 80 ? 'Rendimiento Premium' : 'Requiere Optimizacion Critica'}*`;
 
   return `Desde Strategic Connex (strategicconnex.com.ar)
 
@@ -214,15 +255,13 @@ El tráfico orgánico ha mantenido una curva de interacción sumamente interesan
 
 ## 🛠️ Diagnóstico de Salud Técnica y Velocidad
 
-Nuestros algoritmos de rastreo profundo han verificado un total de **${data.crawledCount} URLs** pertenecientes a su dominio, asignando una puntuación de salud de:
-
-# 🏆 ${healthScoreVal} / 100
-*Clasificación: ${healthScoreVal >= 80 ? 'Rendimiento Premium' : 'Requiere Optimización Crítica'}*
+${healthBlock}
 
 ### ⚡ Core Web Vitals (Velocidad de Experiencia de Usuario):
-*   **Largest Contentful Paint (LCP):** 1.8 segundos (🟢 Rápido - Excelente velocidad de despliegue inicial).
-*   **Interaction to Next Paint (INP):** 210ms (🟡 Mejorable - Se observaron retrasos menores en la interactividad móvil).
-*   **Cumulative Layout Shift (CLS):** 0.03 (🟢 Estable - Diseño visual fluido sin deformaciones al cargar).
+
+Este reporte no incluye métricas de velocidad: el servicio que lo genera no lee la
+telemetría RUM del proyecto. Los valores reales de LCP, INP y CLS están disponibles
+en la pestaña **Performance** del detalle del proyecto, y no se estiman aquí.
 
 ---
 

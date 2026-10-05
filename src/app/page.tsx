@@ -101,6 +101,11 @@ async function loadDashboardData(tx: DbTransaction, userId: string) {
             id: latestAudit.id,
             status: latestAudit.status,
             healthScore,
+            // Conteos de la última auditoría COMPLETADA. El score ya los
+            // codifica (100 - c*15 - w*5), pero sin mostrarlos el analista
+            // ve un número sin poder saber qué lo compone.
+            criticalIssues: issueStats?.criticals ?? 0,
+            warningIssues: issueStats?.warnings ?? 0,
           }
         : null,
     };

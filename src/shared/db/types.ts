@@ -16,6 +16,9 @@ export type ProjectWithNested = ProjectRow & {
     status: string;
     /** Salud 0-100 derivada de los issues de la última auditoría completada. null = sin datos. */
     healthScore?: number | null;
+    /** Issues de esa misma auditoría, para explicar el score. 0 = sin issues. */
+    criticalIssues?: number;
+    warningIssues?: number;
   } | null;
   integrations?: unknown[] | null;
 };

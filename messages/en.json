@@ -265,7 +265,9 @@
     "forecastDesc": "Projection from your own history. Not a guarantee: check confidence.",
     "forecastInDays": "in {days}d",
     "forecastNow": "now",
-    "forecastConfidence": "confidence"
+    "forecastConfidence": "confidence",
+    "telemetryErrorTitle": "Could not load telemetry",
+    "telemetryErrorDescription": "The availability checks and AI health did not respond. You can retry without reloading the page."
   },
   "benchmarking": {
     "title": "Your projects compared",

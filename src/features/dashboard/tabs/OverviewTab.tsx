@@ -16,6 +16,7 @@ import {
 import { useTranslations } from "next-intl";
 import { ProjectCard } from "../ProjectCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScoreGauge } from "@/components/ui/ScoreGauge";
 import { MetricCard } from "@/components/MetricCard";
 import { ActivityTimeline, buildTimelineEvents } from "@/components/ActivityTimeline";
@@ -88,11 +89,13 @@ interface LiveCheck {
 }
 
 interface HeroLive {
-  status: "loading" | "live" | "empty";
+  status: "loading" | "live" | "empty" | "error";
   checks: LiveCheck[];
   uptimePercent: number | null;
   avgLatencyMs: number | null;
   aiHealthy: number | null;
+  /** Mensaje del fallo cuando `status === "error"`. */
+  error?: string | null;
 }
 
 const HERO_EMPTY: HeroLive = {
@@ -189,11 +192,16 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const t = useTranslations("overview");
   const [hero, setHero] = useState<HeroLive>({ ...HERO_EMPTY, status: "loading" });
+  // Contador de intentos: permite que el botón de reintento vuelva a lanzar la
+  // carga (dependencia del useEffect) en vez de necesitar una función aparte.
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const auditedCount = dashboardData.filter((p) => p.latestAudit != null).length;
   const failedChecks = hero.checks.filter((c) => c.isUp === false).length;
 
   // Telemetría real del hero: últimos chequeos de uptime (24h) + salud de IA.
   // 401/sin datos → estado vacío honesto, nunca cifras inventadas.
+  // Fallo de red → estado "error" distinguible del vacío (antes un `.catch`
+  //(setHero(HERO_EMPTY)) hacía que una caída de red se leyera como "sin datos").
   useEffect(() => {
     let cancelled = false;
     const params = projectId ? `?projectId=${projectId}` : "";
@@ -234,13 +242,18 @@ export function OverviewTab({
           aiHealthy: typeof ai?.modelsHealthy === "number" ? ai.modelsHealthy : null,
         });
       })
-      .catch(() => {
-        if (!cancelled) setHero({ ...HERO_EMPTY });
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setHero({
+          ...HERO_EMPTY,
+          status: "error",
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, loadAttempt]);
   return (
     <div className="space-y-6">
       {/* Page title — h1 lives in DashboardHeader; this is the in-content h2 */}
@@ -305,6 +318,16 @@ export function OverviewTab({
               </div>
             </div>
           </div>
+        ) : hero.status === "error" ? (
+          <ErrorState
+            title={t("telemetryErrorTitle")}
+            description={t("telemetryErrorDescription")}
+            detail={hero.error}
+            onRetry={() => {
+              setHero({ ...HERO_EMPTY, status: "loading" });
+              setLoadAttempt((n) => n + 1);
+            }}
+          />
         ) : hero.status === "empty" ? (
           <div className="flex flex-col items-center text-center py-8 gap-3">
             <span className="flex items-center gap-2">

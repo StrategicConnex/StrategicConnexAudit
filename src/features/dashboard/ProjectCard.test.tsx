@@ -71,4 +71,62 @@ describe("ProjectCard — honestidad de score y estado", () => {
     expect(screen.getByText("—")).toBeTruthy();
     expect(screen.getByText("Activo")).toBeTruthy();
   });
+
+  it("muestra el desglose de issues que compone el score", () => {
+    render(
+      <ProjectCard
+        project={{
+          ...baseProject,
+          latestAudit: {
+            id: "a1",
+            status: "completed",
+            healthScore: 55,
+            criticalIssues: 3,
+            warningIssues: 2,
+          },
+        }}
+      />
+    );
+    expect(screen.getByText("3 Crít.")).toBeTruthy();
+    expect(screen.getByText("2 Adv.")).toBeTruthy();
+  });
+
+  it("solo muestra los conteos que son mayores que cero", () => {
+    render(
+      <ProjectCard
+        project={{
+          ...baseProject,
+          latestAudit: {
+            id: "a1",
+            status: "completed",
+            healthScore: 70,
+            criticalIssues: 2,
+            warningIssues: 0,
+          },
+        }}
+      />
+    );
+    expect(screen.getByText("2 Crít.")).toBeTruthy();
+    expect(screen.queryByText("0 Adv.")).toBeNull();
+  });
+
+  it("sin issues no renderiza el bloque de desglose", () => {
+    render(
+      <ProjectCard
+        project={{
+          ...baseProject,
+          latestAudit: {
+            id: "a1",
+            status: "completed",
+            healthScore: 100,
+            criticalIssues: 0,
+            warningIssues: 0,
+          },
+        }}
+      />
+    );
+    expect(screen.queryByText("0 Crít.")).toBeNull();
+    expect(screen.queryByText("0 Adv.")).toBeNull();
+    expect(screen.getByText("100")).toBeTruthy();
+  });
 });

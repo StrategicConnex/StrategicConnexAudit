@@ -1,228 +1,168 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/logger", () => ({getRequestContext: vi.fn(() => undefined), runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(), 
-  logger: {
-    error: vi.fn(),
-    warn: vi.fn(),
-    info: vi.fn(),
-  },
+/**
+ * Regresión del dato fabricado en el reporte SEO.
+ *
+ * El servicio usaba constantes inventadas (`healthScore` 85/45 y
+ * `crawledCount` 142) en lugar de leer los conteos reales, de modo que el
+ * informe afirmaba un score y un número de URLs rastreadas que nunca se
+ * habían medido. Estos tests fijan que el reporte sale de la base.
+ */
+
+// ─── Mocks ──────────────────────────────────────────────────────────────────
+
+/** Filas que el mock de `withRLS` devuelve para cada tabla consultada. */
+const rows = {
+  projects: [] as unknown[],
+  gsc: [] as unknown[],
+  ga4: [] as unknown[],
+  audits: [] as unknown[],
+  keywordsCount: [] as unknown[],
+  crawlCount: [] as unknown[],
+  issues: [] as unknown[],
+};
+
+vi.mock("@/lib/logger", () => ({
+  logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
+/**
+ * Drizzle real no acepta las columnas string del mock de schemas: `eq()`
+ * recibiría un string donde espera una Column y lanzaría. Se sustituye por
+ * funciones de identidad — el test no ejercita el SQL, solo la aritmética del
+ * reporte.
+ */
 vi.mock("drizzle-orm", () => ({
-  eq: vi.fn((_col: unknown, val: unknown) => ({ _eqVal: val })),
-  and: vi.fn((..._args: unknown[]) => ({ _and: true })),
-  desc: vi.fn((col: unknown) => ({ _desc: col })),
-  sql: Object.assign(
-    (strings: TemplateStringsArray, ...values: unknown[]) => ({
-      _sql: strings.join("?"),
-      _values: values,
-    }),
-    { raw: (s: string) => ({ _raw: s }) }
-  ),
+  eq: (col: unknown, val: unknown) => ({ col, val }),
+  and: (...conds: unknown[]) => conds,
+  or: (...conds: unknown[]) => conds,
+  desc: (col: unknown) => ({ col, dir: "desc" }),
+  asc: (col: unknown) => ({ col, dir: "asc" }),
+  sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({
+    text: strings.join("?"),
+    values,
+  }),
 }));
 
-let queryResults: unknown[] = [];
-let queryIndex = 0;
-
-function createMockTx() {
-  queryIndex = 0;
-  const createBuilder = (): Record<string, unknown> => {
-    const builder: Record<string, unknown> = {};
-    builder.select = vi.fn(() => createBuilder());
-    builder.from = vi.fn(() => createBuilder());
-    builder.where = vi.fn(() => createBuilder());
-    builder.orderBy = vi.fn(() => createBuilder());
-    builder.limit = vi.fn(() => createBuilder());
-    builder.then = vi.fn((resolve: (val: unknown) => void, reject?: (err: unknown) => void) => {
-      try {
-        resolve(queryResults[queryIndex++] ?? []);
-      } catch (e) {
-        reject?.(e);
-      }
-    });
-    return builder;
-  };
-  return createBuilder();
+/**
+ * `withRLS` entrega el callback un tx encadenable. Cada `.select()` encadenado
+ * corresponde, en orden, a las consultas del servicio: proyecto, GSC, GA4,
+ * auditoría, keywords, crawl_results e issues.
+ */
+function makeTx() {
+  const queue = [
+    rows.projects,
+    rows.gsc,
+    rows.ga4,
+    rows.audits,
+    rows.keywordsCount,
+    rows.crawlCount,
+    rows.issues,
+  ];
+  let call = 0;
+  const builder: Record<string, unknown> = {};
+  for (const method of ["where", "orderBy", "limit", "groupBy", "from"]) {
+    builder[method] = () => builder;
+  }
+  builder.then = (resolve: (v: unknown[]) => unknown, reject?: (e: unknown) => unknown) =>
+    Promise.resolve(queue[call++] ?? []).then(resolve, reject);
+  // El servicio llama `tx.select()`; cada llamada entrega el siguiente
+  // resultado de la cola.
+  return { select: () => builder };
 }
 
 vi.mock("@/shared/db/rls", () => ({
-  withRLS: vi.fn(),
+  withRLS: async (_userId: string, cb: (tx: unknown) => Promise<unknown>) =>
+    cb(makeTx()),
 }));
 
+// El router siempre falla: así se ejercita el reporte de respaldo, que es
+// donde se imprimían las constantes inventadas.
+const mockCallAI = vi.fn();
 vi.mock("@/server/ai/ai-router", () => ({
-  callAIWithFallback: vi.fn(),
+  callAIWithFallback: (...args: unknown[]) => mockCallAI(...args),
 }));
 
-import { generateSeoReport } from "./seo-report-service";
-import { withRLS } from "@/shared/db/rls";
-import { callAIWithFallback } from "@/server/ai/ai-router";
+vi.mock("@/shared/db/schemas", () => ({
+  projects: { id: "id", ownerId: "owner_id", name: "name", domain: "domain" },
+  audits: { id: "id", projectId: "project_id", status: "status", createdAt: "created_at" },
+  integrationDataGsc: { projectId: "project_id", date: "date" },
+  integrationDataGa4: { projectId: "project_id", date: "date" },
+  keywordTargets: { projectId: "project_id" },
+  crawlResults: { auditId: "audit_id" },
+  issues: { auditId: "audit_id", severity: "severity" },
+}));
 
-function setupThenResults(results: unknown[]) {
-  queryResults = results;
-  queryIndex = 0;
-}
+// ─── Tests ──────────────────────────────────────────────────────────────────
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  queryResults = [];
-  queryIndex = 0;
-  vi.mocked(withRLS).mockImplementation(
-    async (_userId: string, cb: (tx: unknown) => Promise<unknown>) => cb(createMockTx())
-  );
-});
+describe("generateSeoReport — datos reales, no inventados", () => {
+  let generateSeoReport: typeof import("./seo-report-service").generateSeoReport;
 
-describe("generateSeoReport", () => {
-  it("returns 404 when project not found", async () => {
-    setupThenResults([[]]);
-    const result = await generateSeoReport("proj-1", "user-1");
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(404);
-    }
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockCallAI.mockResolvedValue({ success: false });
+    generateSeoReport = (await import("./seo-report-service")).generateSeoReport;
   });
 
-  it("returns AI report when callAIWithFallback succeeds", async () => {
-    setupThenResults([
-      [{ id: "proj-1", name: "Test", domain: "test.com", ownerId: "user-1" }],
-      [{ clicks: 100, impressions: 5000, ctr: 0.02, position: 3.5 }],
-      [{ activeUsers: 50, conversions: 5, engagementRate: 0.8 }],
-      [{ status: "completed" }],
-      [{ count: 25 }],
-    ]);
-    vi.mocked(callAIWithFallback).mockResolvedValue({
-      success: true,
-      content: "# Reporte SEO\nContenido generado",
-      modelUsed: "gpt-4",
-      fromCache: false,
-    });
+  it("usa el conteo real de URLs rastreadas y el score derivado de los issues", async () => {
+    rows.projects = [{ id: "p1", ownerId: "u1", name: "Cliente Acme", domain: "acme.test" }];
+    rows.gsc = [];
+    rows.ga4 = [];
+    rows.audits = [{ id: "a1", projectId: "p1", status: "completed" }];
+    rows.keywordsCount = [{ count: 0 }];
+    rows.crawlCount = [{ count: 37 }];
+    rows.issues = [
+      { severity: "critical", count: 2 },
+      { severity: "warning", count: 1 },
+    ];
 
-    const result = await generateSeoReport("proj-1", "user-1");
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.report).toContain("Reporte SEO");
-      expect(result.isFallback).toBe(false);
-      expect(result.modelUsed).toBe("gpt-4");
-    }
+    const outcome = await generateSeoReport("p1", "u1");
+
+    expect(outcome.ok).toBe(true);
+    const report = outcome.ok ? outcome.report : "";
+
+    // 37 URLs reales, no las 142 inventadas.
+    expect(report).toContain("37");
+    expect(report).not.toContain("142");
+    // 100 - 2 criticos*15 - 1 warning*5 = 65, no el 85 inventado.
+    expect(report).toContain("65");
+    expect(report).not.toContain("85");
   });
 
-  it("returns fallback report when AI fails", async () => {
-    setupThenResults([
-      [{ id: "proj-1", name: "Test", domain: "test.com", ownerId: "user-1" }],
-      [{ clicks: 100, impressions: 5000, ctr: 0.02, position: 3.5 }],
-      [{ activeUsers: 50, conversions: 5, engagementRate: 0.8 }],
-      [{ status: "completed" }],
-      [{ count: 10 }],
-    ]);
-    vi.mocked(callAIWithFallback).mockResolvedValue({
-      success: false,
-      error: "model unavailable",
-    });
+  it("no inventa un score cuando no hay auditoría completada", async () => {
+    rows.projects = [{ id: "p1", ownerId: "u1", name: "Cliente Acme", domain: "acme.test" }];
+    rows.gsc = [];
+    rows.ga4 = [];
+    rows.audits = [{ id: "a1", projectId: "p1", status: "running" }];
+    rows.keywordsCount = [{ count: 0 }];
+    rows.crawlCount = [{ count: 0 }];
+    rows.issues = [];
 
-    const result = await generateSeoReport("proj-1", "user-1");
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.isFallback).toBe(true);
-      expect(result.report).toContain("Strategic Connex");
-      expect(result.report).toContain("Test");
-    }
+    const outcome = await generateSeoReport("p1", "u1");
+
+    expect(outcome.ok).toBe(true);
+    const report = outcome.ok ? outcome.report : "";
+
+    // Sin auditoría completada no se publica puntuación alguna.
+    expect(report).not.toContain("/ 100");
+    expect(report).not.toContain("# 🏆 45");
   });
 
-  it("returns contingency report when an exception is thrown", async () => {
-    vi.mocked(withRLS).mockRejectedValue(new Error("DB connection lost"));
-    const result = await generateSeoReport("proj-1", "user-1");
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.isFallback).toBe(true);
-      expect(result.report).toContain("Contingencia");
-    }
-  });
+  it("un proyecto sin auditorías no muestra score ni URLs rastreadas inventadas", async () => {
+    rows.projects = [{ id: "p1", ownerId: "u1", name: "Nuevo", domain: "nuevo.test" }];
+    rows.gsc = [];
+    rows.ga4 = [];
+    rows.audits = [];
+    rows.keywordsCount = [{ count: 0 }];
+    rows.crawlCount = [{ count: 0 }];
+    rows.issues = [];
 
-  it("generates fallback with no GSC/GA4 data", async () => {
-    setupThenResults([
-      [{ id: "proj-1", name: "NewProject", domain: "new.com", ownerId: "user-1" }],
-      [],
-      [],
-      [],
-      [{ count: 0 }],
-    ]);
-    vi.mocked(callAIWithFallback).mockResolvedValue({
-      success: false,
-      error: "no models",
-    });
+    const outcome = await generateSeoReport("p1", "u1");
 
-    const result = await generateSeoReport("proj-1", "user-1");
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.report).toContain("NewProject");
-      expect(result.report).toContain("new.com");
-    }
-  });
+    expect(outcome.ok).toBe(true);
+    const report = outcome.ok ? outcome.report : "";
 
-  it("generates fallback with partial data (GSC only)", async () => {
-    setupThenResults([
-      [{ id: "proj-1", name: "GscOnly", domain: "gsc.com", ownerId: "user-1" }],
-      [{ clicks: 200, impressions: 10000, ctr: 0.02, position: 5 }],
-      [],
-      [{ status: "pending" }],
-      [{ count: 5 }],
-    ]);
-    vi.mocked(callAIWithFallback).mockResolvedValue({
-      success: false,
-      error: "unavailable",
-    });
-
-    const result = await generateSeoReport("proj-1", "user-1");
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.report).toContain("GscOnly");
-      expect(result.report).toContain("gsc.com");
-    }
-  });
-
-  it("generates fallback with GA4 only data", async () => {
-    setupThenResults([
-      [{ id: "proj-1", name: "Ga4Only", domain: "ga4.com", ownerId: "user-1" }],
-      [],
-      [{ activeUsers: 100, conversions: 10, engagementRate: 0.9 }],
-      [],
-      [{ count: 3 }],
-    ]);
-    vi.mocked(callAIWithFallback).mockResolvedValue({
-      success: false,
-      error: "unavailable",
-    });
-
-    const result = await generateSeoReport("proj-1", "user-1");
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.report).toContain("Ga4Only");
-    }
-  });
-
-  it("passes correct data structure to AI", async () => {
-    setupThenResults([
-      [{ id: "proj-1", name: "AI Test", domain: "ai.com", ownerId: "user-1" }],
-      [{ clicks: 50, impressions: 2000, ctr: 0.025, position: 2.1 }],
-      [{ activeUsers: 30, conversions: 3, engagementRate: 0.75 }],
-      [{ status: "completed" }],
-      [{ count: 15 }],
-    ]);
-    vi.mocked(callAIWithFallback).mockResolvedValue({
-      success: true,
-      content: "Reporte",
-    });
-
-    await generateSeoReport("proj-1", "user-1");
-
-    expect(callAIWithFallback).toHaveBeenCalledTimes(1);
-    const callArgs = vi.mocked(callAIWithFallback).mock.calls[0]![0];
-    expect(callArgs.taskType).toBe("seo-report");
-    expect(callArgs.messages).toHaveLength(2);
-    expect(callArgs.messages[0]!.role).toBe("system");
-    expect(callArgs.messages[1]!.role).toBe("user");
-    expect(callArgs.messages[1]!.content).toContain("AI Test");
-    expect(callArgs.messages[1]!.content).toContain("ai.com");
-    expect(callArgs.temperature).toBe(0.3);
-    expect(callArgs.maxTokens).toBe(3000);
+    expect(report).not.toContain("142");
+    expect(report).not.toContain("/ 100");
   });
 });

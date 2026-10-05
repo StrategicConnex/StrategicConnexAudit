@@ -39,6 +39,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const healthScore = project.latestAudit?.healthScore ?? null;
   const healthStyle = healthScore != null ? getHealthStyle(healthScore) : NEUTRAL_STYLE;
   const auditStatus = project.latestAudit?.status ?? null;
+  const criticalIssues = project.latestAudit?.criticalIssues ?? 0;
+  const warningIssues = project.latestAudit?.warningIssues ?? 0;
+  const totalIssues = criticalIssues + warningIssues;
   // Dominios .example.com están reservados para documentación (RFC 2606):
   // si aparecen aquí son fixtures de demo, no sitios reales. Se etiquetan.
   const isDemo = /\.example\.com$/i.test(project.domain || "");
@@ -133,6 +136,28 @@ export function ProjectCard({ project }: ProjectCardProps) {
               </>
             )}
           </div>
+          {/* Desglose del score: los issues que lo componen. Sin issues no se
+              muestra nada en lugar de un "0 / 0" que confunde. */}
+          {totalIssues > 0 && (
+            <div className="flex items-center gap-1.5 bg-muted/10 border border-border/50 px-2.5 py-1.5 rounded-md">
+              {criticalIssues > 0 && (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-destructive" />
+                  <span className="text-foreground/80 font-bold text-2xs tracking-wide uppercase">
+                    {criticalIssues} Crít.
+                  </span>
+                </>
+              )}
+              {warningIssues > 0 && (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-chart-warning" />
+                  <span className="text-foreground/80 font-bold text-2xs tracking-wide uppercase">
+                    {warningIssues} Adv.
+                  </span>
+                </>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-1.5 bg-muted/10 border border-border/50 px-2.5 py-1.5 rounded-md">
             <Globe size={14} className="text-muted-fg" />
             <span className="text-foreground/80 font-bold text-2xs tracking-wide uppercase">

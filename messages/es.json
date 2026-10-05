@@ -265,7 +265,9 @@
     "forecastDesc": "Proyección del histórico propio. No es garantía: revisa la confianza.",
     "forecastInDays": "en {days}d",
     "forecastNow": "hoy",
-    "forecastConfidence": "confianza"
+    "forecastConfidence": "confianza",
+    "telemetryErrorTitle": "No se pudo cargar la telemetría",
+    "telemetryErrorDescription": "Los chequeos de disponibilidad y la salud de IA no respondieron. Puedes reintentar sin recargar la página."
   },
   "benchmarking": {
     "title": "Comparativa entre tus proyectos",
