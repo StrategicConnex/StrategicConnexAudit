@@ -273,8 +273,8 @@ Para maximizar el CTR y asegurar la escalabilidad del posicionamiento orgánico,
     *   *Qué hacer:* Rediseñar las etiquetas "title" y "meta description" de las 10 URLs con mayor volumen de impresiones y menor CTR.
     *   *Por qué:* Capturaremos una porción más grande del tráfico existente en primera página sin requerir enlaces adicionales.
 2.  **Ajuste de Carga de Scripts en Móviles (Prioridad Media):**
-    *   *Qué hacer:* Diferir scripts de terceros no críticos y optimizar imágenes para reducir el INP móvil de 210ms a menos de 150ms.
-    *   *Por qué:* Google penaliza la interactividad lenta. Reducir esta métrica impulsará directamente los rankings de tus landings principales.
+    *   *Qué hacer:* Diferir scripts de terceros no críticos y optimizar imágenes en las páginas más vistas.
+    *   *Por qué:* Una interactividad lenta afecta los rankings. Este informe no mide INP: verificá el valor real en la pestaña **Performance** del proyecto antes de fijar un objetivo numérico.
 3.  **Enriquecimiento de Marcado Schema JSON-LD (Prioridad Media):**
     *   *Qué hacer:* Implementar datos estructurados avanzados (Product, FAQ o Article) en tus páginas de alta conversión.
     *   *Por qué:* Permitirá que Google muestre "fragmentos enriquecidos" (Rich Snippets) directamente en las búsquedas, aumentando la tasa de clics de forma espectacular.
