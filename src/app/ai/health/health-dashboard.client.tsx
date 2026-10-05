@@ -3,12 +3,29 @@
 import { useState, useMemo, Fragment } from "react";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import {
-  AreaChart, Area, LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Legend, PieChart, Pie, Cell,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import { useChartColors } from "@/shared/design-system";
-import type { HealthCheckRecord, DailyAggregate, ModelHealthSummary, TaskCostBreakdown } from "./actions";
+import type {
+  HealthCheckRecord,
+  DailyAggregate,
+  ModelHealthSummary,
+  TaskCostBreakdown,
+} from "./actions";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -39,7 +56,10 @@ function timeAgo(iso: string): string {
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("es-AR", {
-    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -59,9 +79,15 @@ function shortModelId(id: string): string {
 // ─── Card Component ───────────────────────────────────────────────────────────
 
 function StatCard({
-  label, value, sub, accent,
+  label,
+  value,
+  sub,
+  accent,
 }: {
-  label: string; value: string | number; sub?: string; accent?: string;
+  label: string;
+  value: string | number;
+  sub?: string;
+  accent?: string;
 }) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-border bg-card p-5 group hover:bg-surface-muted transition-all duration-300">
@@ -138,7 +164,11 @@ function ModelLatencyChart({ recent }: { recent: HealthCheckRecord[] }) {
       <ResponsiveContainer {...CHART_COMMON} height={280}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-          <XAxis dataKey="time" tick={{ fontSize: 10, fill: colors.text }} interval="preserveStartEnd" />
+          <XAxis
+            dataKey="time"
+            tick={{ fontSize: 10, fill: colors.text }}
+            interval="preserveStartEnd"
+          />
           <YAxis tick={{ fontSize: 10, fill: colors.text }} unit="ms" />
           <Tooltip content={<ChartTooltip />} />
           <Legend wrapperStyle={{ fontSize: 10, color: colors.text }} />
@@ -164,12 +194,16 @@ function ModelLatencyChart({ recent }: { recent: HealthCheckRecord[] }) {
 function DailyStatusChart({ daily }: { daily: DailyAggregate[] }) {
   const colors = useChartColors();
 
-  const data = useMemo(() => daily.map((d) => ({
-    date: new Date(d.date).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }),
-    healthy: d.healthyChecks,
-    degraded: d.degradedChecks,
-    unhealthy: d.unhealthyChecks,
-  })), [daily]);
+  const data = useMemo(
+    () =>
+      daily.map((d) => ({
+        date: new Date(d.date).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }),
+        healthy: d.healthyChecks,
+        degraded: d.degradedChecks,
+        unhealthy: d.unhealthyChecks,
+      })),
+    [daily]
+  );
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -218,13 +252,17 @@ function DailyStatusChart({ daily }: { daily: DailyAggregate[] }) {
 
 function ModelPieChart({ models }: { models: ModelHealthSummary[] }) {
   const colors = useChartColors();
-  const data = useMemo(() =>
-    models.flatMap((m) => [
-      { name: `${shortModelId(m.modelId)} ✅`, value: m.healthyCount, fill: colors.healthy },
-      { name: `${shortModelId(m.modelId)} ⚠️`, value: m.degradedCount, fill: colors.degraded },
-      { name: `${shortModelId(m.modelId)} ❌`, value: m.failedCount, fill: colors.unhealthy },
-    ]).filter((d) => d.value > 0),
-  [colors, models]);
+  const data = useMemo(
+    () =>
+      models
+        .flatMap((m) => [
+          { name: `${shortModelId(m.modelId)} ✅`, value: m.healthyCount, fill: colors.healthy },
+          { name: `${shortModelId(m.modelId)} ⚠️`, value: m.degradedCount, fill: colors.degraded },
+          { name: `${shortModelId(m.modelId)} ❌`, value: m.failedCount, fill: colors.unhealthy },
+        ])
+        .filter((d) => d.value > 0),
+    [colors, models]
+  );
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -259,11 +297,15 @@ function ModelPieChart({ models }: { models: ModelHealthSummary[] }) {
 
 function AvgLatencyChart({ daily }: { daily: DailyAggregate[] }) {
   const colors = useChartColors();
-  const data = useMemo(() => daily.slice(-14).map((d) => ({
-    date: new Date(d.date).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }),
-    latency: d.avgLatencyMs ?? 0,
-    failures: d.totalFailures,
-  })), [daily]);
+  const data = useMemo(
+    () =>
+      daily.slice(-14).map((d) => ({
+        date: new Date(d.date).toLocaleDateString("es-AR", { day: "2-digit", month: "short" }),
+        latency: d.avgLatencyMs ?? 0,
+        failures: d.totalFailures,
+      })),
+    [daily]
+  );
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -304,24 +346,44 @@ function ModelTable({ models }: { models: ModelHealthSummary[] }) {
           </thead>
           <tbody>
             {models.map((m) => (
-              <tr key={m.modelId} className="border-b border-border hover:bg-surface-muted transition-colors">
+              <tr
+                key={m.modelId}
+                className="border-b border-border hover:bg-surface-muted transition-colors"
+              >
                 <td className="p-3 font-mono text-2xs">{shortModelId(m.modelId)}</td>
                 <td className="p-3 text-right">{m.totalChecks}</td>
                 <td className="p-3 text-right text-chart-success">{m.healthyCount}</td>
                 <td className="p-3 text-right text-chart-warning">{m.degradedCount}</td>
                 <td className="p-3 text-right text-destructive">{m.failedCount}</td>
                 <td className="p-3 text-right">
-                  {m.avgLatencyMs ? <>{m.avgLatencyMs}<span className="text-muted-foreground">ms</span></> : "—"}
+                  {m.avgLatencyMs ? (
+                    <>
+                      {m.avgLatencyMs}
+                      <span className="text-muted-foreground">ms</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td className="p-3 text-right">
-                  <span className={`inline-flex items-center gap-1 ${
-                    m.lastStatus === "healthy" ? "text-chart-success" :
-                    m.lastStatus === "degraded" ? "text-chart-warning" : "text-destructive"
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      m.lastStatus === "healthy" ? "bg-chart-success" :
-                      m.lastStatus === "degraded" ? "bg-chart-warning" : "bg-chart-danger"
-                    }`} />
+                  <span
+                    className={`inline-flex items-center gap-1 ${
+                      m.lastStatus === "healthy"
+                        ? "text-chart-success"
+                        : m.lastStatus === "degraded"
+                          ? "text-chart-warning"
+                          : "text-destructive"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        m.lastStatus === "healthy"
+                          ? "bg-chart-success"
+                          : m.lastStatus === "degraded"
+                            ? "bg-chart-warning"
+                            : "bg-chart-danger"
+                      }`}
+                    />
                     {m.lastStatus}
                   </span>
                 </td>
@@ -358,7 +420,8 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
               <th className="text-right p-3 font-semibold">Fuente</th>
             </tr>
           </thead>
-          <tbody>              {recent.map((r) => {
+          <tbody>
+            {recent.map((r) => {
               const hasErrors = r.modelResults.some((m) => m.status === "failed");
               return (
                 <Fragment key={r.id}>
@@ -371,17 +434,24 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                   >
                     <td className="p-3 whitespace-nowrap">{formatDate(r.checkedAt)}</td>
                     <td className="p-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-bold ${
-                        r.overallStatus === "healthy"
-                          ? "bg-chart-success/10 text-chart-success"
-                          : r.overallStatus === "degraded"
-                          ? "bg-chart-warning/10 text-chart-warning"
-                          : "bg-destructive/10 text-destructive"
-                      }`}>
-                        <span className={`w-1 h-1 rounded-full ${
-                          r.overallStatus === "healthy" ? "bg-chart-success" :
-                          r.overallStatus === "degraded" ? "bg-chart-warning" : "bg-chart-danger"
-                        }`} />
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-bold ${
+                          r.overallStatus === "healthy"
+                            ? "bg-chart-success/10 text-chart-success"
+                            : r.overallStatus === "degraded"
+                              ? "bg-chart-warning/10 text-chart-warning"
+                              : "bg-destructive/10 text-destructive"
+                        }`}
+                      >
+                        <span
+                          className={`w-1 h-1 rounded-full ${
+                            r.overallStatus === "healthy"
+                              ? "bg-chart-success"
+                              : r.overallStatus === "degraded"
+                                ? "bg-chart-warning"
+                                : "bg-chart-danger"
+                          }`}
+                        />
                         {r.overallStatus}
                       </span>
                     </td>
@@ -389,7 +459,14 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                     <td className="p-3 text-right text-destructive">{r.modelsFailed}</td>
                     <td className="p-3 text-right">{r.modelsTotal}</td>
                     <td className="p-3 text-right">
-                      {r.avgLatencyMs ? <>{r.avgLatencyMs}<span className="text-muted-foreground">ms</span></> : "—"}
+                      {r.avgLatencyMs ? (
+                        <>
+                          {r.avgLatencyMs}
+                          <span className="text-muted-foreground">ms</span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="p-3 text-right text-muted-foreground">{r.triggerSource}</td>
                   </tr>
@@ -402,22 +479,37 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
                               key={mr.modelId}
                               className="flex items-center gap-3 text-2xs font-mono px-3 py-1.5 rounded-lg"
                             >
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                mr.status === "healthy" ? "bg-chart-success" :
-                                mr.status === "degraded" ? "bg-chart-warning" : "bg-chart-danger"
-                              }`} />
-                              <span className="text-muted-foreground w-40 truncate">{shortModelId(mr.modelId)}</span>
-                              <span className={
-                                mr.status === "healthy" ? "text-chart-success" :
-                                mr.status === "degraded" ? "text-chart-warning" : "text-destructive"
-                              }>
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                  mr.status === "healthy"
+                                    ? "bg-chart-success"
+                                    : mr.status === "degraded"
+                                      ? "bg-chart-warning"
+                                      : "bg-chart-danger"
+                                }`}
+                              />
+                              <span className="text-muted-foreground w-40 truncate">
+                                {shortModelId(mr.modelId)}
+                              </span>
+                              <span
+                                className={
+                                  mr.status === "healthy"
+                                    ? "text-chart-success"
+                                    : mr.status === "degraded"
+                                      ? "text-chart-warning"
+                                      : "text-destructive"
+                                }
+                              >
                                 {mr.status}
                               </span>
                               <span className="text-muted-foreground">
                                 {mr.latencyMs ? `${mr.latencyMs}ms` : "—"}
                               </span>
                               {mr.error && (
-                                <span className="text-destructive truncate max-w-[200px]" title={mr.error}>
+                                <span
+                                  className="text-destructive truncate max-w-[200px]"
+                                  title={mr.error}
+                                >
                                   {mr.error}
                                 </span>
                               )}
@@ -442,7 +534,10 @@ function RecentChecksTable({ recent }: { recent: HealthCheckRecord[] }) {
 function FailureList({ recent }: { recent: HealthCheckRecord[] }) {
   const failures = useMemo(() => {
     const list: Array<{
-      modelId: string; error: string; checkedAt: string; latencyMs: number | null;
+      modelId: string;
+      error: string;
+      checkedAt: string;
+      latencyMs: number | null;
     }> = [];
     for (const r of recent) {
       for (const mr of r.modelResults) {
@@ -537,7 +632,10 @@ function TaskCostTable({ taskCosts }: { taskCosts: TaskCostBreakdown[] }) {
             {taskCosts.map((t) => {
               const hitRate = t.calls > 0 ? ((t.cacheHits / t.calls) * 100).toFixed(0) : "0";
               return (
-                <tr key={t.taskType} className="border-b border-border hover:bg-surface-muted transition-colors">
+                <tr
+                  key={t.taskType}
+                  className="border-b border-border hover:bg-surface-muted transition-colors"
+                >
                   <td className="p-3 font-mono text-2xs">{t.taskType}</td>
                   <td className="p-3 text-right">{t.calls}</td>
                   <td className="p-3 text-right text-chart-success">
@@ -548,11 +646,20 @@ function TaskCostTable({ taskCosts }: { taskCosts: TaskCostBreakdown[] }) {
                   </td>
                   <td className="p-3 text-right">{t.tokensIn.toLocaleString("es")}</td>
                   <td className="p-3 text-right">{t.tokensOut.toLocaleString("es")}</td>
-                  <td className={`p-3 text-right font-medium ${t.costUsd > 0 ? "text-chart-warning" : "text-muted-foreground"}`}>
+                  <td
+                    className={`p-3 text-right font-medium ${t.costUsd > 0 ? "text-chart-warning" : "text-muted-foreground"}`}
+                  >
                     {fmtUsd(t.costUsd)}
                   </td>
                   <td className="p-3 text-right">
-                    {t.avgLatencyMs != null ? <>{t.avgLatencyMs}<span className="text-muted-foreground">ms</span></> : "—"}
+                    {t.avgLatencyMs != null ? (
+                      <>
+                        {t.avgLatencyMs}
+                        <span className="text-muted-foreground">ms</span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                 </tr>
               );
@@ -566,17 +673,21 @@ function TaskCostTable({ taskCosts }: { taskCosts: TaskCostBreakdown[] }) {
 
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 
-export function AiHealthDashboardClient({ recent, daily, models, latest, taskCosts }: AiHealthDashboardClientProps) {
+export function AiHealthDashboardClient({
+  recent,
+  daily,
+  models,
+  latest,
+  taskCosts,
+}: AiHealthDashboardClientProps) {
   const colors = useChartColors();
 
-  const failRate = latest && latest.modelsTotal > 0
-    ? ((latest.modelsFailed / latest.modelsTotal) * 100).toFixed(1)
-    : "0";
+  const failRate =
+    latest && latest.modelsTotal > 0
+      ? ((latest.modelsFailed / latest.modelsTotal) * 100).toFixed(1)
+      : "0";
 
-  const totalFailures = useMemo(
-    () => recent.reduce((acc, r) => acc + r.modelsFailed, 0),
-    [recent]
-  );
+  const totalFailures = useMemo(() => recent.reduce((acc, r) => acc + r.modelsFailed, 0), [recent]);
 
   const avgLatency = useMemo(() => {
     const valid = recent.filter((r) => r.avgLatencyMs != null);
@@ -591,8 +702,8 @@ export function AiHealthDashboardClient({ recent, daily, models, latest, taskCos
         <div>
           <h1 className="text-2xl font-bold tracking-tight">🩺 Salud del Motor de IA</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Monitoreo de modelos :free en OpenRouter · Último chequeo:
-            {" "}{latest ? timeAgo(latest.checkedAt) : "Nunca"}
+            Monitoreo de modelos :free en OpenRouter · Último chequeo:{" "}
+            {latest ? timeAgo(latest.checkedAt) : "Nunca"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -611,7 +722,13 @@ export function AiHealthDashboardClient({ recent, daily, models, latest, taskCos
         <StatCard
           label="Estado Actual"
           value={latest?.overallStatus ?? "Sin datos"}
-          accent={latest?.overallStatus === "healthy" ? colors.healthy : latest?.overallStatus === "degraded" ? colors.degraded : colors.unhealthy}
+          accent={
+            latest?.overallStatus === "healthy"
+              ? colors.healthy
+              : latest?.overallStatus === "degraded"
+                ? colors.degraded
+                : colors.unhealthy
+          }
         />
         <StatCard
           label="Total Chequeos"

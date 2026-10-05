@@ -1,4 +1,4 @@
-import type { projects } from './schemas';
+import type { projects } from "./schemas";
 
 /**
  * Tipos canónicos derivados del schema Drizzle, seguros para importar desde
@@ -14,6 +14,8 @@ export type ProjectWithNested = ProjectRow & {
   latestAudit?: {
     id: string;
     status: string;
+    /** Salud 0-100 derivada de los issues de la última auditoría completada. null = sin datos. */
+    healthScore?: number | null;
   } | null;
   integrations?: unknown[] | null;
 };

@@ -1,23 +1,46 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
-  LayoutDashboard, Globe, Activity, Search, BarChart3, Settings,
-  ShieldCheck, Sliders, HeartPulse, Crosshair, BookOpen, Zap, Key, Skull, Package
-} from 'lucide-react';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { Badge } from '@/components/ui/Badge';
-import { useTranslations } from 'next-intl';
-import { LanguageSwitcher } from '@/features/dashboard/LanguageSwitcher';
-import { loadIntelligenceTab } from './tab-loaders';
+  LayoutDashboard,
+  Globe,
+  Activity,
+  Search,
+  BarChart3,
+  Settings,
+  ShieldCheck,
+  Sliders,
+  HeartPulse,
+  Crosshair,
+  BookOpen,
+  Zap,
+  Key,
+  Skull,
+  Package,
+} from "lucide-react";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { Badge } from "@/components/ui/Badge";
+import { useTranslations } from "next-intl";
+import { LanguageSwitcher } from "@/features/dashboard/LanguageSwitcher";
+import { loadIntelligenceTab } from "./tab-loaders";
 import { ThemeSwitcher } from "@/shared/design-system";
 
-const AiCoreVisual = dynamic(() => import('./AiCoreVisual'), { ssr: false });
+const AiCoreVisual = dynamic(() => import("./AiCoreVisual"), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type DashboardTab = 'overview' | 'projects' | 'performance' | 'keywords' | 'reports' | 'intelligence' | 'monitoring' | 'adversary' | 'plugins' | 'settings';
+export type DashboardTab =
+  | "overview"
+  | "projects"
+  | "performance"
+  | "keywords"
+  | "reports"
+  | "intelligence"
+  | "monitoring"
+  | "adversary"
+  | "plugins"
+  | "settings";
 
 interface DashboardSidebarProps {
   activeTab: DashboardTab;
@@ -39,18 +62,28 @@ interface NavButtonProps {
   collapsed?: boolean;
 }
 
-function NavButton({ tab, activeTab, icon, label, hint, badge, onClick, onHover, collapsed }: NavButtonProps) {
+function NavButton({
+  tab,
+  activeTab,
+  icon,
+  label,
+  hint,
+  badge,
+  onClick,
+  onHover,
+  collapsed,
+}: NavButtonProps) {
   const isActive = activeTab === tab;
   return (
     <button
       onClick={onClick}
       onMouseEnter={onHover}
       title={hint ?? (collapsed ? label : undefined)}
-      aria-current={isActive ? 'page' : undefined}
-      className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} py-3 rounded-lg text-sm font-medium transition-colors duration-200 group border cursor-pointer ${
+      aria-current={isActive ? "page" : undefined}
+      className={`relative w-full flex items-center ${collapsed ? "justify-center px-0" : "justify-between px-4"} py-3 rounded-lg text-sm font-medium transition-colors duration-200 group border cursor-pointer ${
         isActive
-          ? 'bg-primary/10 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
-          : 'text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10'
+          ? "bg-primary/10 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]"
+          : "text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
       }`}
     >
       {isActive && (
@@ -60,7 +93,13 @@ function NavButton({ tab, activeTab, icon, label, hint, badge, onClick, onHover,
         />
       )}
       <div className="flex items-center gap-3">
-        <span className={isActive ? 'text-primary' : 'text-muted-fg group-hover:text-primary transition-colors duration-300'}>
+        <span
+          className={
+            isActive
+              ? "text-primary"
+              : "text-muted-fg group-hover:text-primary transition-colors duration-300"
+          }
+        >
           {icon}
         </span>
         {!collapsed && <span className="tracking-tight">{label}</span>}
@@ -72,11 +111,24 @@ function NavButton({ tab, activeTab, icon, label, hint, badge, onClick, onHover,
 
 // ─── NavSection ───────────────────────────────────────────────────────────────
 
-function NavSection({ id, title, collapsed, children }: { id: string; title: string; collapsed?: boolean; children: React.ReactNode }) {
+function NavSection({
+  id,
+  title,
+  collapsed,
+  children,
+}: {
+  id: string;
+  title: string;
+  collapsed?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <section aria-labelledby={id} className="space-y-1">
       {!collapsed && (
-        <h2 id={id} className="px-4 pt-3 pb-1 text-2xs font-extrabold uppercase tracking-widest text-muted-fg/60">
+        <h2
+          id={id}
+          className="px-4 pt-3 pb-1 text-2xs font-extrabold uppercase tracking-widest text-muted-fg/60"
+        >
           {title}
         </h2>
       )}
@@ -88,7 +140,7 @@ function NavSection({ id, title, collapsed, children }: { id: string; title: str
 // ─── DashboardSidebar ─────────────────────────────────────────────────────────
 
 export function DashboardSidebar({ activeTab, onTabChange, projectCount }: DashboardSidebarProps) {
-  const t = useTranslations('sidebar');
+  const t = useTranslations("sidebar");
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebar-collapsed") === "true";
@@ -101,7 +153,9 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
   }, [collapsed]);
 
   return (
-    <aside className={`${collapsed ? 'w-[72px]' : 'w-66'} bg-surface/60 backdrop-blur-2xl border-r border-border hidden md:flex flex-col shrink-0 relative overflow-hidden transition-all duration-300`}>
+    <aside
+      className={`${collapsed ? "w-[72px]" : "w-66"} bg-surface/60 backdrop-blur-2xl border-r border-border hidden md:flex flex-col shrink-0 relative overflow-hidden transition-all duration-300`}
+    >
       {/* Top Ambient Glow in Sidebar */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-24 bg-gradient-to-b from-primary/5 to-transparent rounded-full blur-2xl pointer-events-none" />
 
@@ -110,21 +164,22 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="absolute top-3 right-2 w-6 h-6 flex items-center justify-center rounded bg-muted/30 hover:bg-muted/50 text-muted-fg hover:text-foreground transition-colors text-xs z-20"
-          title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          title={collapsed ? "Expandir sidebar" : "Colapsar sidebar"}
         >
-          {collapsed ? '»' : '«'}
+          {collapsed ? "»" : "«"}
         </button>
-        <div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : ''}`}>
+        <div className={`flex items-center gap-2 ${collapsed ? "justify-center" : ""}`}>
           <div className="w-10 h-10 flex items-center justify-center relative group shrink-0">
             <AiCoreVisual size={38} interactive={true} />
           </div>
           {!collapsed && (
             <div className="flex flex-col -space-y-1">
               <span className="font-extrabold text-base tracking-tight text-foreground flex items-center gap-1.5">
-                {t('brand')}
+                {t("brand")}
               </span>
               <span className="text-2xs text-primary font-extrabold tracking-widest uppercase opacity-90 flex items-center gap-1">
-                {t('pro')} <span className="w-1.5 h-1.5 rounded-full bg-chartreuse scan-pulse inline-block" />
+                {t("pro")}{" "}
+                <span className="w-1.5 h-1.5 rounded-full bg-chartreuse scan-pulse inline-block" />
               </span>
             </div>
           )}
@@ -132,102 +187,107 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
       </div>
 
       {/* Navigation — agrupada por secciones (spec §4.2) */}
-      <nav aria-label={t('navLabel')} className="flex-1 overflow-y-auto p-4 pt-2 space-y-4 z-10 mt-2 min-h-0">
-        <NavSection id="sidebar-section-main" title={t('sections.main')} collapsed={collapsed}>
-        <NavButton
-          collapsed={collapsed}
-          tab="overview"
-          activeTab={activeTab}
-          icon={<LayoutDashboard size={18} strokeWidth={2} />}
-          label={t('tabs.overview')}
-          badge={<Badge variant="live">{t('live')}</Badge>}
-          onClick={() => onTabChange('overview')}
-        />
+      <nav
+        aria-label={t("navLabel")}
+        className="flex-1 overflow-y-auto p-4 pt-2 space-y-4 z-10 mt-2 min-h-0"
+      >
+        <NavSection id="sidebar-section-main" title={t("sections.main")} collapsed={collapsed}>
+          <NavButton
+            collapsed={collapsed}
+            tab="overview"
+            activeTab={activeTab}
+            icon={<LayoutDashboard size={18} strokeWidth={2} />}
+            label={t("tabs.overview")}
+            badge={<Badge variant="live">{t("live")}</Badge>}
+            onClick={() => onTabChange("overview")}
+          />
 
-        <NavButton
-          collapsed={collapsed}
-          tab="projects"
-          activeTab={activeTab}
-          icon={<Globe size={18} strokeWidth={2} />}
-          label={t('tabs.projects')}
-          badge={<Badge variant="neutral">{projectCount}</Badge>}
-          onClick={() => onTabChange('projects')}
-        />
+          <NavButton
+            collapsed={collapsed}
+            tab="projects"
+            activeTab={activeTab}
+            icon={<Globe size={18} strokeWidth={2} />}
+            label={t("tabs.projects")}
+            badge={<Badge variant="neutral">{projectCount}</Badge>}
+            onClick={() => onTabChange("projects")}
+          />
 
-        <NavButton
-          collapsed={collapsed}
-          tab="performance"
-          activeTab={activeTab}
-          icon={<Activity size={18} strokeWidth={2} />}
-          label={t('tabs.performance')}
-          onClick={() => onTabChange('performance')}
-        />
+          <NavButton
+            collapsed={collapsed}
+            tab="performance"
+            activeTab={activeTab}
+            icon={<Activity size={18} strokeWidth={2} />}
+            label={t("tabs.performance")}
+            onClick={() => onTabChange("performance")}
+          />
 
-        <NavButton
-          collapsed={collapsed}
-          tab="keywords"
-          activeTab={activeTab}
-          icon={<Search size={18} strokeWidth={2} />}
-          label={t('tabs.keywords')}
-          onClick={() => onTabChange('keywords')}
-        />
+          <NavButton
+            collapsed={collapsed}
+            tab="keywords"
+            activeTab={activeTab}
+            icon={<Search size={18} strokeWidth={2} />}
+            label={t("tabs.keywords")}
+            onClick={() => onTabChange("keywords")}
+          />
 
-        <NavButton
-          collapsed={collapsed}
-          tab="reports"
-          activeTab={activeTab}
-          icon={<BarChart3 size={18} strokeWidth={2} />}
-          label={t('tabs.reports')}
-          badge={<Badge variant="neutral">{t('audit')}</Badge>}
-          onClick={() => onTabChange('reports')}
-        />
+          <NavButton
+            collapsed={collapsed}
+            tab="reports"
+            activeTab={activeTab}
+            icon={<BarChart3 size={18} strokeWidth={2} />}
+            label={t("tabs.reports")}
+            badge={<Badge variant="neutral">{t("audit")}</Badge>}
+            onClick={() => onTabChange("reports")}
+          />
         </NavSection>
 
-        <NavSection id="sidebar-section-intel" title={t('sections.intel')} collapsed={collapsed}>
-        <NavButton
-          collapsed={collapsed}
-          tab="intelligence"
-          activeTab={activeTab}
-          icon={<ShieldCheck size={18} strokeWidth={2} />}
-          label={t('tabs.intelligence')}
-          hint={t('hints.intelligence')}
-          badge={<Badge variant="neutral">{t('beta')}</Badge>}
-          onClick={() => onTabChange('intelligence')}
-          onHover={() => { void loadIntelligenceTab(); }}
-        />
+        <NavSection id="sidebar-section-intel" title={t("sections.intel")} collapsed={collapsed}>
+          <NavButton
+            collapsed={collapsed}
+            tab="intelligence"
+            activeTab={activeTab}
+            icon={<ShieldCheck size={18} strokeWidth={2} />}
+            label={t("tabs.intelligence")}
+            hint={t("hints.intelligence")}
+            badge={<Badge variant="neutral">{t("beta")}</Badge>}
+            onClick={() => onTabChange("intelligence")}
+            onHover={() => {
+              void loadIntelligenceTab();
+            }}
+          />
 
-        <NavButton
-          collapsed={collapsed}
-          tab="monitoring"
-          activeTab={activeTab}
-          icon={<Sliders size={18} strokeWidth={2} />}
-          label={t('tabs.monitoring')}
-          hint={t('hints.monitoring')}
-          badge={<Badge variant="neutral">{t('apis')}</Badge>}
-          onClick={() => onTabChange('monitoring')}
-        />
+          <NavButton
+            collapsed={collapsed}
+            tab="monitoring"
+            activeTab={activeTab}
+            icon={<Sliders size={18} strokeWidth={2} />}
+            label={t("tabs.monitoring")}
+            hint={t("hints.monitoring")}
+            badge={<Badge variant="neutral">{t("apis")}</Badge>}
+            onClick={() => onTabChange("monitoring")}
+          />
 
-        <NavButton
-          collapsed={collapsed}
-          tab="adversary"
-          activeTab={activeTab}
-          icon={<Skull size={18} strokeWidth={2} />}
-          label={t('tabs.adversary')}
-          hint={t('hints.adversary')}
-          badge={<Badge variant="alert">BAS</Badge>}
-          onClick={() => onTabChange('adversary')}
-        />
+          <NavButton
+            collapsed={collapsed}
+            tab="adversary"
+            activeTab={activeTab}
+            icon={<Skull size={18} strokeWidth={2} />}
+            label={t("tabs.adversary")}
+            hint={t("hints.adversary")}
+            badge={<Badge variant="alert">BAS</Badge>}
+            onClick={() => onTabChange("adversary")}
+          />
 
-        <NavButton
-          collapsed={collapsed}
-          tab="plugins"
-          activeTab={activeTab}
-          icon={<Package size={18} strokeWidth={2} />}
-          label={t('tabs.marketplace')}
-          hint={t('hints.marketplace')}
-          badge={<Badge variant="neutral">{t('new')}</Badge>}
-          onClick={() => onTabChange('plugins')}
-        />
+          <NavButton
+            collapsed={collapsed}
+            tab="plugins"
+            activeTab={activeTab}
+            icon={<Package size={18} strokeWidth={2} />}
+            label={t("tabs.marketplace")}
+            hint={t("hints.marketplace")}
+            badge={<Badge variant="neutral">{t("new")}</Badge>}
+            onClick={() => onTabChange("plugins")}
+          />
         </NavSection>
       </nav>
 
@@ -235,34 +295,43 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
           El badge NO puede decir "ACTIVE" con 0 proyectos: era texto fijo y
           afirmaba un estado que nunca se consultaba. Ahora refleja el único
           dato real que el sidebar tiene (projectCount). La salud real del
-          motor IA la muestra OverviewTab vía /api/ai/healthcheck — no se
-          duplica aquí porque esa ruta testeja cada modelo contra OpenRouter
-          y no es gratis repetirla en cada render del sidebar. */}
+          motor IA la muestra OverviewTab vía /api/ai/status (último chequeo
+          persistido) — no se duplica aquí, y /api/ai/healthcheck (cron con
+          Bearer) jamás se llama desde el navegador. */}
       {!collapsed && (
         <div className="mx-4 my-2 p-4 rounded-xl border border-border bg-muted/10 space-y-3 relative overflow-hidden group z-10">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-chartreuse/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="flex items-center justify-between relative z-10">
-            <span className="text-2xs text-muted-fg font-extrabold tracking-widest uppercase">{t('copilotEngine')}</span>
+            <span className="text-2xs text-muted-fg font-extrabold tracking-widest uppercase">
+              {t("copilotEngine")}
+            </span>
             <div className="flex items-center gap-1">
               {projectCount > 0 ? (
                 <>
-                  <span className="text-2xs text-chartreuse font-bold">{t('active')}</span>
+                  <span className="text-2xs text-chartreuse font-bold">{t("active")}</span>
                   <span className="flex h-1.5 w-1.5 rounded-full bg-chartreuse scan-pulse" />
                 </>
               ) : (
                 <>
-                  <span className="text-2xs text-muted-fg font-bold">{t('copilotStatus.noData')}</span>
-                  <span className="flex h-1.5 w-1.5 rounded-full bg-muted-fg/40" aria-hidden="true" />
+                  <span className="text-2xs text-muted-fg font-bold">
+                    {t("copilotStatus.noData")}
+                  </span>
+                  <span
+                    className="flex h-1.5 w-1.5 rounded-full bg-muted-fg/40"
+                    aria-hidden="true"
+                  />
                 </>
               )}
             </div>
           </div>
           <div className="space-y-1 relative z-10">
             <div className="text-xs font-bold text-foreground/80 flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-primary" /> {t('continuousAudit')}
+              <ShieldCheck size={14} className="text-primary" /> {t("continuousAudit")}
             </div>
             <div className="text-2xs text-muted-fg">
-              {projectCount > 0 ? t('monitoringProjects', { count: projectCount }) : t('noProjectsYet')}
+              {projectCount > 0
+                ? t("monitoringProjects", { count: projectCount })
+                : t("noProjectsYet")}
             </div>
           </div>
         </div>
@@ -270,39 +339,75 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
 
       {/* External Links — sección Recursos, hidden when collapsed */}
       {!collapsed && (
-        <section aria-labelledby="sidebar-section-resources" className="px-4 mb-1 z-10 space-y-1 shrink-0">
-          <h2 id="sidebar-section-resources" className="px-4 pt-2 pb-1 text-2xs font-extrabold uppercase tracking-widest text-muted-fg/60">
-            {t('sections.resources')}
+        <section
+          aria-labelledby="sidebar-section-resources"
+          className="px-4 mb-1 z-10 space-y-1 shrink-0"
+        >
+          <h2
+            id="sidebar-section-resources"
+            className="px-4 pt-2 pb-1 text-2xs font-extrabold uppercase tracking-widest text-muted-fg/60"
+          >
+            {t("sections.resources")}
           </h2>
-          <Link href="/docs" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
+          <Link
+            href="/docs"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          >
             <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
-            <span className="tracking-tight">{t('links.docs')}</span>
-            <Badge variant="neutral" className="ml-auto">{t('links.docsBadge')}</Badge>
+            <span className="tracking-tight">{t("links.docs")}</span>
+            <Badge variant="neutral" className="ml-auto">
+              {t("links.docsBadge")}
+            </Badge>
           </Link>
-          <Link href="/ai/health" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
+          <Link
+            href="/ai/health"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          >
             <HeartPulse size={18} strokeWidth={2} className="text-muted-fg" />
-            <span className="tracking-tight">{t('links.aiHealth')}</span>
-            <Badge variant="neutral" className="ml-auto">{t('links.aiHealthBadge')}</Badge>
+            <span className="tracking-tight">{t("links.aiHealth")}</span>
+            <Badge variant="neutral" className="ml-auto">
+              {t("links.aiHealthBadge")}
+            </Badge>
           </Link>
-          <Link href="/mitre-coverage" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
+          <Link
+            href="/mitre-coverage"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          >
             <Crosshair size={18} strokeWidth={2} className="text-muted-fg" />
-            <span className="tracking-tight">{t('links.mitre')}</span>
-            <Badge variant="neutral" className="ml-auto">{t('links.mitreBadge')}</Badge>
+            <span className="tracking-tight">{t("links.mitre")}</span>
+            <Badge variant="neutral" className="ml-auto">
+              {t("links.mitreBadge")}
+            </Badge>
           </Link>
-          <Link href="/docs/api" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
+          <Link
+            href="/docs/api"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          >
             <BookOpen size={18} strokeWidth={2} className="text-muted-fg" />
-            <span className="tracking-tight">{t('links.apiReference')}</span>
-            <Badge variant="neutral" className="ml-auto">{t('links.docsBadge')}</Badge>
+            <span className="tracking-tight">{t("links.apiReference")}</span>
+            <Badge variant="neutral" className="ml-auto">
+              {t("links.docsBadge")}
+            </Badge>
           </Link>
-          <Link href="/settings/api-keys" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
+          <Link
+            href="/settings/api-keys"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          >
             <Key size={18} strokeWidth={2} className="text-muted-fg" />
-            <span className="tracking-tight">{t('links.apiKeys')}</span>
-            <Badge variant="neutral" className="ml-auto">{t('links.apiKeysBadge')}</Badge>
+            <span className="tracking-tight">{t("links.apiKeys")}</span>
+            <Badge variant="neutral" className="ml-auto">
+              {t("links.apiKeysBadge")}
+            </Badge>
           </Link>
-          <Link href="/swagger" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10">
+          <Link
+            href="/swagger"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
+          >
             <Zap size={18} strokeWidth={2} className="text-muted-fg" />
-            <span className="tracking-tight">{t('links.apiPlayground')}</span>
-            <Badge variant="neutral" className="ml-auto">{t('links.apiPlaygroundBadge')}</Badge>
+            <span className="tracking-tight">{t("links.apiPlayground")}</span>
+            <Badge variant="neutral" className="ml-auto">
+              {t("links.apiPlaygroundBadge")}
+            </Badge>
           </Link>
         </section>
       )}
@@ -322,16 +427,20 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
       {/* Settings button — always visible */}
       <div className="p-4 border-t border-border/50 shrink-0 z-10">
         <button
-          onClick={() => onTabChange('settings')}
-          title={collapsed ? t('settings') : undefined}
-          className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer ${
-            activeTab === 'settings'
-              ? 'bg-primary/5 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]'
-              : 'text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10'
+          onClick={() => onTabChange("settings")}
+          title={collapsed ? t("settings") : undefined}
+          className={`w-full flex items-center ${collapsed ? "justify-center px-0" : "gap-3 px-4"} py-3 rounded-lg text-sm font-medium transition-colors duration-300 border cursor-pointer ${
+            activeTab === "settings"
+              ? "bg-primary/5 text-foreground border-primary/15 shadow-[0_2px_12px_rgba(0,0,0,0.5)]"
+              : "text-muted-fg border-transparent hover:bg-primary/5 hover:text-foreground hover:border-primary/10"
           }`}
         >
-          <Settings size={18} strokeWidth={2} className={activeTab === 'settings' ? 'text-primary' : 'text-muted-fg'} />
-          {!collapsed && <span className="tracking-tight">{t('settings')}</span>}
+          <Settings
+            size={18}
+            strokeWidth={2}
+            className={activeTab === "settings" ? "text-primary" : "text-muted-fg"}
+          />
+          {!collapsed && <span className="tracking-tight">{t("settings")}</span>}
         </button>
       </div>
     </aside>

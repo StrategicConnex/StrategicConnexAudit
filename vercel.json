@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/uptime",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/ai/healthcheck",
+      "schedule": "0 4 * * *"
     }
   ],
   "regions": ["iad1"],
