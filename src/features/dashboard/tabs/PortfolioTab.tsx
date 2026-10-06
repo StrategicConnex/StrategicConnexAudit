@@ -96,6 +96,11 @@ interface PurpleResponse {
       exposed: number;
       protected: number;
       manualOnly: number;
+      /** Ejecuciones del adversario en la ventana (pueden existir sin
+          evaluaciones de técnica: el missRate sale solo de estos). */
+      runs: number;
+      detected: number;
+      missed: number;
       blindSpots: string[];
     };
     deltaPoints: number | null;
@@ -425,7 +430,8 @@ export function PortfolioTab({ projects, selectedProjectId, setSelectedProjectId
             </div>
             <p className="text-2xs text-muted-fg">{t('purpleDescription')}</p>
 
-            {purple && purple.current.evaluated > 0 ? (
+            {purple &&
+            (purple.current.evaluated > 0 || purple.current.missRate !== null || purple.current.runs > 0) ? (
               <div className="mt-4 space-y-3">
                 <div className="flex flex-wrap items-center gap-6">
                   <div>
@@ -436,13 +442,29 @@ export function PortfolioTab({ projects, selectedProjectId, setSelectedProjectId
                   </div>
                   <div>
                     <p className="text-2xs uppercase tracking-wider text-muted-fg">{t('purpleMissRate')}</p>
-                    <p className="text-2xl font-bold font-mono text-foreground">
+                    {/* 100% de simulacros escapados es lo más urgente del
+                        panel: se pinta en rojo de alarma, no en gris neutro. */}
+                    <p
+                      className={`text-2xl font-bold font-mono ${
+                        purple.current.missRate !== null && purple.current.missRate > 0
+                          ? "text-chart-danger"
+                          : "text-foreground"
+                      }`}
+                    >
                       {purple.current.missRate !== null ? `${purple.current.missRate}%` : '—'}
                     </p>
                   </div>
                   <div>
                     <p className="text-2xs uppercase tracking-wider text-muted-fg">{t('purpleExposed')}</p>
-                    <p className="text-2xl font-bold font-mono text-chart-danger">{purple.current.exposed}</p>
+                    <p className="text-2xl font-bold font-mono text-chart-danger">
+                      {purple.current.evaluated > 0 ? purple.current.exposed : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-2xs uppercase tracking-wider text-muted-fg">{t('purpleRuns')}</p>
+                    <p className="text-2xl font-bold font-mono text-foreground">
+                      {purple.current.runs > 0 ? purple.current.runs : '—'}
+                    </p>
                   </div>
                   {purple.deltaPoints !== null && (
                     <div>
@@ -454,6 +476,9 @@ export function PortfolioTab({ projects, selectedProjectId, setSelectedProjectId
                     </div>
                   )}
                 </div>
+                {purple.current.evaluated === 0 && (
+                  <p className="text-2xs text-muted-fg">{t('purpleNoEvaluations')}</p>
+                )}
                 {purple.current.blindSpots.length > 0 && (
                   <div className="rounded-lg border border-chart-warning/30 bg-chart-warning/5 px-3 py-2">
                     <p className="text-2xs font-semibold text-chart-warning">

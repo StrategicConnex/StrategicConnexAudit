@@ -69,6 +69,8 @@
     "purpleMissRate": "Missed in simulation",
     "purpleExposed": "Exposed",
     "purpleDelta": "Change",
+    "purpleRuns": "Simulations",
+    "purpleNoEvaluations": "No technique evaluations: the detection score needs per-technique verdicts, but the adversary runs already give signal.",
     "purpleEmpty": "No MITRE evaluations for this project yet.",
     "blindSpots": "{count} exposed technique(s) with no adversary run to confirm them.",
     "worstTitle": "Worst posture",

@@ -279,6 +279,63 @@ describe("PortfolioTab", () => {
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBefore));
   });
 
+  it("enseña los simulacros del adversario aunque no haya evaluaciones de técnica", async () => {
+    // Regresión: el panel se ocultaba entero con `evaluated > 0`, así que
+    // 4 simulacros 'missed' (missRate 100%) quedaban invisibles sin
+    // evaluaciones. El miss rate es la cifra más urgente del panel.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.startsWith("/api/portfolio/trends")) return ok({ trends: emptyTrends });
+        if (url.startsWith("/api/portfolio/purple-score")) {
+          return ok({
+            purple: {
+              ...emptyPurple,
+              current: {
+                ...emptyPurple.current,
+                evaluated: 0,
+                exposed: 0,
+                detectionScore: null,
+                missRate: 100,
+                runs: 4,
+                detected: 0,
+                missed: 4,
+              },
+            },
+          });
+        }
+        return ok({ portfolio: { ...emptyPortfolio, projectCount: 1, corporateScore: 80 } });
+      }),
+    );
+
+    renderTab();
+
+    // El panel aparece porque hay evidencia (runs > 0).
+    expect(await screen.findByText("portfolio.purpleTitle")).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByText("portfolio.purpleMissRate")).toBeInTheDocument();
+    expect(screen.getByText("portfolio.purpleRuns")).toBeInTheDocument();
+    // Y explica por qué no hay score de detección.
+    expect(screen.getByText("portfolio.purpleNoEvaluations")).toBeInTheDocument();
+    // El score de detección sin evidencia es guion, no 0%.
+    expect(screen.queryByText("0%")).not.toBeInTheDocument();
+  });
+
+  it("sin ninguna evidencia ni simulacros muestra el estado vacío", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.startsWith("/api/portfolio/trends")) return ok({ trends: emptyTrends });
+        if (url.startsWith("/api/portfolio/purple-score")) return ok({ purple: emptyPurple });
+        return ok({ portfolio: { ...emptyPortfolio, projectCount: 1, corporateScore: 80 } });
+      }),
+    );
+
+    renderTab();
+    expect(await screen.findByText("portfolio.purpleTitle")).toBeInTheDocument();
+    expect(screen.getByText("portfolio.purpleEmpty")).toBeInTheDocument();
+  });
+
   it("sin proyecto seleccionado no pide series y no se queda cargando", async () => {
     // Regresión: el efecto hacía `return` temprano sin proyecto, así que el
     // `finally` no corría, el estado de carga no terminaba nunca y el tab

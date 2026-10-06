@@ -69,6 +69,8 @@
     "purpleMissRate": "Escaparon al simulacro",
     "purpleExposed": "Expuestas",
     "purpleDelta": "Variación",
+    "purpleRuns": "Simulacros",
+    "purpleNoEvaluations": "Sin evaluaciones de técnica: el score de detección necesita veredictos por técnica, pero los simulacros del adversario ya dan señal.",
     "purpleEmpty": "Sin evaluaciones MITRE para este proyecto todavía.",
     "blindSpots": "{count} técnica(s) expuesta(s) sin ninguna ejecución del adversario que lo confirme.",
     "worstTitle": "Peor postura",
