@@ -1,6 +1,5 @@
 import {
   MITRE_MAPPING,
-  MITRE_TACTICS,
   getMitreCoverage,
   getToolsByTactic,
   type MitreTechnique,
@@ -19,12 +18,27 @@ import { Crosshair, BarChart3, ClipboardList } from "lucide-react";
 
 // ─── Tactic color mapping ─────────────────────────────────────────────────────
 
+/**
+ * Una entrada por cada táctica del framework (14), no solo por las que ya
+ * tenían herramientas: un heatmap donde Execution y Persistence no aparecen
+ * se lee como "no aplican" cuando en realidad es "aún no las cubrimos". Las
+ * tácticas sin cobertura caen en el tono neutro.
+ */
 const TACTIC_COLORS: Record<string, { bar: string; text: string; light: string }> = {
-  Reconnaissance:       { bar: "bg-accent-blue",   text: "text-accent-blue",   light: "bg-accent-blue/10" },
-  "Resource Development": { bar: "bg-accent-purple", text: "text-accent-purple", light: "bg-accent-purple/10" },
-  Discovery:           { bar: "bg-accent-cyan",   text: "text-accent-cyan",   light: "bg-accent-cyan/10" },
-  Collection:          { bar: "bg-accent-indigo",  text: "text-accent-indigo",  light: "bg-accent-indigo/10" },
-  "Command and Control": { bar: "bg-accent-violet",  text: "text-accent-violet", light: "bg-accent-violet/10" },
+  "Reconnaissance":         { bar: "bg-accent-blue",   text: "text-accent-blue",   light: "bg-accent-blue/10" },
+  "Resource Development":   { bar: "bg-accent-purple", text: "text-accent-purple", light: "bg-accent-purple/10" },
+  "Initial Access":         { bar: "bg-chart-warning", text: "text-chart-warning", light: "bg-chart-warning/10" },
+  "Execution":              { bar: "bg-muted",         text: "text-muted-foreground", light: "bg-muted/50" },
+  "Persistence":            { bar: "bg-muted",         text: "text-muted-foreground", light: "bg-muted/50" },
+  "Privilege Escalation":   { bar: "bg-muted",         text: "text-muted-foreground", light: "bg-muted/50" },
+  "Defense Evasion":        { bar: "bg-muted",         text: "text-muted-foreground", light: "bg-muted/50" },
+  "Credential Access":      { bar: "bg-muted",         text: "text-muted-foreground", light: "bg-muted/50" },
+  "Discovery":              { bar: "bg-accent-cyan",   text: "text-accent-cyan",   light: "bg-accent-cyan/10" },
+  "Lateral Movement":       { bar: "bg-muted",         text: "text-muted-foreground", light: "bg-muted/50" },
+  "Collection":             { bar: "bg-accent-indigo", text: "text-accent-indigo", light: "bg-accent-indigo/10" },
+  "Command and Control":    { bar: "bg-accent-violet", text: "text-accent-violet", light: "bg-accent-violet/10" },
+  "Exfiltration":           { bar: "bg-chart-danger",  text: "text-chart-danger",  light: "bg-chart-danger/10" },
+  "Impact":                 { bar: "bg-muted",         text: "text-muted-foreground", light: "bg-muted/50" },
 };
 
 function getColor(tactic: string) {
@@ -36,19 +50,21 @@ function getColor(tactic: string) {
 function buildCoverageData() {
   const coverage = getMitreCoverage();
 
-  // Map tactic → tools + techniques
-  const tactics = MITRE_TACTICS.filter((t) => coverage.toolsPerTactic[t.name]);
-  const tacticData = tactics.map((tactic) => {
+  // Todas las tácticas del framework, en su orden canónico. Antes se filtraba
+  // por `coverage.toolsPerTactic[t.name]`, lo que borraba de la vista las
+  // tácticas sin cobertura y hacía el heatmap más completo de lo que es.
+  const tacticData = coverage.tacticCoverage.map(({ tactic, toolCount }) => {
     const toolIds = getToolsByTactic(tactic.name);
     const techniques = new Map<string, MitreTechnique>();
     for (const toolId of toolIds) {
       const t = MITRE_MAPPING[toolId];
-      if (t) for (const tech of t) techniques.set(tech.id, tech);
+      if (t) for (const tech of t) if (tech.tactic === tactic.name) techniques.set(tech.id, tech);
     }
     return {
       tactic,
-      toolCount: toolIds.length,
+      toolCount,
       techniqueCount: techniques.size,
+      covered: toolCount > 0,
       tools: toolIds,
       techniques: Array.from(techniques.values()),
     };
@@ -178,12 +194,17 @@ export default async function MitreCoveragePage() {
 
             {/* Total Tactics */}
             <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5">
-              <MiniDonut value={coverage.totalTactics} max={14} color="var(--accent-purple)" label={`${coverage.totalTactics} de 14 tácticas alcanzadas`} />
+              <MiniDonut value={coverage.totalTactics} max={coverage.frameworkTactics} color="var(--accent-purple)" label={`${coverage.totalTactics} de ${coverage.frameworkTactics} tácticas alcanzadas`} />
               <div>
-                <p className="text-2xl font-bold text-accent-purple font-mono">{coverage.totalTactics}</p>
+                <p className="text-2xl font-bold text-accent-purple font-mono">
+                  {coverage.totalTactics}
+                  <span className="text-muted-foreground text-base">/{coverage.frameworkTactics}</span>
+                </p>
                 <p className="text-xs text-muted-foreground font-medium mt-0.5">Tácticas Alcanzadas</p>
                 <p className="text-2xs text-muted-foreground mt-1">
-                  De 14 tácticas en la matriz Enterprise
+                  {coverage.uncoveredTactics.length > 0
+                    ? `Sin cobertura: ${coverage.uncoveredTactics.join(", ")}`
+                    : "Las 14 tácticas de la matriz Enterprise"}
                 </p>
               </div>
             </div>
@@ -212,17 +233,24 @@ export default async function MitreCoveragePage() {
             </span>
             <div>
               <h2 className="text-sm font-semibold text-foreground">Cobertura por Táctica</h2>
-              <p className="text-2xs text-muted-foreground">Cantidad de herramientas de escaneo que aportan a cada táctica MITRE</p>
+              <p className="text-2xs text-muted-foreground">
+                Las {coverage.frameworkTactics} tácticas de la matriz Enterprise. Las que no aportan herramientas
+                aparecen sin barra: son trabajo pendiente, no técnicas irrelevantes.
+              </p>
             </div>
           </div>
 
           <div className="space-y-2.5">
-            {tacticData.map(({ tactic, toolCount, techniqueCount, techniques }) => {
+            {tacticData.map(({ tactic, toolCount, techniqueCount, covered, techniques }) => {
               const c = getColor(tactic.name);
               const pct = Math.round((toolCount / maxTools) * 100);
               return (
                 <details key={tactic.id} className="group bg-card border border-border rounded-lg overflow-hidden transition-all duration-200 hover:border-foreground/20">
-                  <summary className="flex items-center gap-4 px-5 py-3.5 cursor-pointer list-none hover:bg-surface-muted transition-colors select-none">
+                  <summary
+                    className={`flex items-center gap-4 px-5 py-3.5 cursor-pointer list-none hover:bg-surface-muted transition-colors select-none ${
+                      covered ? "" : "opacity-70"
+                    }`}
+                  >
                     {/* Tactic badge */}
                     <span className={`w-2 h-2 rounded-full shrink-0 ${c.bar}`} />
 
@@ -239,19 +267,30 @@ export default async function MitreCoveragePage() {
 
                     {/* Numbers */}
                     <div className="flex items-center gap-4 shrink-0 text-xs">
-                      <span className="font-mono font-bold text-foreground min-w-[3ch] text-right">{toolCount}</span>
-                      <span className="text-muted-foreground">herramientas</span>
-                      <span className="font-mono text-muted-foreground min-w-[3ch] text-right">{techniqueCount}</span>
-                      <span className="text-muted-foreground">técnicas</span>
+                      {covered ? (
+                        <>
+                          <span className="font-mono font-bold text-foreground min-w-[3ch] text-right">{toolCount}</span>
+                          <span className="text-muted-foreground">herramientas</span>
+                          <span className="font-mono text-muted-foreground min-w-[3ch] text-right">{techniqueCount}</span>
+                          <span className="text-muted-foreground">técnicas</span>
+                        </>
+                      ) : (
+                        <span className="rounded border border-border bg-muted/10 px-2 py-0.5 text-2xs text-muted-foreground">
+                          sin cobertura
+                        </span>
+                      )}
                     </div>
 
-                    {/* Expand indicator */}
-                    <span className="text-muted-foreground text-xs group-open:rotate-180 transition-transform duration-200 shrink-0">
-                      ▼
-                    </span>
+                    {/* Expand indicator (solo si hay algo que mostrar) */}
+                    {covered ? (
+                      <span className="text-muted-foreground text-xs group-open:rotate-180 transition-transform duration-200 shrink-0">
+                        ▼
+                      </span>
+                    ) : null}
                   </summary>
 
                   {/* Expanded content: tool list + technique cards */}
+                  {covered ? (
                   <div className="border-t border-border px-5 py-4 space-y-4 bg-surface-muted/60">
                     {/* Technique badges */}
                     <div>
@@ -294,6 +333,7 @@ export default async function MitreCoveragePage() {
                       </div>
                     </div>
                   </div>
+                  ) : null}
                 </details>
               );
             })}
@@ -379,11 +419,18 @@ export default async function MitreCoveragePage() {
                 MITRE ATT&CK
               </a>
             </p>
-            <p className="flex items-center gap-2">
+            <p className="flex items-start gap-2">
               <span className="text-muted-foreground">📊</span>
-              {coverage.totalTechniques} técnicas únicas cubiertas por {coverage.totalTools} herramientas en {coverage.totalTactics} tácticas.
-              Las herramientas se asignan manualmente según su propósito de detección.
+              {coverage.totalTechniques} técnicas únicas cubiertas por {coverage.totalTools} herramientas en {coverage.totalTactics} de{" "}
+              {coverage.frameworkTactics} tácticas. Las herramientas se asignan manualmente según su propósito de detección.
             </p>
+            {coverage.uncoveredTactics.length > 0 && (
+              <p className="flex items-start gap-2">
+                <span className="text-muted-foreground">⚠</span>
+                Tácticas aún sin herramienta mapeada: {coverage.uncoveredTactics.join(", ")}. Cubrirlas exige
+                escáners que la plataforma todavía no ejecuta.
+              </p>
+            )}
             <p className="flex items-center gap-2">
               <span className="text-muted-foreground">🔄</span>
               El mapeo se actualiza cuando se agregan nuevas herramientas de escaneo. Fuente:{" "}

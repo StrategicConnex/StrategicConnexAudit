@@ -27,6 +27,15 @@ export interface MitreTactic {
   shortName: string;
 }
 
+/**
+ * Las 14 tácticas de MITRE ATT&CK Enterprise.
+ *
+ * Antes eran 13: faltaba Exfiltration (TA0010), pese a que /mitre-coverage
+ * ya anunciaba "De 14 tácticas en la matriz Enterprise". El número del pie
+ * era correcto; el registro estaba incompleto. Las tácticas que ninguna
+ * herramienta cubre siguen listadas aquí — `getMitreCoverage` las reporta con
+ * 0 herramientas en vez de ocultarlas, para que el hueco sea visible.
+ */
 export const MITRE_TACTICS: MitreTactic[] = [
   { id: "TA0043", name: "Reconnaissance", shortName: "RECON" },
   { id: "TA0042", name: "Resource Development", shortName: "RES-DEV" },
@@ -40,6 +49,7 @@ export const MITRE_TACTICS: MitreTactic[] = [
   { id: "TA0008", name: "Lateral Movement", shortName: "LATERAL" },
   { id: "TA0009", name: "Collection", shortName: "COLLECT" },
   { id: "TA0011", name: "Command and Control", shortName: "C2" },
+  { id: "TA0010", name: "Exfiltration", shortName: "EXFIL" },
   { id: "TA0040", name: "Impact", shortName: "IMPACT" },
 ];
 
@@ -54,8 +64,29 @@ export function getToolsByTactic(tactic: string): string[] {
   return tools;
 }
 
+export interface TacticCoverage {
+  tactic: MitreTactic;
+  toolCount: number;
+  techniqueCount: number;
+  covered: boolean;
+}
+
+export interface MitreCoverage {
+  totalTechniques: number;
+  /** Tácticas de MITRE_TACTICS con al menos una herramienta (13 sobre 14 hoy). */
+  totalTactics: number;
+  /** Tácticas del framework, no las cubiertas. */
+  frameworkTactics: number;
+  totalTools: number;
+  toolsPerTactic: Record<string, number>;
+  /** Una entrada por cada táctica del framework, incluidas las vacías. */
+  tacticCoverage: TacticCoverage[];
+  /** Nombres de las tácticas sin ninguna herramienta mapeada. */
+  uncoveredTactics: string[];
+}
+
 /** Devuelve un resumen de cobertura MITRE */
-export function getMitreCoverage() {
+export function getMitreCoverage(): MitreCoverage {
   const uniqueTechs = new Set<string>();
   const uniqueTactics = new Set<string>();
   const toolsPerTactic: Record<string, number> = {};
@@ -68,10 +99,29 @@ export function getMitreCoverage() {
     }
   }
 
+  const tacticCoverage: TacticCoverage[] = MITRE_TACTICS.map((tactic) => {
+    const toolCount = toolsPerTactic[tactic.name] ?? 0;
+    const techniqueIds = new Set<string>();
+    for (const toolId of getToolsByTactic(tactic.name)) {
+      for (const tech of MITRE_MAPPING[toolId] ?? []) {
+        if (tech.tactic === tactic.name) techniqueIds.add(tech.id);
+      }
+    }
+    return {
+      tactic,
+      toolCount,
+      techniqueCount: techniqueIds.size,
+      covered: toolCount > 0,
+    };
+  });
+
   return {
     totalTechniques: uniqueTechs.size,
     totalTactics: uniqueTactics.size,
+    frameworkTactics: MITRE_TACTICS.length,
     totalTools: Object.keys(MITRE_MAPPING).length,
     toolsPerTactic,
+    tacticCoverage,
+    uncoveredTactics: tacticCoverage.filter((t) => !t.covered).map((t) => t.tactic.name),
   };
 }

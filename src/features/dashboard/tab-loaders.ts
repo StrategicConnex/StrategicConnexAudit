@@ -12,3 +12,6 @@ export const loadIntelligenceTab = () =>
 
 export const loadTriageTab = () =>
   import('./tabs/TriageTab').then((mod) => ({ default: mod.TriageTab }));
+
+export const loadPortfolioTab = () =>
+  import('./tabs/PortfolioTab').then((mod) => ({ default: mod.PortfolioTab }));

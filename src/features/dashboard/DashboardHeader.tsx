@@ -45,6 +45,7 @@ const TITLE_KEYS: Record<string, string> = {
   reports: 'tabs.reports',
   intelligence: 'tabs.intelligence',
   triage: 'tabs.triage',
+  portfolio: 'tabs.portfolio',
   monitoring: 'tabs.monitoring',
   adversary: 'tabs.adversary',
   plugins: 'tabs.marketplace',

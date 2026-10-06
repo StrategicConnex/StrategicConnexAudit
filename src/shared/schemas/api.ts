@@ -37,3 +37,21 @@ export const PaginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
+
+/**
+ * Ventana de la vista de tendencias (B9). El rango se acota en el servidor:
+ * sin tope, `audits` y `uptime_logs` de un proyecto con histórico largo se
+ * escanean enteros para pintar la misma línea.
+ */
+export const TrendWindowSchema = z.enum(["day", "week", "month"]);
+
+export const TrendsQuerySchema = z.object({
+  projectId: z.string().uuid(),
+  bucket: TrendWindowSchema.default("week"),
+  window: z.coerce.number().int().min(1).max(52).default(12),
+});
+
+export const PurpleScoreQuerySchema = z.object({
+  projectId: z.string().uuid(),
+  days: z.coerce.number().int().min(7).max(365).default(90),
+});

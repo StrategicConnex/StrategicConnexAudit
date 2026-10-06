@@ -37,6 +37,51 @@
     "passwordVerifying": "Verifying…",
     "passwordSubmit": "Sign in"
   },
+  "portfolio": {
+    "loading": "Loading aggregated posture…",
+    "errorTitle": "Could not load the portfolio",
+    "errorDescription": "The roll-ups and series did not arrive. Retry; if it persists the problem is server-side.",
+    "loadError": "Could not load the portfolio view.",
+    "corporateScore": "Corporate score",
+    "projectsWithoutData": "{count} project(s) without a completed audit, excluded from the average",
+    "projectsScored": "Average across {count} project(s) with data",
+    "noData": "Not enough data",
+    "openCritical": "Open criticals",
+    "openTotal": "{count} open findings in total",
+    "mttr": "MTTR",
+    "noClosures": "No finding closed yet",
+    "trendTitle": "Trend",
+    "trendDescription": "Health score of completed audits. Gaps are days without an audit, not days scoring zero.",
+    "noTrend": "No comparable history",
+    "noTrendData": "No completed audits in this window yet.",
+    "bucketLabel": "Time grouping",
+    "buckets": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "resolvedInWindow": "Resolved in window",
+    "stillOpen": "Still open",
+    "uptime": "Uptime",
+    "purpleTitle": "Purple Team — detection vs execution",
+    "purpleDescription": "Of the techniques an attacker could run, how many the product actually sees.",
+    "purpleScore": "Detection score",
+    "purpleMissRate": "Missed in simulation",
+    "purpleExposed": "Exposed",
+    "purpleDelta": "Change",
+    "purpleEmpty": "No MITRE evaluations for this project yet.",
+    "blindSpots": "{count} exposed technique(s) with no adversary run to confirm them.",
+    "worstTitle": "Worst posture",
+    "worstDescription": "Up to 5 projects with the lowest health score. Projects without an audit are left out: they are not the worst, they are the unknown.",
+    "noScoredProjects": "No project has a completed audit yet.",
+    "criticalShort": "crit.",
+    "warningShort": "warn.",
+    "findingsShort": "findings",
+    "open": "Open",
+    "projectLabel": "Project",
+    "empty": "No projects yet",
+    "emptyDescription": "Create your first project to start measuring aggregated posture."
+  },
   "triage": {
     "pageTitle": "Finding Triage",
     "pageSubtitle": "Kanban board with owner, status and SLA clock. Drag a card to move it between columns.",
@@ -92,6 +137,7 @@
       "adversary": "Adversary",
       "marketplace": "Marketplace",
       "settings": "Settings",
+      "portfolio": "Portfolio",
       "triage": "Triage"
     },
     "hints": {
@@ -99,6 +145,7 @@
       "monitoring": "Active Controls: automatic checks that watch your site nonstop.",
       "adversary": "Adversary: we simulate controlled attacks to test your defenses.",
       "marketplace": "Marketplace: integrations and extensions to connect your tools.",
+      "portfolio": "Portfolio: corporate score, worst posture and trend across all your projects.",
       "triage": "Triage: findings with an owner, status and SLA clock so none get lost."
     },
     "header": {

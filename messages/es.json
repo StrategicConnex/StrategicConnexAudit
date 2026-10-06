@@ -37,6 +37,51 @@
     "passwordVerifying": "Verificando…",
     "passwordSubmit": "Iniciar sesión"
   },
+  "portfolio": {
+    "loading": "Cargando postura agregada…",
+    "errorTitle": "No se pudo cargar el portafolio",
+    "errorDescription": "Los roll-ups y las series no llegaron. Reintenta; si persiste, el problema está del lado del servidor.",
+    "loadError": "No se pudo cargar la vista de portafolio.",
+    "corporateScore": "Score corporativo",
+    "projectsWithoutData": "{count} proyecto(s) sin auditoría completada, excluidos de la media",
+    "projectsScored": "Media de {count} proyecto(s) con datos",
+    "noData": "Sin datos suficientes",
+    "openCritical": "Críticos abiertos",
+    "openTotal": "{count} hallazgos abiertos en total",
+    "mttr": "MTTR",
+    "noClosures": "Ningún hallazgo cerrado todavía",
+    "trendTitle": "Tendencia",
+    "trendDescription": "Score de salud de las auditorías completadas. Los huecos son días sin auditoría, no días con cero.",
+    "noTrend": "Sin histórico comparable",
+    "noTrendData": "Todavía no hay auditorías completadas en esta ventana.",
+    "bucketLabel": "Agrupación temporal",
+    "buckets": {
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes"
+    },
+    "resolvedInWindow": "Resueltos en la ventana",
+    "stillOpen": "Aún abiertos",
+    "uptime": "Uptime",
+    "purpleTitle": "Purple Team — detección vs ejecución",
+    "purpleDescription": "De las técnicas que el atacante podría ejecutar, cuántas ve el producto.",
+    "purpleScore": "Score de detección",
+    "purpleMissRate": "Escaparon al simulacro",
+    "purpleExposed": "Expuestas",
+    "purpleDelta": "Variación",
+    "purpleEmpty": "Sin evaluaciones MITRE para este proyecto todavía.",
+    "blindSpots": "{count} técnica(s) expuesta(s) sin ninguna ejecución del adversario que lo confirme.",
+    "worstTitle": "Peor postura",
+    "worstDescription": "Hasta 5 proyectos con menor score de salud. Los proyectos sin auditoría quedan fuera: no son los peores, son los desconocidos.",
+    "noScoredProjects": "Ningún proyecto tiene una auditoría completada todavía.",
+    "criticalShort": "crít.",
+    "warningShort": "adv.",
+    "findingsShort": "hallazgos",
+    "open": "Abrir",
+    "projectLabel": "Proyecto",
+    "empty": "Todavía no hay proyectos",
+    "emptyDescription": "Crea tu primer proyecto para empezar a medir la postura agregada."
+  },
   "triage": {
     "pageTitle": "Triage de Hallazgos",
     "pageSubtitle": "Tablero Kanban con dueño, estado y reloj de SLA. Arrastra una tarjeta para moverla de columna.",
@@ -92,6 +137,7 @@
       "adversary": "Adversario",
       "marketplace": "Marketplace",
       "settings": "Configuración",
+      "portfolio": "Portafolio",
       "triage": "Triage"
     },
     "hints": {
@@ -99,6 +145,7 @@
       "monitoring": "Controles Activos: vigilancias automáticas que revisan tu sitio sin parar.",
       "adversary": "Adversario: simulamos ataques controlados para probar tus defensas.",
       "marketplace": "Marketplace: integraciones y extensiones para conectar tus herramientas.",
+      "portfolio": "Portafolio: score corporativo, peor postura y tendencia de todos tus proyectos.",
       "triage": "Triage: hallazgos con dueño, estado y reloj de SLA para no perder ninguno."
     },
     "header": {
