@@ -37,6 +37,47 @@
     "passwordVerifying": "Verificando…",
     "passwordSubmit": "Iniciar sesión"
   },
+  "triage": {
+    "pageTitle": "Triage de Hallazgos",
+    "pageSubtitle": "Tablero Kanban con dueño, estado y reloj de SLA. Arrastra una tarjeta para moverla de columna.",
+    "projectLabel": "Proyecto",
+    "loading": "Cargando tablero…",
+    "error": "No se pudo cargar el tablero de triage.",
+    "empty": "Sin hallazgos abiertos en este proyecto.",
+    "overdue": "SLA vencido",
+    "noSla": "Sin SLA",
+    "suppressed": "Silenciado",
+    "moveError": "Ese movimiento no está permitido para el estado actual.",
+    "suppressReasonPlaceholder": "Motivo para silenciar (mín. 3 letras)",
+    "suppressError": "No se pudo silenciar el hallazgo.",
+    "columns": {
+      "open": "Nuevos",
+      "acknowledged": "Acusados",
+      "in_progress": "En curso",
+      "closed": "Cerrados"
+    },
+    "severity": {
+      "critical": "Crítica",
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja",
+      "info": "Info"
+    },
+    "actions": {
+      "open": "Reabrir",
+      "acknowledged": "Acusar recibo",
+      "in_progress": "Empezar",
+      "resolved": "Resolver",
+      "false_positive": "Falso positivo",
+      "accepted_risk": "Aceptar riesgo",
+      "suppress": "Silenciar"
+    },
+    "detail": {
+      "aiTitle": "Triage IA del hallazgo",
+      "businessImpact": "Impacto de negocio",
+      "remediation": "Remediación sugerida"
+    }
+  },
   "sidebar": {
     "brand": "StrategicAudit",
     "pro": "PRO",
@@ -50,13 +91,15 @@
       "monitoring": "Controles Activos",
       "adversary": "Adversario",
       "marketplace": "Marketplace",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "triage": "Triage"
     },
     "hints": {
       "intelligence": "Inteligencia: amenazas y hallazgos de seguridad explicados en simple.",
       "monitoring": "Controles Activos: vigilancias automáticas que revisan tu sitio sin parar.",
       "adversary": "Adversario: simulamos ataques controlados para probar tus defensas.",
-      "marketplace": "Marketplace: integraciones y extensiones para conectar tus herramientas."
+      "marketplace": "Marketplace: integraciones y extensiones para conectar tus herramientas.",
+      "triage": "Triage: hallazgos con dueño, estado y reloj de SLA para no perder ninguno."
     },
     "header": {
       "overviewTitle": "Panel",

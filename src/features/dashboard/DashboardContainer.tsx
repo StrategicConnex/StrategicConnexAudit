@@ -8,7 +8,7 @@ import { DashboardHeader } from './DashboardHeader';
 import { CommandPalette } from '@/components/CommandPalette';
 import { OverviewTab } from './tabs/OverviewTab';
 import { TabSkeleton } from './TabSkeleton';
-import { loadIntelligenceTab } from './tab-loaders';
+import { loadIntelligenceTab, loadTriageTab } from './tab-loaders';
 import type { KeywordItem } from './tabs/KeywordsTab';
 
 /**
@@ -50,6 +50,10 @@ const AdversaryTab = dynamic(() => import('./tabs/AdversaryTab').then(mod => ({ 
 });
 
 const MarketplaceTab = dynamic(() => import('./tabs/MarketplaceTab').then(mod => ({ default: mod.MarketplaceTab })), {
+  loading: () => <TabSkeleton />,
+});
+
+const TriageTab = dynamic(loadTriageTab, {
   loading: () => <TabSkeleton />,
 });
 
@@ -328,6 +332,14 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
 
             {activeTab === 'plugins' && (
               <MarketplaceTab />
+            )}
+
+            {activeTab === 'triage' && (
+              <TriageTab
+                initialProjects={initialProjects}
+                selectedProjectId={selectedProjectId}
+                setSelectedProjectId={pickProject}
+              />
             )}
 
           </div>

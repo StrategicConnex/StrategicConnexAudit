@@ -2,7 +2,7 @@ import {
   pgTable, uuid, text, integer, timestamp, pgEnum,
   jsonb, boolean, numeric, unique, index
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { sql, desc } from "drizzle-orm";
 import { users, projects } from "./index";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -93,6 +93,17 @@ export const intelligenceFindings = pgTable("intelligence_findings", {
   /** Momento del triage; null = pendiente de clasificar. */
   aiTriageAt: timestamp("ai_triage_at", { withTimezone: true }),
 
+  /** Ciclo de vida (drizzle/2026-10-05_finding_lifecycle.sql). */
+  status: text("status").notNull().default("open"),
+  assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
+  /** Horas de SLA fijadas al acusar recibo; null = sin SLA. */
+  slaHours: integer("sla_hours"),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  suppressedUntil: timestamp("suppressed_until", { withTimezone: true }),
+  suppressedReason: text("suppressed_reason"),
+
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   // Índice parcial del sweep: localiza rápido los pendientes de triage.
@@ -105,6 +116,11 @@ export const intelligenceFindings = pgTable("intelligence_findings", {
   // REC-01 (TSK-008): FK tool_run_id con onDelete set null — borrar un tool_run
   // fuerza seq scan sobre findings sin este índice.
   index("idx_findings_tool_run").on(t.toolRunId),
+  // Ciclo de vida (2026-10-05): tablero por estado + reloj de SLA (parcial).
+  index("idx_findings_status").on(t.projectId, t.status, desc(t.createdAt)),
+  index("idx_findings_due")
+    .on(t.dueAt)
+    .where(sql`due_at IS NOT NULL AND status NOT IN ('resolved', 'false_positive', 'accepted_risk')`),
 ]);
 
 // 4. Activos Descubiertos (Subdominios, IPs, etc.)
@@ -153,6 +169,19 @@ export const intelligenceUsageEvents = pgTable("intelligence_usage_events", {
   index("idx_intel_usage_user").on(t.userId),
 ]);
 
+// 7. Historial de Transiciones del Hallazgo (Kanban de Triage)
+export const findingActivity = pgTable("finding_activity", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  findingId: uuid("finding_id").references(() => intelligenceFindings.id, { onDelete: "cascade" }).notNull(),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status").notNull(),
+  actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index("idx_finding_activity_finding_created").on(t.findingId, t.createdAt),
+]);
+
 // ─── Tipos canónicos derivados del schema ────────────────────────────────────
 // FUENTE ÚNICA DE VERDAD para filas de intelligence. Los componentes deben
 // importar estos tipos en lugar de redeclarar interfaces locales divergentes
@@ -164,6 +193,8 @@ export type IntelligenceFinding = typeof intelligenceFindings.$inferSelect;
 export type IntelligenceAsset = typeof intelligenceAssets.$inferSelect;
 export type IntelligenceRunEvent = typeof intelligenceRunEvents.$inferSelect;
 export type IntelligenceUsageEvent = typeof intelligenceUsageEvents.$inferSelect;
+export type IntelligenceFindingActivity = typeof findingActivity.$inferSelect;
+export type NewIntelligenceFindingActivity = typeof findingActivity.$inferInsert;
 export type FindingSeverity = (typeof findingSeverityEnum.enumValues)[number];
 export type InvestigationStatus = (typeof investigationStatusEnum.enumValues)[number];
 

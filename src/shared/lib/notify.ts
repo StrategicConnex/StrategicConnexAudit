@@ -10,9 +10,12 @@ import { toast } from 'sonner';
    - Historial de sesión en memoria (la campana del header lo muestra)
    - Pub/sub simple para que los suscriptores reaccionen a cambios
 
-   El historial es solo de sesión (se pierde al recargar): honesto y sin
-   backend nuevo. Los canales email/Telegram viven del digest semanal
-   (runWeeklyDigest) y de project.settings.telegramChatId.
+   Dos fuentes en el mismo historial:
+   - Sesión: los eventos que `notify.*` registra en memoria (toast + campana).
+   - Servidor: la bandeja persistente (`/api/notifications`, Tanda 2 / B3) que
+     `useNotificationCenter` hidrata al montar, para que un aviso no se pierda
+     si el usuario recarga. Los canales email/Telegram viven del digest semanal
+     (runWeeklyDigest) y de project.settings.telegramChatId.
    ═══════════════════════════════════════════════════════════════════════ */
 
 export type NotificationSeverity = 'success' | 'error' | 'info' | 'warning';
@@ -29,6 +32,8 @@ export interface NotificationEntry {
 type Listener = () => void;
 
 const MAX_HISTORY = 20;
+// La bandeja persistente puede aportar más entradas que la sesión.
+const MAX_MERGED = 50;
 const history: NotificationEntry[] = [];
 const listeners = new Set<Listener>();
 
@@ -105,6 +110,21 @@ export function markAllRead() {
 /** Limpia el historial de sesión. */
 export function clearNotifications() {
   history.length = 0;
+  emit();
+}
+
+/**
+ * Fusiona la bandeja persistente del servidor con el historial de sesión.
+ * Deduplica por id (re-llamadas no duplican) y ordena por fecha desc. No
+ * reemplaza las entradas de sesión: son eventos recientes aún sin persistir.
+ */
+export function mergeServerNotifications(entries: NotificationEntry[]) {
+  const byId = new Map<string, NotificationEntry>();
+  for (const e of history) byId.set(e.id, e);
+  for (const e of entries) if (!byId.has(e.id)) byId.set(e.id, e);
+  const merged = [...byId.values()].sort((a, b) => b.createdAt - a.createdAt);
+  history.length = 0;
+  history.push(...merged.slice(0, MAX_MERGED));
   emit();
 }
 

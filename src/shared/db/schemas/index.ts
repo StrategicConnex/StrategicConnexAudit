@@ -501,6 +501,7 @@ export * from "./monitoring";
 export * from "./security-audit";
 export * from "./health";
 export * from "./push-subscriptions";
+export * from "./notifications";
 
 export * from "./history";
 export * from "./teams";

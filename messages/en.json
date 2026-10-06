@@ -37,6 +37,47 @@
     "passwordVerifying": "Verifying…",
     "passwordSubmit": "Sign in"
   },
+  "triage": {
+    "pageTitle": "Finding Triage",
+    "pageSubtitle": "Kanban board with owner, status and SLA clock. Drag a card to move it between columns.",
+    "projectLabel": "Project",
+    "loading": "Loading board…",
+    "error": "Could not load the triage board.",
+    "empty": "No open findings in this project.",
+    "overdue": "SLA breached",
+    "noSla": "No SLA",
+    "suppressed": "Muted",
+    "moveError": "That move is not allowed from the current status.",
+    "suppressReasonPlaceholder": "Reason to mute (min. 3 chars)",
+    "suppressError": "Could not mute the finding.",
+    "columns": {
+      "open": "New",
+      "acknowledged": "Acknowledged",
+      "in_progress": "In progress",
+      "closed": "Closed"
+    },
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "info": "Info"
+    },
+    "actions": {
+      "open": "Reopen",
+      "acknowledged": "Acknowledge",
+      "in_progress": "Start",
+      "resolved": "Resolve",
+      "false_positive": "False positive",
+      "accepted_risk": "Accept risk",
+      "suppress": "Mute"
+    },
+    "detail": {
+      "aiTitle": "AI triage for this finding",
+      "businessImpact": "Business impact",
+      "remediation": "Suggested remediation"
+    }
+  },
   "sidebar": {
     "brand": "StrategicAudit",
     "pro": "PRO",
@@ -50,13 +91,15 @@
       "monitoring": "Active Controls",
       "adversary": "Adversary",
       "marketplace": "Marketplace",
-      "settings": "Settings"
+      "settings": "Settings",
+      "triage": "Triage"
     },
     "hints": {
       "intelligence": "Intelligence: security threats and findings explained simply.",
       "monitoring": "Active Controls: automatic checks that watch your site nonstop.",
       "adversary": "Adversary: we simulate controlled attacks to test your defenses.",
-      "marketplace": "Marketplace: integrations and extensions to connect your tools."
+      "marketplace": "Marketplace: integrations and extensions to connect your tools.",
+      "triage": "Triage: findings with an owner, status and SLA clock so none get lost."
     },
     "header": {
       "overviewTitle": "Dashboard",

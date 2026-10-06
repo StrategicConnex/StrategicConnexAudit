@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import {
   LayoutDashboard, Globe, Activity, Search, BarChart3, ShieldCheck,
-  Sliders, Skull, Package, Settings, X, BookOpen, HeartPulse, Crosshair, Key, Zap,
+  Sliders, Skull, Package, Settings, X, BookOpen, HeartPulse, Crosshair, Key, Zap, ListChecks,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -23,6 +23,7 @@ const TABS: { tab: DashboardTab; icon: React.ReactNode; labelKey: string; hintKe
   { tab: 'keywords', icon: <Search size={18} strokeWidth={2} />, labelKey: 'tabs.keywords' },
   { tab: 'reports', icon: <BarChart3 size={18} strokeWidth={2} />, labelKey: 'tabs.reports' },
   { tab: 'intelligence', icon: <ShieldCheck size={18} strokeWidth={2} />, labelKey: 'tabs.intelligence', hintKey: 'hints.intelligence' },
+  { tab: 'triage', icon: <ListChecks size={18} strokeWidth={2} />, labelKey: 'tabs.triage', hintKey: 'hints.triage' },
   { tab: 'monitoring', icon: <Sliders size={18} strokeWidth={2} />, labelKey: 'tabs.monitoring', hintKey: 'hints.monitoring' },
   { tab: 'adversary', icon: <Skull size={18} strokeWidth={2} />, labelKey: 'tabs.adversary', hintKey: 'hints.adversary' },
   { tab: 'plugins', icon: <Package size={18} strokeWidth={2} />, labelKey: 'tabs.marketplace', hintKey: 'hints.marketplace' },

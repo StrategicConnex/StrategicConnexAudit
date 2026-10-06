@@ -337,6 +337,20 @@
       "when": 1791121706820,
       "tag": "2026-10-04_users_self_write_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1791241278502,
+      "tag": "2026-10-05_finding_lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1791244800000,
+      "tag": "2026-10-05_notifications",
+      "breakpoints": true
     }
   ]
 }

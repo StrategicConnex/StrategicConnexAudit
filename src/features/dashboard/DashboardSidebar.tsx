@@ -17,13 +17,14 @@ import {
   Key,
   Skull,
   Package,
+  ListChecks,
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Badge } from "@/components/ui/Badge";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/features/dashboard/LanguageSwitcher";
-import { loadIntelligenceTab } from "./tab-loaders";
+import { loadIntelligenceTab, loadTriageTab } from "./tab-loaders";
 import { ThemeSwitcher } from "@/shared/design-system";
 
 const AiCoreVisual = dynamic(() => import("./AiCoreVisual"), { ssr: false });
@@ -40,7 +41,8 @@ export type DashboardTab =
   | "monitoring"
   | "adversary"
   | "plugins"
-  | "settings";
+  | "settings"
+  | "triage";
 
 interface DashboardSidebarProps {
   activeTab: DashboardTab;
@@ -287,6 +289,19 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
             hint={t("hints.marketplace")}
             badge={<Badge variant="neutral">{t("new")}</Badge>}
             onClick={() => onTabChange("plugins")}
+          />
+
+          <NavButton
+            collapsed={collapsed}
+            tab="triage"
+            activeTab={activeTab}
+            icon={<ListChecks size={18} strokeWidth={2} />}
+            label={t("tabs.triage")}
+            hint={t("hints.triage")}
+            onClick={() => onTabChange("triage")}
+            onHover={() => {
+              void loadTriageTab();
+            }}
           />
         </NavSection>
       </nav>
