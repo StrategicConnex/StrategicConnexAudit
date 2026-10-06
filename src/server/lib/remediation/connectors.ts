@@ -58,6 +58,28 @@ export const CONNECTORS: ConnectorDef[] = [
     ],
   },
   {
+    id: "jira.create_issue",
+    label: "Jira: crear issue",
+    description:
+      "Abre un issue en Jira Cloud con el plan de remediación (usa la descripción en formato ADF, obligatorio en la API v3).",
+    fields: [
+      { key: "siteUrl", label: "URL de Jira", placeholder: "https://acme.atlassian.net" },
+      { key: "email", label: "Email de la cuenta Atlassian", placeholder: "soc@acme.com" },
+      { key: "apiToken", label: "API token", secret: true },
+      { key: "projectKey", label: "Clave del proyecto", placeholder: "SEC" },
+      { key: "issueType", label: "Tipo de issue", placeholder: "Task" },
+    ],
+  },
+  {
+    id: "linear.create_issue",
+    label: "Linear: crear issue",
+    description: "Crea un issue en el equipo de Linear vía GraphQL (issueCreate).",
+    fields: [
+      { key: "apiKey", label: "API key de Linear", secret: true },
+      { key: "teamId", label: "ID del equipo (teamId)", placeholder: "e1f2a3b4-…" },
+    ],
+  },
+  {
     id: "http.request",
     label: "HTTP: webhook genérico",
     description: "Llama a cualquier URL (Zapier, Make, n8n) con el payload dado.",
@@ -173,6 +195,71 @@ export async function executeConnector(
       return { ok: true, evidence: { issueUrl: url } };
     }
 
+    case "jira.create_issue": {
+      const { siteUrl, email, apiToken, projectKey, issueType } = cfg;
+      if (!siteUrl || !email || !apiToken || !projectKey) {
+        throw new Error("Faltan siteUrl, email, apiToken o projectKey");
+      }
+      const base = siteUrl.replace(/\/$/, "");
+      await assertPublicHostname(new URL(base).hostname);
+      const auth = Buffer.from(`${email}:${apiToken}`).toString("base64");
+      const { status, json } = await fetchJson(`${base}/rest/api/3/issue`, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${auth}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fields: {
+            project: { key: projectKey },
+            summary: context.title.slice(0, 240),
+            issuetype: { name: issueType || "Task" },
+            description: adfDocument([context.title, ...context.steps]),
+          },
+        }),
+      });
+      if (status < 200 || status >= 300) throw new Error(`Jira respondió ${status}`);
+      const key = (json as { key?: string } | null)?.key ?? null;
+      return {
+        ok: true,
+        evidence: { issueKey: key, issueUrl: key ? `${base}/browse/${key}` : null },
+      };
+    }
+
+    case "linear.create_issue": {
+      const { apiKey, teamId } = cfg;
+      if (!apiKey || !teamId) throw new Error("Faltan apiKey o teamId");
+      await assertPublicHostname("api.linear.app");
+      const { status, json } = await fetchJson("https://api.linear.app/graphql", {
+        method: "POST",
+        // Linear usa la API key tal cual en la cabecera Authorization.
+        headers: { Authorization: apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query:
+            "mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url } } }",
+          variables: {
+            input: {
+              teamId,
+              title: context.title.slice(0, 240),
+              description: context.steps.map((s, i) => `${i + 1}. ${s}`).join("\n"),
+            },
+          },
+        }),
+      });
+      if (status < 200 || status >= 300) throw new Error(`Linear respondió ${status}`);
+      const issue = (
+        json as {
+          data?: { issueCreate?: { issue?: { identifier?: string; url?: string } } };
+        } | null
+      )?.data?.issueCreate?.issue;
+      if (!issue) throw new Error("Linear no devolvió el issue creado");
+      return {
+        ok: true,
+        evidence: { identifier: issue.identifier ?? null, issueUrl: issue.url ?? null },
+      };
+    }
+
     case "http.request": {
       const { url, method, body } = cfg;
       if (!url) throw new Error("Falta url");
@@ -190,6 +277,24 @@ export async function executeConnector(
     default:
       throw new Error(`Conector desconocido: ${connector satisfies never}`);
   }
+}
+
+/**
+ * Documento ADF mínimo y válido para `description` de Jira Cloud v3, que no
+ * acepta texto plano. Un párrafo por línea del plan de remediación.
+ */
+export function adfDocument(paragraphs: string[]): Record<string, unknown> {
+  const content = paragraphs
+    .filter((p) => p.trim().length > 0)
+    .map((p) => ({
+      type: "paragraph",
+      content: [{ type: "text", text: p.slice(0, 3000) }],
+    }));
+  return {
+    type: "doc",
+    version: 1,
+    content: content.length > 0 ? content : [{ type: "paragraph" }],
+  };
 }
 
 /** Descifra la config almacenada (acepta legacy en claro por migración). */

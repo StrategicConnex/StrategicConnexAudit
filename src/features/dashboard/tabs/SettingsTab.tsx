@@ -20,12 +20,19 @@ import {
   Search,
   ArrowUpDown,
   Clock,
-  BarChart3
+  BarChart3,
+  Send
 } from 'lucide-react';
 import { logger } from "@/lib/logger";
 import { formatDate } from '@/shared/utils/datetime';
 import { TeamSettingsTab } from '../TeamSettingsTab';
 import { AgencySection } from '../AgencySection';
+import {
+  WEBHOOK_EVENTS,
+  DEFAULT_WEBHOOK_EVENTS,
+  webhookEventLabelKey,
+  webhookEventDescriptionKey,
+} from '@/shared/lib/webhook-events';
 
 interface Project {
   id: string;
@@ -108,11 +115,16 @@ export function SettingsTab({
   // Create Webhook state
   const [newWebhookName, setNewWebhookName] = useState('');
   const [newWebhookUrl, setNewWebhookUrl] = useState('');
-  const [webhookEvents, setWebhookEvents] = useState<string[]>(['audit.completed', 'alert.triggered']);
+  const [webhookEvents, setWebhookEvents] = useState<string[]>([...DEFAULT_WEBHOOK_EVENTS]);
   const [webhookActive, setWebhookActive] = useState(true);
   const [creatingWebhook, setCreatingWebhook] = useState(false);
   const [revealedWebhookSecret, setRevealedWebhookSecret] = useState<string | null>(null);
   const [showWebhookModal, setShowWebhookModal] = useState(false);
+  // B7: resultado de la última entrega de prueba (id de webhook → resultado).
+  const [testingWebhookId, setTestingWebhookId] = useState<string | null>(null);
+  const [webhookTestResults, setWebhookTestResults] = useState<
+    Record<string, { ok: boolean; message: string }>
+  >({});
 
   // Copy helper
   const handleCopy = (text: string, id: string) => {
@@ -280,7 +292,7 @@ export function SettingsTab({
         setShowWebhookModal(true);
         setNewWebhookName('');
         setNewWebhookUrl('');
-        setWebhookEvents(['audit.completed', 'alert.triggered']);
+        setWebhookEvents([...DEFAULT_WEBHOOK_EVENTS]);
         setWebhookActive(true);
         fetchWebhooks(selectedProjectId); // reload
       } else {
@@ -309,6 +321,29 @@ export function SettingsTab({
       }
     } catch (err: unknown) {
       alert(t('webhooksDeleteNetworkError', { error: getErrorMessage(err) }));
+    }
+  };
+
+  // B7: entrega un `webhook.test` real contra el destino. Un fallo se
+  // muestra como fallo (no se disfraza de éxito).
+  const handleTestWebhook = async (id: string) => {
+    setTestingWebhookId(id);
+    try {
+      const res = await fetch(`/api/webhooks/${id}/test?projectId=${selectedProjectId}`, { method: 'POST' });
+      const data = await res.json();
+      setWebhookTestResults(prev => ({
+        ...prev,
+        [id]: data.success
+          ? { ok: true, message: t('webhooksTestOk', { status: data.status ?? 200 }) }
+          : { ok: false, message: t('webhooksTestFail', { error: data.error || 'error' }) },
+      }));
+    } catch (err: unknown) {
+      setWebhookTestResults(prev => ({
+        ...prev,
+        [id]: { ok: false, message: t('webhooksTestFail', { error: getErrorMessage(err) }) },
+      }));
+    } finally {
+      setTestingWebhookId(null);
     }
   };
 
@@ -734,32 +769,26 @@ export function SettingsTab({
               {/* Event Suscription */}
               <div className="space-y-3">
                 <label className="text-2xs font-bold text-muted-fg uppercase tracking-widest block">{t('webhooksEventsLabel')}</label>
+                {/* Catálogo canónico (B7): solo eventos que un productor emite de verdad. */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-colors cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={webhookEvents.includes('audit.completed')}
-                      onChange={() => handleToggleEvent('audit.completed')}
-                      className="mt-0.5 rounded border-border text-primary focus:ring-primary/20 bg-card"
-                    />
-                    <div>
-                      <span className="text-xs font-bold text-foreground block font-mono">audit.completed</span>
-                      <span className="text-2xs text-muted-fg">{t('webhooksEventAuditDesc')}</span>
-                    </div>
-                  </label>
-
-                  <label className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-colors cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={webhookEvents.includes('alert.triggered')}
-                      onChange={() => handleToggleEvent('alert.triggered')}
-                      className="mt-0.5 rounded border-border text-primary focus:ring-primary/20 bg-card"
-                    />
-                    <div>
-                      <span className="text-xs font-bold text-foreground block font-mono">alert.triggered</span>
-                      <span className="text-2xs text-muted-fg">{t('webhooksEventAlertDesc')}</span>
-                    </div>
-                  </label>
+                  {WEBHOOK_EVENTS.map((event) => (
+                    <label
+                      key={event.id}
+                      className="flex items-start gap-3 p-4 bg-card border border-border rounded-xl hover:bg-card transition-colors cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={webhookEvents.includes(event.id)}
+                        onChange={() => handleToggleEvent(event.id)}
+                        className="mt-0.5 rounded border-border text-primary focus:ring-primary/20 bg-card"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-foreground block">{t(webhookEventLabelKey(event.id))}</span>
+                        <span className="text-2xs text-muted-fg block font-mono">{event.id}</span>
+                        <span className="text-2xs text-muted-fg">{t(webhookEventDescriptionKey(event.id))}</span>
+                      </div>
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -852,6 +881,12 @@ export function SettingsTab({
                             </span>
                           ))}
                         </div>
+
+                        {webhookTestResults[wh.id] && (
+                          <p className={`text-2xs font-bold ${webhookTestResults[wh.id]!.ok ? 'text-chartreuse' : 'text-destructive'}`}>
+                            {webhookTestResults[wh.id]!.message}
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-3 justify-end flex-shrink-0">
@@ -866,6 +901,19 @@ export function SettingsTab({
                             {wh.secretTokenPreview}
                           </span>
                         )}
+
+                        <button
+                          onClick={() => handleTestWebhook(wh.id)}
+                          disabled={testingWebhookId === wh.id}
+                          className="text-primary bg-primary/10 hover:bg-primary/20 p-2 rounded-xl border border-primary/20 transition-colors cursor-pointer disabled:opacity-50"
+                          title={t('webhooksTestTitle')}
+                        >
+                          {testingWebhookId === wh.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4" />
+                          )}
+                        </button>
 
                         <button
                           onClick={() => handleDeleteWebhook(wh.id)}

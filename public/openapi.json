@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "SCAUDIT — StrategicAudit Pro REST API",
-    "description": "API pública de inteligencia de infraestructura cibernética. Automatiza escaneos de subdominios, TLS, DNS, emails y más.\n\n## Autenticación\n- **API Key** (para endpoints públicos): `Authorization: Bearer sa_live_xxx`\n- **Session Cookie** (para endpoints del dashboard): autenticación vía Supabase\n\n## Rate Limiting\nTodas las respuestas incluyen headers de rate limiting estándar (IETF) que indican el estado actual de tu cuota:\n| Header | Descripción |\n|--------|-------------|\n| `RateLimit-Limit` | Máximo de requests permitidos en la ventana de tiempo |\n| `RateLimit-Remaining` | Requests restantes en la ventana actual |\n| `RateLimit-Reset` | Timestamp Unix (ms) del momento en que se reestablece la cuota |\n| `Retry-After` | (Solo 429) Segundos hasta reintentar |\n\nLímites vigentes:\n- Endpoints públicos: 60 requests/min por API Key\n- Endpoints de dashboard: 30 requests/min por sesión\n- Reportes PDF: 5 requests/min\n- Escaneos de inteligencia: 30 requests/min por usuario Outbound events (project webhooks): finding.critical, anomaly.detected, uptime.down.",
+    "description": "API pública de inteligencia de infraestructura cibernética. Automatiza escaneos de subdominios, TLS, DNS, emails y más.\n\n## Autenticación\n- **API Key** (para endpoints públicos): `Authorization: Bearer sa_live_xxx`\n- **Session Cookie** (para endpoints del dashboard): autenticación vía Supabase\n\n## Rate Limiting\nTodas las respuestas incluyen headers de rate limiting estándar (IETF) que indican el estado actual de tu cuota:\n| Header | Descripción |\n|--------|-------------|\n| `RateLimit-Limit` | Máximo de requests permitidos en la ventana de tiempo |\n| `RateLimit-Remaining` | Requests restantes en la ventana actual |\n| `RateLimit-Reset` | Timestamp Unix (ms) del momento en que se reestablece la cuota |\n| `Retry-After` | (Solo 429) Segundos hasta reintentar |\n\nLímites vigentes:\n- Endpoints públicos: 60 requests/min por API Key\n- Endpoints de dashboard: 30 requests/min por sesión\n- Reportes PDF: 5 requests/min\n- Escaneos de inteligencia: 30 requests/min por usuario Outbound events (project webhooks): finding.critical, anomaly.detected, uptime.down. Scopes de API key: intelligence:read, intelligence:write, reports:read, findings:read, adversary:read.",
     "version": "1.0.0",
     "contact": {
       "name": "Strategic Connex",
@@ -1111,6 +1111,453 @@
           },
           "429": {
             "description": "Too many requests — rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/findings": {
+      "get": {
+        "summary": "List project findings",
+        "description": "Hallazgos del proyecto (owner o miembro), de mas reciente a mas antiguo. cvssScore y mitreId salen del triage IA y son null mientras el hallazgo no se ha clasificado: un dato ausente se informa como ausente, nunca como 0.",
+        "tags": [
+          "Public v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": [
+              "findings:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "critical",
+                "high",
+                "medium",
+                "low",
+                "info"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "critical",
+                              "high",
+                              "medium",
+                              "low",
+                              "info"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "affectedAsset": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "cvssScore": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "mitreId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "projectId is required / invalid severity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API key does not include required scope: findings:read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found or access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/adversary": {
+      "get": {
+        "summary": "List adversary simulation results",
+        "description": "Ejecuciones de escenarios purple (result detected/missed/error) y evaluaciones de superficie con riskScore. Un run sin veredicto devuelve result: null; no cuenta como missed ni como acierto.",
+        "tags": [
+          "Public v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": [
+              "adversary:read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "runs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "result": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "detected",
+                              "missed",
+                              "error",
+                              null
+                            ]
+                          },
+                          "detectedBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "mitreId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "scenarioName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "completedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "assessments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "target": {
+                            "type": "string"
+                          },
+                          "riskScore": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "summary": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "completedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "projectId is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API key does not include required scope: adversary:read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found or access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
             "content": {
               "application/json": {
                 "schema": {

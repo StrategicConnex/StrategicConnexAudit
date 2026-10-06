@@ -13,6 +13,12 @@ import { encryptField, maskSecret } from "@/server/lib/field-crypto";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { withRequestContext } from "@/lib/request-context";
+import {
+  DEFAULT_WEBHOOK_EVENTS,
+  WEBHOOK_EVENTS,
+  isWebhookEvent,
+  listWebhookEventIds,
+} from "@/shared/lib/webhook-events";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +26,17 @@ const webhookCreateSchema = z.object({
   projectId: z.string().uuid(),
   name: z.string().min(1).max(256),
   url: z.string().url().max(2048),
-  events: z.array(z.string()).default(["audit.completed", "alert.triggered"]),
+  // B7: solo eventos del catálogo. Antes aceptaba cualquier string, así que
+  // el cliente podía suscribirse a eventos que nadie emite (`audit.completed`)
+  // y su webhook no recibía jamás nada.
+  events: z
+    .array(z.string())
+    .min(1)
+    .max(WEBHOOK_EVENTS.length)
+    .refine((list) => list.every(isWebhookEvent), {
+      message: "Evento desconocido",
+    })
+    .default([...DEFAULT_WEBHOOK_EVENTS]),
   active: z.boolean().default(true)
 });
 
@@ -118,6 +134,19 @@ async function rawPost(req: NextRequest) {
     const body = await req.json();
     const parseResult = webhookCreateSchema.safeParse(body);
     if (!parseResult.success) {
+      // Un evento fuera del catálogo es el error más probable del cliente y el
+      // más caro de depurar en silencio: se responde con los ids válidos.
+      const badEvents = parseResult.error.issues.some((issue) => issue.path[0] === "events");
+      if (badEvents) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Evento no reconocido. Válidos: ${listWebhookEventIds().join(", ")}`,
+            validEvents: listWebhookEventIds(),
+          },
+          { status: 400 },
+        );
+      }
       return NextResponse.json({ success: false, error: "Argumentos inválidos" }, { status: 400 });
     }
 

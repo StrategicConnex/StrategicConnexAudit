@@ -19,6 +19,9 @@ export const API_SCOPES = {
   intelligenceRead: 'intelligence:read',
   intelligenceWrite: 'intelligence:write',
   reportsRead: 'reports:read',
+  // B13 (Tanda 4): la API v1 expone hallazgos y resultados de adversario.
+  findingsRead: 'findings:read',
+  adversaryRead: 'adversary:read',
 } as const;
 export type ApiScope = (typeof API_SCOPES)[keyof typeof API_SCOPES];
 

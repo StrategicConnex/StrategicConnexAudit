@@ -182,6 +182,10 @@ async function rawPost(req: NextRequest) {
           affectedAsset: finding.affectedAsset ?? null,
         }));
         await tx.insert(intelligenceFindings).values(findingsToInsert);
+        // B7: evento outbound `finding.created` (silencioso: sin IA ni push).
+        void import("@/server/webhooks/emit").then((m) =>
+          m.emitWebhookEvent(projectId, "finding.created", m.findingCreatedData(findingsToInsert))
+        ).catch(() => {});
       }
 
       return insertedRun;

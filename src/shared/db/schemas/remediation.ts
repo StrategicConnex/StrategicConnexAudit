@@ -14,6 +14,9 @@ export type RemediationConnector =
   | "cloudflare.purge_cache"
   | "wordpress.update_plugin"
   | "github.create_issue"
+  // B11 (Tanda 4): integración de tickets más allá de GitHub.
+  | "jira.create_issue"
+  | "linear.create_issue"
   | "http.request";
 
 /**

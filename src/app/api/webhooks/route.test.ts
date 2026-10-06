@@ -302,12 +302,56 @@ describe("Webhooks API — Validación", () => {
       projectId: "550e8400-e29b-41d4-a716-446655440000",
       name: "Mi Webhook",
       url: "https://hooks.example.com/endpoint",
-      events: ["audit.completed"],
+      events: ["finding.critical"],
     }));
 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.webhook).toBeDefined();
+  });
+
+  it("POST con evento fuera del catálogo → 400 con los ids válidos (B7)", async () => {
+    const res = await POST(createRequest("POST", "", {
+      projectId: "550e8400-e29b-41d4-a716-446655440000",
+      name: "Fantasma",
+      url: "https://hooks.example.com/endpoint",
+      events: ["audit.completed"],
+    }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Evento no reconocido");
+    expect(body.validEvents).toContain("finding.critical");
+    // El evento fantasma que rompía la suscripción ya no es aceptable.
+    expect(body.validEvents).not.toContain("audit.completed");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("POST sin events → aplica la suscripción por defecto del catálogo (B7)", async () => {
+    const valuesMock = vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([
+        {
+          id: "wh-default",
+          projectId: "550e8400-e29b-41d4-a716-446655440000",
+          name: "Default",
+          url: "https://hooks.example.com/endpoint",
+          secretToken: "whsec_default",
+          events: ["finding.critical", "uptime.down"],
+          active: true,
+        },
+      ]),
+    });
+    mockInsert.mockReturnValue({ values: valuesMock });
+
+    const res = await POST(createRequest("POST", "", {
+      projectId: "550e8400-e29b-41d4-a716-446655440000",
+      name: "Default",
+      url: "https://hooks.example.com/endpoint",
+    }));
+
+    expect(res.status).toBe(200);
+    const inserted = valuesMock.mock.calls[0]![0] as { events: string[] };
+    expect(inserted.events).toEqual(["finding.critical", "uptime.down"]);
   });
 });

@@ -338,6 +338,10 @@ async function rawPost(req: NextRequest) {
                   affectedAsset: f.affectedAsset ?? null,
                 }))
               );
+            // B7: evento outbound `finding.created` (silencioso: sin IA ni push).
+            void import("@/server/webhooks/emit").then((m) =>
+              m.emitWebhookEvent(projectId, "finding.created", m.findingCreatedData(aggregatedFindings))
+            ).catch(() => {});
             }
 
             // Assets
