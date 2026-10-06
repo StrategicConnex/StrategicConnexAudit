@@ -16,15 +16,18 @@
  *   SIEM_EMAIL_FROM / SIEM_EMAIL_TO → opcional (direcciones de email)
  */
 
-import { logger, schedules } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
+import type { CronJobPayload } from "./cron-plan";
 import { runApiKeyExpiryCheck } from "@/server/security/api-key-expiry-alert";
 
-export const apiKeyExpiryAlert = schedules.task({
+export const apiKeyExpiryAlert = task({
   id: "api-key-expiry-alert",
   // Run daily at 09:00 UTC
-  cron: "0 9 * * *",
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "daily-governance-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 9 * * *"
   retry: { maxAttempts: 3 },
-  run: async () => {
+  run: async (_payload: CronJobPayload) => {
     logger.info("API Key Expiry Alert: iniciando verificación diaria", {
       timestamp: new Date().toISOString(),
     });

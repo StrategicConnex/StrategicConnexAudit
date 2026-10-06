@@ -1,4 +1,5 @@
-import { schedules } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
+import type { CronJobPayload } from "./cron-plan";
 import { listOverdueFindings } from "@/server/intelligence/findings/workflow";
 import {
   notifyProjectAdmins,
@@ -23,11 +24,13 @@ import {
 export const SLA_ESCALATION_LIMIT = 200;
 export const SLA_ESCALATION_DEDUP_HOURS = 24;
 
-export const findingSlaSweep = schedules.task({
+export const findingSlaSweep = task({
   id: "finding-sla-sweep",
-  cron: "0 5 * * *",
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "daily-governance-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 5 * * *"
   retry: { maxAttempts: 2 },
-  run: async (payload) => {
+  run: async (payload: CronJobPayload) => {
     console.log(`[FindingSla] Inicio ${payload.timestamp.toISOString()}`);
 
     const overdue = await listOverdueFindings(SLA_ESCALATION_LIMIT);

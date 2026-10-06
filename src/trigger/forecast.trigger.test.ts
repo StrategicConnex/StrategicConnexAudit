@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 interface ScheduleConfig {
   id: string;
-  cron: string;
+  cron?: string;
   run: (payload: { timestamp: Date }) => Promise<{
     processed: number;
     successCount: number;
@@ -21,7 +22,7 @@ const select = vi.hoisted(() => vi.fn());
 const linearForecast = vi.hoisted(() => vi.fn());
 
 vi.mock("@trigger.dev/sdk", () => ({
-  schedules: { task: vi.fn((config: unknown) => config) },
+  task: vi.fn((config: unknown) => config),
 }));
 
 vi.mock("@/shared/db", () => ({ db: { select, insert, execute } }));
@@ -64,9 +65,10 @@ describe("Trigger: weekly-forecast", () => {
     });
   });
 
-  it("registra id y cron semanal (lunes 06:00 UTC)", () => {
+  it("registra id sin cron propio: lo dispara weekly-monday-dispatcher", () => {
     expect(task.id).toBe("weekly-forecast");
-    expect(task.cron).toBe("0 6 * * 1");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["weekly-forecast"]).toBe("weekly-monday-dispatcher");
   });
 
   it("sin proyectos activos → processed 0", async () => {

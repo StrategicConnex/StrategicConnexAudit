@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 const listOverdueFindings = vi.hoisted(() => vi.fn());
 const notifyProjectAdmins = vi.hoisted(() => vi.fn());
 const listRecentlyEscalatedFindingIds = vi.hoisted(() => vi.fn());
 
 vi.mock("@trigger.dev/sdk", () => ({
-  schedules: { task: vi.fn((config: unknown) => config) },
+  task: vi.fn((config: unknown) => config),
 }));
 vi.mock("@/server/intelligence/findings/workflow", () => ({ listOverdueFindings }));
 vi.mock("@/server/notifications/emit", () => ({
@@ -21,7 +22,7 @@ import {
 
 interface ScheduleConfig {
   id: string;
-  cron: string;
+  cron?: string;
   retry: { maxAttempts: number };
   run: (payload: { timestamp: Date }) => Promise<{
     success: boolean;
@@ -54,9 +55,10 @@ beforeEach(() => {
 });
 
 describe("Trigger: finding-sla-sweep", () => {
-  it("registra id, cron 05:00 UTC y reintentos", () => {
+  it("registra id sin cron propio y reintentos", () => {
     expect(task.id).toBe("finding-sla-sweep");
-    expect(task.cron).toBe("0 5 * * *");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["finding-sla-sweep"]).toBe("daily-governance-dispatcher");
     expect(task.retry.maxAttempts).toBe(2);
   });
 

@@ -2,7 +2,7 @@
    Trigger: Integration Sync Sweep — Tests (TD-10 / TSK-016)
 
    Verifica:
-   - Registro del task (id + cron diario 03:00 UTC)
+   - Registro del task (id correcto, sin cron propio)
    - Log `running` insertado por integración y cierre `success`/`failed`
    - Conteo de filas nuevas desde last_sync_at → recordsSynced
    - Sin credenciales → failed; >48h sin sync → expiración de la integración
@@ -10,11 +10,12 @@
    - Fallos por integración no tumban el barrido
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 interface SweepConfig {
   id: string;
-  cron: string;
+  cron?: string;
   retry: { maxAttempts: number };
   run: (payload: { timestamp: Date }) => Promise<{
     success: boolean;
@@ -43,7 +44,7 @@ const m = vi.hoisted(() => {
 });
 
 vi.mock("@trigger.dev/sdk", () => ({
-  schedules: { task: vi.fn((config: unknown) => config) },
+  task: vi.fn((config: unknown) => config),
 }));
 
 vi.mock("@/shared/db", () => ({
@@ -166,9 +167,10 @@ describe("Trigger: integration-sync-sweep", () => {
   const task = integrationSyncSweep as unknown as SweepConfig;
   const payload = { timestamp: NOW };
 
-  it("registra id, cron diario 03:00 UTC y reintentos", () => {
+  it("registra id sin cron propio: lo dispara daily-operations-dispatcher", () => {
     expect(task.id).toBe("integration-sync-sweep");
-    expect(task.cron).toBe("0 3 * * *");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["integration-sync-sweep"]).toBe("daily-operations-dispatcher");
     expect(task.retry.maxAttempts).toBe(3);
   });
 

@@ -2,19 +2,20 @@
    Trigger: Continuous Discovery — Tests del task programado (P0)
 
    Verifica:
-   - Registro del task (id + cron correctos)
+   - Registro del task (id correcto, sin cron propio)
    - Consulta de proyectos activos (deletedAt IS NULL)
    - Ejecución de runDiscovery por proyecto con mapeo de resultados
    - Tolerancia a errores por proyecto (el ciclo continúa)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
 interface DiscoveryTaskConfig {
   id: string;
-  cron: string;
+  cron?: string;
   run: (payload: { timestamp: string }) => Promise<Record<string, unknown>>;
 }
 
@@ -57,9 +58,7 @@ vi.mock("@/shared/db/schemas", () => ({
 }));
 
 vi.mock("@trigger.dev/sdk", () => ({
-  schedules: {
-    task: vi.fn((config: DiscoveryTaskConfig) => config),
-  },
+  task: vi.fn((config: DiscoveryTaskConfig) => config),
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -101,11 +100,12 @@ describe("Trigger: Continuous Discovery", () => {
     vi.clearAllMocks();
   });
 
-  it("registra el task con id y cron correctos", async () => {
+  it("registra el task sin cron propio: lo dispara six-hourly-dispatcher", async () => {
     const { continuousDiscovery } = await import("./discovery.trigger");
     const task = continuousDiscovery as unknown as DiscoveryTaskConfig;
     expect(task.id).toBe("continuous-discovery");
-    expect(task.cron).toBe("0 */6 * * *");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["continuous-discovery"]).toBe("six-hourly-dispatcher");
   });
 
   it("sin proyectos activos → processed 0 y sin ejecutar discovery", async () => {

@@ -2,7 +2,7 @@
    Trigger: Periodic Adversary Simulation — Tests del task programado (P0)
 
    Verifica:
-   - Registro del task (id + cron correctos)
+   - Registro del task (id correcto, sin cron propio)
    - Consulta de proyectos activos (deletedAt IS NULL)
    - Omisión de escenarios manuales (executorType === "manual")
    - Ejecución de runScenario por escenario con mapeo detected/missed/error
@@ -10,12 +10,13 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
 interface AdversaryTaskConfig {
   id: string;
-  cron: string;
+  cron?: string;
   run: (payload: { timestamp: string }) => Promise<Record<string, unknown>>;
 }
 
@@ -60,9 +61,7 @@ vi.mock("@/shared/db/schemas", () => ({
 }));
 
 vi.mock("@trigger.dev/sdk", () => ({
-  schedules: {
-    task: vi.fn((config: AdversaryTaskConfig) => config),
-  },
+  task: vi.fn((config: AdversaryTaskConfig) => config),
 }));
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -75,11 +74,12 @@ describe("Trigger: Periodic Adversary Simulation", () => {
     vi.clearAllMocks();
   });
 
-  it("registra el task con id y cron correctos", async () => {
+  it("registra el task sin cron propio: lo dispara six-hourly-dispatcher", async () => {
     const { periodicAdversarySimulation } = await import("./adversary.trigger");
     const task = periodicAdversarySimulation as unknown as AdversaryTaskConfig;
     expect(task.id).toBe("periodic-adversary-simulation");
-    expect(task.cron).toBe("0 */6 * * *");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["periodic-adversary-simulation"]).toBe("six-hourly-dispatcher");
   });
 
   it("sin proyectos activos → processed 0 y sin ejecutar runScenario", async () => {

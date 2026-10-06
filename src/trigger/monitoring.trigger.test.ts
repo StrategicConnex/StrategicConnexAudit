@@ -2,20 +2,21 @@
    Trigger: Monitor Evaluation — Tests del task programado (P0)
 
    Verifica:
-   - Registro del task (id + cron correctos)
+   - Registro del task (id correcto, sin cron propio)
    - Consulta de monitores activos (enabled)
    - Resolución del dominio del proyecto (hostname)
    - Ejecución de executeTool y generación de alerta ante hallazgos High/Critical
    - Actualización de lastRunAt + tolerancia a errores por monitor
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
 interface MonitorTaskConfig {
   id: string;
-  cron: string;
+  cron?: string;
   run: (payload: { timestamp: Date }) => Promise<Record<string, unknown>>;
 }
 
@@ -64,9 +65,7 @@ vi.mock("@/shared/db/schemas", () => ({
 
 vi.mock("@trigger.dev/sdk/v3", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-  schedules: {
-    task: vi.fn((config: MonitorTaskConfig) => config),
-  },
+  task: vi.fn((config: MonitorTaskConfig) => config),
 }));
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -80,11 +79,12 @@ describe("Trigger: Monitor Evaluation", () => {
     vi.clearAllMocks();
   });
 
-  it("registra el task con id y cron correctos", async () => {
+  it("registra el task sin cron propio: lo dispara daily-operations-dispatcher", async () => {
     const { evaluateMonitorsTask } = await import("./monitoring.trigger");
     const task = evaluateMonitorsTask as unknown as MonitorTaskConfig;
     expect(task.id).toBe("evaluate-monitors-task");
-    expect(task.cron).toBe("0 0 * * *");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["evaluate-monitors-task"]).toBe("daily-operations-dispatcher");
   });
 
   it("sin monitores activos → evaluated 0 y sin ejecutar tools", async () => {

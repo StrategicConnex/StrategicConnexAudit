@@ -20,7 +20,8 @@
  * Variables de entorno (Trigger.dev Dashboard → Env vars): DATABASE_URL / DIRECT_URL.
  */
 
-import { schedules } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
+import type { CronJobPayload } from "./cron-plan";
 import { and, count, eq, gt } from "drizzle-orm";
 import { directDb } from "@/shared/db";
 import {
@@ -44,11 +45,13 @@ const DATA_TABLE_BY_TYPE: Partial<Record<string, DataTable>> = {
   bing: integrationDataBing,
 };
 
-export const integrationSyncSweep = schedules.task({
+export const integrationSyncSweep = task({
   id: "integration-sync-sweep",
-  cron: "0 3 * * *",
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "daily-operations-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 3 * * *"
   retry: { maxAttempts: 3 },
-  run: async (payload: { timestamp: Date }) => {
+  run: async (payload: CronJobPayload) => {
     const now = payload.timestamp;
     console.log(`[IntegrationSync] Inicio ${now.toISOString()}`);
 

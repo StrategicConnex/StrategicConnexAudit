@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 interface ScheduleConfig {
   id: string;
-  cron: string;
+  cron?: string;
   run: () => Promise<{
     success: boolean;
     uptimeDeleted: number;
@@ -16,7 +17,7 @@ const delWhere = vi.hoisted(() => vi.fn());
 const del = vi.hoisted(() => vi.fn());
 
 vi.mock("@trigger.dev/sdk", () => ({
-  schedules: { task: vi.fn((config: unknown) => config) },
+  task: vi.fn((config: unknown) => config),
 }));
 
 vi.mock("@/shared/db", () => ({ db: { delete: del } }));
@@ -42,9 +43,10 @@ describe("Trigger: cleanup-old-logs", () => {
     delWhere.mockResolvedValue({ rowCount: 7 });
   });
 
-  it("registra id y cron de medianoche", () => {
+  it("registra id sin cron propio: lo dispara daily-operations-dispatcher", () => {
     expect(task.id).toBe("cleanup-old-logs");
-    expect(task.cron).toBe("0 0 * * *");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["cleanup-old-logs"]).toBe("daily-operations-dispatcher");
   });
 
   it("purga las 4 tablas y devuelve los rowCount", async () => {

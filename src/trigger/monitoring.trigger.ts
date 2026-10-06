@@ -1,17 +1,18 @@
-import { logger, schedules } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
+import type { CronJobPayload } from "./cron-plan";
 import { db } from "@/shared/db";
 import { monitoringSchedules, monitoringAlerts, projects } from "@/shared/db/schemas";
 import { eq, inArray } from "drizzle-orm";
 import { executeTool } from "@/server/intelligence/core/dispatcher";
 
 // Tarea programada que evalúa los monitores activos
-export const evaluateMonitorsTask = schedules.task({
+export const evaluateMonitorsTask = task({
   id: "evaluate-monitors-task",
-  // Se ejecutaría según la configuración cron, por ejemplo diario a las 00:00
-  // Aquí usamos un patrón de ejemplo para la definición del schedule trigger
-  cron: "0 0 * * *", 
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "daily-operations-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 0 * * *"
   retry: { maxAttempts: 3 },
-  run: async (payload) => {
+  run: async (payload: CronJobPayload) => {
     logger.info("Iniciando evaluación de monitores de seguridad", { timestamp: payload.timestamp.toISOString() });
 
     // Obtener todos los schedules activos que deberían ejecutarse

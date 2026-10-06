@@ -1,13 +1,16 @@
-import { schedules } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
+import type { CronJobPayload } from "./cron-plan";
 import { db } from "@/shared/db";
 import { uptimeLogs, webVitalsLogs, heatmapSessions, securityAuditLogs } from "@/shared/db/schemas";
 import { lt } from "drizzle-orm";
 
-export const cleanupOldLogs = schedules.task({
+export const cleanupOldLogs = task({
   id: "cleanup-old-logs",
-  cron: "0 0 * * *", // Ejecutar cada medianoche
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "daily-operations-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 0 * * *"
   retry: { maxAttempts: 3 },
-  run: async () => {
+  run: async (_payload: CronJobPayload) => {
     console.log("[Cleanup] Iniciando purga de registros antiguos (>30 días)");
     
     const thirtyDaysAgo = new Date();

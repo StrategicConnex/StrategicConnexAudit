@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 interface TriageSweepResult {
   processed: number;
@@ -19,7 +20,7 @@ interface TaskConfig {
 
 interface ScheduleConfig {
   id: string;
-  cron: string;
+  cron?: string;
   retry: { maxAttempts: number };
   run: (payload: { timestamp: Date }) => Promise<{
     success: boolean;
@@ -40,7 +41,6 @@ const limit = vi.hoisted(() => vi.fn());
 
 vi.mock("@trigger.dev/sdk", () => ({
   task: vi.fn((config: unknown) => config),
-  schedules: { task: vi.fn((config: unknown) => config) },
 }));
 vi.mock("@/shared/db", () => ({ directDb: { select } }));
 vi.mock("@/shared/db/schemas", () => ({ projects }));
@@ -148,9 +148,10 @@ describe("Trigger: finding-triage-sweep", () => {
   const task = findingTriageSweep as unknown as ScheduleConfig;
   const payload = { timestamp: new Date("2026-09-24T04:00:00.000Z") };
 
-  it("registra id, cron diario 04:00 UTC y reintentos", () => {
+  it("registra id sin cron propio: lo dispara daily-governance-dispatcher, con reintentos", () => {
     expect(task.id).toBe("finding-triage-sweep");
-    expect(task.cron).toBe("0 4 * * *");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["finding-triage-sweep"]).toBe("daily-governance-dispatcher");
     expect(task.retry.maxAttempts).toBe(2);
   });
 

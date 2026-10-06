@@ -1,4 +1,5 @@
-import { task, schedules } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
+import type { CronJobPayload } from "./cron-plan";
 import { directDb } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { runFindingTriageSweep, TRIAGE_BATCH_SIZE } from "@/server/ai/finding-triage";
@@ -59,11 +60,13 @@ async function triageAfterAuditJob(payload: {
   };
 }
 
-export const findingTriageSweep = schedules.task({
+export const findingTriageSweep = task({
   id: "finding-triage-sweep",
-  cron: "0 4 * * *",
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "daily-governance-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 4 * * *"
   retry: { maxAttempts: 2 },
-  run: async (payload) => {
+  run: async (payload: CronJobPayload) => {
     console.log(`[TriageSweep] Inicio ${payload.timestamp.toISOString()}`);
 
     // Proyectos activos con posible backlog de findings. El sweep es diario

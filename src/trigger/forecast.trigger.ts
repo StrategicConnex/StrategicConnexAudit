@@ -1,4 +1,5 @@
-import { schedules } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
+import type { CronJobPayload } from "./cron-plan";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/shared/db";
 import {
@@ -82,12 +83,14 @@ async function forecastProject(projectId: string): Promise<void> {
   }
 }
 
-export const forecastTask = schedules.task({
+export const forecastTask = task({
   id: "weekly-forecast",
   // Lunes 06:00 UTC: predicción a 14 días por proyecto.
-  cron: "0 6 * * 1",
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "weekly-monday-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 6 * * 1"
   retry: { maxAttempts: 3 },
-  run: async (payload) => {
+  run: async (payload: CronJobPayload) => {
     logger.info(`[Forecast] Iniciando: ${payload.timestamp}`);
 
     const activeProjects = await db

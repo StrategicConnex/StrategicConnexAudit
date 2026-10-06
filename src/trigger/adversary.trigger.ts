@@ -6,7 +6,8 @@
  * scenarios and records results for detection coverage tracking.
  */
 
-import { schedules } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
+import type { CronJobPayload } from "./cron-plan";
 import { db } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { ADVERSARY_CATALOG } from "@/server/intelligence/adversary/catalog";
@@ -23,10 +24,12 @@ const SCHEDULED_SCENARIOS = [
   "T1490",
 ];
 
-export const periodicAdversarySimulation = schedules.task({
+export const periodicAdversarySimulation = task({
   id: "periodic-adversary-simulation",
-  cron: "0 */6 * * *",
-  run: async (payload) => {
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "six-hourly-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 */6 * * *"
+  run: async (payload: CronJobPayload) => {
     logger.info(`[AdversaryTrigger] Starting: ${payload.timestamp}`);
 
     const activeProjects = await db

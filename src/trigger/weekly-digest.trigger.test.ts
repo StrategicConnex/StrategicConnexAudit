@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 interface ScheduleConfig {
   id: string;
-  cron: string;
+  cron?: string;
   run: (payload: { timestamp: Date }) => Promise<Record<string, unknown>>;
 }
 
 const runWeeklyDigest = vi.hoisted(() => vi.fn());
 
 vi.mock("@trigger.dev/sdk", () => ({
-  schedules: { task: vi.fn((config: unknown) => config) },
+  task: vi.fn((config: unknown) => config),
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -29,9 +30,10 @@ describe("Trigger: weekly-digest", () => {
     runWeeklyDigest.mockReset();
   });
 
-  it("registra id y cron semanal (lunes 09:00 UTC)", () => {
+  it("registra id sin cron propio: lo dispara weekly-monday-dispatcher", () => {
     expect(task.id).toBe("weekly-digest");
-    expect(task.cron).toBe("0 9 * * 1");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["weekly-digest"]).toBe("weekly-monday-dispatcher");
   });
 
   it("delega en runWeeklyDigest y añade timestamp ISO", async () => {

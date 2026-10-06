@@ -5,7 +5,8 @@
  * via Trigger.dev scheduled task for all active projects.
  */
 
-import { schedules } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
+import type { CronJobPayload } from "./cron-plan";
 import { db } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { runDiscovery } from "@/server/intelligence/discovery/orchestrator";
@@ -13,11 +14,13 @@ import { and, eq, isNull } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { mapLimit } from "@/shared/lib/map-limit";
 
-export const continuousDiscovery = schedules.task({
+export const continuousDiscovery = task({
   id: "continuous-discovery",
-  cron: "0 */6 * * *",
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "six-hourly-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 */6 * * *"
   retry: { maxAttempts: 3 },
-  run: async (payload) => {
+  run: async (payload: CronJobPayload) => {
     logger.info(`[Discovery Trigger] Starting: ${payload.timestamp}`);
 
     const activeProjects = await db

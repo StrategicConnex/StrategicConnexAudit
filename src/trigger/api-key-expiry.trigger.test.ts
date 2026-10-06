@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DISPATCH_OWNER } from "./cron-plan";
 
 interface ScheduleConfig {
   id: string;
-  cron: string;
+  cron?: string;
   run: () => Promise<{
     success: boolean;
     expiringKeysFound: number;
@@ -16,7 +17,7 @@ interface ScheduleConfig {
 const runApiKeyExpiryCheck = vi.hoisted(() => vi.fn());
 
 vi.mock("@trigger.dev/sdk/v3", () => ({
-  schedules: { task: vi.fn((config: unknown) => config) },
+  task: vi.fn((config: unknown) => config),
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
@@ -33,9 +34,10 @@ describe("Trigger: api-key-expiry-alert", () => {
 
   const base = { expiringKeysFound: 0, alertsSent: 0, alertsFailed: 0, keys: [], errors: [] as string[] };
 
-  it("registra id y cron diario", () => {
+  it("registra id sin cron propio: lo dispara daily-governance-dispatcher", () => {
     expect(task.id).toBe("api-key-expiry-alert");
-    expect(task.cron).toBe("0 9 * * *");
+    expect(task.cron).toBeUndefined();
+    expect(DISPATCH_OWNER["api-key-expiry-alert"]).toBe("daily-governance-dispatcher");
   });
 
   it("sin claves próximas a expirar → success y sin keys", async () => {

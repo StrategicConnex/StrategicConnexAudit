@@ -1,4 +1,5 @@
-import { schedules } from "@trigger.dev/sdk";
+import { task } from "@trigger.dev/sdk";
+import type { CronJobPayload } from "./cron-plan";
 import { purgeOldNotifications } from "@/server/notifications/emit";
 
 /**
@@ -11,11 +12,13 @@ import { purgeOldNotifications } from "@/server/notifications/emit";
 
 export const NOTIFICATION_RETENTION_DAYS = 90;
 
-export const notificationsMaintenance = schedules.task({
+export const notificationsMaintenance = task({
   id: "notifications-maintenance",
-  cron: "0 3 * * *",
+  // Sin cron propio: el free tier de Trigger.dev permite 10 schedules y
+  // esta task la dispara "daily-operations-dispatcher" (ver cron-dispatchers.trigger.ts).
+  // Cron original: "0 3 * * *"
   retry: { maxAttempts: 2 },
-  run: async (payload) => {
+  run: async (payload: CronJobPayload) => {
     console.log(`[NotificationsMaintenance] Inicio ${payload.timestamp.toISOString()}`);
 
     const purged = await purgeOldNotifications(NOTIFICATION_RETENTION_DAYS);
