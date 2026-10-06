@@ -171,34 +171,58 @@ export function PortfolioTab({ projects, selectedProjectId, setSelectedProjectId
   const [bucketLoaded, setBucketLoaded] = useState<Bucket | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isLoading = loadedFor !== selectedProjectId || bucketLoaded !== bucket;
+  const isLoading =
+    selectedProjectId !== "" && (loadedFor !== selectedProjectId || bucketLoaded !== bucket);
 
   useEffect(() => {
-    if (!selectedProjectId) return;
     let active = true;
     (async () => {
       try {
-        const [pRes, tRes, purpleRes] = await Promise.all([
+        // Sin proyecto seleccionado solo tiene sentido el roll-up de cartera:
+        // las series y el purple score son por proyecto. Antes se hacía
+        // `return` temprano, lo que dejaba el tab girando para siempre sin
+        // proyecto — el `finally` nunca corría y el estado de carga no
+        // terminaba nunca. Ahora se cargan las fuentes que apliquen y la
+        // carga se cierra igual.
+        const projectScoped = selectedProjectId
+          ? Promise.all([
+              fetch(
+                `/api/portfolio/trends?projectId=${selectedProjectId}&bucket=${bucket}&window=12`,
+              ),
+              fetch(`/api/portfolio/purple-score?projectId=${selectedProjectId}&days=90`),
+            ])
+          : Promise.resolve([null, null] as const);
+
+        // `projectScoped` resuelve a un PAR, y Promise.all no lo aplana: hay
+        // que desenvolverlo o `tRes` sería el array entero y su `.json()`
+        // reventaría al no ser una respuesta.
+        const [pRes, scoped] = await Promise.all([
           fetch('/api/portfolio'),
-          fetch(
-            `/api/portfolio/trends?projectId=${selectedProjectId}&bucket=${bucket}&window=12`,
-          ),
-          fetch(`/api/portfolio/purple-score?projectId=${selectedProjectId}&days=90`),
+          projectScoped,
         ]);
+        const [tRes, purpleRes] = scoped as [Response | null, Response | null];
+
         const [pData, tData, purpleData] = (await Promise.all([
           pRes.json(),
-          tRes.json(),
-          purpleRes.json(),
-        ])) as [PortfolioResponse & { error?: string }, TrendsResponse & { error?: string }, PurpleResponse & { error?: string }];
+          tRes ? tRes.json() : Promise.resolve(null),
+          purpleRes ? purpleRes.json() : Promise.resolve(null),
+        ])) as [
+          PortfolioResponse & { error?: string },
+          (TrendsResponse & { error?: string }) | null,
+          (PurpleResponse & { error?: string }) | null,
+        ];
 
         if (!active) return;
-        if (pData.success && tData.success && purpleData.success) {
-          setPortfolio(pData.portfolio);
-          setTrends(tData.trends);
-          setPurple(purpleData.purple);
-          setError(null);
+        const failed = [pData, tData, purpleData].find((d) => d !== null && !d.success);
+        if (failed) {
+          setError((failed as { error?: string }).error ?? t('loadError'));
         } else {
-          setError(tData.error ?? pData.error ?? t('loadError'));
+          setPortfolio(pData.portfolio);
+          // Sin proyecto no hay serie que enseñar: se limpian para que no
+          // quede el dato del proyecto anterior colgado en pantalla.
+          setTrends(tData?.trends ?? null);
+          setPurple(purpleData?.purple ?? null);
+          setError(null);
         }
       } catch (err) {
         logger.error('Failed to fetch portfolio:', err);

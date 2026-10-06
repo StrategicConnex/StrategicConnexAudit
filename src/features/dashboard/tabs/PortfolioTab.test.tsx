@@ -279,6 +279,24 @@ describe("PortfolioTab", () => {
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBefore));
   });
 
+  it("sin proyecto seleccionado no pide series y no se queda cargando", async () => {
+    // Regresión: el efecto hacía `return` temprano sin proyecto, así que el
+    // `finally` no corría, el estado de carga no terminaba nunca y el tab
+    // giraba indefinidamente. El roll-up de cartera no necesita proyecto.
+    render(
+      <PortfolioTab projects={[]} selectedProjectId="" setSelectedProjectId={vi.fn()} />,
+    );
+
+    expect(await screen.findByText("portfolio.empty")).toBeInTheDocument();
+    expect(screen.queryByText("portfolio.loading")).not.toBeInTheDocument();
+
+    const fetchMock = global.fetch as unknown as ReturnType<typeof vi.fn>;
+    const urls = fetchMock.mock.calls.map((c) => c[0]);
+    expect(urls).toContain("/api/portfolio");
+    expect(urls.some((u: string) => u.includes("/api/portfolio/trends"))).toBe(false);
+    expect(urls.some((u: string) => u.includes("purple-score"))).toBe(false);
+  });
+
   it("respuesta sin success muestra ErrorState sin romperse", async () => {
     vi.stubGlobal(
       "fetch",
