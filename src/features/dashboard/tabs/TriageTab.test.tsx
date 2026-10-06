@@ -77,6 +77,27 @@ function mockBoard(payload: unknown) {
 }
 
 describe("TriageTab", () => {
+  it("sin proyecto seleccionado no pide el tablero y no se queda cargando", async () => {
+    // Regresión (encontrado navegando, no en tests): con cero proyectos el
+    // <select> vale "" y el efecto hacía `return` temprano, dejando
+    // `loadedFor` en null para siempre. El tab giraba en "Cargando tablero…"
+    // en vez de mostrar el estado vacío.
+    mockBoard(board());
+    render(
+      <TriageTab
+        initialProjects={[]}
+        selectedProjectId=""
+        setSelectedProjectId={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("empty")).toBeTruthy();
+    });
+    expect(screen.queryByText("loading")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("muestra el estado vacío cuando no hay hallazgos", async () => {
     mockBoard(board());
     render(<TriageTab {...props} />);

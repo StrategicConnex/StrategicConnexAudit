@@ -85,7 +85,10 @@ export function TriageTab({ initialProjects, selectedProjectId, setSelectedProje
   // Proyecto del que ya hay datos: en vez de un booleano de carga se deriva,
   // para no setear estado de forma síncrona dentro del efecto (react-hooks).
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
-  const isLoading = loadedFor !== selectedProjectId;
+  // Sin proyecto no hay tablero que pedir: el `return` temprano del efecto
+  // dejaba `loadedFor` en null para siempre y el tab giraba indefinidamente
+  // en lugar de mostrar el estado vacío. Mismo criterio que PortfolioTab.
+  const isLoading = selectedProjectId !== "" && loadedFor !== selectedProjectId;
   // Contador de recargas: al mutar un hallazgo se incrementa y el efecto
   // vuelve a pedir el tablero. Evita un `load` con setState síncrono.
   const [reloadToken, setReloadToken] = useState(0);
