@@ -275,31 +275,50 @@ jobs:
       - name: Generate Postman collection from OpenAPI
         run: pnpm generate:collection
 
+      # DECISION: un contrato roto contra produccion SI tumba el pipeline.
+      # La unica exencion intencional es no ejecutar Newman cuando falta el
+      # secreto `SCAUDIT_API_KEY` (forks / PRs sin secret): el paso queda verde
+      # con `newman_status=skipped` y el resumen del PR lo declara. En cuanto el
+      # secreto existe, un 401/403/scope/rate-limit fuera de contrato devuelve
+      # un exit code != 0 que propagamos tal cual para romper el job.
+      # Antes `... && echo passed || echo failed` fijaba siempre exit 0: el
+      # fallo se perdia y el contrato roto cerraba el pipeline en verde.
       - name: Run Newman API contract tests (skip if no API key)
         id: newman
         run: |
-          if [ -n "${{ secrets.SCAUDIT_API_KEY }}" ]; then
-            npx newman run tests/api-contract/scaudit-api-collection.json \
-              --env-var "apiKey=${{ secrets.SCAUDIT_API_KEY }}" \
-              --reporters cli,junit \
-              --reporter-junit-export results/api-contract.xml \
-              --bail \
-              --timeout-request 15000 \
-              --delay-request 1000 && \
-            echo "newman_status=passed" >> "$GITHUB_OUTPUT" || \
-            echo "newman_status=failed" >> "$GITHUB_OUTPUT"
-          else
+          if [ -z "${{ secrets.SCAUDIT_API_KEY }}" ]; then
             echo "🔑 No SCAUDIT_API_KEY secret — skipping live endpoint tests"
             echo "newman_status=skipped" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
+          newman_rc=0
+          npx newman run tests/api-contract/scaudit-api-collection.json \
+            --env-var "apiKey=${{ secrets.SCAUDIT_API_KEY }}" \
+            --reporters cli,junit \
+            --reporter-junit-export results/api-contract.xml \
+            --bail \
+            --timeout-request 15000 \
+            --delay-request 1000 || newman_rc=$?
+
+          if [ "$newman_rc" -eq 0 ]; then
+            echo "newman_status=passed" >> "$GITHUB_OUTPUT"
+          else
+            echo "newman_status=failed" >> "$GITHUB_OUTPUT"
+            echo "::error::Newman detecto un contrato roto contra produccion (exit $newman_rc)"
+            exit "$newman_rc"
+          fi
+
+      # `always()` para subir el JUnit tambien cuando Newman falla: con el
+      # filtro anterior (`== 'passed'`) el diagnostico de la rotura se perdia.
       - name: Upload Newman results
-        if: steps.newman.outputs.newman_status == 'passed'
+        if: always() && steps.newman.outputs.newman_status != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: newman-results
           path: results/api-contract.xml
           retention-days: 7
+          if-no-files-found: warn
 
       - name: Report API contract status in PR
         if: always()
