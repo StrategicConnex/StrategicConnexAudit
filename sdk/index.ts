@@ -1,15 +1,16 @@
 /**
  * SCAUDIT SDK — cliente TypeScript de la API pública v1 (Tanda 4 / B13).
  *
- * Cubre los endpoints de LECTURA de `/api/public/v1` con contrato estable.
- * Los tipos replican lo que cada ruta devuelve de verdad (verificado contra
- * `src/app/api/public/v1/*`), no lo que sería bonito que devolviera:
+ * Cubre los endpoints de `/api/public/v1` con contrato estable: lectura y el
+ * alta de escaneos (`POST /intelligence`). Los tipos replican lo que cada ruta
+ * devuelve de verdad (verificado contra `src/app/api/public/v1/*`), no lo que
+ * sería bonito que devolviera:
  *  - Un dato ausente en el dominio llega como `null` (nunca 0 ni "").
  *  - Un run de adversario sin veredicto llega como `result: null`, no "missed".
  *
- * La creación de escaneos (POST /api/public/v1/intelligence) queda fuera del
- * SDK v1 a propósito: su respuesta incluye el detalle del planificador, que no
- * es un contrato estable. Se documenta como hueco conocido en el README.
+ * El planificador de `POST /intelligence` (qué tools corren y en qué orden)
+ * vive en el servidor y NUNCA viaja en la respuesta: lo que el cliente ve es
+ * `{ investigation, message }`, un contrato estable.
  *
  * Sin dependencias: solo `fetch`. Sirve en Node 18+, Bun, Deno y navegador.
  *   (De ahí que este archivo no importe nada del código de la app: el SDK es
@@ -155,6 +156,28 @@ export interface ListAdversaryResponse {
   assessments: AdversaryAssessment[];
 }
 
+/**
+ * Investigación recién creada por `POST /intelligence`, mientras corre.
+ * `status: 'running'` es el estado en que el servidor la devuelve; el
+ * resultado se consulta luego con `listIntelligence`.
+ */
+export interface ScanInvestigation {
+  id: string;
+  title: string;
+  target: string;
+  normalizedTarget: string | null;
+  targetType: string;
+  status: string;
+  createdAt: string | null;
+}
+
+export interface StartScanResponse {
+  success: true;
+  investigation: ScanInvestigation;
+  /** Texto humano con el siguiente paso (consultar la investigación). */
+  message: string;
+}
+
 // ─── Cliente ────────────────────────────────────────────────────────────────
 
 export interface ScAuditClientOptions {
@@ -175,6 +198,10 @@ interface RequestOptions {
   noAuth?: boolean;
   /** Códigos que NO deben lanzar (p. ej. el 503 de /health). */
   allowStatuses?: number[];
+  /** Por defecto GET. */
+  method?: 'GET' | 'POST';
+  /** Cuerpo JSON (solo con POST). */
+  body?: unknown;
 }
 
 export class ScAuditClient {
@@ -206,12 +233,15 @@ export class ScAuditClient {
         ? AbortSignal.timeout(this.timeoutMs)
         : undefined;
 
+    const hasBody = options.body !== undefined;
     const response = await this.fetchImpl(url.toString(), {
-      method: 'GET',
+      method: options.method ?? 'GET',
       headers: {
         Accept: 'application/json',
+        ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
         ...(options.noAuth ? {} : { Authorization: `Bearer ${this.apiKey}` }),
       },
+      ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
       ...(signal ? { signal } : {}),
     });
 
@@ -283,6 +313,21 @@ export class ScAuditClient {
   ): Promise<ListAdversaryResponse> {
     return this.request<ListAdversaryResponse>('/api/public/v1/adversary', {
       params: { projectId, limit: options.limit },
+    });
+  }
+
+  /**
+   * Lanza un escaneo de infraestructura. Requiere el scope
+   * `intelligence:write` y ser **owner** del proyecto (403/404 si no).
+   *
+   * Es asíncrono: devuelve la investigación en `running`. La cuota es de 30
+   * escaneos/min por usuario (429 si se supera). Sigue el avance con
+   * `listIntelligence(projectId)`.
+   */
+  startScan(params: { projectId: string; target: string }): Promise<StartScanResponse> {
+    return this.request<StartScanResponse>('/api/public/v1/intelligence', {
+      method: 'POST',
+      body: { projectId: params.projectId, target: params.target },
     });
   }
 }

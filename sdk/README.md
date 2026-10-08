@@ -17,7 +17,8 @@ determina a qué endpoints puede llamar:
 
 | Scope | Endpoints |
 |-------|-----------|
-| `intelligence:read` | `/v1/intelligence`, `/v1/uptime` |
+| `intelligence:read` | `GET /v1/intelligence`, `GET /v1/uptime` |
+| `intelligence:write` | `POST /v1/intelligence` (lanzar escaneo) |
 | `reports:read` | `/v1/reports` |
 | `findings:read` | `/v1/findings` |
 | `adversary:read` | `/v1/adversary` |
@@ -49,6 +50,10 @@ console.log(uptime.uptimePct); // null si no hay chequeos, nunca 0%
 // Purple team: cuánto de lo ejecutado se detectó
 const { runs, assessments } = await client.listAdversary("<projectId>");
 console.log(detectionRate(runs)); // null si nada tiene veredicto
+
+// Lanzar un escaneo (requiere `intelligence:write` y ser owner del proyecto)
+const scan = await client.startScan({ projectId: "<projectId>", target: "acme.com" });
+console.log(scan.investigation.status); // 'running' — es asíncrono
 ```
 
 ### Manejo de errores
@@ -78,12 +83,14 @@ devuelve.
 
 ## Cobertura
 
-Cubiertos (lectura, contrato estable): `getHealth`, `listIntelligence`,
-`listAudits`, `listFindings`, `getUptime`, `listReports`, `listAdversary`.
+Cubiertos con contrato estable: `getHealth`, `listIntelligence`, `listAudits`,
+`listFindings`, `getUptime`, `listReports`, `listAdversary` y `startScan`.
 
-**Hueco conocido:** `POST /api/public/v1/intelligence` (lanzar un escaneo) no
-está en el SDK. Su respuesta incluye el detalle interno del planificador, que
-todavía no es un contrato estable; mientras tanto puede llamarse por REST.
+`startScan` es **asíncrono**: devuelve la investigación en `running` y el
+siguiente paso (`message`). El planificador —qué tools corren y en qué orden—
+vive en el servidor y no viaja en la respuesta, por eso la respuesta es un
+contrato estable y forma parte del SDK. Sigue el avance con
+`listIntelligence(projectId)`.
 
 ## Desarrollo
 

@@ -117,6 +117,69 @@ describe('ScAuditClient — requests', () => {
   });
 });
 
+describe('startScan — POST /api/public/v1/intelligence', () => {
+  it('hace POST con JSON, Content-Type y Bearer', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({
+        success: true,
+        investigation: { id: 'inv-1', status: 'running', target: 'acme.com' },
+        message: 'Scan started',
+      }),
+    );
+    const res = await makeClient(fetchImpl as unknown as typeof fetch).startScan({
+      projectId: 'p1',
+      target: 'acme.com',
+    });
+
+    const [url, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    // Sin query string: los datos van en el cuerpo, no en la URL.
+    expect(url).toBe(`${SCAUDIT_DEFAULT_BASE_URL}/api/public/v1/intelligence`);
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer sa_live_test');
+    expect(JSON.parse(init.body as string)).toEqual({ projectId: 'p1', target: 'acme.com' });
+    expect(res.success).toBe(true);
+    expect(res.investigation.status).toBe('running');
+  });
+
+  it('los GET siguen sin Content-Type ni body', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ success: true, findings: [] }));
+    await makeClient(fetchImpl as unknown as typeof fetch).listFindings('p1');
+
+    const [, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(init.method).toBe('GET');
+    expect((init.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+    expect(init.body).toBeUndefined();
+  });
+
+  it('403 por scope faltante → ScAuditApiError(403)', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse(
+        { success: false, error: 'API key does not include required scope: intelligence:write' },
+        403,
+      ),
+    );
+    await expect(
+      makeClient(fetchImpl as unknown as typeof fetch).startScan({ projectId: 'p1', target: 'a.com' }),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('429 por cuota de escaneos → ScAuditApiError(429)', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ success: false, error: 'Scan rate limit exceeded. Try again later.' }, 429),
+    );
+    await expect(
+      makeClient(fetchImpl as unknown as typeof fetch).startScan({ projectId: 'p1', target: 'a.com' }),
+    ).rejects.toBeInstanceOf(ScAuditApiError);
+  });
+});
+
 describe('detectionRate', () => {
   const run = (result: AdversaryRun['result']): AdversaryRun => ({
     id: `r-${result ?? 'null'}`,

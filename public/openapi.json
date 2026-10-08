@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "SCAUDIT — StrategicAudit Pro REST API",
-    "description": "API pública de inteligencia de infraestructura cibernética. Automatiza escaneos de subdominios, TLS, DNS, emails y más.\n\n## Autenticación\n- **API Key** (para endpoints públicos): `Authorization: Bearer sa_live_xxx`\n- **Session Cookie** (para endpoints del dashboard): autenticación vía Supabase\n\n## Rate Limiting\nTodas las respuestas incluyen headers de rate limiting estándar (IETF) que indican el estado actual de tu cuota:\n| Header | Descripción |\n|--------|-------------|\n| `RateLimit-Limit` | Máximo de requests permitidos en la ventana de tiempo |\n| `RateLimit-Remaining` | Requests restantes en la ventana actual |\n| `RateLimit-Reset` | Timestamp Unix (ms) del momento en que se reestablece la cuota |\n| `Retry-After` | (Solo 429) Segundos hasta reintentar |\n\nLímites vigentes:\n- Endpoints públicos: 60 requests/min por API Key\n- Endpoints de dashboard: 30 requests/min por sesión\n- Reportes PDF: 5 requests/min\n- Escaneos de inteligencia: 30 requests/min por usuario Outbound events (project webhooks): finding.critical, anomaly.detected, uptime.down. Scopes de API key: intelligence:read, intelligence:write, reports:read, findings:read, adversary:read.",
+    "description": "API pública de inteligencia de infraestructura cibernética. Automatiza escaneos de subdominios, TLS, DNS, emails y más.\n\n## Autenticación\n- **API Key** (para endpoints públicos): `Authorization: Bearer sa_live_xxx`\n- **Session Cookie** (para endpoints del dashboard): autenticación vía Supabase\n\n## Rate Limiting\nTodas las respuestas incluyen headers de rate limiting estándar (IETF) que indican el estado actual de tu cuota:\n| Header | Descripción |\n|--------|-------------|\n| `RateLimit-Limit` | Máximo de requests permitidos en la ventana de tiempo |\n| `RateLimit-Remaining` | Requests restantes en la ventana actual |\n| `RateLimit-Reset` | Timestamp Unix (ms) del momento en que se reestablece la cuota |\n| `Retry-After` | (Solo 429) Segundos hasta reintentar |\n\nLímites vigentes:\n- Endpoints públicos: 60 requests/min por API Key\n- Endpoints de dashboard: 30 requests/min por sesión\n- Reportes PDF: 5 requests/min\n- Escaneos de inteligencia: 30 requests/min por usuario Outbound events (project webhooks): finding.created, finding.critical, anomaly.detected, uptime.down. Scopes de API key: intelligence:read, intelligence:write, reports:read, findings:read, adversary:read.",
     "version": "1.0.0",
     "contact": {
       "name": "Strategic Connex",
@@ -552,28 +552,18 @@
                 "type": "object",
                 "required": [
                   "projectId",
-                  "target",
-                  "targetType"
+                  "target"
                 ],
                 "properties": {
                   "projectId": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "ID del proyecto"
+                    "description": "ID del proyecto (la key debe ser owner)"
                   },
                   "target": {
                     "type": "string",
-                    "description": "Target a escanear (dominio, IP o email)",
+                    "description": "Target a escanear (dominio, IP o email). El tipo se normaliza en el servidor.",
                     "example": "example.com"
-                  },
-                  "targetType": {
-                    "type": "string",
-                    "enum": [
-                      "domain",
-                      "ip",
-                      "email"
-                    ],
-                    "description": "Tipo de target"
                   }
                 }
               }
@@ -593,6 +583,10 @@
                     },
                     "investigation": {
                       "$ref": "#/components/schemas/Investigation"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Siguiente paso sugerido (consultar la investigación creada)"
                     }
                   }
                 }
@@ -615,6 +609,24 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "La API key no incluye el scope intelligence:write, o no eres owner del proyecto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           },
           "429": {
             "$ref": "#/components/responses/RateLimit"
@@ -1584,6 +1596,11 @@
         "type": "http",
         "scheme": "bearer",
         "description": "API Key: sa_live_xxx"
+      },
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API Key: Authorization: Bearer sa_live_xxx"
       },
       "sessionCookie": {
         "type": "apiKey",
