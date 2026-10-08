@@ -132,7 +132,9 @@ jobs:
 
       - name: Run unit tests with coverage
         id: coverage
-        run: pnpm test:coverage 2>&1 | tee coverage-output.txt
+        # `pipefail` es imprescindible: sin él, el exit status del paso lo fija
+        # `tee` (siempre 0) y una suite en rojo dejaría el pipeline en verde.
+        run: set -o pipefail; pnpm test:coverage 2>&1 | tee coverage-output.txt
 
       - name: Upload coverage report (lcov + html)
         if: always()
