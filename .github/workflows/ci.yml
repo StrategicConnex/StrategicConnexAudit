@@ -184,6 +184,11 @@ jobs:
       - name: Check migrations journal integrity
         run: pnpm exec drizzle-kit check
 
+      # Guard estatico (sin BD): clasifica las 74 tablas y exige RLS donde toca.
+      # No necesita DIRECT_URL, asi que corre SIEMPRE y no se omite con el secreto.
+      - name: RLS inventory guard (static)
+        run: pnpm rls:inventory
+
       - name: Anti-drift (schema Drizzle vs BD)
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
