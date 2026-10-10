@@ -72,9 +72,26 @@ Sentry.init({
   },
 
   // Privacy by default. `false` en `CollectBehavior` significa "no recolectes
-  // nada": las cabeceras (que venían con `{ request: true, response: true }`
-  // por defecto) y las cookies (que venían a `true`) dejan de salir del
-  // proceso, en vez de salir y confiar en que el SDK las filtre.
+  // nada": el dato no llega a construirse, en vez de construirse y confiar en
+  // que el SDK lo filtre.
+  //
+  // Cada clave tiene consumidor verificado en @sentry/core 11.4.0 — quitarla NO
+  // equivale a `false`, cae al default del SDK (`resolveDataCollectionOptions`):
+  //  - `stackFrameVariables`: lo lee `localVariablesAsyncIntegration`
+  //    (`stackFrameVariables ?? true`) y esa integración es por defecto en el
+  //    runtime Node. Sin esto viajaban VALORES DE VARIABLES LOCALES del frame,
+  //    donde un token cae con más facilidad que en una cabecera.
+  //  - `httpHeaders` / `cookies` / `urlQueryParams`: los lee
+  //    `requestDataIntegration` (por defecto) y `filterCollectedUrl` para los
+  //    spans. `userInfo` además corta la IP que `requestdata` copia.
+  //  - `databaseQueryData`: HOY NO tiene consumidor en este stack — el único que
+  //    lo lee es `integrations/supabase.js` de `@sentry/core`, y @sentry/nextjs no
+  //    la registra. Se fija como profilaxis. (La instrumentación de `pg`, que sí
+  //    está activa porque `pg` es dependencia directa, NO consulta esta opción:
+  //    solo manda el `db.query.text` saneado + resumen, sin valores ligados).
+  //  - `genAI`: hoy es profilaxis — sin integración de IA (OpenRouter va por
+  //    `fetch`) no hay nada que gatear. Se fija para que el día que se añada no
+  //    capture entradas/salidas por defecto.
   //
   // El scrub de `beforeSend` se queda como segunda barrera por si alguien
   // vuelve a activar la recolección: no sustituye a este corte, lo respalda.
@@ -83,5 +100,9 @@ Sentry.init({
     httpHeaders: false,
     cookies: false,
     httpBodies: [],
+    urlQueryParams: false,
+    genAI: { inputs: false, outputs: false },
+    databaseQueryData: false,
+    stackFrameVariables: false,
   },
 });

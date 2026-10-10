@@ -60,14 +60,22 @@ Sentry.init({
     return scrubEvent(event);
   },
 
-  // Sin userInfo, sin cabeceras, sin cookies y sin cuerpos HTTP: `false` es
-  // "no recolectes nada" (CollectBehavior), así que estos datos no llegan a
-  // construirse en el evento. El scrub de `beforeSend` queda como segunda
-  // barrera (ver sentry.server.config.ts).
+  // Sin userInfo, sin cabeceras, sin cookies, sin query params, sin cuerpos,
+  // sin datos de query de BD y sin entradas/salidas de IA: `false` es "no
+  // recolectes nada" (CollectBehavior), así que el dato no llega a construirse.
+  //
+  // En edge no existe la integración de variables locales (es de Node), pero la
+  // clave se fija igual: el coste es cero y el config no debe depender de en qué
+  // runtime acabe corriendo. El detalle de cada clave, con su consumidor
+  // verificado, está en sentry.server.config.ts.
   dataCollection: {
     userInfo: false,
     httpHeaders: false,
     cookies: false,
     httpBodies: [],
+    urlQueryParams: false,
+    genAI: { inputs: false, outputs: false },
+    databaseQueryData: false,
+    stackFrameVariables: false,
   },
 });

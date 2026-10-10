@@ -10,10 +10,12 @@
  *    puesto solo prometía un scrub de trazas que nunca ocurría.
  * 2. El scrub de PII de `beforeSend` sigue vivo en los tres procesos: al quitar
  *    el hook muerto no se puede perder el que sí corre.
- * 3. La recolección en origen sigue cortada (`dataCollection`): sin cabeceras,
- *    sin cookies, sin cuerpos y sin `userInfo`. En `CollectBehavior`, `false`
- *    es «no recolectes nada»; quitar la clave NO equivale a eso — se vuelve al
- *    default del SDK, que recolecta cabeceras y cookies.
+ * 3. La recolección en origen sigue cortada (`dataCollection`) en las ocho
+ *    claves que el proyecto fija. En `CollectBehavior`, `false` es «no
+ *    recolectes nada»; quitar la clave NO equivale a eso — se vuelve al default
+ *    del SDK (`resolveDataCollectionOptions` de `@sentry/core` 11.4.0), que
+ *    recolecta. Cada clave fijada tiene consumidor verificado en el SDK
+ *    instalado (variables locales, request data, `pg`, URL query, IA).
  */
 
 import { describe, it, expect, vi, afterEach } from "vitest";
@@ -42,6 +44,10 @@ interface InitOptions {
     httpHeaders?: boolean | { request?: unknown; response?: unknown };
     cookies?: boolean | { allow?: string[]; deny?: string[] };
     httpBodies?: string[];
+    urlQueryParams?: boolean;
+    databaseQueryData?: boolean;
+    stackFrameVariables?: boolean;
+    genAI?: { inputs?: boolean; outputs?: boolean };
   };
 }
 
@@ -106,16 +112,26 @@ describe.each(Object.entries(LOADERS))("Sentry — %s", (_label, load) => {
     expect(scrubbed.user).toBeUndefined();
   });
 
-  it("corta la recolección en origen: sin cabeceras, cookies, cuerpos ni userInfo", async () => {
+  it("corta la recolección en origen: cabeceras, cookies, query, frames, BD y IA", async () => {
     const options = await initOptionsOf(load);
+    const dc = options.dataCollection;
 
-    // `false` es «no recolectes nada». Un `true` —o borrar la clave, que cae al
-    // default del SDK (`httpHeaders: { request: true, response: true }`,
-    // `cookies: true`)— volvería a mandar cabeceras y cookies del usuario a
-    // Sentry.
-    expect(options.dataCollection?.httpHeaders).toBe(false);
-    expect(options.dataCollection?.cookies).toBe(false);
-    expect(options.dataCollection?.userInfo).toBe(false);
-    expect(options.dataCollection?.httpBodies).toEqual([]);
+    // Cada expect cubre un dato que hoy se recolecta de verdad en algún runtime
+    // del proyecto (o que se recolectaría en cuanto se active la integración que
+    // falta). Un `true` —o borrar la clave, que cae al default del SDK— los
+    // reabre, así que el test hace de contrato.
+    //
+    // PII de la request:
+    expect(dc?.httpHeaders).toBe(false); // cabeceras (default: request+response)
+    expect(dc?.cookies).toBe(false); // cookies (default: true)
+    expect(dc?.userInfo).toBe(false); // user.* y la IP copiada por requestdata
+    expect(dc?.httpBodies).toEqual([]); // cuerpos (default: los cuatro tipos)
+    expect(dc?.urlQueryParams).toBe(false); // query string de las URLs
+    // Datos de la aplicación:
+    expect(dc?.stackFrameVariables).toBe(false); // variables LOCALES de los frames
+    // Profilaxis declarada (sin consumidor en este stack hoy): que nadie las
+    // retire creyéndolas inútiles, pero tampoco que se venda como corte activo.
+    expect(dc?.databaseQueryData).toBe(false); // solo lo lee la integración de supabase
+    expect(dc?.genAI).toEqual({ inputs: false, outputs: false }); // sin SDK de IA instalado
   });
 });
