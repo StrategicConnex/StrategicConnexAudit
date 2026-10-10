@@ -206,8 +206,14 @@ acceso no cambia: Realtime sólo transporta filas que el usuario ya puede leer.
   `scripts/db/rls-manifest.json` clasifican las tablas expuestas.
 - **Verificación post-push (BD real):** CHANGE-003 aprobado con 4/4 tablas
   publicadas, RLS `true` ×4 y 9 policies; sonda E2E `wss` en prod.
-- **Pendiente por fase:** test que compruebe la **publicación** de la tabla y el
-  corte del polling en la ruta feliz (ver §12.3/§16).
+- **E2E medible (Fase 2):** `e2e/realtime-overview.spec.ts` (tag `@realtime`)
+  inserta una fila real en `intelligence_run_events` y exige **0 peticiones** a
+  `/api/intelligence/live` en una ventana de 16 s (sin sondeo) más **≥ 1**
+  justo tras el INSERT (el refresco lo dispara el canal, no el sondeo). Opt-in
+  (`RUN_REALTIME_E2E=1`), se omite limpiamente en CI. Cómo medir la tasa
+  agregada: `docs/runbook/realtime-metrics.md`.
+- **Pendiente:** test que compruebe la **publicación** de la tabla en la BD
+  (hoy verificado a mano en CHANGE-003) — ver §12.3/§16.
 
 ## 10. Decisión propuesta
 
