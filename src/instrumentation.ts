@@ -16,10 +16,29 @@ import { logger } from "@/lib/logger";
 import type { Instrumentation } from "next";
 
 export async function register(): Promise<void> {
-  // Solo runtime Node: el proxy corre en edge y no necesita estas variables.
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
   // Nunca durante `next build` (CI/Vercel no tienen secrets en fase de build).
   if (process.env.NEXT_PHASE === "phase-production-build") return;
+
+  // C4: inicializa Sentry en cada runtime. Antes este archivo NUNCA importaba
+  // `sentry.server.config`, así que `Sentry.init()` no se ejecutaba en el
+  // servidor y los errores de runtime Node no llegaban a Sentry. El DSN es
+  // opcional (`enabled: Boolean(dsn)`): sin él el SDK queda inactivo y la app
+  // arranca igual.
+  try {
+    if (process.env.NEXT_RUNTIME === "nodejs") {
+      await import("../sentry.server.config");
+    } else if (process.env.NEXT_RUNTIME === "edge") {
+      await import("../sentry.edge.config");
+    }
+  } catch (error) {
+    logger.error("No se pudo inicializar Sentry — continúa sin observabilidad externa", {
+      module: "instrumentation",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Solo runtime Node: el proxy corre en edge y no necesita estas variables.
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
   try {
     validateEnv();
@@ -54,6 +73,16 @@ export const onRequestError: Instrumentation.onRequestError = async (
   request,
   context,
 ) => {
+  // C4: Sentry — `captureRequestError` es el punto de captura recomendado por
+  // el SDK de Next.js. Se ejecuta en cualquier runtime (el SDK ya está
+  // inicializado por `register()`). Fail-open: nunca interfiere con Next.
+  try {
+    const Sentry = await import("@sentry/nextjs");
+    Sentry.captureRequestError(error, request, context);
+  } catch {
+    // Sin DSN o sin red: se ignora.
+  }
+
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === "phase-production-build") return;
   if (process.env.NODE_ENV !== "production") return;
