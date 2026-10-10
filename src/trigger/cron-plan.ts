@@ -48,6 +48,7 @@ export const DISPATCH_OWNER: Record<string, DispatcherName> = {
   "notifications-maintenance": "daily-operations-dispatcher",
   "cleanup-old-logs": "daily-operations-dispatcher",
   "evaluate-monitors-task": "daily-operations-dispatcher",
+  "purge-scan-queue": "daily-operations-dispatcher",
   "finding-triage-sweep": "daily-governance-dispatcher",
   "finding-sla-sweep": "daily-governance-dispatcher",
   "api-key-expiry-alert": "daily-governance-dispatcher",

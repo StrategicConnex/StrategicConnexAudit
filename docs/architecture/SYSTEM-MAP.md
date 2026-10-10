@@ -166,11 +166,11 @@ sequenceDiagram
 flowchart LR
     subgraph SCHED["Disparadores"]
         CRON["Vercel Cron (garantizado)<br/>/api/cron/siem · /api/cron/uptime<br/>*/5 · */15 min (CRON_SECRET)"]
-        SCHED2["Trigger.dev schedules (opcional)<br/>(9 crons en src/trigger)"]
+        SCHED2["Trigger.dev schedules (opcional)<br/>(10 crons en src/trigger)"]
         ONDEMAND["On-demand<br/>tasks.trigger (actions)<br/>webhook events"]
     end
 
-    subgraph TRIG["Trigger.dev (src/trigger · 12 tasks)"]
+    subgraph TRIG["Trigger.dev (src/trigger · 14 tasks)"]
         T_ADV["periodicAdversarySimulation<br/>0 */6 h"]
         T_ANOM["periodicAnomalyDetection<br/>*/15 min"]
         T_KEY["apiKeyExpiryAlert<br/>0 9 h"]
@@ -180,6 +180,8 @@ flowchart LR
         T_SCAN["scheduledScanTask<br/>0 * h"]
         T_SIEM["siemExporterTask<br/>*/5 min"]
         T_UP["uptimeMonitor<br/>*/15 min"]
+        T_SQ["drainScanQueueSchedule<br/>*/5 min"]
+        T_PURGE["purgeScanQueueTask<br/>on-demand (diario)"]
         T_AUDIT["runProjectAudit<br/>on-demand"]
         T_WEB["dispatchWebhookTask<br/>on-demand"]
         T_HELLO["helloJob<br/>(dev)"]
@@ -212,6 +214,7 @@ flowchart LR
     T_UP --> S_ANOM
     T_AUDIT --> S_ADV
     T_CLEAN --> D_DB
+    T_PURGE --> D_DB
     S_ADV --> D_DB
     S_ANOM --> D_DB
     S_SEC --> D_SIEM
@@ -233,11 +236,15 @@ flowchart LR
 | `scheduledScanTask` | cron `0 * * * *` | Escaneo agendado: procesa `monitoring_schedules` vencidos → crea audit `pending` → encola `run-project-audit` | `intelligence/` core → DB | [VERIFIED] |
 | `siemExporterTask` | cron `*/5 * * * *` | Exportar a SIEM | `security/siem-exporter.ts` → SIEM externo | [VERIFIED] |
 | `uptimeMonitor` | cron `*/15 * * * *` | Monitoreo de uptime | `anomaly/detector.ts` → DB | [VERIFIED] |
+| `drainScanQueueSchedule` · `drainScanQueueTask` | cron `*/5 * * * *` + wakeup al encolar | Drena `scan_queue` respetando el cupo por plan (`FOR UPDATE SKIP LOCKED` + slots) y ejecuta el escaneo fuera del request HTTP | `scan-queue-worker.ts` → `intelligence_tool_runs` / `intelligence_findings` / outbox | [VERIFIED] |
+| `purgeScanQueueTask` | on-demand desde el dispatcher diario de operaciones (`daily-operations-dispatcher`, `0 3 * * *`) | Purga por retención (14 días) los jobs `done`/`failed` de `scan_queue`; idempotente y sin cron propio (presupuesto 10/10 agotado) | `scan-queue.ts` → DB (`DELETE`) | [VERIFIED] |
 | `runProjectAudit` | on-demand (`tasks.trigger` desde `src/app/actions/audits.ts:163`) | Auditoría completa de proyecto | `intelligence/` → reportes → DB | [VERIFIED] |
 | `dispatchWebhookTask` | on-demand (eventos de proyecto) | Despacho webhook con HMAC + guard SSRF | `webhookConfigs` + endpoints externos | [VERIFIED] |
 | `helloJob` | manual (dev) | Hello world | — | [VERIFIED] |
 
 **Configuración del runtime Trigger.dev** [VERIFIED]: `trigger.config.ts` → project `proj_vzzxtydwblfhxgmljiai`, `dirs: ["./src/trigger"]`, `retries.maxAttempts = 3` (default), `maxDuration = 3600`. ⚠️ Configuración local verificada; **deploy a Trigger.dev no verificado** (plataforma opcional según `deployment.md`).
+
+**Cola de escaneo (C2/C3, ADR-008)** [VERIFIED]: la cola vive en Postgres (`scan_queue` + `scan_queue_slots`, migración 0040) con RLS sin policy (solo el backend). El **productor** (`enqueueScanJob`) sella el `plan` resuelto por el policy-enforcer y encola desde `POST /api/intelligence/runs` cuando `FEATURE_SCAN_QUEUE` está activo (fail-closed: apagado, la ruta ejecuta en línea); el **worker** (`drainScanQueue`) reclama con `SKIP LOCKED` y persiste run/findings/outbox con la misma lógica que el camino síncrono. El drenado se dispara al encolar y, como red de seguridad, por el schedule `*/5`.
 
 **Cron Vercel — mecanismo garantizado** [VERIFIED]: `vercel.json` → `/api/cron/siem` (`0 3 * * *` diario 03:00, CRON_SECRET) y `/api/cron/uptime` (`30 3 * * *` diario 03:30, CRON_SECRET) — frecuencia diaria por límite Hobby (máx. 1 ejecución/día); `regions: ["iad1"]`, respaldados por `src/app/api/cron/siem/route.ts` y `src/app/api/cron/uptime/route.ts`.
 

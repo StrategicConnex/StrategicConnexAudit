@@ -1,7 +1,8 @@
 {
   "_comment": "Manifest del inventario RLS (C7). Cada tabla del schema de Drizzle debe estar en tenant, publicCatalogs o failClosed. scripts/db/rls-inventory.mjs falla si hay una tabla sin clasificar, si una tabla tenant pierde RLS o alguna policy, si una tabla tiene GRANT a authenticated/anon sin RLS, o si el manifest referencia una tabla inexistente.",
-  "_updated": "2026-10-08",
+  "_updated": "2026-10-10",
   "tenant": [
+    "ab_test_results",
     "ab_tests",
     "adversary_assessments",
     "adversary_engagements",
@@ -14,7 +15,9 @@
     "anomaly_detections",
     "audit_logs",
     "audits",
+    "backlink_history",
     "backlinks",
+    "competitor_keywords",
     "competitors",
     "crawl_results",
     "developer_api_keys",
@@ -26,6 +29,7 @@
     "integration_data_bing",
     "integration_data_ga4",
     "integration_data_gsc",
+    "integration_sync_logs",
     "integrations",
     "intelligence_assets",
     "intelligence_findings",
@@ -41,6 +45,7 @@
     "monitoring_alerts",
     "monitoring_schedules",
     "notifications",
+    "outbox_events",
     "pdf_progress",
     "performance_results",
     "plugin_instances",
@@ -51,6 +56,7 @@
     "push_subscriptions",
     "rank_history",
     "remediation_actions",
+    "report_exports",
     "reports",
     "schema_validations",
     "security_audit_logs",
@@ -71,15 +77,14 @@
     "subscription_plans": "catálogo de planes — lectura pública (subscription_plans_public_read USING true)"
   },
   "failClosed": {
-    "ab_test_results": "policy dinámica de 0027 omitida (la tabla no tiene project_id → el EXCEPTION del DO la descarta): fail-closed, solo seed/trigger",
     "ai_eval_results": "resultados de evaluaciones de IA internas (0038): RLS sin policy, solo service role",
     "app_logs": "sink de logs de aplicación (ADR-007): RLS sin policy, solo service role",
-    "backlink_history": "policy dinámica de 0027 omitida (la tabla no tiene project_id → el EXCEPTION del DO la descarta): fail-closed, solo seed/trigger",
-    "competitor_keywords": "policy dinámica de 0027 omitida (la tabla no tiene project_id → el EXCEPTION del DO la descarta): fail-closed, solo seed/trigger",
+    "distributed_cache": "caché distribuida L2 de tools (0040, ADR-008): RLS sin policy, solo el backend la toca",
+    "idempotency_keys": "claves de idempotencia de endpoints (0041, A6): RLS sin policy, solo el backend la toca",
     "exec_briefs": "briefs ejecutivos internos (0038): RLS sin policy, solo service role",
-    "integration_sync_logs": "policy dinámica de 0027 omitida (la tabla no tiene project_id → el EXCEPTION del DO la descarta): fail-closed, solo seed/trigger",
     "rate_limit_windows": "contadores de rate limit en Postgres (ADR-002): RLS sin policy, solo el server los toca",
-    "report_exports": "policy dinámica de 0027 omitida (la tabla no tiene project_id → el EXCEPTION del DO la descarta): fail-closed, solo seed/trigger"
+    "scan_queue": "cola de escaneo en Postgres (0040, ADR-008): RLS sin policy, solo los workers la tocan",
+    "scan_queue_slots": "cupo de concurrencia por plan de la cola (0040, ADR-008): RLS sin policy, solo los workers"
   },
   "rlsExceptions": {}
 }

@@ -11,6 +11,7 @@ import { assertAiQuota } from '@/server/ai/ai-usage';
 import { generateSeoReport } from '@/server/ai/seo-report-service';
 import { assertProjectAccess } from '@/server/lib/project-access';
 import { withRequestContext, currentCorrelationId } from "@/lib/request-context";
+import { withIdempotency } from "@/shared/lib/idempotency";
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,10 @@ export const POST = withRateLimit(
       return user ? { id: user.id } : null;
     }
   },
-  async (req: NextRequest, userId: string) => {
+  // A6: `Idempotency-Key` opcional — un reintento del cliente no encola un
+  // segundo informe para el mismo proyecto.
+  async (req: NextRequest, userId: string) =>
+    withIdempotency(req, { userId, endpoint: "POST /api/ai/report" }, async () => {
     try {
       // Cuota diaria P0-1: antes de cualquier trabajo costoso
       const quota = await assertAiQuota(userId, "seo-report");
@@ -88,7 +92,7 @@ export const POST = withRateLimit(
       logger.error('Error al encolar reporte IA', { error });
       return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
     }
-  }
+    }),
 );
 
 /**

@@ -7,7 +7,8 @@ import {
   intelligenceToolRuns,
   intelligenceFindings,
   intelligenceAssets,
-  intelligenceRunEvents
+  intelligenceRunEvents,
+  outboxEvents
 } from "@/shared/db/schemas";
 import { eq, desc } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
@@ -22,6 +23,7 @@ import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/lib/logger";
 import { ProjectIdSchema } from "@/shared/schemas/api";
 import { withRequestContext } from "@/lib/request-context";
+import { wakeOutboxDrain } from "@/server/webhooks/outbox";
 
 export const dynamic = "force-dynamic";
 
@@ -359,10 +361,19 @@ async function rawPost(req: NextRequest) {
           affectedAsset: f.affectedAsset ?? null,
         }));
         await tx.insert(intelligenceFindings).values(findingsToInsert);
-        // B7: evento outbound `finding.created` (silencioso: sin IA ni push).
-        void import("@/server/webhooks/emit").then((m) =>
-          m.emitWebhookEvent(projectId, "finding.created", m.findingCreatedData(findingsToInsert))
-        ).catch(() => {});
+        // C6: `finding.created` persistido en el outbox DENTRO de la misma
+        // transacción que los hallazgos (durable; el drenador lo entrega).
+        const severities: Record<string, number> = {};
+        for (const f of findingsToInsert) {
+          severities[f.severity] = (severities[f.severity] ?? 0) + 1;
+        }
+        await tx.insert(outboxEvents).values({
+          eventType: "finding.created",
+          aggregateType: "investigation",
+          aggregateId: investigation.id,
+          projectId,
+          payload: { count: findingsToInsert.length, severities },
+        });
       }
 
       // C. Guardar IPs descubiertas como activos persistentes del proyecto
@@ -402,6 +413,11 @@ async function rawPost(req: NextRequest) {
         updatedAt: new Date()
       }).where(eq(intelligenceInvestigations.id, investigation.id));
     });
+
+    // C6: wakeup del drenador del outbox (latencia; el registro es durable).
+    if (aggregatedFindings.length > 0) {
+      void wakeOutboxDrain();
+    }
 
     // 11. Responder estructuradamente con mapeo dinámico de compatibilidad UI
     return NextResponse.json(

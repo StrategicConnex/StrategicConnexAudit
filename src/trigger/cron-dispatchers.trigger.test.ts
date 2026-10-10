@@ -7,7 +7,9 @@
 
    Verifica:
    - Los 4 dispatchers existen con su cron exacto
-   - El repo entero queda dentro del presupuesto de 10 schedules
+   - El repo entero queda dentro del presupuesto de 10 schedules (10/10: no hay
+     hueco para un cron propio de la purga de scan_queue, que cuelga del
+     dispatcher diario de operaciones)
    - Cada job tiene dueño y su dueño es el dispatcher que lo encola
    - Ningún job se encola dos veces ni se queda fuera
    - El run encola todos los jobs y aísla los que fallan
@@ -33,6 +35,7 @@ const hoisted = vi.hoisted(() => {
     integrationSync: trigger(),
     notifications: trigger(),
     cleanup: trigger(),
+    purgeScanQueue: trigger(),
     monitors: trigger(),
     triage: trigger(),
     sla: trigger(),
@@ -63,6 +66,9 @@ vi.mock("./notifications.trigger", () => ({
   notificationsMaintenance: { trigger: hoisted.notifications },
 }));
 vi.mock("./cleanup.trigger", () => ({ cleanupOldLogs: { trigger: hoisted.cleanup } }));
+vi.mock("./scan-queue.trigger", () => ({
+  purgeScanQueueTask: { trigger: hoisted.purgeScanQueue },
+}));
 vi.mock("./monitoring.trigger", () => ({
   evaluateMonitorsTask: { trigger: hoisted.monitors },
 }));
@@ -110,8 +116,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   for (const mock of [
     hoisted.adversary, hoisted.discovery, hoisted.integrationSync, hoisted.notifications,
-    hoisted.cleanup, hoisted.monitors, hoisted.triage, hoisted.sla, hoisted.apiKey,
-    hoisted.pentest, hoisted.forecast, hoisted.digest,
+    hoisted.cleanup, hoisted.purgeScanQueue, hoisted.monitors, hoisted.triage, hoisted.sla,
+    hoisted.apiKey, hoisted.pentest, hoisted.forecast, hoisted.digest,
   ]) {
     mock.mockResolvedValue({ ok: true });
   }
@@ -126,9 +132,9 @@ describe("dispatchers: registro", () => {
     },
   );
 
-  it("son 4 dispatchers y cubren 12 jobs", () => {
+  it("son 4 dispatchers y cubren 13 jobs", () => {
     expect(DISPATCHERS).toHaveLength(4);
-    expect(ALL_DISPATCHED_JOBS).toHaveLength(12);
+    expect(ALL_DISPATCHED_JOBS).toHaveLength(13);
   });
 });
 
@@ -151,11 +157,15 @@ describe("dispatchers: presupuesto de schedules", () => {
     ).toBeLessThanOrEqual(FREE_TIER_MAX_SCHEDULES);
 
     // Guarda contra un escaneo que no encuentra nada y pasa por debajo del
-    // presupuesto sin haber comprobado nada: los 5 jobs de alta frecuencia
-    // siguen con cron propio y son el suelo real del repo.
+    // presupuesto sin haber comprobado nada: los jobs de alta frecuencia siguen
+    // con cron propio y son el suelo real del repo. Inventario actual (6):
+    // anomaly + uptime (*/15), siem + drain-scan-queue (*/5), scheduled-scan
+    // (0 *), eval-weekly (0 6 * * 0). El presupuesto sigue en 10/10 con los 4     // dispatchers. La purga de scan_queue NO declara `cron:` propio (cuelga del
+    // dispatcher diario), así que el inventario no cambia.
     expect(declared.filter((d) => !d.file.startsWith("cron-dispatchers")).map((d) => d.cron).sort()).toEqual([
       "*/15 * * * *",
       "*/15 * * * *",
+      "*/5 * * * *",
       "*/5 * * * *",
       "0 * * * *",
       "0 6 * * 0",
@@ -189,18 +199,24 @@ describe("dispatchers: cobertura", () => {
 });
 
 describe("dispatchers: run", () => {
-  it("el dispatcher de operaciones encola sus 4 jobs con el timestamp del cron", async () => {
+  it("el dispatcher de operaciones encola sus 5 jobs con el timestamp del cron", async () => {
     const result = await (dailyOperationsDispatcher as unknown as ScheduleConfig).run({
       timestamp: TIMESTAMP,
     });
 
     expect(result).toEqual({
       dispatcher: "daily-operations-dispatcher",
-      total: 4,
-      dispatched: 4,
+      total: 5,
+      dispatched: 5,
       failed: 0,
     });
-    for (const mock of [hoisted.integrationSync, hoisted.notifications, hoisted.cleanup, hoisted.monitors]) {
+    for (const mock of [
+      hoisted.purgeScanQueue,
+      hoisted.integrationSync,
+      hoisted.notifications,
+      hoisted.cleanup,
+      hoisted.monitors,
+    ]) {
       expect(mock).toHaveBeenCalledWith({ timestamp: TIMESTAMP });
     }
   });
@@ -221,8 +237,8 @@ describe("dispatchers: run", () => {
 
     expect(result).toEqual({
       dispatcher: "daily-operations-dispatcher",
-      total: 4,
-      dispatched: 3,
+      total: 5,
+      dispatched: 4,
       failed: 1,
     });
     expect(hoisted.monitors).toHaveBeenCalledTimes(1);

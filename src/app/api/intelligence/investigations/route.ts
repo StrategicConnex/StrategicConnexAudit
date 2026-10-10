@@ -8,7 +8,8 @@ import {
   intelligenceFindings,
   intelligenceAssets,
   intelligenceRunEvents,
-  intelligenceToolRuns
+  intelligenceToolRuns,
+  outboxEvents
 } from "@/shared/db/schemas";
 import { checkIntelScanRateLimit } from "@/shared/lib/ratelimit";
 import { createInvestigationSchema } from "@/features/intelligence/validators/intelligence.schema";
@@ -19,6 +20,7 @@ import type { Finding } from "@/server/intelligence/types/executor.types";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/lib/logger";
 import { withRequestContext } from "@/lib/request-context";
+import { wakeOutboxDrain } from "@/server/webhooks/outbox";
 
 export const dynamic = "force-dynamic";
 
@@ -338,10 +340,20 @@ async function rawPost(req: NextRequest) {
                   affectedAsset: f.affectedAsset ?? null,
                 }))
               );
-            // B7: evento outbound `finding.created` (silencioso: sin IA ni push).
-            void import("@/server/webhooks/emit").then((m) =>
-              m.emitWebhookEvent(projectId, "finding.created", m.findingCreatedData(aggregatedFindings))
-            ).catch(() => {});
+            // C6: `finding.created` persistido en el outbox DENTRO de la misma
+            // transacción que los hallazgos — si el commit revierte, el evento
+            // no existe; si commitea, el drenador lo entrega (at-least-once).
+            const severities: Record<string, number> = {};
+            for (const f of aggregatedFindings) {
+              severities[f.severity] = (severities[f.severity] ?? 0) + 1;
+            }
+            await tx.insert(outboxEvents).values({
+              eventType: "finding.created",
+              aggregateType: "investigation",
+              aggregateId: investigation.id,
+              projectId,
+              payload: { count: aggregatedFindings.length, severities },
+            });
             }
 
             // Assets
@@ -419,6 +431,11 @@ async function rawPost(req: NextRequest) {
             score,
             summary: `Finalizado con errores de persistencia: ${dbMsg}. ${toolsOk}/${TOOLS_TO_RUN.length} herramientas ejecutadas.`,
           }, errorLog);
+        }
+
+        // C6: wakeup del drenador del outbox (latencia; el registro es durable).
+        if (aggregatedFindings.length > 0) {
+          void wakeOutboxDrain();
         }
 
       } catch (backgroundError: unknown) {

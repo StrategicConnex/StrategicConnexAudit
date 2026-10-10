@@ -5,6 +5,7 @@ import { executionCache, IntelligenceCache } from "./cache";
 import { enforceToolRunPolicy } from "./policy-enforcer";
 import { initializePluginExecutors } from "../plugins/plugin-executor";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { cacheGet, cacheSet, isDistributedCacheEnabled } from "@/shared/lib/distributed-cache";
 import net from "node:net";
 import dns from "node:dns/promises";
 import { logger } from "@/lib/logger";
@@ -98,6 +99,22 @@ export async function executeTool(
     };
   }
 
+  // 2b. Caché distribuida (L2): comparte el resultado entre instancias
+  //     serverless. Sólo en modo postgres (en dev/test no se toca la BD).
+  if (isDistributedCacheEnabled()) {
+    const shared = await cacheGet<ExecutionResult<Record<string, unknown>>>(cacheKey);
+    if (shared) {
+      executionCache.set(cacheKey, shared);
+      return {
+        ...shared,
+        output: {
+          ...(shared.output as Record<string, unknown>),
+          _fromCache: true,
+        },
+      };
+    }
+  }
+
   // 3. Preparar el ExecutionContext con soporte de timeouts controlados
   const controller = new AbortController();
   const timeoutMs = toolDef.timeoutMs || executor.timeoutMs || 10000;
@@ -139,8 +156,11 @@ export async function executeTool(
     };
 
     // 5. Cachear resultado exitoso para evitar re-ejecuciones innecesarias
+    //    (L1 en memoria + L2 distribuido, C2)
     if (result.success) {
-      executionCache.set(cacheKey, { ...finalResult, output: { ...(result.output as Record<string, unknown>) } });
+      const toCache = { ...finalResult, output: { ...(result.output as Record<string, unknown>) } };
+      executionCache.set(cacheKey, toCache);
+      if (isDistributedCacheEnabled()) void cacheSet(cacheKey, toCache);
     }
 
     return finalResult;

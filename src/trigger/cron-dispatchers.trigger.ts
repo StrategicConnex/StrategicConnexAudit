@@ -7,9 +7,11 @@
  * Por qué agrupar: el plan gratuito de Trigger.dev admite 10 schedules por
  * proyecto. El repo declaraba 17 crons, así que `trigger.dev deploy` fallaba
  * con "You have created 10/10 schedules" y ninguno llegaba a ejecutarse en
- * producción. Ahora hay 9 schedules en total (5 jobs de alta frecuencia con
- * cron propio + estos 4) y los 12 jobs de cadencia lenta siguen corriéndose
- * todos, cada uno con su hora original documentada en su propio archivo.
+ * producción. Ahora hay 10 schedules en total (6 jobs de alta frecuencia con
+ * cron propio + estos 4) y los 13 jobs de cadencia lenta siguen corriéndose
+ * todos, cada uno con su hora original documentada en su propio archivo —
+ * incluidos los que nacieron DESPUÉS de la consolidación (`purgeScanQueueTask`,
+ * que no tiene cron propio precisamente porque el presupuesto ya está lleno).
  *
  * El encolado es "fire and forget": el dispatcher no espera a que termine cada
  * job. El resultado de cada uno vive en su propio run, que es donde hay que
@@ -25,6 +27,7 @@ import { continuousDiscovery } from "./discovery.trigger";
 import { integrationSyncSweep } from "./integration-sync.trigger";
 import { notificationsMaintenance } from "./notifications.trigger";
 import { cleanupOldLogs } from "./cleanup.trigger";
+import { purgeScanQueueTask } from "./scan-queue.trigger";
 import { evaluateMonitorsTask } from "./monitoring.trigger";
 import { findingTriageSweep } from "./finding-triage.trigger";
 import { findingSlaSweep } from "./finding-sla.trigger";
@@ -39,8 +42,13 @@ export const SIX_HOURLY_JOBS: readonly DispatchJob[] = [
   { id: "continuous-discovery", legacyCron: "0 */6 * * *", trigger: continuousDiscovery.trigger },
 ];
 
-/** Diario: integraciones, bandeja y purgas de logs. */
+/** Diario: integraciones, bandeja, retención de la cola y purgas de logs. */
 export const DAILY_OPERATIONS_JOBS: readonly DispatchJob[] = [
+  // La purga de `scan_queue` pedía cron propio a las 02:00, pero el presupuesto
+  // de 10 schedules ya está agotado (`cron-dispatchers.trigger.test.ts`), así que
+  // cuelga de este dispatcher: corre cada día a las 03:00. `legacyCron` conserva
+  // la hora objetivo como documentación.
+  { id: "purge-scan-queue", legacyCron: "0 2 * * *", trigger: purgeScanQueueTask.trigger },
   { id: "integration-sync-sweep", legacyCron: "0 3 * * *", trigger: integrationSyncSweep.trigger },
   { id: "notifications-maintenance", legacyCron: "0 3 * * *", trigger: notificationsMaintenance.trigger },
   { id: "cleanup-old-logs", legacyCron: "0 0 * * *", trigger: cleanupOldLogs.trigger },

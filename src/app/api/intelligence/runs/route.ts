@@ -2,19 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, desc } from "drizzle-orm";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
 import { withRLS } from "@/shared/db/rls";
-import {
-  projects,
-  intelligenceToolRuns,
-  intelligenceFindings
-} from "@/shared/db/schemas";
+import { projects, intelligenceToolRuns } from "@/shared/db/schemas";
 import { runToolSchema } from "@/features/intelligence/validators/intelligence.schema";
 import { assertPublicHostname } from "@/server/intelligence/security/egress-guard";
 import { getToolDefinition } from "@/server/intelligence/core/tool-registry";
-import { executeTool } from "@/server/intelligence/core/dispatcher";
+import { executeAndRecordToolRun } from "@/server/intelligence/tool-run";
+import { enqueueScanJob, wakeScanQueueDrain, QueueFullError } from "@/server/intelligence/scan-queue";
+import { isFlagEnabled } from "@/shared/lib/flags";
 import { checkIntelScanRateLimit, buildRateLimitHeaders } from "@/shared/lib/ratelimit";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/lib/logger";
 import { withRequestContext } from "@/lib/request-context";
+import { withIdempotency } from "@/shared/lib/idempotency";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +71,9 @@ export const GET = withRequestContext(rawGet);
 async function rawPost(req: NextRequest) {
   try {
     const user = await getCurrentUserOrThrow();
+
+    // A6: `Idempotency-Key` opcional — un reintento no vuelve a ejecutar la tool.
+    return await withIdempotency(req, { userId: user.id, endpoint: "POST /api/intelligence/runs" }, async () => {
     const body = await req.json();
 
     const parseResult = runToolSchema.safeParse(body);
@@ -133,69 +135,71 @@ async function rawPost(req: NextRequest) {
       }, { status: 403 });
     }
 
-    const startedAt = new Date();
-    const tStart = Date.now();
+    // C3: si la cola de escaneo está activa para este usuario, el trabajo se
+    // ENCOLA y lo ejecuta el worker fuera del request HTTP (sin el timeout de
+    // la función serverless). El flag es fail-closed: por defecto el camino
+    // sigue siendo el síncrono de abajo. Si la cola no está disponible, NO
+    // rompemos la request: se cae al camino síncrono. La única excepción es la
+    // contrapresión (`QueueFullError`): ahí la request SÍ se rechaza con 429,
+    // porque ejecutar en línea haría justo el trabajo que la cola rechazó.
+    if (isFlagEnabled("scanQueue", { userId: user.id })) {
+      try {
+        const job = await enqueueScanJob({
+          projectId,
+          userId: user.id,
+          toolId,
+          target,
+          input,
+          investigationId,
+        });
+        if (job) {
+          void wakeScanQueueDrain();
+          return NextResponse.json({ success: true, queued: true, job }, { status: 202 });
+        }
+        logger.warn("[intelligence/runs] la cola no está disponible; se ejecuta en línea", {
+          projectId,
+          toolId,
+        });
+      } catch (error: unknown) {
+        // Contrapresión (C3): la cola activa del proyecto ya alcanzó el límite de
+        // su plan. Se responde 429 accionable —reintentar cuando drene— en vez de
+        // degradar al camino síncrono, que volvería a saturar el pool con el
+        // trabajo que la cola acaba de rechazar.
+        if (error instanceof QueueFullError) {
+          logger.warn("[intelligence/runs] cola de escaneo llena; se rechaza el encolado", {
+            projectId,
+            toolId,
+            depth: error.depth,
+            limit: error.limit,
+          });
+          return NextResponse.json(
+            {
+              success: false,
+              error: error.message,
+              queue: { depth: error.depth, limit: error.limit },
+            },
+            { status: 429 },
+          );
+        }
+        throw error;
+      }
+    }
 
-    // Despachar a nuestro motor dinámico técnico
-    const executionResult = await executeTool(
+    // Camino síncrono (por defecto): ejecuta y persiste run + findings + outbox.
+    const { success, run } = await executeAndRecordToolRun({
+      userId: user.id,
+      projectId,
+      investigationId,
       toolId,
       target,
       input,
-      projectId,
-      investigationId,
-      user.id
-    );
-
-    const durationMs = Date.now() - tStart;
-    const status = executionResult.success ? "completed" : "failed";
-
-    // Guardar el registro de la ejecución del ejecutor real y sus findings si existiesen
-    const record = await withRLS(user.id, async (tx) => {
-      // 1. Insertar la ejecución de la herramienta
-      const [insertedRun] = await tx.insert(intelligenceToolRuns).values({
-        projectId,
-        investigationId: investigationId || null,
-        toolId,
-        category: toolDef.category,
-        status,
-        input,
-        output: executionResult.output,
-        error: executionResult.error || null,
-        durationMs,
-        startedAt,
-        completedAt: new Date()
-      }).returning();
-      if (!insertedRun) throw new Error("Fallo al registrar la ejecución de la herramienta");
-
-      // 2. Si hubo findings reales, insertarlos de forma atómica
-      if (executionResult.findings && executionResult.findings.length > 0 && investigationId) {
-        const findingsToInsert = executionResult.findings.map(finding => ({
-          projectId,
-          investigationId,
-          toolRunId: insertedRun.id,
-          severity: finding.severity as "info" | "low" | "medium" | "high" | "critical",
-          confidence: String(Number(finding.confidence) || 0.7),
-          title: finding.title,
-          description: finding.description,
-          recommendation: finding.remediation || finding.recommendation || null,
-          evidence: (finding.evidence ?? {}) as Record<string, unknown>,
-          affectedAsset: finding.affectedAsset ?? null,
-        }));
-        await tx.insert(intelligenceFindings).values(findingsToInsert);
-        // B7: evento outbound `finding.created` (silencioso: sin IA ni push).
-        void import("@/server/webhooks/emit").then((m) =>
-          m.emitWebhookEvent(projectId, "finding.created", m.findingCreatedData(findingsToInsert))
-        ).catch(() => {});
-      }
-
-      return insertedRun;
     });
 
     return NextResponse.json({
-      success: executionResult.success,
-      run: record
+      success,
+      run
     });
-
+    });
   } catch (error: unknown) {
     const msg = getErrorMessage(error);
     logger.error("POST intelligence run failure:", { error: getErrorMessage(error) })

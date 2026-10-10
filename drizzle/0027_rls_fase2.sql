@@ -95,12 +95,16 @@ ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
 DO $$
 DECLARE
   t TEXT;
+  -- SOLO tablas con project_id directo. Las hijas sin project_id van en la
+  -- sección 3 con una policy EXISTS hacia el padre: incluirlas aquí haría
+  -- fallar el CREATE POLICY y el EXCEPTION del bloque lo tragaría en
+  -- silencio, dejando la tabla fail-closed sin que nadie se enterara.
   tables TEXT[] := ARRAY[
-    'integrations', 'integration_sync_logs', 'integration_data_ga4',
+    'integrations', 'integration_data_ga4',
     'integration_data_bing', 'project_audit_rules', 'issues', 'competitors',
-    'competitor_keywords', 'backlinks', 'backlink_history', 'ab_tests',
-    'ab_test_results', 'heatmap_sessions', 'schema_validations', 'reports',
-    'report_exports', 'subscriptions', 'monitoring_schedules',
+    'backlinks', 'ab_tests',
+    'heatmap_sessions', 'schema_validations', 'reports',
+    'subscriptions', 'monitoring_schedules',
     'monitoring_alerts', 'webhook_configs', 'dns_history', 'whois_history',
     'plugin_instances', 'domain_technologies', 'project_invitations',
     'team_audit_logs', 'adversary_runs', 'adversary_assessments',
@@ -108,18 +112,11 @@ DECLARE
   ];
 BEGIN
   FOREACH t IN ARRAY tables LOOP
-    BEGIN
-      -- Guard por sentencia: algunas tablas de la lista no tienen project_id
-      -- (p.ej. integration_sync_logs) y el CREATE POLICY fallaría, abortando
-      -- TODO el bloque (transaccional). Con EXCEPTION seguimos con el resto.
-      EXECUTE format('DROP POLICY IF EXISTS %I ON %I', t || '_fase2', t);
-      EXECUTE format(
-        'CREATE POLICY %I ON %I FOR ALL TO authenticated USING (public.user_has_project_access(project_id)) WITH CHECK (public.user_has_project_access(project_id))',
-        t || '_fase2', t
-      );
-    EXCEPTION WHEN OTHERS THEN
-      RAISE NOTICE 'policy %_fase2 omitida: %', t, SQLERRM;
-    END;
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I', t || '_fase2', t);
+    EXECUTE format(
+      'CREATE POLICY %I ON %I FOR ALL TO authenticated USING (public.user_has_project_access(project_id)) WITH CHECK (public.user_has_project_access(project_id))',
+      t || '_fase2', t
+    );
   END LOOP;
 END $$;
 --> statement-breakpoint
@@ -148,6 +145,38 @@ DROP POLICY IF EXISTS adversary_vulnerabilities_fase2 ON adversary_vulnerabiliti
 CREATE POLICY adversary_vulnerabilities_fase2 ON adversary_vulnerabilities FOR ALL TO authenticated
   USING (EXISTS (SELECT 1 FROM adversary_assessments a WHERE a.id = adversary_vulnerabilities.assessment_id AND public.user_has_project_access(a.project_id)))
   WITH CHECK (EXISTS (SELECT 1 FROM adversary_assessments a WHERE a.id = adversary_vulnerabilities.assessment_id AND public.user_has_project_access(a.project_id)));
+--> statement-breakpoint
+
+-- Hijas sin project_id que antes se colaban en el ARRAY dinámico (bug del
+-- EXCEPTION que las dejaba fail-closed en silencio). Van explícitas aquí.
+DROP POLICY IF EXISTS integration_sync_logs_fase2 ON integration_sync_logs;
+CREATE POLICY integration_sync_logs_fase2 ON integration_sync_logs FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM integrations i WHERE i.id = integration_sync_logs.integration_id AND public.user_has_project_access(i.project_id)))
+  WITH CHECK (EXISTS (SELECT 1 FROM integrations i WHERE i.id = integration_sync_logs.integration_id AND public.user_has_project_access(i.project_id)));
+--> statement-breakpoint
+
+DROP POLICY IF EXISTS competitor_keywords_fase2 ON competitor_keywords;
+CREATE POLICY competitor_keywords_fase2 ON competitor_keywords FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM competitors c WHERE c.id = competitor_keywords.competitor_id AND public.user_has_project_access(c.project_id)))
+  WITH CHECK (EXISTS (SELECT 1 FROM competitors c WHERE c.id = competitor_keywords.competitor_id AND public.user_has_project_access(c.project_id)));
+--> statement-breakpoint
+
+DROP POLICY IF EXISTS backlink_history_fase2 ON backlink_history;
+CREATE POLICY backlink_history_fase2 ON backlink_history FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM backlinks b WHERE b.id = backlink_history.backlink_id AND public.user_has_project_access(b.project_id)))
+  WITH CHECK (EXISTS (SELECT 1 FROM backlinks b WHERE b.id = backlink_history.backlink_id AND public.user_has_project_access(b.project_id)));
+--> statement-breakpoint
+
+DROP POLICY IF EXISTS ab_test_results_fase2 ON ab_test_results;
+CREATE POLICY ab_test_results_fase2 ON ab_test_results FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM ab_tests t WHERE t.id = ab_test_results.test_id AND public.user_has_project_access(t.project_id)))
+  WITH CHECK (EXISTS (SELECT 1 FROM ab_tests t WHERE t.id = ab_test_results.test_id AND public.user_has_project_access(t.project_id)));
+--> statement-breakpoint
+
+DROP POLICY IF EXISTS report_exports_fase2 ON report_exports;
+CREATE POLICY report_exports_fase2 ON report_exports FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM reports r WHERE r.id = report_exports.report_id AND public.user_has_project_access(r.project_id)))
+  WITH CHECK (EXISTS (SELECT 1 FROM reports r WHERE r.id = report_exports.report_id AND public.user_has_project_access(r.project_id)));
 --> statement-breakpoint
 
 -- ══ 4. push_subscriptions (propias + alta anónima) ═════════════════════════

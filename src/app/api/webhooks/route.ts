@@ -13,6 +13,7 @@ import { encryptField, maskSecret } from "@/server/lib/field-crypto";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { withRequestContext } from "@/lib/request-context";
+import { withIdempotency } from "@/shared/lib/idempotency";
 import {
   DEFAULT_WEBHOOK_EVENTS,
   WEBHOOK_EVENTS,
@@ -131,6 +132,9 @@ async function rawPost(req: NextRequest) {
       return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 });
     }
 
+    // A6: `Idempotency-Key` opcional. Un reintento con la misma clave devuelve
+    // la respuesta original en vez de crear una segunda configuración.
+    return await withIdempotency(req, { userId: user.id, endpoint: "POST /api/webhooks" }, async () => {
     const body = await req.json();
     const parseResult = webhookCreateSchema.safeParse(body);
     if (!parseResult.success) {
@@ -201,7 +205,9 @@ async function rawPost(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result.data
-    });    } catch (error: unknown) {
+    });
+    });
+  } catch (error: unknown) {
     logger.error("POST webhooks route failure:", { error: getErrorMessage(error) })
     return NextResponse.json({
       success: false,

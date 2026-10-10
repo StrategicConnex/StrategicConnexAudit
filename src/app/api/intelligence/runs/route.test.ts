@@ -10,6 +10,9 @@ const mockEgressGuard = vi.fn(async () => undefined);
 const mockGetToolDefinition = vi.fn();
 const mockExecuteTool = vi.fn();
 const mockInsertValues = vi.fn(() => ({ returning: mockReturning }));
+const mockIsFlagEnabled = vi.fn(() => false);
+const mockEnqueueScanJob = vi.fn();
+const mockWakeScanQueueDrain = vi.fn(async () => undefined);
 
 const mockTx = {
   query: {
@@ -45,6 +48,24 @@ vi.mock("@/server/intelligence/core/tool-registry", () => ({
 vi.mock("@/server/intelligence/core/dispatcher", () => ({
   executeTool: mockExecuteTool,
 }));
+
+// C3: la ruta encola en vez de ejecutar en línea cuando el flag `scanQueue`
+// está activo; el flag es fail-closed, así que por defecto el mock devuelve off.
+vi.mock("@/shared/lib/flags", () => ({
+  isFlagEnabled: mockIsFlagEnabled,
+}));
+
+// Se mockean sólo las funciones con efectos (encolado/wakeup) y se conserva el
+// resto del módulo real: la ruta discrimina la contrapresión con
+// `error instanceof QueueFullError`, así que la clase debe ser la de verdad.
+vi.mock("@/server/intelligence/scan-queue", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/server/intelligence/scan-queue")>();
+  return {
+    ...actual,
+    enqueueScanJob: mockEnqueueScanJob,
+    wakeScanQueueDrain: mockWakeScanQueueDrain,
+  };
+});
 
 vi.mock("@/shared/db/schemas", () => ({
   projects: { id: "id" },
@@ -89,6 +110,8 @@ beforeEach(() => {
   mockProjectFindFirst.mockResolvedValue({ id: PROJECT_ID });
   mockReturning.mockResolvedValue([{ id: "run-1", status: "completed" }]);
   mockExecuteTool.mockResolvedValue({ success: true, output: { answers: [] }, findings: [] });
+  mockIsFlagEnabled.mockReturnValue(false);
+  mockEnqueueScanJob.mockResolvedValue(null);
 });
 
 describe("GET /api/intelligence/runs", () => {
@@ -215,5 +238,55 @@ describe("POST /api/intelligence/runs", () => {
     );
     expect(mockInsertValues).toHaveBeenCalledTimes(1);
     expect(mockReturning).toHaveBeenCalledTimes(1);
+  });
+
+  it("flag scanQueue activo → 202 encolado y NO ejecuta en línea", async () => {
+    mockIsFlagEnabled.mockReturnValue(true);
+    mockEnqueueScanJob.mockResolvedValue({ id: "job-1", plan: "pro" });
+
+    const res = await POST(createRequest("POST", "http://localhost/api/intelligence/runs", validBody));
+
+    expect(res.status).toBe(202);
+    const body = await res.json();
+    expect(body).toMatchObject({ success: true, queued: true, job: { id: "job-1", plan: "pro" } });
+    expect(mockEnqueueScanJob).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: PROJECT_ID, toolId: "dns-lookup", userId: "user-1" })
+    );
+    expect(mockExecuteTool).not.toHaveBeenCalled();
+    expect(mockWakeScanQueueDrain).toHaveBeenCalledTimes(1);
+  });
+
+  it("flag activo y cola llena → 429 accionable y NO ejecuta en línea", async () => {
+    // Import dinámico: la clase real del módulo mockeado (con `importOriginal`),
+    // para que el `instanceof` de la ruta se cumpla. Un import estático aquí se
+    // izaría junto al `vi.mock` y evaluaría el factory antes de inicializar los
+    // mocks ("Cannot access 'mockEnqueueScanJob' before initialization").
+    const { QueueFullError } = await import("@/server/intelligence/scan-queue");
+
+    mockIsFlagEnabled.mockReturnValue(true);
+    mockEnqueueScanJob.mockRejectedValue(new QueueFullError(PROJECT_ID, 10, 10));
+
+    const res = await POST(createRequest("POST", "http://localhost/api/intelligence/runs", validBody));
+
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("Límite de escaneos en cola alcanzado");
+    expect(body.queue).toEqual({ depth: 10, limit: 10 });
+    // Degradar al camino síncrono sería volver a lanzar el trabajo rechazado.
+    expect(mockExecuteTool).not.toHaveBeenCalled();
+    expect(mockWakeScanQueueDrain).not.toHaveBeenCalled();
+  });
+
+  it("flag activo pero la cola no está disponible → cae al camino síncrono", async () => {
+    mockIsFlagEnabled.mockReturnValue(true);
+    mockEnqueueScanJob.mockResolvedValue(null);
+
+    const res = await POST(createRequest("POST", "http://localhost/api/intelligence/runs", validBody));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(mockExecuteTool).toHaveBeenCalledTimes(1);
   });
 });

@@ -351,6 +351,27 @@
       "when": 1791244800000,
       "tag": "2026-10-05_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791504000000,
+      "tag": "0039_rls_fase2_fix",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1791590400000,
+      "tag": "0040_platform_cache_queue",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1791676800000,
+      "tag": "0041_platform_idempotency_outbox",
+      "breakpoints": true
     }
   ]
 }
