@@ -46,6 +46,12 @@ dev-*.log
 *.bak
 design-report.html
 
+# residuos locales (no versionar): pid del dev server, logs de e2e y config de herramientas
+/dev.pid
+/e2e-err.log
+/e2e-run.log
+/opencode.json
+
 # test artifacts
 test-results/
 playwright-report/
