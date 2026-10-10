@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Activity,
   WifiOff,
+  Radio,
   Bell,
   Terminal,
   CheckCircle2,
@@ -27,6 +28,8 @@ import { Card } from "@/components/ui/Card";
 import type { ProjectWithNested } from "@/shared/db/types";
 import type { TimelineEvent } from "@/components/ActivityTimeline";
 import { formatTime, formatTimeWithSeconds } from "@/shared/utils/datetime";
+import { createClient } from "@/shared/lib/supabase/client";
+import { isFlagEnabled } from "@/shared/lib/flags";
 
 /**
  * BenchmarkingSection pulls in recharts (~570KB) — defer the chunk until the
@@ -105,6 +108,23 @@ const HERO_EMPTY: HeroLive = {
   avgLatencyMs: null,
   aiHealthy: null,
 };
+
+/** Periodo del refresco de respaldo: el mismo que el sondeo de la barra live. */
+const FALLBACK_MS = 15_000;
+
+/**
+ * Margen de gracia para la confirmación del canal (mismo valor que la barra live).
+ * Si el canal no confirma en este plazo se degrada aunque Realtime no haya
+ * reportado error: un canal que se queda en "conectando" deja el hero congelado, y
+ * congelado sin decirlo es peor que degradado.
+ */
+const SUBSCRIBE_GRACE_MS = 4_000;
+
+/** Ventana de agrupación: una ráfaga de eventos vale un solo refresco. */
+const REFRESH_COALESCE_MS = 1_000;
+
+/** Fuente que alimenta el hero: suscripción Realtime o refresco periódico. */
+export type HeroTransport = "realtime" | "polling";
 
 // ─── OverviewSummary (Semana 5) ─────────────────────────────────────────────
 
@@ -191,7 +211,14 @@ export function OverviewTab({
   userInitials,
 }: OverviewTabProps) {
   const t = useTranslations("overview");
+  // Las etiquetas de transporte se reutilizan del namespace `live` (C1): el
+  // vocabulario del usuario ("Realtime" / "Sondeo 15s") debe ser el mismo en los
+  // dos componentes, y claves nuevas serían vocabulario duplicado.
+  const tLive = useTranslations("live");
   const [hero, setHero] = useState<HeroLive>({ ...HERO_EMPTY, status: "loading" });
+  const [transport, setTransport] = useState<HeroTransport>("polling");
+  /** Espejo del transporte: el callback de `subscribe` no debe leer estado. */
+  const transportRef = useRef<HeroTransport>("polling");
   // Contador de intentos: permite que el botón de reintento vuelva a lanzar la
   // carga (dependencia del useEffect) en vez de necesitar una función aparte.
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -254,6 +281,109 @@ export function OverviewTab({
       cancelled = true;
     };
   }, [projectId, loadAttempt]);
+
+  // ─── Realtime: hero en vivo (ADR-004 enmienda, Fase 2) ──────────────────────
+  //
+  // Mismo patrón ya probado en `LiveMetricsBar` (C1). Dos diferencias que conviene
+  // tener presentes porque no son obvias:
+  //
+  // 1. ESTE COMPONENTE NO TENÍA SONDEO. El hero se cargaba una sola vez al montar,
+  //    así que "degradar al sondeo existente" aquí significa instaurarlo: sin él,
+  //    apagar el flag o perder el canal dejaría la telemetría congelada para
+  //    siempre. El periodo es el mismo de la barra (15 s) y del runbook del ADR
+  //    (§14: apagar el flag → la UI refresca por tiempo).
+  //
+  // 2. LA SUSCRIPCIÓN VA SIN FILTRO. `intelligence_run_events` NO tiene
+  //    `project_id`: no hay columna por la que filtrar el proyecto del hero. El
+  //    aislamiento lo impone la policy `intelligence_run_events_select_member_or_owner`
+  //    (migración 0022) del lado del servidor: solo llegan filas de investigaciones
+  //    del propio usuario. Un evento de otro proyecto del MISMO usuario dispararía
+  //    un refresco de más; el snapshot que se pide entonces es RLS-scoped, así que
+  //    el peor caso es una petición extra, nunca un dato ajeno en pantalla.
+  //
+  // Qué hace un evento: pedir el snapshot otra vez. El evento no trae los datos
+  // que pinta el hero (chequeos de uptime, salud de IA), así que derivar cifras de
+  // él sería inventarlas.
+  useEffect(() => {
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let coalesceId: ReturnType<typeof setTimeout> | null = null;
+
+    const refrescar = () => {
+      if (!cancelled) setLoadAttempt((n) => n + 1);
+    };
+
+    const marcar = (valor: HeroTransport) => {
+      transportRef.current = valor;
+      if (!cancelled) setTransport(valor);
+    };
+
+    /** Fallo o silencio del canal → refresco periódico. */
+    const aSondeo = () => {
+      if (cancelled) return;
+      marcar("polling");
+      if (!intervalId) intervalId = setInterval(refrescar, FALLBACK_MS);
+    };
+
+    // Flag apagado (fail-closed): sin suscripción, el hero se refresca por tiempo.
+    if (!isFlagEnabled("realtimeLive")) {
+      intervalId = setInterval(refrescar, FALLBACK_MS);
+      return () => {
+        cancelled = true;
+        if (intervalId) clearInterval(intervalId);
+      };
+    }
+
+    const supabase = createClient();
+
+    /** Ráfaga de eventos → un solo refresco (20 eventos no son 20 snapshots). */
+    const refrescarPronto = () => {
+      if (coalesceId) return;
+      coalesceId = setTimeout(() => {
+        coalesceId = null;
+        refrescar();
+      }, REFRESH_COALESCE_MS);
+    };
+
+    const channel = supabase
+      // Nombre único por proyecto: dos montajes con distinto `projectId` no deben
+      // compartir topic.
+      .channel(`overview-hero:${projectId ?? "sin-proyecto"}`)
+      .on(
+        "postgres_changes",
+        // Sin `filter`: ver la nota 2 de arriba.
+        { event: "INSERT", schema: "public", table: "intelligence_run_events" },
+        () => refrescarPronto()
+      )
+      .subscribe((status) => {
+        if (cancelled) return;
+        if (status === "SUBSCRIBED") {
+          marcar("realtime");
+          return;
+        }
+        // CHANNEL_ERROR, TIMED_OUT y CLOSED son los tres finales de un canal que
+        // no entrega: los tres degradan.
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          aSondeo();
+        }
+      });
+
+    // Red de seguridad del silencio: sin esto un canal que nunca responde dejaría
+    // el hero sin datos y sin refresco.
+    const graceId = setTimeout(() => {
+      if (transportRef.current !== "realtime") aSondeo();
+    }, SUBSCRIBE_GRACE_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(graceId);
+      if (coalesceId) clearTimeout(coalesceId);
+      if (intervalId) clearInterval(intervalId);
+      void supabase.removeChannel(channel);
+    };
+  }, [projectId]);
+
+  const esRealtime = transport === "realtime";
   return (
     <div className="space-y-6">
       {/* Page title — h1 lives in DashboardHeader; this is the in-content h2 */}
@@ -364,6 +494,26 @@ export function OverviewTab({
                 </span>
                 <span className="w-0.5 h-3 bg-border" />
                 <span className="text-2xs font-mono font-bold text-muted-fg">SCAUDIT Engine</span>
+                {/* Fuente del refresco (REQ-5 del ADR): sin esto el usuario no
+                    distingue "actualizado por suscripción" de "actualizado por
+                    tiempo". Se reutilizan las clases de contraste ya medidas en
+                    la barra live: `text-chartreuse` y `text-muted-fg` son aptas
+                    sobre `--card` en claro y oscuro; un ámbar no lo era. */}
+                <span className="w-0.5 h-3 bg-border" />
+                <span className="flex items-center gap-1">
+                  <Radio
+                    aria-hidden="true"
+                    className={"w-3 h-3 " + (esRealtime ? "text-chartreuse" : "text-muted-fg")}
+                  />
+                  <span
+                    className={
+                      "text-2xs font-mono uppercase tracking-wider " +
+                      (esRealtime ? "text-chartreuse" : "text-muted-fg")
+                    }
+                  >
+                    {esRealtime ? tLive("realtime") : tLive("degraded")}
+                  </span>
+                </span>
               </div>
               <span className="text-2xs font-bold text-muted-fg flex items-center gap-1.5 font-mono">
                 <Zap className="w-3 h-3 text-primary" />
