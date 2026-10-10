@@ -288,7 +288,10 @@ jobs:
       # un exit code != 0 que propagamos tal cual para romper el job.
       # Antes `... && echo passed || echo failed` fijaba siempre exit 0: el
       # fallo se perdia y el contrato roto cerraba el pipeline en verde.
-      - name: Run Newman API contract tests (skip if no API key)
+      # Requiere el secreto `SCAUDIT_API_KEY` (ver `.env.example` → "API pública
+      # v1 — contrato Newman"): sin él este paso se omite y solo se valida el
+      # OpenAPI offline. Configúralo en Settings → Secrets → Actions.
+      - name: Run Newman API contract tests (skip if no SCAUDIT_API_KEY)
         id: newman
         run: |
           if [ -z "${{ secrets.SCAUDIT_API_KEY }}" ]; then
