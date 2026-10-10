@@ -1,4 +1,4 @@
-import { getRecentHealthChecks, getDailyAggregates, getModelHealthSummary, getLatestHealthCheck, getTaskCostBreakdown } from "./actions";
+import { getRecentHealthChecks, getDailyAggregates, getModelHealthSummary, getLatestHealthCheck, getTaskCostBreakdown, getModelCostBreakdown } from "./actions";
 import { createClient } from "@/shared/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/server/auth/admin";
@@ -23,12 +23,13 @@ export default async function AiHealthPage() {
   }
 
   // 3. Fetch all data in parallel
-  const [recent, daily, models, latest, taskCosts] = await Promise.all([
+  const [recent, daily, models, latest, taskCosts, modelCosts] = await Promise.all([
     getRecentHealthChecks(100),
     getDailyAggregates(30),
     getModelHealthSummary(),
     getLatestHealthCheck(),
     getTaskCostBreakdown(7),
+    getModelCostBreakdown(7),
   ]);
 
   return (
@@ -40,6 +41,7 @@ export default async function AiHealthPage() {
         models={models}
         latest={latest}
         taskCosts={taskCosts}
+        modelCosts={modelCosts}
       />
     </div>
   );

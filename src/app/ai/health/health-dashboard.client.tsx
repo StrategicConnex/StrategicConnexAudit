@@ -25,6 +25,7 @@ import type {
   DailyAggregate,
   ModelHealthSummary,
   TaskCostBreakdown,
+  ModelCostBreakdown,
 } from "./actions";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ export interface AiHealthDashboardClientProps {
   models: ModelHealthSummary[];
   latest: HealthCheckRecord | null;
   taskCosts: TaskCostBreakdown[];
+  modelCosts: ModelCostBreakdown[];
 }
 
 // ─── Colors — theme-aware (tokens CSS leídos vía useChartColors) ───────────────
@@ -671,6 +673,65 @@ function TaskCostTable({ taskCosts }: { taskCosts: TaskCostBreakdown[] }) {
   );
 }
 
+function ModelCostTable({ modelCosts }: { modelCosts: ModelCostBreakdown[] }) {
+  if (modelCosts.length === 0) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-6 flex items-center justify-center text-muted-foreground text-sm">
+        <div className="text-center">
+          <span className="text-2xl block mb-2">🧮</span>
+          Sin gasto por modelo registrado en los últimos 7 días
+        </div>
+      </div>
+    );
+  }
+  const totalCost = modelCosts.reduce((acc, m) => acc + m.costUsd, 0);
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <h3 className="text-sm font-bold text-foreground">Gasto por Modelo (7 días)</h3>
+        <span className="text-2xs text-muted-foreground">total estimado {fmtUsd(totalCost)}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="text-left p-3 font-semibold">Modelo</th>
+              <th className="text-right p-3 font-semibold">Llamadas</th>
+              <th className="text-right p-3 font-semibold">Tokens in</th>
+              <th className="text-right p-3 font-semibold">Tokens out</th>
+              <th className="text-right p-3 font-semibold">Coste est.</th>
+              <th className="text-right p-3 font-semibold">Latencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {modelCosts.map((m) => (
+              <tr key={m.modelUsed} className="border-b border-border hover:bg-surface-muted transition-colors">
+                <td className="p-3 font-mono text-2xs">{shortModelId(m.modelUsed)}</td>
+                <td className="p-3 text-right">{m.calls}</td>
+                <td className="p-3 text-right">{m.tokensIn.toLocaleString("es")}</td>
+                <td className="p-3 text-right">{m.tokensOut.toLocaleString("es")}</td>
+                <td className={`p-3 text-right font-medium ${m.costUsd > 0 ? "text-chart-warning" : "text-muted-foreground"}`}>
+                  {fmtUsd(m.costUsd)}
+                </td>
+                <td className="p-3 text-right">
+                  {m.avgLatencyMs != null ? (
+                    <>
+                      {m.avgLatencyMs}
+                      <span className="text-muted-foreground">ms</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 
 export function AiHealthDashboardClient({
@@ -679,6 +740,7 @@ export function AiHealthDashboardClient({
   models,
   latest,
   taskCosts,
+  modelCosts,
 }: AiHealthDashboardClientProps) {
   const colors = useChartColors();
 
@@ -773,6 +835,9 @@ export function AiHealthDashboardClient({
 
       {/* Task Cost Breakdown (Sprint 1, idea #17) */}
       <TaskCostTable taskCosts={taskCosts} />
+
+      {/* Model Cost Breakdown (C5) */}
+      <ModelCostTable modelCosts={modelCosts} />
     </div>
   );
 }

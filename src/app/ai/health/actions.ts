@@ -256,3 +256,49 @@ export async function getTaskCostBreakdown(days = 7): Promise<TaskCostBreakdown[
     return [];
   }
 }
+
+export type ModelCostBreakdown = {
+  modelUsed: string;
+  calls: number;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  avgLatencyMs: number | null;
+};
+
+/**
+ * Desglose de gasto/uso por MODELO (C5): el panel ya mostraba coste por
+ * task type, pero no qué modelo consume el presupuesto. Agrega los últimos
+ * `days` días de `ai_usage` por `model_used`. Igual que el resto de actions,
+ * degrada a `[]` ante cualquier fallo (el panel no debe romper).
+ */
+export async function getModelCostBreakdown(days = 7): Promise<ModelCostBreakdown[]> {
+  await assertPlatformAdmin();
+  try {
+    const since = new Date(Date.now() - days * 86_400_000);
+    const rows = await directDb
+      .select({
+        modelUsed: aiUsage.modelUsed,
+        calls: sql<number>`count(*)`,
+        tokensIn: sql<number>`coalesce(sum(${aiUsage.tokensIn}), 0)`,
+        tokensOut: sql<number>`coalesce(sum(${aiUsage.tokensOut}), 0)`,
+        costUsd: sql<number>`coalesce(sum(${aiUsage.costUsd}), 0)`,
+        avgLatencyMs: sql<number | null>`avg(${aiUsage.latencyMs})`,
+      })
+      .from(aiUsage)
+      .where(gte(aiUsage.createdAt, since))
+      .groupBy(aiUsage.modelUsed)
+      .orderBy(sql`coalesce(sum(${aiUsage.costUsd}), 0) desc, count(*) desc`);
+
+    return rows.map((r) => ({
+      modelUsed: r.modelUsed,
+      calls: Number(r.calls),
+      tokensIn: Number(r.tokensIn),
+      tokensOut: Number(r.tokensOut),
+      costUsd: Number(r.costUsd),
+      avgLatencyMs: r.avgLatencyMs != null ? Math.round(Number(r.avgLatencyMs)) : null,
+    }));
+  } catch {
+    return [];
+  }
+}
