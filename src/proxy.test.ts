@@ -116,6 +116,22 @@ describe("Proxy — Security Headers", () => {
     expect(csp).not.toContain("vercel.app");
   });
 
+  it("CSP: connect-src incluye 'self' (de eso depende el túnel /monitoring)", async () => {
+    // `next.config.ts` declara `tunnelRoute: "/monitoring"`: el navegador postea
+    // los envelopes a esa ruta RELATIVA. Si 'self' desapareciera de connect-src,
+    // el POST quedaría bloqueado por la CSP y los errores de cliente se
+    // perderían sin ruido (mismo fallo silencioso que un guard que redirige).
+    const response = await proxyFn(createMockRequest("/monitoring"));
+    const csp = response.headers.get("content-security-policy") ?? "";
+    const connectSrc = csp
+      .split(";")
+      .map((d) => d.trim())
+      .find((d) => d.startsWith("connect-src"));
+
+    expect(connectSrc).toBeDefined();
+    expect(connectSrc).toContain("'self'");
+  });
+
   it("CSP: object-src 'none'", async () => {
     const response = await proxyFn(createMockRequest("/login"));
     const csp = response.headers.get("content-security-policy");

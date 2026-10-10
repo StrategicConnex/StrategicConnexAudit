@@ -101,3 +101,48 @@ describe("telemetría de accesos — no se auto-dispara", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * El túnel de Sentry (`tunnelRoute: "/monitoring"`) es un POST same-origin del
+ * navegador. Si el guard lo redirigiera a `/login`, los errores de cliente se
+ * perderían en silencio (el SDK no reintenta ante un 307). El proxy SÍ cubre
+ * `/monitoring` con su matcher, así que este test fija que atravesarlo no
+ * redirige ni para anónimos ni para autenticados.
+ */
+describe("túnel de Sentry — /monitoring no queda detrás del guard", () => {
+  let fetchSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_DEV_BYPASS_AUTH", "false");
+    getUserMock.mockReset();
+    fetchSpy = vi.fn().mockResolvedValue(new Response("{}"));
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.clearAllMocks();
+  });
+
+  it("visitante anónimo: el envelope no se redirige a /login", async () => {
+    getUserMock.mockResolvedValue({ data: { user: null } });
+
+    const res = await updateSession(makeRequest("/monitoring") as never);
+
+    expect(res.headers.get("location")).toBeNull();
+    expect([301, 302, 303, 307, 308]).not.toContain(res.status);
+  });
+
+  it("usuario autenticado: tampoco se redirige", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "u-1", email: "user@example.test" } },
+    });
+
+    const res = await updateSession(makeRequest("/monitoring") as never);
+
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.status).toBe(200);
+  });
+});

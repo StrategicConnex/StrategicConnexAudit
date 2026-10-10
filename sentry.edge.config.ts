@@ -23,8 +23,11 @@ const REDACTED_HEADERS = new Set([
   "x-auth-token",
 ]);
 
-// Genérica para conservar el tipo concreto del evento (ErrorEvent vs
-// TransactionEvent) en los hooks `beforeSend*`.
+// Genérica para conservar el tipo concreto del evento que recibe el hook.
+//
+// Sin `beforeSendTransaction` a propósito: con el `traceLifecycle: 'stream'`
+// por defecto del SDK 11.x ese hook se ignora (ver sentry.server.config.ts),
+// así que no se registra para no prometer un scrub que no ocurre.
 const scrubEvent = <T extends Sentry.Event>(event: T): T => {
   const request = event.request as
     | { headers?: Record<string, unknown>; data?: unknown; cookies?: unknown }
@@ -54,9 +57,6 @@ Sentry.init({
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1,
 
   beforeSend(event) {
-    return scrubEvent(event);
-  },
-  beforeSendTransaction(event) {
     return scrubEvent(event);
   },
 

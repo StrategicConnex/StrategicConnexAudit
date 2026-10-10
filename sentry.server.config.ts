@@ -25,8 +25,15 @@ const REDACTED_HEADERS = new Set([
   "x-auth-token",
 ]);
 
-// Genérica para conservar el tipo concreto del evento: `beforeSend` espera
-// ErrorEvent y `beforeSendTransaction` espera TransactionEvent.
+// Genérica para conservar el tipo concreto del evento que recibe el hook
+// (`beforeSend` espera ErrorEvent).
+//
+// NOTA (SDK 11.4.0): aquí NO hay `beforeSendTransaction` a propósito. Con
+// `traceLifecycle` en `'stream'` —el default, que es el nuestro— el SDK lo
+// ignora en silencio (`maybeWarnAboutIgnoredTransactionOptions` en
+// `@sentry/core`) y lo eliminará en la v12, así que mantenerlo solo daría una
+// falsa sensación de seguridad. El día que haga falta scrub de trazas se usa
+// `beforeSendSpan`/`ignoreSpans`, que sí operan con span streaming.
 export const scrubEvent = <T extends Sentry.Event>(event: T): T => {
   const request = event.request as
     | { headers?: Record<string, unknown>; data?: unknown; cookies?: unknown }
@@ -61,9 +68,6 @@ Sentry.init({
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1,
 
   beforeSend(event) {
-    return scrubEvent(event);
-  },
-  beforeSendTransaction(event) {
     return scrubEvent(event);
   },
 
