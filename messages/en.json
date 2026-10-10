@@ -396,7 +396,10 @@
     "critical": "Critical",
     "events": "Events",
     "updated": "Updated: ",
-    "waiting": "Waiting…"
+    "waiting": "Waiting…",
+    "source": "Fuente",
+    "realtime": "Realtime",
+    "degraded": "Sondeo 15s"
   },
   "projects": {
     "title": "Complete Domain List",

@@ -396,7 +396,10 @@
     "critical": "Críticas",
     "events": "Eventos",
     "updated": "Actualizado: ",
-    "waiting": "En espera…"
+    "waiting": "En espera…",
+    "source": "Fuente",
+    "realtime": "Realtime",
+    "degraded": "Sondeo 15s"
   },
   "projects": {
     "title": "Listado Completo de Dominios",
