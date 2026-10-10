@@ -2,7 +2,34 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/shared/config/env";
 
+/**
+ * Ruta del túnel de errores de Sentry (`next.config.ts` → `tunnelRoute`).
+ *
+ * El SDK del navegador postea los envelopes en la forma
+ * `/monitoring?o=<org>&p=<proyecto>` (el pathname es `/monitoring`; el query
+ * lo añade `applyTunnelRouteOption`). No es una página de la aplicación: no
+ * tiene sesión que refrescar ni guard que aplicar, así que cada envelope
+ * pagaba un `supabase.auth.getUser()` contra Supabase que no cambiaba
+ * ninguna decisión.
+ */
+const SENTRY_TUNNEL_PATH = "/monitoring";
+
+/** `true` sólo para la ruta exacta del túnel (tolera la barra final). */
+function isSentryTunnelPath(pathname: string): boolean {
+  return pathname.replace(/\/+$/, "") === SENTRY_TUNNEL_PATH;
+}
+
 export async function updateSession(request: NextRequest) {
+  // El túnel sale por aquí ANTES de instanciar el cliente de Supabase: cero
+  // `getUser()` por envelope. No abre ninguna puerta nueva — `/monitoring` no
+  // es ruta protegida ni ruta de auth, y el guard sólo redirige las privadas,
+  // de modo que un anónimo ya atravesaba esta ruta antes del corte. El proxy
+  // sigue aplicando su CSP, HSTS y `x-request-id` a la respuesta que
+  // devolvemos (las cabeceras se ponen sobre el objeto de respuesta, no aquí).
+  if (isSentryTunnelPath(request.nextUrl.pathname)) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });

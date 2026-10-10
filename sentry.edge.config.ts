@@ -60,8 +60,14 @@ Sentry.init({
     return scrubEvent(event);
   },
 
+  // Sin userInfo, sin cabeceras, sin cookies y sin cuerpos HTTP: `false` es
+  // "no recolectes nada" (CollectBehavior), así que estos datos no llegan a
+  // construirse en el evento. El scrub de `beforeSend` queda como segunda
+  // barrera (ver sentry.server.config.ts).
   dataCollection: {
     userInfo: false,
+    httpHeaders: false,
+    cookies: false,
     httpBodies: [],
   },
 });

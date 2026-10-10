@@ -1,7 +1,7 @@
 /**
  * Sentry — contrato de inicialización de los tres procesos (SDK 11.4.0).
  *
- * Fija dos cosas que se pueden romper sin que nada avise:
+ * Fija tres cosas que se pueden romper sin que nada avise:
  *
  * 1. Ningún config debe volver a registrar `beforeSendTransaction`. Con
  *    `traceLifecycle` en `'stream'` —el default del SDK— ese hook se ignora en
@@ -10,6 +10,10 @@
  *    puesto solo prometía un scrub de trazas que nunca ocurría.
  * 2. El scrub de PII de `beforeSend` sigue vivo en los tres procesos: al quitar
  *    el hook muerto no se puede perder el que sí corre.
+ * 3. La recolección en origen sigue cortada (`dataCollection`): sin cabeceras,
+ *    sin cookies, sin cuerpos y sin `userInfo`. En `CollectBehavior`, `false`
+ *    es «no recolectes nada»; quitar la clave NO equivale a eso — se vuelve al
+ *    default del SDK, que recolecta cabeceras y cookies.
  */
 
 import { describe, it, expect, vi, afterEach } from "vitest";
@@ -33,6 +37,12 @@ interface ScrubResult {
 interface InitOptions {
   beforeSend?: (event: ScrubResult, hint: unknown) => ScrubResult;
   beforeSendTransaction?: unknown;
+  dataCollection?: {
+    userInfo?: boolean;
+    httpHeaders?: boolean | { request?: unknown; response?: unknown };
+    cookies?: boolean | { allow?: string[]; deny?: string[] };
+    httpBodies?: string[];
+  };
 }
 
 /** Cargadores estáticos: vite no resuelve imports con plantilla. */
@@ -94,5 +104,18 @@ describe.each(Object.entries(LOADERS))("Sentry — %s", (_label, load) => {
     expect(scrubbed.request?.data).toBeUndefined();
     expect(scrubbed.request?.cookies).toBeUndefined();
     expect(scrubbed.user).toBeUndefined();
+  });
+
+  it("corta la recolección en origen: sin cabeceras, cookies, cuerpos ni userInfo", async () => {
+    const options = await initOptionsOf(load);
+
+    // `false` es «no recolectes nada». Un `true` —o borrar la clave, que cae al
+    // default del SDK (`httpHeaders: { request: true, response: true }`,
+    // `cookies: true`)— volvería a mandar cabeceras y cookies del usuario a
+    // Sentry.
+    expect(options.dataCollection?.httpHeaders).toBe(false);
+    expect(options.dataCollection?.cookies).toBe(false);
+    expect(options.dataCollection?.userInfo).toBe(false);
+    expect(options.dataCollection?.httpBodies).toEqual([]);
   });
 });

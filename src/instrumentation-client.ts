@@ -67,8 +67,13 @@ Sentry.init({
     return scrubEvent(event);
   },
 
+  // Sin userInfo, sin cabeceras, sin cookies y sin cuerpos HTTP: `false` es
+  // "no recolectes nada" (CollectBehavior), así que el navegador no llega a
+  // recolectarlos. No sustituye al scrub de `beforeSend`: lo respalda.
   dataCollection: {
     userInfo: false,
+    httpHeaders: false,
+    cookies: false,
     httpBodies: [],
   },
 });

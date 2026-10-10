@@ -71,9 +71,17 @@ Sentry.init({
     return scrubEvent(event);
   },
 
-  // Sin userInfo y sin cuerpos HTTP: Privacy by default.
+  // Privacy by default. `false` en `CollectBehavior` significa "no recolectes
+  // nada": las cabeceras (que venían con `{ request: true, response: true }`
+  // por defecto) y las cookies (que venían a `true`) dejan de salir del
+  // proceso, en vez de salir y confiar en que el SDK las filtre.
+  //
+  // El scrub de `beforeSend` se queda como segunda barrera por si alguien
+  // vuelve a activar la recolección: no sustituye a este corte, lo respalda.
   dataCollection: {
     userInfo: false,
+    httpHeaders: false,
+    cookies: false,
     httpBodies: [],
   },
 });

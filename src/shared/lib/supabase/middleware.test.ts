@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+// El contrato de `isSentryTunnelPath` se prueba indirectamente, a través de
+// `updateSession`, que es la costura real por la que pasa cada request.
+
 /**
  * Regresión del bucle de telemetría de accesos.
  *
@@ -32,7 +35,14 @@ function makeRequest(path: string, cookies: Record<string, string> = {}) {
   const jar = new Map(Object.entries(cookies));
   const url = new URL(`http://localhost:3000${path}`);
   return {
-    nextUrl: { pathname: path, clone: () => ({ ...url, pathname: url.pathname }) },
+    // `pathname` se lee del URL parseado, como en un NextRequest real: con la
+    // ruta cruda, `/monitoring?o=1&p=2` (la forma que envía el SDK) no
+    // representaba lo que ve el matcher.
+    nextUrl: {
+      pathname: url.pathname,
+      search: url.search,
+      clone: () => new URL(url.toString()),
+    },
     url: url.toString(),
     cookies: {
       get: (n: string) => (jar.has(n) ? { name: n, value: jar.get(n)! } : undefined),
@@ -104,13 +114,30 @@ describe("telemetría de accesos — no se auto-dispara", () => {
 
 /**
  * El túnel de Sentry (`tunnelRoute: "/monitoring"`) es un POST same-origin del
- * navegador. Si el guard lo redirigiera a `/login`, los errores de cliente se
- * perderían en silencio (el SDK no reintenta ante un 307). El proxy SÍ cubre
- * `/monitoring` con su matcher, así que este test fija que atravesarlo no
- * redirige ni para anónimos ni para autenticados.
+ * navegador a `/monitoring?o=<org>&p=<proyecto>`. Dos invariantes:
+ *
+ * 1. No queda detrás del guard: si se redirigiera a `/login`, los errores de
+ *    cliente se perderían en silencio (el SDK no reintenta ante un 307).
+ * 2. No paga sesión. Antes, cada envelope llamaba a `supabase.auth.getUser()`
+ *    contra Supabase para decidir algo que no dependía del usuario: no es ruta
+ *    protegida ni ruta de auth, y un anónimo ya atravesaba la ruta. El corte es
+ *    por ruta EXACTA para no saltarse el guard en páginas que sólo la contienen
+ *    (p. ej. `/dashboard/projects/<id>/monitoring`).
+ *
+ * El proxy sigue aplicando su CSP/HSTS/`x-request-id` a la respuesta del túnel
+ * (se ponen sobre el objeto de respuesta; ver `proxy.test.ts`).
  */
-describe("túnel de Sentry — /monitoring no queda detrás del guard", () => {
+describe("túnel de Sentry — /monitoring ni se redirige ni paga sesión", () => {
   let fetchSpy: ReturnType<typeof vi.fn>;
+
+  /** Ruta → llamadas esperadas a `supabase.auth.getUser()`. */
+  const TUNNEL_CASES: Array<[string, number]> = [
+    ["/monitoring", 0],
+    ["/monitoring/", 0],
+    ["/monitoring?o=4511488296026112&p=4511488301137920", 0],
+    ["/api/monitoring", 1],
+    ["/dashboard/projects/p-1/monitoring", 1],
+  ];
 
   beforeEach(() => {
     vi.stubEnv("NODE_ENV", "production");
@@ -124,6 +151,14 @@ describe("túnel de Sentry — /monitoring no queda detrás del guard", () => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     vi.clearAllMocks();
+  });
+
+  it.each(TUNNEL_CASES)("%s → getUser() × %i", async (path, expectedCalls) => {
+    getUserMock.mockResolvedValue({ data: { user: null } });
+
+    await updateSession(makeRequest(path) as never);
+
+    expect(getUserMock).toHaveBeenCalledTimes(expectedCalls);
   });
 
   it("visitante anónimo: el envelope no se redirige a /login", async () => {
@@ -144,5 +179,14 @@ describe("túnel de Sentry — /monitoring no queda detrás del guard", () => {
 
     expect(res.headers.get("location")).toBeNull();
     expect(res.status).toBe(200);
+  });
+
+  it("el corte no debilita el guard: una página protegida que contiene 'monitoring' sí se redirige", async () => {
+    getUserMock.mockResolvedValue({ data: { user: null } });
+
+    const res = await updateSession(makeRequest("/dashboard/projects/p-1/monitoring") as never);
+
+    expect(getUserMock).toHaveBeenCalledTimes(1);
+    expect(res.headers.get("location")).toContain("/login");
   });
 });
