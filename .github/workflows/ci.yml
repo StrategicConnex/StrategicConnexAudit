@@ -280,24 +280,31 @@ jobs:
       - name: Generate Postman collection from OpenAPI
         run: pnpm generate:collection
 
-      # DECISION: un contrato roto contra produccion SI tumba el pipeline.
-      # La unica exencion intencional es no ejecutar Newman cuando falta el
-      # secreto `SCAUDIT_API_KEY` (forks / PRs sin secret): el paso queda verde
-      # con `newman_status=skipped` y el resumen del PR lo declara. En cuanto el
-      # secreto existe, un 401/403/scope/rate-limit fuera de contrato devuelve
-      # un exit code != 0 que propagamos tal cual para romper el job.
+      # DECISION: un contrato roto contra produccion SI tumba el pipeline, y la
+      # AUSENCIA del secreto `SCAUDIT_API_KEY` tambien: el paso FALLA con
+      # `newman_status=missing_secret` en lugar de cerrar en verde por omision.
+      # La unica exencion es un PR desde un fork, donde GitHub no expone los
+      # secretos del repo: alli se omite con un `::warning::` visible y
+      # `newman_status=skipped`. En cuanto el secreto existe, un
+      # 401/403/scope/rate-limit fuera de contrato devuelve un exit code != 0
+      # que propagamos tal cual para romper el job.
       # Antes `... && echo passed || echo failed` fijaba siempre exit 0: el
       # fallo se perdia y el contrato roto cerraba el pipeline en verde.
       # Requiere el secreto `SCAUDIT_API_KEY` (ver `.env.example` → "API pública
-      # v1 — contrato Newman"): sin él este paso se omite y solo se valida el
-      # OpenAPI offline. Configúralo en Settings → Secrets → Actions.
-      - name: Run Newman API contract tests (skip if no SCAUDIT_API_KEY)
+      # v1 — contrato Newman"). Configúralo en
+      # Settings → Secrets and variables → Actions → New repository secret.
+      - name: Run Newman API contract tests (fail if no SCAUDIT_API_KEY)
         id: newman
         run: |
           if [ -z "${{ secrets.SCAUDIT_API_KEY }}" ]; then
-            echo "🔑 No SCAUDIT_API_KEY secret — skipping live endpoint tests"
-            echo "newman_status=skipped" >> "$GITHUB_OUTPUT"
-            exit 0
+            if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
+              echo "::warning::PR de fork sin acceso a SCAUDIT_API_KEY — se omite el contrato en vivo (solo OpenAPI offline)"
+              echo "newman_status=skipped" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::Falta el secreto SCAUDIT_API_KEY: el contrato de la API pública no se puede validar en vivo. Configúralo en Settings → Secrets and variables → Actions → New repository secret."
+            echo "newman_status=missing_secret" >> "$GITHUB_OUTPUT"
+            exit 1
           fi
 
           newman_rc=0
@@ -320,7 +327,7 @@ jobs:
       # `always()` para subir el JUnit tambien cuando Newman falla: con el
       # filtro anterior (`== 'passed'`) el diagnostico de la rotura se perdia.
       - name: Upload Newman results
-        if: always() && steps.newman.outputs.newman_status != 'skipped'
+        if: always() && steps.newman.outputs.newman_status != 'skipped' && steps.newman.outputs.newman_status != 'missing_secret'
         uses: actions/upload-artifact@v4
         with:
           name: newman-results
@@ -337,7 +344,9 @@ jobs:
             if [ "${{ steps.newman.outputs.newman_status }}" = "passed" ]; then
               echo '✅ **OpenAPI spec valid** — Newman tests passed against production'
             elif [ "${{ steps.newman.outputs.newman_status }}" = "skipped" ]; then
-              echo '✅ **OpenAPI spec valid** — Newman skipped (set `SCAUDIT_API_KEY` secret to enable live endpoint testing)'
+              echo '✅ **OpenAPI spec valid** — Newman skipped (fork PR: `SCAUDIT_API_KEY` no disponible)'
+            elif [ "${{ steps.newman.outputs.newman_status }}" = "missing_secret" ]; then
+              echo '❌ **Falta el secreto `SCAUDIT_API_KEY`** — el contrato en vivo no se ejecutó y el job falla'
             else
               echo '❌ **Newman tests failed** — check artifacts for details'
             fi

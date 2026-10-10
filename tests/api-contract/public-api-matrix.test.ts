@@ -68,6 +68,17 @@ function uniqueIp(): string {
   return `203.0.113.${ipCounter % 250}`;
 }
 
+let rateLimitIpCounter = 0;
+/**
+ * Rango distinto al de `uniqueIp` para que la ventana de rate limit de un
+ * caso no se solape con la de otro (compartir identificador haría que el
+ * segundo arrancara ya agotado y la aserción de `limit` llamadas fallara).
+ */
+function uniqueRateLimitIp(): string {
+  rateLimitIpCounter += 1;
+  return `198.18.${Math.floor(rateLimitIpCounter / 250)}.${rateLimitIpCounter % 250}`;
+}
+
 /** Cargadores estáticos (vite no resuelve imports con plantilla). */
 const LOADERS: Record<string, () => Promise<Record<string, unknown>>> = {
   adversary: () => import("@/app/api/public/v1/adversary/route"),
@@ -145,4 +156,56 @@ describe("API pública v1 — matriz por endpoint", () => {
       expect(source, `${endpoint.path} no declara scope`).toMatch(/scope:\s*API_SCOPES\./);
     }
   });
+});
+
+/**
+ * Rate limiting de la API pública (fase IP) POR ENDPOINT.
+ *
+ * El presupuesto se agota con un identificador propio de cada caso para no
+ * interferir entre endpoints. El 429 se resuelve ANTES de autenticar, así que
+ * `authenticateApiKey` se llama exactamente `limit` veces: esa cuenta prueba
+ * que la ruta pasa por `withPublicApi` (una ruta sin envolver no limitaría ni
+ * devolvería headers de cuota).
+ *
+ * La fase `key` (límite por key tras autenticar, que sí ejecuta el handler y
+ * por tanto toca la BD) se cubre en `src/server/api/public-router.test.ts`.
+ */
+describe("API pública v1 — matriz por endpoint (rate limit por IP)", () => {
+  it.each(MATRIX.map((e) => [`${e.method} /${e.path}`, e] as const))(
+    "%s agota el presupuesto por IP → 429 con headers de límite",
+    async (_label, endpoint) => {
+      // Import dinámico: el `vi.mock` de arriba se hoista, así que un import
+      // estático del router evalúa su fábrica ANTES de que exista
+      // `mockAuthenticateApiKey` (ReferenceError).
+      const { PUBLIC_API_RATE_LIMITS } = await import("@/server/api/public-router");
+
+      mockAuthenticateApiKey.mockResolvedValue({
+        authenticated: false,
+        userId: null,
+        error: "no key",
+      });
+
+      const handler = await loadHandler(endpoint.path, endpoint.method);
+      const ip = uniqueRateLimitIp();
+
+      let last: Response | undefined;
+      for (let i = 0; i <= PUBLIC_API_RATE_LIMITS.ip.limit; i++) {
+        last = await handler(requestFor(endpoint.path, endpoint.method, ip));
+      }
+
+      expect(last!.status).toBe(429);
+      // Headers IETF + legacy: el cliente sabe cuánto le queda y cuándo reintentar.
+      expect(last!.headers.get("RateLimit-Limit")).toBe(String(PUBLIC_API_RATE_LIMITS.ip.limit));
+      expect(last!.headers.get("RateLimit-Remaining")).toBe("0");
+      expect(last!.headers.get("X-RateLimit-Limit")).toBe(String(PUBLIC_API_RATE_LIMITS.ip.limit));
+      expect(last!.headers.get("Retry-After")).toBeTruthy();
+
+      const body = await last!.json();
+      expect(body.success).toBe(false);
+      expect(body.documentation_url).toBeDefined();
+
+      // El 429 corta antes de autenticar: no se gastó una consulta de API key.
+      expect(mockAuthenticateApiKey).toHaveBeenCalledTimes(PUBLIC_API_RATE_LIMITS.ip.limit);
+    },
+  );
 });
