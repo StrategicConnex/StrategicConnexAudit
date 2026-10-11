@@ -23,6 +23,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:drift-check": "node scripts/db/drift-check.mjs",
     "db:fake-audit": "node scripts/db/fake-data-audit.mjs",
+    "db:fake-purge": "node scripts/db/fake-data-purge.mjs",
     "rls:inventory": "node scripts/db/rls-inventory.mjs",
     "db:push": "drizzle-kit push",
     "prepare": "node scripts/prepare.mjs",

@@ -35,6 +35,13 @@ import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import pg from "pg";
 import { connectionFor } from "../lib/db-connection.mjs";
+// Fuente única de la politica: la comparten el auditor y la purga.
+import {
+  PATTERNS,
+  KEEP,
+  DEMO_PROJECT_PATTERNS,
+  PROJECT_SCOPED,
+} from "../lib/fake-data-patterns.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 // Mismo patrón que `scripts/manual/backup-manager.ts:6-8`: sólo se LEE.
@@ -42,44 +49,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 // informe `--json` cuando se redirige a un fichero (`> backups/baseline.json`).
 dotenv.config({ path: path.join(ROOT, ".env.local"), quiet: true });
 
-/**
- * Patrones globales: se aplican a TODAS las tablas de `public`.
- * D1-1 (2026-10-10): el proyecto `Pipeline Test - strategicconnex.com.ar` pasó
- * de REVIEW a DELETE por decisión del operador.
- *
- * D1-2 (2026-10-11): `admin@strategicaudit.pro` pasó de REVIEW a DELETE por la
- * misma vía que D1-1 (ver el patrón `ambiguous-admin`).
- */
-const PATTERNS = [
-  { id: "demo-domain", kind: "DELETE", find: ["example.com", "example.org", "example.net"] },
-  { id: "seed-fake-email", kind: "DELETE", find: ["client@company.com", "usera_", "userb_"] },
-  { id: "fake-registrar", kind: "DELETE", find: ["ICANN Registrar Corp"] },
-  { id: "fake-ip-testnet", kind: "DELETE", find: ["203.0.113."] },
-  { id: "sim-marker", kind: "DELETE", find: ["[SIM]"] },
-  { id: "fake-cohosted", kind: "DELETE", find: ["site1.", ".domain.net"] },
-  { id: "seed-competitor", kind: "DELETE", find: ["competitor1.com"] },
-  { id: "seed-pipeline", kind: "DELETE", find: ["pipeline test"] },
-  // D1-2 (2026-10-11): el operador confirmó que es una identidad de login de
-  // PRUEBA (fila del seed: mismo segundo que `client@company.com`, 0 filas en
-  // `project_members`) y que el alta legítima es `pnpm setup-admin`, no el
-  // seed. Marcarla DELETE (antes REVIEW) es lo que evita que quede fuera del
-  // allowlist de purga y que la Fase 1 cierre con un REVIEW decidido por el
-  // operador pero nunca ejecutado.
-  { id: "ambiguous-admin", kind: "DELETE", find: ["admin@strategicaudit.pro"] },
-];
-
-/** Excepciones que NUNCA se reportan como hallazgo (operativas). */
-const KEEP = ["smoke-test@strategicconnex.test"];
-
-/** Patrones que identifican un "proyecto demo", destino de la purga. */
-const DEMO_PROJECT_PATTERNS = ["example.com", "example.org", "example.net", "pipeline test"];
-
-/**
- * D1-3 (2026-10-10): tablas cuyas filas no tienen patrón de texto propio y sólo
- * se pueden atribuir a un proyecto demo por su FK. Se reportan como DELETE con
- * el patrón sintético `DELETE:demo-project-fk`.
- */
-const PROJECT_SCOPED = { exec_briefs: "project_id" };
+// PATTERNS / KEEP / DEMO_PROJECT_PATTERNS / PROJECT_SCOPED viven ahora en
+// `scripts/lib/fake-data-patterns.mjs`, porque la purga necesita exactamente los
+// mismos. Duplicarlos ya nos costó una clase entera de bugs.
 
 /** Columnas cuyo valor no se imprime ni truncado (defensa en profundidad). */
 const NAME_LOOKS_SECRET = /(pass|secret|token|key|hash|credential|refresh|session|cookie)/i;
