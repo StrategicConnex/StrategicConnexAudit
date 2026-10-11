@@ -6,21 +6,31 @@
   (read-only, exit 1 si hay `DELETE`) + script `pnpm db:fake-audit`. Sesión Postgres abierta
   en read-only y salida redactada (PK + columnas coincidentes, nunca la fila completa).
   Task 2 (backup) **ejecutada y verificada el 2026-10-11** (ver Task 2).
-- **D1 — CERRADA (2026-10-11).** D1-1 `Pipeline Test` → DELETE · **D1-2
-  `admin@strategicaudit.pro` → DELETE, confirmado por el operador** · **D1-3 `exec_briefs`
-  revertida**: los 4 briefs cuelgan del proyecto real `Consultora BPOMA` y **no se borran**.
-  Evidencia en *D1-1..D1-3*; consecuencia aplicada al auditor y al allowlist de purga.
+- **D1 — D1-1 cerrada, D1-3 revertida y D1-2 REABIERTA por evidencia nueva (2026-10-11).**
+  D1-1 `Pipeline Test` → DELETE · **D1-3 `exec_briefs` revertida**: los 4 briefs cuelgan del
+  proyecto real `Consultora BPOMA` y no se borran · **D1-2 `admin@strategicaudit.pro`: la
+  decisión de borrarlo se tomó sobre evidencia INCOMPLETA y no se puede ejecutar** — esa fila
+  es `owner_id` de 5 proyectos (4 sin pinta de prueba) y `projects.owner_id` es
+  `ON DELETE CASCADE`. Detalle y opciones en *D1-2*; la purga lo bloquea por diseño.
 - **Bug de SSL corregido antes de la Fase 1 (2026-10-11):** `pg@8.20` pisaba el objeto `ssl`
   con el `sslmode` del DSN y `backup-manager.ts` **además invertía el flag**
   `DB_ALLOW_INSECURE_SSL` → política única en `scripts/lib/db-connection.mjs` + guard
   `tests/security/db-connection-ssl.test.ts`. Es lo que desbloqueó la Task 2.
+- **Migraciones al día (2026-10-11):** `pnpm db:migrate` aplicó las **5** pendientes
+  (`2026-10-05_finding_lifecycle`, `2026-10-05_notifications`, `0039_rls_fase2_fix`,
+  `0040_platform_cache_queue`, `0041_platform_idempotency_outbox`) y el ledger quedó en 53/53.
+  Tres de ellas ya estaban aplicadas a mano en la BD (sólo faltaba el registro), así que el
+  efecto real fue crear las 5 tablas de plataforma. **`db:drift-check` pasa a exit 0**
+  («Sin drift duro»); quedan 22 diffs adhesivas.
 - **CI fuera de producción (parcial):** el job `api-contract-test` ya no puede apuntar a
   producción (guard `target`: `TEST_ENV` ∈ {staging,test} + `SCAUDIT_CONTRACT_BASE_URL` no
   productivo + colección reapuntable). **Abierto:** el job `e2e` sigue usando el secreto
   `DATABASE_URL` — si ese secreto apunta a producción, el job escribe en producción.
-- Fase 1 (purga): **backup ya hecho** (Task 2, 2026-10-11) y **allowlist ampliada** con los
-  hallazgos del auditor. Sigue **bloqueada por diseño**: falta la aprobación del listado del
-  dry-run (Task 3.3) antes de cualquier `--apply`.
+- Fase 1 (purga): **backup hecho** (Task 2), **allowlist ampliada** y **script de purga
+  entregado** (Task 3). El dry-run del 2026-10-11 cuadra al 100% el recuento (155/155) y
+  **se niega a aplicar**: 4 relaciones de FK harían fallar el `DELETE` (`NO ACTION`) y hay
+  20 relaciones de cascada que se llevarían 1.372 filas no candidatas. Sin resolver esas dos
+  cosas **no hay purga**: el `--apply` sale con exit 2.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: `writing-plans` (este documento ya cumple su
 > formato; léelo completo antes de ejecutar tareas). Global constraints: ver sección
@@ -96,9 +106,25 @@ No bloqueo el arranque; si una es errónea, se corrige antes de su tarea.
   `full_name` es "Admin User", se creó en el MISMO segundo que `client@company.com`
   ("Client User") y tiene 0 filas en `project_members`. Los admins con pinta real son otros
   (`adm***@strategicconnex.com.ar` y el del smoke).
-  **Consecuencia aplicada:** el patrón `ambiguous-admin` del auditor pasa de `REVIEW` a
-  `DELETE` y el allowlist de purga incorpora el mismo patrón. Sin ese cambio, una fila
-  `REVIEW` habría quedado fuera de la purga y habría sobrevivido al `--apply`.
+
+  **REAPERTURA (2026-10-11, evidencia medida con la BD real):** la premisa de la decisión era
+  falsa. `membresías=0` en `project_members` es cierto, **pero la propiedad no vive ahí**:
+  `projects.owner_id` apunta a esa fila en **5 proyectos**, de los que **4 no tienen pinta de
+  prueba**: `hola` (pepe.com.ar), `runrun` (runrunenergetico.com), `strategic connex`
+  (strategicconnex.vercel.app) y `Strategic Connex COM AR` (strategicconnex.com.ar); el quinto
+  es `Main E-commerce` (demo). `projects.owner_id` es **`ON DELETE CASCADE`**, así que borrar
+  esa fila **se lleva por delante 4-5 proyectos**, no una identidad de prueba. Además no tiene
+  identidad en `auth.users` (0 de los 14 candidatos la tienen), así que no hay login que
+  retirar: la fila es propiedad, no acceso.
+
+  **Estado:** la purga lo trata como **BLOCKER** (`users ← projects.owner_id [CASCADE]`, 9 filas
+  en el alcance completo) y no lo borra. El patrón sigue marcado `DELETE` en el auditor
+  (decisión del operador), pero **el auditor y la purga discrepan a propósito** hasta que se
+  resuelva: mientras siga en `DELETE`, la Fase 1 no puede cerrar con `DELETE=0`. Opciones
+  (requieren decisión del operador): (a) **KEEP**: es la cuenta original del operador — se
+  mueve el patrón a `KEEP` y se documenta; (b) **traspaso**: reasignar los 5 proyectos al admin
+  real (`adm***@strategicconnex.com.ar`) y sólo entonces borrar la fila; (c) borrar sólo las
+  filas de seed sin propiedad (9 de los 14 candidatos tienen 0 proyectos).
 - **D1-3 · `exec_briefs` (4 filas) → NO SE BORRAN (reversión confirmada, 2026-10-11).** La auditoría
   ejecutada contradice la decisión inicial: las 4 filas cuelgan del proyecto
   **`Consultora BPOMA` (`bpoma.com`)**, que es un proyecto real (2026-05-20, con escaneos
@@ -454,14 +480,35 @@ existente; para un dump restaurable desde cero hace falta `pg_dump` o generar el
 
 ## Task 3: Script de purga con dry-run obligatorio
 
-**Files:** `scripts/db/fake-data-purge.mjs` (nuevo)
+**Files:** `scripts/db/fake-data-purge.mjs` (nuevo) + `scripts/lib/fake-data-patterns.mjs`
+(fuente única de patrones/allowlist/recuento, compartida con el auditor) + `package.json`
+(`db:fake-purge`).
 
-**Interfaces:**
-- `node scripts/db/fake-data-purge.mjs` → **dry-run** (por defecto): lista lo que se borraría por
-  tabla con PKs y no escribe nada. Exit 0.
-- `node scripts/db/fake-data-purge.mjs --apply --confirm YYYY-MM-DD` → ejecuta en **una sola
-  transacción** (`BEGIN … COMMIT`, error ⇒ `ROLLBACK`) y sólo si `--confirm` es la fecha de hoy.
-- `--tables a,b` → restringe el alcance.
+**ESTADO: ENTREGADO el 2026-10-11.** Contrato real (la spec en código de más abajo queda como
+referencia histórica; el contrato es este):
+
+- `node scripts/db/fake-data-purge.mjs` → **dry-run** (por defecto): compara candidatos con el
+  recuento esperado, analiza el grafo de FK y **no escribe nada**. Exit 0 si está limpio,
+  **exit 1 si hay bloqueos**.
+- `--apply --confirm YYYY-MM-DD` → ejecuta en **una sola transacción** (`BEGIN … COMMIT`, error ⇒
+  `ROLLBACK` total) y sólo si `--confirm` es la fecha de hoy. **Exit 2 si hay bloqueos.**
+- `--accept-cascade` → acepta explícitamente el borrado en cascada de filas no candidatas.
+  Nunca acepta `RESTRICT`/`NO ACTION` (esos hacen fallar el `DELETE` y exigen cambiar el alcance).
+- `--tables a,b` → restringe el alcance (el gate de recuento se limita a esas tablas).
+- `--json` → informe para artefactos de CI.
+
+**Deltas respecto a la spec original (a propósito):**
+1. Los patrones/allowlist/recuento viven en `scripts/lib/fake-data-patterns.mjs`: el auditor y la
+   purga comparten una sola verdad (duplicarlos ya nos costó una clase de bugs con el SSL).
+2. **No borra `auth.users`.** `public.users` y `auth.users` sólo coinciden en 6 de 21 filas y
+   ninguno de los 14 candidatos tiene identidad: borrar una identidad es una operación de cuenta,
+   no una limpieza de datos. La purga lo **informa** (`authIdentities.notTouched`).
+3. **Gate de dependencias** (no estaba en la spec): `CASCADE`/`SET NULL` sobre filas no candidatas
+   se detectan ANTES de borrar. Sin él, `projects.owner_id ON DELETE CASCADE` habría borrado
+   proyectos reales «con éxito».
+4. `pg.Client` único en vez de `Pool`: con `Pool`, un error en la ruta de error dejaba
+   `pool.end()` esperando a que se liberase un cliente prestado (el script se colgaba).
+5. Guarda contra ciclos de FK en el orden de borrado.
 
 **Diseño (importante):** reutiliza los patrones del auditor, pero es **conservador**: sólo
 borra filas en las tablas permitidas de `PURGE_TABLES` y siempre por **PK extraída del propio
@@ -683,6 +730,9 @@ async function main() {
           `DELETE FROM "public"."${table}" WHERE (${pk.join(", ")}) IN ${idList(rows.map((r) => r.id))}`);
         console.log(`  DELETE ${table}: ${res.rowCount} fila(s)`);
       }
+      // NO IMPLEMENTADO (2026-10-11): `public.users` y `auth.users` sólo coinciden en 6 de 21
+      // filas y NINGUNO de los 14 candidatos tiene identidad; el bloque de abajo habría borrado 0
+      // filas y, si alguna vez coincidiese, borraría una cuenta de login. La purga lo informa.
       // auth.users (sólo para usuarios candidatos de public.users)
       const users = byTable.users;
       if (users && users.length) {
@@ -749,6 +799,38 @@ Si un dry-run se desvía de esta tabla, **se investiga antes de aplicar**: la di
 o un cambio real en la BD desde el 2026-10-10 o un patrón que no entró en la purga.
 **Verificación:** dry-run exit 0 sin escribir (confirmar después con
 `node scripts/db/fake-data-audit.mjs` → los mismos DELETE que antes de la ejecución).
+
+### Dry-run real del 2026-10-11 (entregado)
+
+```
+candidatos=155 · drift=0 · dependencias=24 (bloqueo=4 cascada=1372)
+TOTAL   esperado=155  real=155          ← cuadra exactamente tras las migraciones
+DRY-RUN: HAY BLOQUEOS — no se ha escrito nada y el --apply sería RECHAZADO.
+  · FK que harían fallar el DELETE: projects←audit_logs(NO ACTION), users←audit_logs(NO ACTION),
+    users←audits(NO ACTION), users←reports(NO ACTION)
+  · cascada no aceptada (1372 filas): repite con --accept-cascade si es intencionado
+```
+
+**Los dos bloqueos son el entregable, no un estorbo.** (1) Cuatro relaciones `NO ACTION`
+impiden borrar los proyectos demo y los usuarios candidatos: `audit_logs`, `audits` y `reports`
+no están en `PURGE_TABLES` y sus filas no llevan patrón, así que las retiene una FK sin cascada.
+(2) Aceptar la cascada se llevaría 1.372 filas no apuntadas por los patrones —el grueso,
+`uptime_logs` (1.297) de un proyecto demo, más `intelligence_usage_events` (34)— y, sobre
+`users`, **los 7 proyectos ajenos al allowlist** que poseen esas cuentas (ver D1-2).
+
+**Decisiones que quedan abiertas (no las toma el script):**
+- ¿Las filas *hijas de un proyecto demo* (`uptime_logs`, `intelligence_usage_events`,
+  `monitoring_schedules`, …) se consideran parte de la purga? Son datos del proyecto demo, pero
+  ninguna lleva patrón. Hoy se reportan: se puede ampliar el alcance con una regla de
+  «proyecto-scoped» o aceptar la cascada con `--accept-cascade`.
+- ¿Se añaden `audit_logs`, `audits` y `reports` al allowlist? Sin eso, los 6 proyectos demo no se
+  pueden borrar (sus 4 filas `NO ACTION` lo impiden) y los 14 usuarios tampoco.
+- D1-2: ver *D1-1..D1-3* (mientras siga en `DELETE`, la purga lo bloquea y la Fase 1 no cierra).
+
+**Camino de escritura verificado sin borrar nada:** `--apply --tables ab_test_results
+--confirm <hoy>` (alcance sin candidatos) → `COMMIT OK — 0 fila(s) borradas`, snapshot escrito y
+`ab_test_results` intacto (1 fila antes y después). El `--apply` sin `--confirm` de hoy sale con
+exit 2. **La purga real no se ha ejecutado.**
 
 **Commit:** `feat(db): purga de datos falsos con dry-run obligatorio y backup`
 → `scripts/db/fake-data-purge.mjs`.
@@ -1559,7 +1641,9 @@ smoke pendiente; commit/push **sólo** con orden explícita.
 | Romper el gate de smoke (usuario E2E) | `KEEP` allowlist: `smoke-test@strategicconnex.test` |
 | Colisión con WIP sin commitear en `src/features/dashboard/**` y `src/components/**` | `git status --porcelain` antes de cada tarea 12-17; pausar y preguntar |
 | Cascada FK no contemplada en la purga | introspección de `pg_constraint` + una sola transacción + backup completo previo (si un hijo sin CASCADE impide el borrado, hay `ROLLBACK` total en vez de purga parcial) |
-| **Drift duro PREEXISTENTE** (detectado por `db:drift-check` el 2026-10-11, no relacionado con la purga): faltan 5 tablas en la BD respecto al schema (`distributed_cache`, `idempotency_keys`, `outbox_events`, `scan_queue`, `scan_queue_slots` → migraciones 0040/0041 sin aplicar) | `drizzle-kit migrate` antes de Fase 1 (o aceptar el rojo documentado). El job `db-drift-check` de CI está en rojo por esto, no por el bug de SSL |
+| ~~Drift duro preexistente: 5 tablas del schema sin crear~~ | **RESUELTO (2026-10-11).** `pnpm db:migrate` aplicó las 5 migraciones pendientes y `db:drift-check` sale exit 0. Las migraciones eran idempotentes por diseño (`IF NOT EXISTS`), así que 3 de ellas ya estaban aplicadas a mano y sólo faltaba el registro en el ledger |
+| Purga bloqueada por `NO ACTION` (`audit_logs`/`audits`/`reports`) y por cascada sobre 1.372 filas no candidatas | El script **aborta por diseño**; la salida es ampliar el alcance o `--accept-cascade` explícito. Ninguno de los dos lo decide el agente |
+| Borrar `admin@strategicaudit.pro` habría cascada-do 4-5 proyectos reales (D1-2) | El gate de dependencias lo bloquea; la decisión (KEEP / traspaso / borrar sólo las 9 filas sin propiedad) es del operador |
 | Backup **sólo-datos** (sin DDL ni `auth.users`) | Restaurar reinyectando los INSERT con el schema ya migrado; para un dump desde cero, generar DDL aparte (`pg_dump --schema-only`) |
 | CI sigue escribiendo en prod (Newman) | decisión pendiente: API key de sólo lectura o BD de staging (Task 19.4) |
 | Crons Trigger.dev siguen activos (`adversary.trigger` 6h) | Task 11 desactiva la simulación; verificar en dashboard de Trigger.dev que no quedan runs |
