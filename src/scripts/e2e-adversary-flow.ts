@@ -18,15 +18,16 @@
      npx tsx --env-file=.env.local src/scripts/e2e-adversary-flow.ts
      (requiere dev server en :3000 y .env.local completo)
 
-   Flag opcional: --cleanup elimina el usuario + datos al terminar.
+   Guarda de entorno (Fase 2): se niega a correr contra PRODUCCIÓN salvo
+   `--allow-prod`. La limpieza de lo que crea es ON por defecto (se conserva
+   con `--no-cleanup --allow-prod`).
    ═══════════════════════════════════════════════════════════════════ */
-
-const CLEANUP = process.argv.includes("--cleanup");
 
 import { createClient } from "@supabase/supabase-js";
 import { Pool } from "pg";
 import * as fs from "fs";
 import * as path from "path";
+import { assertNotProd, assertCleanupPlan } from "../../scripts/lib/assert-env.mjs";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
@@ -88,6 +89,10 @@ async function cleanupTestData(pool: Pool, userId: string, projectId: string): P
 // ─── Main ───────────────────────────────────────────────────────────
 
 async function main() {
+  // Fase 2: fail-fast ANTES de tocar la BD.
+  assertNotProd("e2e-adversary-flow");
+  const CLEANUP = assertCleanupPlan("e2e-adversary-flow");
+
   if (!SUPABASE_URL || !ANON_KEY || !DATABASE_URL) {
     console.error("Faltan env vars: NEXT_PUBLIC_SUPABASE_URL / PUBLISHABLE_KEY / DATABASE_URL");
     process.exit(1);
@@ -295,7 +300,7 @@ async function main() {
       console.log("\n🧹 Limpiando datos de test...");
       await cleanupTestData(pool, userId, projectId);
     } else {
-      console.log("\n────── Datos de limpieza (re-ejecuta con --cleanup para borrar) ──────");
+      console.log("\n────── Datos conservados por --no-cleanup (borrar a mano) ──────");
       console.log({ email, userId, projectId });
     }
     await pool.end();

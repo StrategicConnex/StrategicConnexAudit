@@ -5,8 +5,12 @@ import { eq } from 'drizzle-orm';
 import { randomUUID as uuidv4 } from 'crypto';
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { assertNotProd } from "../../../scripts/lib/assert-env.mjs";
 
 async function testRLS() {
+  // Fase 2: este script crea usuarios/proyecto de prueba (fixtures RLS).
+  assertNotProd("test-rls");
+
   logger.info("🚀 Iniciando Prueba de Fuego: Row Level Security (RLS)\n");
 
   const userA_Id = uuidv4();

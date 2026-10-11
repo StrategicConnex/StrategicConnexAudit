@@ -11,8 +11,13 @@
  */
 import fs from "node:fs";
 import pg from "pg";
+import { assertNotProd } from "../lib/assert-env.mjs";
 
-const BASE = process.argv[2] ?? "https://scaudit.vercel.app";
+// Default LOCAL (Fase 2): apuntar a producción exige --allow-prod explícito.
+// Este script inserta en `users` y `projects` (fila "E2E RLS Check"), así que
+// no puede quedarse con producción como destino por defecto.
+const BASE = process.argv[2] ?? process.env.E2E_BASE_URL ?? "http://localhost:3000";
+assertNotProd("post-rls-check", { url: BASE });
 const env = {};
 for (const line of fs.readFileSync(".env.local", "utf8").split(/\r?\n/)) {
   const m = line.match(/^([A-Z0-9_]+)=(.*)$/);

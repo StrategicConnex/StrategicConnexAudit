@@ -4,6 +4,7 @@ import { pgTable, uuid, text, timestamp, pgEnum } from 'drizzle-orm/pg-core';
 import { sql, eq } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
 import { randomUUID } from 'crypto';
+import { assertNotProd } from '../lib/assert-env.mjs';
 
 // Cargar variables de entorno
 dotenv.config({ path: '.env.local' });
@@ -27,6 +28,9 @@ const projects = pgTable("projects", {
 });
 
 async function runTest() {
+  // Fase 2: crea usuarios/proyecto de prueba (fixtures RLS).
+  assertNotProd("rls-fire-test");
+
   console.log("🚀 INICIANDO PRUEBA DE FUEGO RLS (Versin Autocontenida)\n");
 
   if (!dbUrl) {

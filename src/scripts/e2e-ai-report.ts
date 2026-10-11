@@ -26,17 +26,16 @@
    restringido el router IA cae al reporte resiliente (isFallback=true),
    que es un resultado válido de la validación del pipeline.
 
-   Flag opcional: --cleanup elimina el usuario y los datos sembrados al
-   terminar (evita acumular filas de test en la BD compartida).
+   Guarda de entorno (Fase 2): se niega a correr contra PRODUCCIÓN salvo
+   `--allow-prod`. La limpieza de lo que crea es ON por defecto (el flag
+   `--cleanup` pasó a ser opt-out: se conserva con `--no-cleanup --allow-prod`).
    ═══════════════════════════════════════════════════════════════════ */
-
-// Flag --cleanup: borra el usuario test + datos al finalizar
-const CLEANUP = process.argv.includes("--cleanup");
 
 import { createClient } from "@supabase/supabase-js";
 import { Pool } from "pg";
 import * as fs from "fs";
 import * as path from "path";
+import { assertNotProd, assertCleanupPlan } from "../../scripts/lib/assert-env.mjs";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
@@ -105,6 +104,10 @@ async function cleanupTestData(pool: Pool, userId: string, projectId: string): P
 // ─── Main ───────────────────────────────────────────────────────────
 
 async function main() {
+  // Fase 2: fail-fast ANTES de tocar la BD.
+  assertNotProd("e2e-ai-report");
+  const CLEANUP = assertCleanupPlan("e2e-ai-report");
+
   if (!SUPABASE_URL || !ANON_KEY || !DATABASE_URL) {
     console.error("Faltan env vars: NEXT_PUBLIC_SUPABASE_URL / PUBLISHABLE_KEY / DATABASE_URL");
     process.exit(1);
@@ -310,7 +313,7 @@ async function main() {
       await cleanupTestData(pool, userId, projectId);
     } else {
       // Credenciales del usuario test para limpieza manual si es necesario
-      console.log("\n────── Datos de limpieza (re-ejecuta con --cleanup para borrar) ──────");
+      console.log("\n────── Datos conservados por --no-cleanup (borrar a mano) ──────");
       console.log({ email, userId, projectId, auditId });
     }
     await pool.end();

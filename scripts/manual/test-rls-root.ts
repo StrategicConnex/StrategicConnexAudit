@@ -1,7 +1,11 @@
 import * as dotenv from 'dotenv';
+import { assertNotProd } from '../lib/assert-env.mjs';
 dotenv.config({ path: '.env.local' });
 
 async function testRLS() {
+  // Fase 2: crea usuarios/proyecto de prueba (fixtures RLS).
+  assertNotProd("test-rls-root");
+
   console.log("🚀 Iniciando Prueba de Fuego (Root Version): Row Level Security (RLS)\n");
 
   const { db } = await import('./src/shared/db/index');
