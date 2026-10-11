@@ -34,6 +34,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import pg from "pg";
+import { connectionFor } from "../lib/db-connection.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 // Mismo patrón que `scripts/manual/backup-manager.ts:6-8`: sólo se LEE.
@@ -103,21 +104,6 @@ const quoteIdent = (name) => `"${String(name).replace(/"/g, '""')}"`;
 function projectLabel(url) {
   const m = url.match(/@(?:db\.)?([a-z0-9]+)\.supabase\.co/);
   return m ? `supabase:${m[1]}` : "postgres:externo";
-}
-
-/**
- * pg 8.20 trata `sslmode=require` como alias de `verify-full` y **ese valor de
- * la URL pisa el objeto `ssl`** de la config, así que con el pooler de Supabase
- * la conexión muere con "self-signed certificate in certificate chain". Se
- * retira `sslmode` de la URL y se decide el SSL explícitamente (misma política
- * que `scripts/db/drift-check.mjs:187`).
- */
-function connectionFor(url) {
-  const connectionString = url
-    .replace(/([?&])sslmode=[^&]*(&?)/i, (_m, sep, tail) => (tail ? sep : ""))
-    .replace(/[?&]$/, "");
-  const ssl = /sslmode=disable/i.test(url) ? false : { rejectUnauthorized: false };
-  return { connectionString, ssl };
 }
 
 /**
@@ -237,13 +223,11 @@ async function main() {
     process.exit(2);
   }
 
-  // SSL como en `scripts/db/drift-check.mjs:187` (el script de BD que ya
-  // funciona contra este Supabase): el pooler sirve una cadena que Node no
-  // trae en su almacén, así que se acepta salvo `sslmode=disable` explícito.
-  // OJO: la spec del plan escribía `rejectUnauthorized: DB_ALLOW_INSECURE_SSL
-  // === "true"`, que INVIERTE el flag (`allow_insecure=true` acababa exigiendo
-  // verificación estricta y rompía la conexión con "self-signed certificate in
-  // certificate chain"). No repetir ese patrón.
+  // SSL: política única en `scripts/lib/db-connection.mjs` (el `sslmode` del
+  // DSN se retira para que pg 8.20 no pueda pisar el objeto `ssl`; `disable`
+  // → sin TLS). Ver el comentario de ese módulo: aquí vivía la primera copia
+  // de este arreglo y hay un guard de regresión en
+  // `tests/security/db-connection-ssl.test.ts`.
   const pool = new pg.Pool({ ...connectionFor(url), max: 2 });
 
   try {

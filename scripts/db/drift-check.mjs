@@ -22,6 +22,7 @@ import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
 import pg from "pg";
+import { connectionFor } from "../lib/db-connection.mjs";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -181,11 +182,13 @@ function defaultsEquivalent(tsCol, dbDefault) {
 
 // ── Main ────────────────────────────────────────────────────────────────
 const drizzle = parseSchemas();
-// sslmode=disable (Postgres locales, p.ej. BD de prueba) → sin SSL; Supabase siempre exige SSL.
-const client = new pg.Client({
-  connectionString: dbUrl,
-  ssl: /sslmode=disable/.test(dbUrl) ? false : { rejectUnauthorized: false },
-});
+// Política TLS centralizada en `scripts/lib/db-connection.mjs`. Antes el objeto
+// `ssl` de aquí era CÓDIGO MUERTO cuando el DSN traía `sslmode` (pg 8.20 parsea
+// la URL DESPUÉS y pisa el config) → verificación estricta silenciosa y
+// «self-signed certificate in certificate chain» contra el pooler de Supabase.
+// Funcionaba de milagro porque `DIRECT_URL` (sin `sslmode`) gana localmente;
+// en CI el fallback es `DATABASE_URL`, que sí lo trae.
+const client = new pg.Client(connectionFor(dbUrl));
 
 try {
   await client.connect();
