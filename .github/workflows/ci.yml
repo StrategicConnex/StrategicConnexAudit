@@ -263,6 +263,16 @@ jobs:
   api-contract-test:
     name: API Contract Test
     runs-on: ubuntu-latest
+    # El contrato en vivo SOLO puede apuntar a un entorno NO productivo.
+    # `TEST_ENV` declara el entorno objetivo (staging|test) y
+    # `SCAUDIT_CONTRACT_BASE_URL` la URL base contra la que Newman dispara.
+    # Son *variables* de repositorio, no secretos (una URL no lo es):
+    # Settings → Secrets and variables → Actions → Variables.
+    # Sin ambas, el guard `target` FALLA con un ::error:: explícito en vez de
+    # golpear producción o de cerrar el pipeline en verde por omisión.
+    env:
+      TEST_ENV: ${{ vars.TEST_ENV }}
+      SCAUDIT_CONTRACT_BASE_URL: ${{ vars.SCAUDIT_CONTRACT_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -280,6 +290,72 @@ jobs:
       - name: Generate Postman collection from OpenAPI
         run: pnpm generate:collection
 
+      # ── Guard: prohibir el contrato en vivo contra PRODUCCIÓN ─────────────
+      # El contrato se ejecuta con Newman, que lanza peticiones REALES contra un
+      # servidor. Hasta 2026-10-10 este job las lanzaba contra producción en cada
+      # push/PR: la colección incrustaba la URL de `servers[0]` del OpenAPI, que
+      # es prod. Ahora el target es explícito y se valida ANTES de disparar nada:
+      #   1. `TEST_ENV` debe ser `staging` o `test`.
+      #   2. `SCAUDIT_CONTRACT_BASE_URL` debe existir y su host no puede ser uno
+      #      de los hosts de producción conocidos.
+      # En PRs desde forks GitHub no expone las variables del repo: se omite con
+      # un `::warning::` visible (misma excepción que aplica al secreto de API).
+      - name: Guard — prohibir el contrato en vivo contra producción
+        id: target
+        run: |
+          set -euo pipefail
+
+          blocked() {
+            echo "::error::$1"
+            echo "target_status=blocked" >> "$GITHUB_OUTPUT"
+            exit 1
+          }
+
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
+            echo "::warning::PR de fork: sin acceso a las variables del repo — se omite el contrato en vivo (solo OpenAPI offline)"
+            echo "target_status=skipped" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${TEST_ENV:-}" != "staging" ] && [ "${TEST_ENV:-}" != "test" ]; then
+            blocked "ERROR: No se permiten pruebas de contrato contra producción (TEST_ENV='${TEST_ENV:-<vacío>}'; se exige 'staging' o 'test'). Define la variable de repositorio TEST_ENV."
+          fi
+
+          TARGET="${SCAUDIT_CONTRACT_BASE_URL:-}"
+          if [ -z "$TARGET" ]; then
+            blocked "ERROR: No se permiten pruebas de contrato contra producción (falta SCAUDIT_CONTRACT_BASE_URL con el host de staging/test)."
+          fi
+
+          HOST="$(printf '%s' "$TARGET" | sed -E 's#^[A-Za-z][A-Za-z0-9+.-]*://##; s#[/?].*$##; s#:.*$##')"
+          if [ -z "$HOST" ]; then
+            blocked "ERROR: SCAUDIT_CONTRACT_BASE_URL no es una URL válida ('$TARGET')."
+          fi
+
+          for PROD_HOST in scaudit.vercel.app www.scaudit.vercel.app strategicaudit.pro www.strategicaudit.pro; do
+            if [ "$HOST" = "$PROD_HOST" ]; then
+              blocked "ERROR: No se permiten pruebas de contrato contra producción (host '$HOST' es de producción). Apunta SCAUDIT_CONTRACT_BASE_URL a un entorno de staging/test."
+            fi
+          done
+
+          # El override sólo funciona si la colección referencia `{{baseUrl}}`.
+          # Si vuelve a incrustar URLs absolutas, Newman golpearía el default
+          # del spec (producción) aunque este guard diga OK.
+          COLLECTION="tests/api-contract/scaudit-api-collection.json"
+          if [ ! -f "$COLLECTION" ]; then
+            blocked "ERROR: falta $COLLECTION (¿falló el paso Generate Postman collection?)."
+          fi
+          RAW_TOTAL="$(grep -cF '"raw": ' "$COLLECTION" || true)"
+          RAW_REF="$(grep -cF '"raw": "{{baseUrl}}/' "$COLLECTION" || true)"
+          if [ "$RAW_TOTAL" = "0" ] || [ "$RAW_TOTAL" != "$RAW_REF" ]; then
+            blocked "ERROR: la colección no es reapuntable ($RAW_REF de $RAW_TOTAL requests usan {{baseUrl}}): Newman ignoraría SCAUDIT_CONTRACT_BASE_URL y golpearía el default del spec. Revisa generate-collection.mjs."
+          fi
+
+          echo "Contrato en vivo contra $HOST (TEST_ENV=$TEST_ENV) — $RAW_REF/$RAW_TOTAL requests reapuntables"
+          echo "target_status=ok" >> "$GITHUB_OUTPUT"
+
+      # NOTA (2026-10-10): el guard `target` corre ANTES de este paso, así que
+      # Newman ya no puede alcanzar producción: sin un target no productivo
+      # declarado el job falla antes de disparar una sola petición.
       # DECISION: un contrato roto contra produccion SI tumba el pipeline, y la
       # AUSENCIA del secreto `SCAUDIT_API_KEY` tambien: el paso FALLA con
       # `newman_status=missing_secret` en lugar de cerrar en verde por omision.
@@ -293,15 +369,12 @@ jobs:
       # Requiere el secreto `SCAUDIT_API_KEY` (ver `.env.example` → "API pública
       # v1 — contrato Newman"). Configúralo en
       # Settings → Secrets and variables → Actions → New repository secret.
-      - name: Run Newman API contract tests (fail if no SCAUDIT_API_KEY)
+      - name: Run Newman API contract tests against the non-production target
         id: newman
+        if: steps.target.outputs.target_status == 'ok'
         run: |
           if [ -z "${{ secrets.SCAUDIT_API_KEY }}" ]; then
-            if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
-              echo "::warning::PR de fork sin acceso a SCAUDIT_API_KEY — se omite el contrato en vivo (solo OpenAPI offline)"
-              echo "newman_status=skipped" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+            # Los PRs de fork ya no llegan aquí: el guard `target` los omite antes.
             echo "::error::Falta el secreto SCAUDIT_API_KEY: el contrato de la API pública no se puede validar en vivo. Configúralo en Settings → Secrets and variables → Actions → New repository secret."
             echo "newman_status=missing_secret" >> "$GITHUB_OUTPUT"
             exit 1
@@ -310,6 +383,7 @@ jobs:
           newman_rc=0
           npx newman run tests/api-contract/scaudit-api-collection.json \
             --env-var "apiKey=${{ secrets.SCAUDIT_API_KEY }}" \
+            --env-var "baseUrl=$SCAUDIT_CONTRACT_BASE_URL" \
             --reporters cli,junit \
             --reporter-junit-export results/api-contract.xml \
             --bail \
@@ -326,8 +400,10 @@ jobs:
 
       # `always()` para subir el JUnit tambien cuando Newman falla: con el
       # filtro anterior (`== 'passed'`) el diagnostico de la rotura se perdia.
+      # Con el target bloqueado/omitido no hay JUnit que subir: se restringe a
+      # los dos estados en los que Newman llegó a ejecutarse.
       - name: Upload Newman results
-        if: always() && steps.newman.outputs.newman_status != 'skipped' && steps.newman.outputs.newman_status != 'missing_secret'
+        if: always() && (steps.newman.outputs.newman_status == 'passed' || steps.newman.outputs.newman_status == 'failed')
         uses: actions/upload-artifact@v4
         with:
           name: newman-results
@@ -341,8 +417,12 @@ jobs:
           {
             echo '## 📋 API Contract Test'
             echo ''
-            if [ "${{ steps.newman.outputs.newman_status }}" = "passed" ]; then
-              echo '✅ **OpenAPI spec valid** — Newman tests passed against production'
+            if [ "${{ steps.target.outputs.target_status }}" = "blocked" ]; then
+              echo '❌ **Contrato en vivo bloqueado** — sin un target no productivo (`TEST_ENV` en {staging,test} + `SCAUDIT_CONTRACT_BASE_URL`) el job no dispara ninguna petición. Ver el ::error:: del paso *Guard*.'
+            elif [ "${{ steps.target.outputs.target_status }}" = "skipped" ]; then
+              echo '✅ **OpenAPI spec valid** — contrato en vivo omitido (PR de fork: el repo no expone sus variables)'
+            elif [ "${{ steps.newman.outputs.newman_status }}" = "passed" ]; then
+              echo '✅ **OpenAPI spec valid** — Newman tests passed against the non-production target'
             elif [ "${{ steps.newman.outputs.newman_status }}" = "skipped" ]; then
               echo '✅ **OpenAPI spec valid** — Newman skipped (fork PR: `SCAUDIT_API_KEY` no disponible)'
             elif [ "${{ steps.newman.outputs.newman_status }}" = "missing_secret" ]; then

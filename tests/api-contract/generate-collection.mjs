@@ -124,8 +124,15 @@ function buildUrl(baseUrl, path, methodSpec) {
 
 // ─── Main ───────────────────────────────────────────────────────────────
 
-var baseUrl = spec.servers && spec.servers[0] ? spec.servers[0].url : 'https://scaudit.vercel.app';
-var specUrl = baseUrl + '/openapi.json';
+// El `servers[0]` del OpenAPI es el target POR DEFECTO: se guarda como valor
+// de la variable `baseUrl` de la colección, mientras cada request referencia
+// `{{baseUrl}}`. Esa indirección es la que permite reapuntar la colección con
+// `--env-var "baseUrl=..."`; sin ella la URL absoluta queda incrustada en cada
+// request y Newman golpea siempre el default del spec — que en CI es
+// producción. El target efectivo lo valida el job `api-contract-test`.
+var defaultBaseUrl = spec.servers && spec.servers[0] ? spec.servers[0].url : 'https://scaudit.vercel.app';
+const BASE_URL_REF = '{{baseUrl}}';
+var specUrl = BASE_URL_REF + '/openapi.json';
 
 // Build folders by tag
 var tagNames = spec.tags ? spec.tags.map(function(t) { return t.name; }) : [];
@@ -142,7 +149,7 @@ pathKeys.forEach(function(path) {
     var responses = details.responses || {};
     var testScript = buildTestScript(method.toUpperCase(), path, responses);
     var auth = getAuth(details.security);
-    var url = buildUrl(baseUrl, path, details);
+    var url = buildUrl(BASE_URL_REF, path, details);
 
     var item = {
       name: details.summary || (method.toUpperCase() + ' ' + path),
@@ -189,7 +196,7 @@ var collection = {
     bearer: [{ key: 'token', value: '{{apiKey}}', type: 'string' }]
   },
   variable: [
-    { key: 'baseUrl', value: baseUrl, type: 'string' },
+    { key: 'baseUrl', value: defaultBaseUrl, type: 'string' },
     { key: 'apiKey', value: 'sa_live_YOUR_API_KEY_HERE', type: 'string' },
     { key: 'sessionToken', value: '', type: 'string' },
     { key: 'specUrl', value: specUrl, type: 'string' }
@@ -208,6 +215,7 @@ console.log('');
 console.log('Run in CI:');
 console.log('  npx newman run ' + OUTPUT_PATH);
 console.log('    --env-var "apiKey=$SCAUDIT_API_KEY"');
+console.log('    --env-var "baseUrl=https://<entorno-no-productivo>"');
 console.log('    --reporters cli,junit');
 console.log('    --reporter-junit-export results/api-contract.xml');
 console.log('    --bail');
