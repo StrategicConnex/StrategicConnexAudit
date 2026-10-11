@@ -13,12 +13,18 @@
      1. DRY-RUN por defecto. Escribir exige `--apply` **y** `--confirm <hoy>`
         (la fecha se comprueba, no se cree: evita el `--apply` de copia-pega).
      2. Sólo `DELETE` con `WHERE` explícito sobre PKs sacadas de la propia fila,
-        y sólo en tablas de `PURGE_TABLES`. Nunca `TRUNCATE`, nunca `DROP`,
-        nunca `UPDATE`. Lo que no está en el allowlist se informa, no se toca.
-     3. RECUENTO: los candidatos se comparan con `PURGE_EXPECTED` (versionado).
-        Desviación >5% en una tabla o en el total ⇒ el `--apply` se ABORTA (el
-        dry-run sale con exit 1). Un recuento que no cuadra es un hecho nuevo,
-        no ruido: se investiga y se actualiza el esperado, no se ignora.
+        y sólo en tablas del allowlist: `PURGE_TABLES` (barrido por patrón) más
+        `PROJECT_SCOPED_TABLES` (filas hijas de un proyecto demo; garantía 8).
+        Nunca `TRUNCATE`, nunca `DROP`, nunca `UPDATE`. Lo que no está en el
+        allowlist se informa, no se toca.
+     3. RECUENTO: los candidatos se comparan, por separado, con `PURGE_EXPECTED`
+        (barrido por patrón) y `PURGE_EXPECTED_PROJECT_SCOPED` (regla
+        project-scoped). Desviación >5% en una tabla o en un total ⇒ el `--apply`
+        se ABORTA (el dry-run sale con exit 1). Un recuento que no cuadra es un
+        hecho nuevo, no ruido: se investiga y se actualiza el esperado, no se
+        ignora. También cuenta el TOPE de filas por tabla: una tabla con
+        exactamente `ROWS_PER_TABLE` filas puede tener más basura sin listar y
+        se avisa en vez de darlo por bueno.
      4. DEPENDENCIAS: antes de borrar se analiza el grafo de FK contra TODAS las
         tablas de `public`, y se separan tres clases:
         · RESTRICT/NO ACTION sobre filas que NO son candidatas → el `DELETE`
@@ -34,10 +40,20 @@
      5. UNA transacción (`BEGIN … COMMIT`); cualquier error ⇒ `ROLLBACK` total.
      6. Snapshot de las filas a borrar en `backups/fake-data-purge-<ts>.json`
         (restauración manual) ANTES de tocar nada.
-     7. `public.users` y `auth.users` son tablas DISTINTAS (aquí sólo 6 de 21
-        filas coinciden): este script NO borra identidades de `auth.users` —
-        eso es una operación de cuenta, no una limpieza de datos. Las identidades
-        que sí existen se INFORMAN para que se retiren a mano si procede.
+     7. `public.users` y `auth.users` son tablas DISTINTAS: este script NO borra
+        identidades de `auth.users` — eso es una operación de cuenta, no una
+        limpieza de datos. Las identidades que sí existen se INFORMAN para que se
+        retiren a mano si procede.
+     8. REGLA «PROJECT-SCOPED» (decisión del operador, 2026-10-11): hay filas
+        basura que no llevan ningún patrón de texto propio (`uptime_logs`,
+        `audit_logs`, `reports`, `intelligence_usage_events`…) y que un barrido
+        por patrones deja atrás; peor, dejan el `DELETE` del proyecto retenido
+        por una FK `NO ACTION`. Toda tabla con una FK de una columna `project_id`
+        hacia `projects` se purga POR PROYECTO, y sólo para los proyectos que
+        son candidatos. El conjunto de tablas está DECLARADO en
+        `PROJECT_SCOPED_TABLES` y la purga lo compara con el que descubre en la
+        BD: si alguien añade una tabla con `project_id`, aparece como diferencia
+        y el `--apply` se rechaza hasta declararla a conciencia.
 
    Códigos de salida: 0 = limpio · 1 = dry-run con bloqueos o desviación de
    recuento (nada escrito) · 2 = error de ejecución o aplicación rechazada.
@@ -51,10 +67,16 @@ import pg from "pg";
 import { connectionFor } from "../lib/db-connection.mjs";
 import {
   PATTERNS,
+  DEMO_PROJECT_PATTERNS,
   KEEP,
   PURGE_TABLES,
   PURGE_EXPECTED,
   PURGE_EXPECTED_TOTAL,
+  PROJECT_SCOPED_FK,
+  PROJECT_SCOPED_TABLES,
+  PROJECT_SCOPED_CASCADE_TABLES,
+  PURGE_EXPECTED_PROJECT_SCOPED,
+  CASCADE_ACCEPTED,
 } from "../lib/fake-data-patterns.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -67,6 +89,28 @@ const TEXT_TYPES = new Set(["text", "character varying", "json", "jsonb", "xml"]
 const DRIFT_TOLERANCE = 0.05;
 /** Filas de `users` que NUNCA se borran (credencial del gate de smoke). */
 const KEEP_ROWS = KEEP.map((email) => ({ table: "users", match: email }));
+
+/**
+ * Guarda de configuración: los recuentos declarados deben corresponder a tablas
+ * que la purga puede borrar de verdad. Sin esto, un esperado mal puesto (o una
+ * tabla que sale del allowlist) se convierte en un `⚠️` de recuento que se
+ * aprende a ignorar.
+ */
+function assertPolicyCoherent() {
+  const patternOut = Object.keys(PURGE_EXPECTED).filter((t) => !PURGE_TABLES.has(t));
+  if (patternOut.length > 0) {
+    throw new Error(
+      `PURGE_EXPECTED declara tablas fuera de PURGE_TABLES (nunca podrían tener candidatos): ${patternOut.join(", ")}`
+    );
+  }
+  const scopedOk = (t) => PROJECT_SCOPED_TABLES.has(t) || PROJECT_SCOPED_CASCADE_TABLES.has(t);
+  const scopedOut = Object.keys(PURGE_EXPECTED_PROJECT_SCOPED).filter((t) => !scopedOk(t));
+  if (scopedOut.length > 0) {
+    throw new Error(
+      `PURGE_EXPECTED_PROJECT_SCOPED declara tablas fuera de la regla project-scoped: ${scopedOut.join(", ")}`
+    );
+  }
+}
 
 const args = process.argv.slice(2);
 const arg = (name) => {
@@ -82,7 +126,18 @@ const onlyTables = (arg("--tables") || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
-const today = () => new Date().toISOString().slice(0, 10);
+/**
+ * Fecha de HOY en el reloj local del operador, no en UTC. El gate existe para
+ * que nadie ejecute un `--apply` copiado de ayer: si `today()` fuera UTC y el
+ * operador está en UTC−3, cualquier intento después de las 21:00 locales
+ * fallaría siempre con "--confirm es obligatorio" aunque la fecha fuera la
+ * correcta (y el plan documenta el comando con la fecha local: `Get-Date`).
+ */
+const today = () => {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
 const quoteIdent = (name) => `"${String(name).replace(/"/g, '""')}"`;
 const line = (s) => {
   if (!asJson) console.log(s);
@@ -103,7 +158,7 @@ async function textColumns(client, table) {
   const res = await client.query(
     `SELECT column_name, data_type FROM information_schema.columns
      WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position`,
-    [table],
+    [table]
   );
   return res.rows.filter((c) => TEXT_TYPES.has(c.data_type)).map((c) => c.column_name);
 }
@@ -116,16 +171,16 @@ async function primaryKey(client, table) {
      WHERE tc.table_schema = 'public' AND tc.table_name = $1
        AND tc.constraint_type = 'PRIMARY KEY'
      ORDER BY kcu.ordinal_position`,
-    [table],
+    [table]
   );
   return res.rows.map((r) => r.column_name);
 }
 
 /** Filas de `table` con algún fragmento de PATTERNS en alguna columna de texto. */
-async function selectMatches(client, table, cols) {
+async function selectMatches(client, table, cols, patterns = PATTERNS) {
   const params = [];
   const ors = [];
-  for (const p of PATTERNS) {
+  for (const p of patterns) {
     for (const f of p.find) {
       params.push(f.toLowerCase());
       const ph = `$${params.length}`;
@@ -135,7 +190,7 @@ async function selectMatches(client, table, cols) {
   const res = await client.query(
     `SELECT to_jsonb(t) AS row FROM "public".${quoteIdent(table)} t
      WHERE (${ors.join(" OR ")}) LIMIT ${ROWS_PER_TABLE}`,
-    params,
+    params
   );
   return res.rows.map((r) => r.row);
 }
@@ -153,75 +208,270 @@ async function inboundFks(client, table) {
      WHERE f.contype = 'f' AND pl.relname = $1 AND n.nspname = 'public'
        AND cl.relname <> $1
      ORDER BY 1`,
-    [table],
+    [table]
   );
   return res.rows;
 }
 
 const RULE = { c: "CASCADE", n: "NO ACTION", r: "RESTRICT", d: "SET NULL", a: "SET DEFAULT" };
 
+/**
+ * Tablas que la BD tiene como project-scoped (FK de una columna `project_id`
+ * hacia `projects`). Se descubren para poder compararlas con las declaradas en
+ * la política: una tabla nueva debe declararse a conciencia, no colarse.
+ */
+async function discoveredProjectScoped(client) {
+  const res = await client.query(
+    `SELECT cl.relname AS child
+     FROM pg_constraint f
+     JOIN pg_class cl ON cl.oid = f.conrelid
+     JOIN pg_class pl ON pl.oid = f.confrelid
+     JOIN pg_namespace n ON n.oid = pl.relnamespace
+     JOIN unnest(f.conkey) AS k(colnum) ON true
+     JOIN pg_attribute a ON a.attrelid = f.conrelid AND a.attnum = k.colnum
+     WHERE f.contype = 'f' AND pl.relname = 'projects' AND n.nspname = 'public'
+       AND cl.relname <> 'projects' AND a.attname = $1
+     ORDER BY 1`,
+    [PROJECT_SCOPED_FK]
+  );
+  return res.rows.map((r) => r.child);
+}
+
+async function countProjectScoped(client, table, projectIds) {
+  const res = await client.query(
+    `SELECT count(*)::int AS n FROM "public".${quoteIdent(table)} WHERE ${quoteIdent(PROJECT_SCOPED_FK)} = ANY($1::uuid[])`,
+    [projectIds]
+  );
+  return res.rows[0].n;
+}
+
+async function rowsProjectScoped(client, table, projectIds) {
+  const res = await client.query(
+    `SELECT to_jsonb(t) AS row FROM "public".${quoteIdent(table)} t WHERE ${quoteIdent(PROJECT_SCOPED_FK)} = ANY($1::uuid[])`,
+    [projectIds]
+  );
+  return res.rows.map((r) => r.row);
+}
+
+/**
+ * Hijos de `table` por una FK de UNA columna con `ON DELETE CASCADE`. Se piden
+ * sólo esas: una FK compuesta no identifica la fila hija con una sola columna y
+ * no se puede enumerar con seguridad (se queda en el gate de dependencias).
+ */
+async function cascadeChildFks(client, table) {
+  const res = await client.query(
+    `SELECT cl.relname AS child, a.attname AS col
+     FROM pg_constraint f
+     JOIN pg_class cl ON cl.oid = f.conrelid
+     JOIN pg_class pl ON pl.oid = f.confrelid
+     JOIN pg_namespace n ON n.oid = pl.relnamespace
+     JOIN pg_attribute a ON a.attrelid = f.conrelid AND a.attnum = f.conkey[1]
+     WHERE f.contype = 'f' AND pl.relname = $1 AND n.nspname = 'public'
+       AND cl.relname <> $1 AND f.confdeltype = 'c' AND array_length(f.conkey, 1) = 1
+     ORDER BY 1`,
+    [table]
+  );
+  return res.rows;
+}
+
+/** Filas de `child` con `col` apuntando a alguna de las filas candidatas. */
+async function rowsByFk(client, child, col, parentIds) {
+  const res = await client.query(
+    `SELECT to_jsonb(t) AS row FROM "public".${quoteIdent(child)} t WHERE ${quoteIdent(col)}::text = ANY($1::text[])`,
+    [parentIds]
+  );
+  return res.rows.map((r) => r.row);
+}
+
 // ── Descubrimiento de candidatos ────────────────────────────────────────
 async function findCandidates(client) {
   const tablesRes = await client.query(
-    `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
+    `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`
   );
   const tables = tablesRes.rows
     .map((r) => r.tablename)
     .filter((t) => PURGE_TABLES.has(t))
     .filter((t) => onlyTables.length === 0 || onlyTables.includes(t));
 
-  const outOfScope = onlyTables.filter((t) => !PURGE_TABLES.has(t));
+  const outOfScope = onlyTables.filter(
+    (t) =>
+      !PURGE_TABLES.has(t) && !PROJECT_SCOPED_TABLES.has(t) && !PROJECT_SCOPED_CASCADE_TABLES.has(t)
+  );
   const byTable = {};
+  const truncated = [];
   let scanned = 0;
 
+  // Añade una fila candidata sin duplicar: una misma fila puede llegar por
+  // coincidir con un patrón Y por pertenecer a un proyecto demo.
+  const add = (table, pk, row) => {
+    const key = pk.map((c) => String(row[c])).join("|");
+    byTable[table] ||= { pk, ids: [], rows: [], keys: new Set() };
+    if (byTable[table].keys.has(key)) return false;
+    byTable[table].keys.add(key);
+    byTable[table].ids.push(pk.map((c) => row[c]));
+    byTable[table].rows.push(row);
+    return true;
+  };
+
+  // 1) Barrido por patrones (alcance: PURGE_TABLES).
   for (const table of tables) {
     const cols = await textColumns(client, table);
     const pk = await primaryKey(client, table);
     if (cols.length === 0 || pk.length === 0) continue; // sin PK no hay borrado seguro
     scanned++;
     const rows = await selectMatches(client, table, cols);
+    if (rows.length >= ROWS_PER_TABLE) truncated.push(`${table} (${rows.length})`);
     const kept = [];
     for (const row of rows) {
       const blob = JSON.stringify(row).toLowerCase();
-      const isKept = KEEP_ROWS.some((k) => k.table === table && blob.includes(k.match.toLowerCase()));
-      if (isKept) {
+      if (KEEP_ROWS.some((k) => k.table === table && blob.includes(k.match.toLowerCase()))) {
         kept.push(row[pk[0]]);
         continue;
       }
-      (byTable[table] ||= { pk, ids: [], rows: [] });
-      byTable[table].ids.push(pk.map((c) => row[c]));
-      byTable[table].rows.push(row);
+      add(table, pk, row);
     }
     if (kept.length > 0) line(`   (KEEP) ${table}: ${kept.length} fila(s) excluidas por allowlist`);
   }
-  return { byTable, scanned, outOfScope };
+
+  const patternIds = {};
+  for (const [t, c] of Object.entries(byTable)) patternIds[t] = c.ids.length;
+
+  // 2) Regla project-scoped. Los proyectos candidatos se calculan SIEMPRE (no
+  // dependen del alcance de `--tables`) porque son el origen de la regla.
+  const projectPk = await primaryKey(client, "projects");
+  const demoRows =
+    byTable.projects?.rows ??
+    (await selectMatches(client, "projects", await textColumns(client, "projects"), [
+      { id: "demo-project", kind: "DELETE", find: DEMO_PROJECT_PATTERNS },
+    ]));
+  const demoIds = demoRows
+    .filter(
+      (r) => !KEEP_ROWS.some((k) => JSON.stringify(r).toLowerCase().includes(k.match.toLowerCase()))
+    )
+    .map((r) => String(r[projectPk[0]]));
+
+  const discovered = await discoveredProjectScoped(client);
+  const projectScoped = {};
+  for (const table of discovered) {
+    if (!PROJECT_SCOPED_TABLES.has(table)) continue;
+    if (onlyTables.length > 0 && !onlyTables.includes(table)) continue;
+    if (demoIds.length === 0) break;
+    const pk = await primaryKey(client, table);
+    if (pk.length === 0) {
+      line(`   ⚠️  ${table}: sin PK, queda fuera de la regla project-scoped`);
+      continue;
+    }
+    const n = await countProjectScoped(client, table, demoIds);
+    if (n === 0) continue;
+    for (const row of await rowsProjectScoped(client, table, demoIds)) {
+      const blob = JSON.stringify(row).toLowerCase();
+      if (KEEP_ROWS.some((k) => k.table === table && blob.includes(k.match.toLowerCase())))
+        continue;
+      add(table, pk, row);
+    }
+    projectScoped[table] = n;
+  }
+
+  // 3) Cierre project-scoped: filas que cuelgan de una fila candidata por una
+  // FK ON DELETE CASCADE. La lista de padres se fija ANTES del bucle para que
+  // el cierre sea de UN nivel: los hijos de un hijo no entran sin declararse, y
+  // si aparecen el gate de dependencias los reporta (nada se amplía en
+  // silencio).
+  const cascadeScoped = {};
+  const notDeclaredCascade = new Set();
+  for (const parent of Object.keys(byTable)) {
+    const parentIds = byTable[parent].ids.map((tuple) => String(tuple[0]));
+    if (parentIds.length === 0) continue;
+    for (const fk of await cascadeChildFks(client, parent)) {
+      if (onlyTables.length > 0 && !onlyTables.includes(fk.child)) continue;
+      const pk = await primaryKey(client, fk.child);
+      if (pk.length === 0) {
+        line(`   ⚠️  ${fk.child}: sin PK, queda fuera del cierre project-scoped`);
+        continue;
+      }
+      let added = 0;
+      for (const row of await rowsByFk(client, fk.child, fk.col, parentIds)) {
+        const blob = JSON.stringify(row).toLowerCase();
+        if (KEEP_ROWS.some((k) => k.table === fk.child && blob.includes(k.match.toLowerCase())))
+          continue;
+        if (add(fk.child, pk, row)) added++;
+      }
+      if (added === 0) continue;
+      cascadeScoped[fk.child] = (cascadeScoped[fk.child] ?? 0) + added;
+      if (!PROJECT_SCOPED_TABLES.has(fk.child) && !PROJECT_SCOPED_CASCADE_TABLES.has(fk.child)) {
+        notDeclaredCascade.add(fk.child);
+      }
+    }
+  }
+
+  return {
+    byTable,
+    scanned,
+    outOfScope,
+    patternIds,
+    projectScoped,
+    cascadeScoped,
+    demoIds,
+    truncated,
+    declaredDiff: {
+      notDeclared: discovered.filter((t) => !PROJECT_SCOPED_TABLES.has(t)),
+      notFound: [...PROJECT_SCOPED_TABLES].filter((t) => !discovered.includes(t)).sort(),
+      notDeclaredCascade: [...notDeclaredCascade].sort(),
+    },
+  };
 }
 
 // ── Gate de recuento ────────────────────────────────────────────────────
-function checkCounts(byTable) {
-  const actual = {};
-  for (const [t, c] of Object.entries(byTable)) actual[t] = c.ids.length;
+function checkCounts(patternIds, projectScoped) {
   const rows = [];
-  // Con `--tables` el alcance es parcial: comparar el esperado global daría
-  // "desviación" en todas las tablas no incluidas (falso positivo).
-  const scope =
-    onlyTables.length > 0
-      ? new Set([...onlyTables, ...Object.keys(actual)])
-      : new Set([...Object.keys(PURGE_EXPECTED), ...Object.keys(actual)]);
-  for (const t of scope) {
-    const exp = PURGE_EXPECTED[t] ?? 0;
-    const got = actual[t] ?? 0;
-    const dev = Math.abs(got - exp) / Math.max(exp, 1);
-    if (dev > DRIFT_TOLERANCE) rows.push({ table: t, expected: exp, actual: got, deviation: Number(dev.toFixed(2)) });
-  }
-  const totalActual = Object.values(actual).reduce((a, b) => a + b, 0);
+  const devOf = (got, exp) => Math.abs(got - exp) / Math.max(exp, 1);
+  const compare = (actual, expected, source) => {
+    // Con `--tables` el alcance es parcial: comparar el esperado global daría
+    // "desviación" en todas las tablas no incluidas (falso positivo).
+    const scope =
+      onlyTables.length > 0
+        ? new Set([...onlyTables, ...Object.keys(actual)])
+        : new Set([...Object.keys(expected), ...Object.keys(actual)]);
+    for (const t of scope) {
+      const exp = expected[t] ?? 0;
+      const got = actual[t] ?? 0;
+      if (devOf(got, exp) > DRIFT_TOLERANCE) {
+        rows.push({
+          source,
+          table: t,
+          expected: exp,
+          actual: got,
+          deviation: Number(devOf(got, exp).toFixed(2)),
+        });
+      }
+    }
+  };
+  compare(patternIds, PURGE_EXPECTED, "patrón");
+  compare(projectScoped, PURGE_EXPECTED_PROJECT_SCOPED, "project-scoped");
+  const patternTotal = Object.values(patternIds).reduce((a, b) => a + b, 0);
+  const scopedTotal = Object.values(projectScoped).reduce((a, b) => a + b, 0);
   if (onlyTables.length === 0) {
-    const totalDev = Math.abs(totalActual - PURGE_EXPECTED_TOTAL) / Math.max(PURGE_EXPECTED_TOTAL, 1);
-    if (totalDev > DRIFT_TOLERANCE) {
-      rows.push({ table: "(TOTAL)", expected: PURGE_EXPECTED_TOTAL, actual: totalActual, deviation: Number(totalDev.toFixed(2)) });
+    const scopedExpected = Object.values(PURGE_EXPECTED_PROJECT_SCOPED).reduce((a, b) => a + b, 0);
+    if (devOf(patternTotal, PURGE_EXPECTED_TOTAL) > DRIFT_TOLERANCE) {
+      rows.push({
+        source: "patrón",
+        table: "(TOTAL)",
+        expected: PURGE_EXPECTED_TOTAL,
+        actual: patternTotal,
+        deviation: Number(devOf(patternTotal, PURGE_EXPECTED_TOTAL).toFixed(2)),
+      });
+    }
+    if (devOf(scopedTotal, scopedExpected) > DRIFT_TOLERANCE) {
+      rows.push({
+        source: "project-scoped",
+        table: "(TOTAL)",
+        expected: scopedExpected,
+        actual: scopedTotal,
+        deviation: Number(devOf(scopedTotal, scopedExpected).toFixed(2)),
+      });
     }
   }
-  return { drift: rows, actual, totalActual };
+  return { drift: rows, patternTotal, scopedTotal };
 }
 
 // ── Gate de dependencias (lo que un DELETE se llevaría por delante) ─────
@@ -245,7 +495,7 @@ async function analyzeDependencies(client, byTable) {
             `SELECT count(*)::int AS n FROM "public".${quoteIdent(fk.child)}
              WHERE ${quoteIdent(fk.col)}::text = ANY($1::text[])
                AND ${quoteIdent(childPk)}::text <> ALL($2::text[])`,
-            params,
+            params
           )
         ).rows[0].n;
         if (notCandidate > 0) {
@@ -256,7 +506,7 @@ async function analyzeDependencies(client, byTable) {
                WHERE ${quoteIdent(fk.col)}::text = ANY($1::text[])
                  AND ${quoteIdent(childPk)}::text <> ALL($2::text[])
                GROUP BY 1 ORDER BY 2 DESC, 1`,
-              params,
+              params
             )
           ).rows;
         }
@@ -265,7 +515,7 @@ async function analyzeDependencies(client, byTable) {
           await client.query(
             `SELECT count(*)::int AS n FROM "public".${quoteIdent(fk.child)}
              WHERE ${quoteIdent(fk.col)}::text = ANY($1::text[])`,
-            [params[0]],
+            [params[0]]
           )
         ).rows[0].n;
       }
@@ -283,23 +533,31 @@ async function analyzeDependencies(client, byTable) {
   // CASCADE pierde datos, RESTRICT/NO ACTION hace fallar el DELETE, SET NULL
   // muta filas que no son candidatas. Se separan las tres clases porque exigen
   // respuestas distintas (ver la cabecera del script).
-  const hardBlockers = findings.filter((f) => f.rule === "NO ACTION" || f.rule === "RESTRICT" || f.rule === "SET DEFAULT");
-  const cascades = findings.filter((f) => f.rule === "CASCADE");
+  const hardBlockers = findings.filter(
+    (f) => f.rule === "NO ACTION" || f.rule === "RESTRICT" || f.rule === "SET DEFAULT"
+  );
+  // Las cascadas declaradas en CASCADE_ACCEPTED son pertenencias de la fila
+  // candidata (claves, logs, notificaciones): borrarlas con ella es correcto y
+  // se registran; el resto bloquea porque amplía el alcance sin declararlo.
+  const isAccepted = (f) =>
+    CASCADE_ACCEPTED.some((a) => a.parent === f.parent && a.child === f.child);
+  const accepted = findings.filter((f) => f.rule === "CASCADE" && isAccepted(f));
+  const cascades = findings.filter((f) => f.rule === "CASCADE" && !isAccepted(f));
   const warnings = findings.filter((f) => f.rule === "SET NULL");
-  return { findings, hardBlockers, cascades, warnings };
+  return { findings, hardBlockers, cascades, accepted, warnings };
 }
 
 /** Identidades de `auth.users` que comparten id o email con los candidatos. */
 async function reportAuthIdentities(client, byTable) {
   const users = byTable.users;
-  if (!users || users.length === 0) return { count: 0, rows: [] };
+  if (!users || users.ids.length === 0) return { count: 0, rows: [] };
   const ids = users.ids.map((t) => String(t[0]));
   const res = await client.query(
     `SELECT a.id, a.email, (a.id::text = ANY($1::text[])) AS por_id
      FROM auth.users a
      WHERE a.id::text = ANY($1::text[])
         OR a.email IN (SELECT email FROM public.users WHERE id::text = ANY($1::text[]))`,
-    [ids],
+    [ids]
   );
   return { count: res.rowCount, rows: res.rows };
 }
@@ -339,6 +597,12 @@ function deleteSql(table, pk, ids) {
 
 // ── main ────────────────────────────────────────────────────────────────
 async function main() {
+  try {
+    assertPolicyCoherent();
+  } catch (err) {
+    console.error(`ERROR: política de datos falsos incoherente — ${err.message}`);
+    process.exit(2);
+  }
   if (apply && confirm !== today()) {
     console.error(`ERROR: --apply exige --confirm ${today()} (recibido: ${confirm ?? "nada"}).`);
     process.exit(2);
@@ -357,28 +621,91 @@ async function main() {
   try {
     await client.query("BEGIN TRANSACTION READ ONLY");
     progress("escaneando candidatos por patrón…");
-    const { byTable, scanned, outOfScope } = await findCandidates(client);
-    const { drift, actual, totalActual } = checkCounts(byTable);
-    const { findings, hardBlockers, cascades, warnings } = await analyzeDependencies(client, byTable);
+    const {
+      byTable,
+      scanned,
+      outOfScope,
+      patternIds,
+      projectScoped,
+      cascadeScoped,
+      demoIds,
+      truncated,
+      declaredDiff,
+    } = await findCandidates(client);
+    // La regla project-scoped es la SUMA de las dos vías (FK directa a la fila
+    // del proyecto + cierre por CASCADE de una fila candidata): el recuento
+    // declarado es uno solo, así que el gate compara el total.
+    const mergedScoped = { ...projectScoped };
+    for (const [t, n] of Object.entries(cascadeScoped))
+      mergedScoped[t] = (mergedScoped[t] ?? 0) + n;
+    const { drift, patternTotal, scopedTotal } = checkCounts(patternIds, mergedScoped);
+    const { findings, hardBlockers, cascades, accepted, warnings } = await analyzeDependencies(
+      client,
+      byTable
+    );
     const auth = await reportAuthIdentities(client, byTable);
     await client.query("COMMIT");
     const cascadeRows = cascades.reduce((a, c) => a + c.notCandidate, 0);
-    const blocking = drift.length > 0 || hardBlockers.length > 0 || (cascades.length > 0 && !acceptCascade);
-    progress(`candidatos=${totalActual} · drift=${drift.length} · dependencias=${findings.length} (bloqueo=${hardBlockers.length} cascada=${cascadeRows})`);
+    // El borrado va por PK y las dos fuentes pueden solaparse, así que el total
+    // real a borrar es la UNIÓN (se cuenta ya deduplicada en `byTable`).
+    const unionRows = Object.values(byTable).reduce((a, c) => a + c.ids.length, 0);
+    const declaredMismatch =
+      declaredDiff.notDeclared.length > 0 ||
+      declaredDiff.notFound.length > 0 ||
+      declaredDiff.notDeclaredCascade.length > 0;
+    const blocking =
+      drift.length > 0 ||
+      hardBlockers.length > 0 ||
+      (cascades.length > 0 && !acceptCascade) ||
+      declaredMismatch;
+    progress(
+      `patrón=${patternTotal} · project-scoped=${scopedTotal} · unión=${unionRows} · drift=${drift.length} · ` +
+        `dependencias=${findings.length} (bloqueo=${hardBlockers.length} cascada=${cascadeRows} aceptada=${accepted.length})`
+    );
 
     const report = {
       generatedAt: new Date().toISOString(),
       mode: apply ? "APPLY" : "DRY-RUN",
       url: projectLabel(url),
       tablesScanned: scanned,
-      candidates: { total: totalActual, byTable: actual },
-      expected: { total: PURGE_EXPECTED_TOTAL, byTable: PURGE_EXPECTED },
+      demoProjects: demoIds.length,
+      candidates: {
+        total: unionRows,
+        byPattern: { total: patternTotal, byTable: patternIds },
+        projectScoped: {
+          total: scopedTotal,
+          byTable: mergedScoped,
+          direct: projectScoped,
+          cascade: cascadeScoped,
+        },
+      },
+      expected: {
+        byPattern: { total: PURGE_EXPECTED_TOTAL, byTable: PURGE_EXPECTED },
+        projectScoped: {
+          total: Object.values(PURGE_EXPECTED_PROJECT_SCOPED).reduce((a, b) => a + b, 0),
+          byTable: PURGE_EXPECTED_PROJECT_SCOPED,
+        },
+      },
+      declaredProjectScoped: {
+        notDeclared: declaredDiff.notDeclared,
+        notFound: declaredDiff.notFound,
+        notDeclaredCascade: declaredDiff.notDeclaredCascade,
+      },
+      truncatedTables: truncated,
       countDrift: drift,
       dependencies: findings,
       hardBlockers: hardBlockers.length,
-      cascades: { accepted: acceptCascade, relations: cascades.length, rowsDestroyed: cascadeRows },
+      cascades: {
+        accepted: acceptCascade,
+        relations: cascades.length,
+        rowsDestroyed: cascadeRows,
+        declaredAccepted: accepted.map((a) => `${a.parent}<-${a.child}`),
+      },
       warnings: warnings.length,
-      authIdentities: { notTouched: auth.count, rows: auth.rows.map((r) => ({ email: r.email, porId: r.por_id })) },
+      authIdentities: {
+        notTouched: auth.count,
+        rows: auth.rows.map((r) => ({ email: r.email, porId: r.por_id })),
+      },
       outOfScopeTables: outOfScope,
     };
 
@@ -386,30 +713,90 @@ async function main() {
       console.log(JSON.stringify(report, null, 2));
     } else {
       line(`Purga de datos falsos — modo ${report.mode} — ${report.generatedAt}`);
-      line(`BD: ${report.url} · tablas del allowlist escaneadas: ${scanned}`);
+      line(
+        `BD: ${report.url} · tablas por patrón escaneadas: ${scanned} · proyectos demo/fixture: ${demoIds.length}`
+      );
       line("");
-      line("── Candidatos vs recuento esperado ──");
+      line("── Candidatos por PATRÓN vs esperado ──");
       // Con `--tables` sólo se comparan las tablas del alcance: listar el
       // esperado global marcaría como desviación todo lo que no se ha mirado.
-      const keys =
+      const pkeys =
         onlyTables.length > 0
-          ? [...new Set([...onlyTables, ...Object.keys(actual)])]
-          : [...new Set([...Object.keys(PURGE_EXPECTED), ...Object.keys(actual)])];
-      for (const t of keys.sort()) {
+          ? [...new Set([...onlyTables, ...Object.keys(patternIds)])]
+          : [...new Set([...Object.keys(PURGE_EXPECTED), ...Object.keys(patternIds)])];
+      for (const t of pkeys.sort()) {
         const exp = PURGE_EXPECTED[t] ?? 0;
-        const got = actual[t] ?? 0;
-        const flag = exp !== got ? "  ⚠️" : "";
-        if (got > 0 || exp > 0) line(`   ${String(t).padEnd(30)} esperado=${String(exp).padStart(3)}  real=${String(got).padStart(3)}${flag}`);
+        const got = patternIds[t] ?? 0;
+        if (got > 0 || exp > 0)
+          line(
+            `   ${String(t).padEnd(30)} esperado=${String(exp).padStart(4)}  real=${String(got).padStart(4)}${exp !== got ? "  ⚠️" : ""}`
+          );
       }
       if (onlyTables.length === 0) {
-        line(`   ${"TOTAL".padEnd(30)} esperado=${String(PURGE_EXPECTED_TOTAL).padStart(3)}  real=${String(totalActual).padStart(3)}`);
+        line(
+          `   ${"TOTAL".padEnd(30)} esperado=${String(PURGE_EXPECTED_TOTAL).padStart(4)}  real=${String(patternTotal).padStart(4)}`
+        );
       } else {
         line(`   (alcance parcial: ${onlyTables.join(", ")} — el TOTAL global no aplica)`);
+      }
+      line("");
+      line(
+        `── Filas PROJECT-SCOPED (de los ${demoIds.length} proyectos demo/fixture: FK directa + cierre por CASCADE) ──`
+      );
+      const scopedKeys = Object.keys(mergedScoped).sort();
+      const scopedExpectedTotal = Object.values(PURGE_EXPECTED_PROJECT_SCOPED).reduce(
+        (a, b) => a + b,
+        0
+      );
+      if (scopedKeys.length === 0) line("   (ninguna)");
+      for (const t of scopedKeys) {
+        const exp = PURGE_EXPECTED_PROJECT_SCOPED[t] ?? 0;
+        const got = mergedScoped[t] ?? 0;
+        line(
+          `   ${String(t).padEnd(30)} esperado=${String(exp).padStart(5)}  real=${String(got).padStart(5)}${exp !== got ? "  ⚠️" : ""}`
+        );
+      }
+      if (onlyTables.length === 0 && scopedKeys.length > 0) {
+        line(
+          `   ${"TOTAL".padEnd(30)} esperado=${String(scopedExpectedTotal).padStart(5)}  real=${String(scopedTotal).padStart(5)}`
+        );
+      }
+      const cascadeEntries = Object.entries(cascadeScoped).sort();
+      const cascadeTotalRows = cascadeEntries.reduce((a, [, n]) => a + n, 0);
+      line(
+        `   · de ellas por cierre CASCADE: ${cascadeTotalRows} fila(s) en ${cascadeEntries.length} tabla(s)` +
+          (cascadeEntries.length
+            ? ` — ${cascadeEntries.map(([t, n]) => `${t}(${n})`).join(", ")}`
+            : "")
+      );
+      line(`   UNIÓN real a borrar (patrón ∪ project-scoped, deduplicada): ${unionRows} fila(s)`);
+      if (
+        declaredDiff.notDeclared.length ||
+        declaredDiff.notFound.length ||
+        declaredDiff.notDeclaredCascade.length
+      ) {
+        line("");
+        line("   ❌ EL CONJUNTO DECLARADO NO COINCIDE CON LA BD (project-scoped):");
+        if (declaredDiff.notDeclared.length)
+          line(`      en BD y NO declaradas: ${declaredDiff.notDeclared.join(", ")}`);
+        if (declaredDiff.notFound.length)
+          line(`      declaradas y NO en BD: ${declaredDiff.notFound.join(", ")}`);
+        if (declaredDiff.notDeclaredCascade.length)
+          line(`      por CASCADE y NO declaradas: ${declaredDiff.notDeclaredCascade.join(", ")}`);
+      }
+      if (truncated.length) {
+        line("");
+        line(
+          `   ⚠️  TABLAS AL TOPE DE ${ROWS_PER_TABLE} FILAS POR PATRÓN (puede faltar basura): ${truncated.join(", ")}`
+        );
       }
       if (drift.length) {
         line("");
         line("   ❌ DESVIACIÓN DE RECUENTO (>5%):");
-        for (const d of drift) line(`      ${d.table}: esperado ${d.expected}, real ${d.actual} (${Math.round(d.deviation * 100)}%)`);
+        for (const d of drift)
+          line(
+            `      [${d.source}] ${d.table}: esperado ${d.expected}, real ${d.actual} (${Math.round(d.deviation * 100)}%)`
+          );
       }
       if (findings.length) {
         line("");
@@ -417,23 +804,36 @@ async function main() {
         for (const f of findings) {
           const icon =
             f.rule === "SET NULL" ? "⚠️ " : f.rule === "CASCADE" && acceptCascade ? "🔻" : "🛑";
-          const note = f.rule === "CASCADE" ? ` se BORRARÍAN por cascada${acceptCascade ? " (--accept-cascade)" : ""}` : " que NO son candidatas";
-          line(`   ${icon} ${f.parent} ← ${f.child}.${f.column} [${f.rule}]: ${f.notCandidate} fila(s)${note}`);
+          const note =
+            f.rule === "CASCADE"
+              ? ` se BORRARÍAN por cascada${acceptCascade ? " (--accept-cascade)" : ""}`
+              : " que NO son candidatas";
+          line(
+            `   ${icon} ${f.parent} ← ${f.child}.${f.column} [${f.rule}]: ${f.notCandidate} fila(s)${note}`
+          );
           for (const r of f.perRow) line(`        ${r.pk} → ${r.rows} fila(s)`);
         }
         if (cascades.length > 0) {
           line("");
-          line(`   Total en cascada: ${cascadeRows} fila(s) en ${cascades.length} relación(es) no apuntadas por los patrones.`);
+          line(
+            `   Total en cascada: ${cascadeRows} fila(s) en ${cascades.length} relación(es) no apuntadas por los patrones.`
+          );
         }
       }
       if (auth.count > 0) {
         line("");
-        line(`── Identidades de auth.users ──  (este script NO las toca: es una operación de cuenta)`);
-        line(`   ${auth.count} candidato(s) coinciden con una identidad de login; retíralas a mano si procede.`);
+        line(
+          `── Identidades de auth.users ──  (este script NO las toca: es una operación de cuenta)`
+        );
+        line(
+          `   ${auth.count} candidato(s) coinciden con una identidad de login; retíralas a mano si procede.`
+        );
       }
       if (outOfScope.length) {
         line("");
-        line(`   ⚠️  tablas solicitadas fuera de PURGE_TABLES (NO se tocan): ${outOfScope.join(", ")}`);
+        line(
+          `   ⚠️  tablas solicitadas fuera de PURGE_TABLES (NO se tocan): ${outOfScope.join(", ")}`
+        );
       }
       line("");
       line("Sólo DELETE con WHERE sobre PKs, en las tablas del allowlist, en una transacción.");
@@ -447,12 +847,18 @@ async function main() {
           line("DRY-RUN: HAY BLOQUEOS — no se ha escrito nada y el --apply sería RECHAZADO.");
           if (drift.length) line(`  · recuento desviado: ${drift.map((d) => d.table).join(", ")}`);
           if (hardBlockers.length)
-            line(`  · FK que harían fallar el DELETE: ${hardBlockers.map((b) => `${b.parent}←${b.child}(${b.rule})`).join(", ")}`);
+            line(
+              `  · FK que harían fallar el DELETE: ${hardBlockers.map((b) => `${b.parent}←${b.child}(${b.rule})`).join(", ")}`
+            );
           if (cascades.length && !acceptCascade)
-            line(`  · cascada no aceptada (${cascadeRows} filas): repite con --accept-cascade si es intencionado`);
+            line(
+              `  · cascada no aceptada (${cascadeRows} filas): repite con --accept-cascade si es intencionado`
+            );
         } else {
           line("DRY-RUN: limpio — no se ha escrito nada. Para aplicar:");
-          line(`  node scripts/db/fake-data-purge.mjs --apply${cascades.length ? " --accept-cascade" : ""} --confirm ${today()}`);
+          line(
+            `  node scripts/db/fake-data-purge.mjs --apply${cascades.length ? " --accept-cascade" : ""} --confirm ${today()}`
+          );
         }
       }
       await client.end().catch(() => {});
@@ -460,18 +866,21 @@ async function main() {
     }
 
     if (bloqued) {
-      console.error("ERROR: --apply RECHAZADO — resuelve los bloqueos del dry-run antes de borrar.");
-      if (drift.length) console.error(`  recuento desviado: ${drift.map((d) => d.table).join(", ")}`);
+      console.error(
+        "ERROR: --apply RECHAZADO — resuelve los bloqueos del dry-run antes de borrar."
+      );
+      if (drift.length)
+        console.error(`  recuento desviado: ${drift.map((d) => d.table).join(", ")}`);
       if (hardBlockers.length) {
         console.error(
           `  FK que harían fallar el DELETE (no aceptables por diseño): ${hardBlockers
             .map((b) => `${b.parent}←${b.child}(${b.rule}, ${b.notCandidate} filas)`)
-            .join(", ")}`,
+            .join(", ")}`
         );
       }
       if (cascades.length && !acceptCascade) {
         console.error(
-          `  cascada no aceptada: ${cascades.length} relación(es), ${cascadeRows} filas. Revisa el dry-run y repite con --accept-cascade si procede.`,
+          `  cascada no aceptada: ${cascades.length} relación(es), ${cascadeRows} filas. Revisa el dry-run y repite con --accept-cascade si procede.`
         );
       }
       await client.end().catch(() => {});
@@ -485,7 +894,7 @@ async function main() {
     const snapshot = path.join(dir, `fake-data-purge-${ts}.json`);
     fs.writeFileSync(
       snapshot,
-      JSON.stringify({ generatedAt: report.generatedAt, candidates: byTable }, null, 2),
+      JSON.stringify({ generatedAt: report.generatedAt, candidates: byTable }, null, 2)
     );
 
     // 2) Una sola transacción; cualquier error ⇒ ROLLBACK total.

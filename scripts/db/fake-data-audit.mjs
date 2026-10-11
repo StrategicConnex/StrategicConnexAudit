@@ -40,7 +40,9 @@ import {
   PATTERNS,
   KEEP,
   DEMO_PROJECT_PATTERNS,
-  PROJECT_SCOPED,
+  PROJECT_SCOPED_FK,
+  PROJECT_SCOPED_TABLES,
+  PROJECT_SCOPED_CASCADE_TABLES,
 } from "../lib/fake-data-patterns.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -49,9 +51,15 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 // informe `--json` cuando se redirige a un fichero (`> backups/baseline.json`).
 dotenv.config({ path: path.join(ROOT, ".env.local"), quiet: true });
 
-// PATTERNS / KEEP / DEMO_PROJECT_PATTERNS / PROJECT_SCOPED viven ahora en
+// PATTERNS / KEEP / DEMO_PROJECT_PATTERNS / PROJECT_SCOPED_* viven ahora en
 // `scripts/lib/fake-data-patterns.mjs`, porque la purga necesita exactamente los
 // mismos. Duplicarlos ya nos costó una clase entera de bugs.
+//
+// El auditor aplica LA MISMA política que la purga (patrón + regla
+// project-scoped: FK directa y cierre por `ON DELETE CASCADE`), así que el
+// `DELETE` que informa aquí es exactamente el conjunto que la purga borra. Si
+// divergieran, la Fase 1 podría cerrar con un `DELETE>0` invisible para la
+// purga (o al revés).
 
 /** Columnas cuyo valor no se imprime ni truncado (defensa en profundidad). */
 const NAME_LOOKS_SECRET = /(pass|secret|token|key|hash|credential|refresh|session|cookie)/i;
@@ -114,7 +122,7 @@ async function textColumns(pool, table) {
     `SELECT column_name, data_type FROM information_schema.columns
      WHERE table_schema = 'public' AND table_name = $1
      ORDER BY ordinal_position`,
-    [table],
+    [table]
   );
   return res.rows.filter((c) => TEXT_TYPES.has(c.data_type)).map((c) => c.column_name);
 }
@@ -129,9 +137,32 @@ async function primaryKey(pool, table) {
      WHERE tc.table_schema = 'public' AND tc.table_name = $1
        AND tc.constraint_type = 'PRIMARY KEY'
      ORDER BY kcu.ordinal_position`,
-    [table],
+    [table]
   );
   return res.rows.map((r) => r.column_name);
+}
+
+/**
+ * Hijos de `table` por una FK de UNA columna con `ON DELETE CASCADE`. Es el
+ * mismo predicado que usa la purga para su cierre: una FK compuesta no permite
+ * atribuir la fila hija con una sola columna y se queda fuera (la reportaría el
+ * gate de dependencias de la purga como cascada no aceptada).
+ */
+async function cascadeChildFks(pool, table) {
+  const res = await roQuery(
+    pool,
+    `SELECT cl.relname AS child, a.attname AS col
+     FROM pg_constraint f
+     JOIN pg_class cl ON cl.oid = f.conrelid
+     JOIN pg_class pl ON pl.oid = f.confrelid
+     JOIN pg_namespace n ON n.oid = pl.relnamespace
+     JOIN pg_attribute a ON a.attrelid = f.conrelid AND a.attnum = f.conkey[1]
+     WHERE f.contype = 'f' AND pl.relname = $1 AND n.nspname = 'public'
+       AND cl.relname <> $1 AND f.confdeltype = 'c' AND array_length(f.conkey, 1) = 1
+     ORDER BY 1`,
+    [table]
+  );
+  return res.rows;
 }
 
 /**
@@ -155,7 +186,7 @@ async function selectMatches(pool, table, cols, patterns, limit) {
     pool,
     `SELECT to_jsonb(t) AS row FROM "public".${quoteIdent(table)} t
      WHERE (${ors.join(" OR ")}) LIMIT ${Number(limit)}`,
-    params,
+    params
   );
   return res.rows.map((r) => r.row);
 }
@@ -170,7 +201,9 @@ function matchedColumns(cols, row) {
     if (raw === null || raw === undefined) continue;
     const text = typeof raw === "string" ? raw : JSON.stringify(raw);
     if (!ALL_FRAGMENTS.some((f) => text.toLowerCase().includes(f))) continue;
-    acc[c] = NAME_LOOKS_SECRET.test(c) ? "[REDACTADO: nombre de columna sensible]" : text.slice(0, SAMPLE_MAX);
+    acc[c] = NAME_LOOKS_SECRET.test(c)
+      ? "[REDACTADO: nombre de columna sensible]"
+      : text.slice(0, SAMPLE_MAX);
   }
   return acc;
 }
@@ -217,12 +250,14 @@ async function main() {
     const probe = await roQuery(pool, "SHOW transaction_read_only");
     const readOnlyEnforced = probe.rows[0]?.transaction_read_only === "on";
     if (!readOnlyEnforced) {
-      console.warn("AVISO: el servidor no confirma transaction_read_only=on; el script sigue emitiendo sólo SELECT.");
+      console.warn(
+        "AVISO: el servidor no confirma transaction_read_only=on; el script sigue emitiendo sólo SELECT."
+      );
     }
 
     const tablesRes = await roQuery(
       pool,
-      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`
     );
     const tables = tablesRes.rows
       .map((r) => r.tablename)
@@ -240,7 +275,7 @@ async function main() {
       "projects",
       await textColumns(pool, "projects"),
       [{ id: "demo-project", kind: "DELETE", find: DEMO_PROJECT_PATTERNS }],
-      200,
+      200
     );
     const demoIds = demoRows.map((r) => r.id).filter(Boolean);
 
@@ -259,36 +294,114 @@ async function main() {
       }
     }
 
-    // 3) D1-3: filas sin patrón propio, atribuidas por FK al proyecto demo.
-    for (const [table, fk] of Object.entries(PROJECT_SCOPED)) {
-      if (onlyTables.length > 0 && !onlyTables.includes(table)) continue;
-      if (demoIds.length === 0) break;
-      const cols = await textColumns(pool, table);
-      if (cols.length === 0) continue;
-      const pk = await primaryKey(pool, table);
-      if (pk.length === 0) continue;
-      const res = await roQuery(
-        pool,
-        `SELECT to_jsonb(t) AS row FROM "public".${quoteIdent(table)} t
-         WHERE ${quoteIdent(fk)} = ANY($1::uuid[]) LIMIT ${ROWS_PER_TABLE}`,
-        [demoIds],
-      );
-      if (res.rows.length > 0 && !scanned.includes(table)) scanned.push(table);
-      for (const r of res.rows) {
-        const row = r.row;
+    // 3) D1-3/D4 — regla «project-scoped»: filas sin patrón de texto propio que
+    //    pertenecen a un proyecto demo. Dos vías, la MISMA política que la purga:
+    //      · directa: FK de una columna `project_id` hacia `projects`.
+    //      · cierre : hijo de una fila candidata por `ON DELETE CASCADE`.
+    //    La clave es la PK: una fila que ya salió por patrón no se cuenta dos
+    //    veces, así el `DELETE` del auditor coincide con la unión de la purga.
+    const seenKeys = new Set(findings.map((f) => `${f.table}|${JSON.stringify(f.pk)}`));
+    const candidateIds = new Map(); // tabla → ids de filas candidatas (DELETE)
+    const remember = (table, pkValue) => {
+      const first = Object.keys(pkValue)[0];
+      if (!first) return;
+      if (!candidateIds.has(table)) candidateIds.set(table, new Set());
+      candidateIds.get(table).add(String(pkValue[first]));
+    };
+    // Sólo los DELETE pueden ser padres del cierre: un REVIEW no se borra, así
+    // que su hijo tampoco entra en el conjunto a purgar.
+    for (const f of findings) if (f.kind === "DELETE") remember(f.table, f.pk);
+
+    const pkCache = new Map();
+    const pkOf = async (table) => {
+      if (!pkCache.has(table)) pkCache.set(table, await primaryKey(pool, table));
+      return pkCache.get(table);
+    };
+    const addScoped = async (table, fkCol, source, rows) => {
+      if (rows.length > 0 && !scanned.includes(table)) scanned.push(table);
+      const pk = rows.length > 0 ? await pkOf(table) : [];
+      for (const row of rows) {
+        const pkValue = Object.fromEntries(pk.map((c) => [c, row[c]]));
+        const key = `${table}|${JSON.stringify(pkValue)}`;
+        if (seenKeys.has(key)) continue;
+        seenKeys.add(key);
+        remember(table, pkValue);
+        // Allowlist operativa: aquí es más fuerte que en el barrido por patrón
+        // (la purga se salta estas filas siempre; ver Task 3 del plan).
+        const blob = JSON.stringify(row).toLowerCase();
+        if (KEEP.some((k) => blob.includes(k.toLowerCase()))) continue;
         findings.push({
           table,
           kind: "DELETE",
-          patterns: ["DELETE:demo-project-fk"],
-          pk: Object.fromEntries(pk.map((c) => [c, row[c]])),
-          matched: { [fk]: String(row[fk]) },
+          patterns: [`DELETE:${source}`],
+          pk: pkValue,
+          matched: { [fkCol]: String(row[fkCol]) },
         });
+      }
+    };
+
+    if (demoIds.length > 0) {
+      for (const table of [...PROJECT_SCOPED_TABLES].sort()) {
+        if (onlyTables.length > 0 && !onlyTables.includes(table)) continue;
+        if ((await pkOf(table)).length === 0) {
+          console.warn(`AVISO: ${table} sin PK; la purga no puede tratarla por project-scoped.`);
+          continue;
+        }
+        const res = await roQuery(
+          pool,
+          `SELECT to_jsonb(t) AS row FROM "public".${quoteIdent(table)} t
+           WHERE ${quoteIdent(PROJECT_SCOPED_FK)} = ANY($1::uuid[])`,
+          [demoIds]
+        );
+        await addScoped(
+          table,
+          PROJECT_SCOPED_FK,
+          "demo-project-fk",
+          res.rows.map((r) => r.row)
+        );
+      }
+    }
+
+    // 4) Cierre por CASCADE. Los padres se congelan ANTES del bucle
+    //    (`[...candidateIds]`): un solo nivel, igual que la purga — los hijos de
+    //    un hijo tendrían que declararse en `PROJECT_SCOPED_CASCADE_TABLES`.
+    const cascadeTables = new Set();
+    for (const [parent, ids] of [...candidateIds]) {
+      if (ids.size === 0) continue;
+      for (const fk of await cascadeChildFks(pool, parent)) {
+        if (onlyTables.length > 0 && !onlyTables.includes(fk.child)) continue;
+        const pk = await pkOf(fk.child);
+        if (pk.length === 0) {
+          console.warn(`AVISO: ${fk.child} sin PK; el cierre por CASCADE no puede enumerarla.`);
+          continue;
+        }
+        const res = await roQuery(
+          pool,
+          `SELECT to_jsonb(t) AS row FROM "public".${quoteIdent(fk.child)} t
+           WHERE ${quoteIdent(fk.col)}::text = ANY($1::text[])`,
+          [[...ids]]
+        );
+        const before = findings.length;
+        await addScoped(
+          fk.child,
+          fk.col,
+          "cascade-child",
+          res.rows.map((r) => r.row)
+        );
+        if (findings.length > before) cascadeTables.add(fk.child);
       }
     }
 
     const count = (k) => findings.filter((f) => f.kind === k).length;
     const byTable = {};
     for (const f of findings) byTable[f.table] = (byTable[f.table] || 0) + 1;
+
+    // Una tabla que aparece por el cierre y NO está declarada es una tabla nueva
+    // con `ON DELETE CASCADE` hacia una fila candidata: la purga se niega a
+    // aplicarlo hasta declararla (diff `declaredProjectScoped.notDeclaredCascade`).
+    const notDeclaredCascade = [...cascadeTables]
+      .filter((t) => !PROJECT_SCOPED_TABLES.has(t) && !PROJECT_SCOPED_CASCADE_TABLES.has(t))
+      .sort();
 
     const report = {
       generatedAt: new Date().toISOString(),
@@ -299,6 +412,7 @@ async function main() {
       delete: count("DELETE"),
       review: count("REVIEW"),
       byTable,
+      notDeclaredCascade,
       findings,
     };
 
@@ -306,13 +420,39 @@ async function main() {
       console.log(JSON.stringify(report, null, 2));
     } else {
       out(`Auditoría de datos falsos — ${report.generatedAt}`);
-      out(`BD: ${report.url} · tablas escaneadas: ${report.tablesScanned} · proyectos demo: ${report.projectsDemo}`);
+      out(
+        `BD: ${report.url} · tablas escaneadas: ${report.tablesScanned} · proyectos demo: ${report.projectsDemo}`
+      );
       out(`DELETE=${report.delete}  REVIEW=${report.review}`);
+      // Agrupado por tabla: una tabla demo con miles de filas (`uptime_logs`)
+      // convertiría el informe en un volcado. El detalle completo va en --json.
+      const LIST_MAX = 10;
+      const grouped = new Map();
       for (const f of findings) {
-        out(`  [${f.kind}] ${f.table} <- ${f.patterns.join(", ")}`);
-        out(`           pk=${JSON.stringify(f.pk)} matched=${JSON.stringify(f.matched)}`);
+        if (!grouped.has(f.table)) grouped.set(f.table, []);
+        grouped.get(f.table).push(f);
       }
-      out(report.delete === 0 ? "RESULTADO: sin basura DELETE." : "RESULTADO: hay basura DELETE pendiente.");
+      for (const [table, rows] of [...grouped].sort()) {
+        const kinds = [...new Set(rows.map((r) => r.kind))].join("/");
+        const pats = [...new Set(rows.flatMap((r) => r.patterns))].join(", ");
+        out(`  [${kinds}] ${table} × ${rows.length}  <- ${pats}`);
+        for (const f of rows.slice(0, LIST_MAX)) {
+          out(`           pk=${JSON.stringify(f.pk)} matched=${JSON.stringify(f.matched)}`);
+        }
+        if (rows.length > LIST_MAX) {
+          out(`           … y ${rows.length - LIST_MAX} fila(s) más (detalle en --json)`);
+        }
+      }
+      if (report.notDeclaredCascade.length > 0) {
+        out(
+          `AVISO: tablas alcanzadas por el cierre CASCADE y NO declaradas en la política: ${report.notDeclaredCascade.join(", ")}`
+        );
+      }
+      out(
+        report.delete === 0
+          ? "RESULTADO: sin basura DELETE."
+          : "RESULTADO: hay basura DELETE pendiente."
+      );
     }
 
     await pool.end();
