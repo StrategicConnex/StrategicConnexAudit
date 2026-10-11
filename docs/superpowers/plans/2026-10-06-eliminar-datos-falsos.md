@@ -960,15 +960,18 @@ que el usuario decidió conservar deben añadirse a `KEEP` en `fake-data-audit.m
 
 **Pasos:**
 
-1. [ ] Comprobar referencias antes de borrar:
+1. [x] Comprobar referencias antes de borrar:
    ```powershell
    Select-String -Path (Get-ChildItem -Recurse -Include *.ts,*.tsx,*.mjs,*.json -Exclude *.log | Where-Object { $_.FullName -notmatch 'node_modules' } | Select-Object -ExpandProperty FullName) -Pattern "shared/db/seed" | ForEach-Object { $_.Path + ":" + $_.LineNumber }
    ```
-2. [ ] Borrar el fichero (`git rm src/shared/db/seed.ts` sólo si hay referencia en algún test;
+2. [x] Borrar el fichero (`git rm src/shared/db/seed.ts` sólo si hay referencia en algún test;
    si la hay, actualizar ese test para que deje de importarlo).
-3. [ ] Verificar que **nada** del repo lo importa (grep = 0) y que `pnpm build` sigue en verde.
+3. [x] Verificar que **nada** del repo lo importa (grep = 0) y que `pnpm build` sigue en verde.
 
 **Verificación:** `Select-String … "shared/db/seed"` → 0 hits; `npx tsc --noEmit` → 0 errores.
+
+**Resultado (2026-10-11):** `git rm src/shared/db/seed.ts` (202 líneas). Referencias: la ÚNICA era la línea de exclusión de cobertura en `vitest.config.ts` (ya retirada); `git grep "shared/db/seed"` → 0 hits en el repo. `npx tsc --noEmit` → exit 0. Era huérfano (no había script npm que lo invocara): la vía legítima de alta de admin es `pnpm setup-admin`.
+⚠️ **Desviación de la letra del plan:** en vez de dejar `seed.ts` con guarda se ha **eliminado**. Su único propósito era insertar `client@company.com` / "Client User" / proyectos `example.com` — exactamente las filas de la Fase 1 — y no tenía consumidores.
 
 **Commit:** `refactor(db): eliminar seed.ts (escribía en prod sin guarda)`.
 
@@ -993,7 +996,7 @@ export function assertCleanupPlan(label, { defaultCleanup = true }) → boolean
 
 **Pasos:**
 
-1. [ ] Crear `scripts/lib/assert-env.mjs`:
+1. [x] Crear `scripts/lib/assert-env.mjs`:
 
 ```js
 /**
@@ -1031,7 +1034,7 @@ export function assertCleanupPlan(label) {
 }
 ```
 
-2. [ ] Aplicar en cada script **al inicio de `main`** (el mismo patrón, cambia la etiqueta):
+2. [x] Aplicar en cada script **al inicio de `main`** (el mismo patrón, cambia la etiqueta):
 
 ```ts
 // src/scripts/e2e-ai-report.ts (arriba de main)
@@ -1045,14 +1048,14 @@ const cleanup = assertCleanupPlan("e2e-ai-report"); // por defecto TRUE: borra l
    Mismo cambio en `scripts/e2e/post-rls-check.mjs` (hoy default
    `https://scaudit.vercel.app` → pasar a `--allow-prod` o cambiar el default a local).
 
-3. [ ] Actualizar `package.json` para que los wrappers pasen argumentos:
+3. [x] Actualizar `package.json` para que los wrappers pasen argumentos:
    ```json
    "e2e:report": "npx tsx --env-file=.env.local src/scripts/e2e-ai-report.ts"
    ```
    (ya existente; sólo asegurar que `process.argv` llega: usar `process.argv` en ESM, no en
    el npm script).
 
-4. [ ] **TDD:** test unitario `tests/unit/assert-env.test.ts`:
+4. [x] **TDD:** test unitario `tests/unit/assert-env.test.ts`:
 ```ts
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { assertNotProd, targetFromEnv } from "../../scripts/lib/assert-env.mjs";
@@ -1084,6 +1087,16 @@ describe("assert-not-prod", () => {
 flag ⇒ mensaje de bloqueo (no toca prod).
 
 **Commit:** `feat(scripts): assert-not-prod + limpieza por defecto en e2e scripts`.
+
+**Resultado (2026-10-11):** guarda entregada y aplicada. Detalles y desviaciones:
+
+- `scripts/lib/assert-env.mjs` exporta `targetFromEnv({ url? })`, `assertNotProd(label, { allowFlag?, url? })` y `assertCleanupPlan(label)`.
+  Detección: `APP_ENV` / `VERCEL_ENV` / `NODE_ENV` ∈ {production, prod} **o** DSN/marcador de prod (`scaudit.vercel.app`).
+- **Aplicada** en: `src/scripts/e2e-ai-report.ts`, `src/scripts/e2e-adversary-flow.ts` (ambos con limpieza **ON por defecto**, antes `--cleanup` opt-in), `src/shared/db/test-rls.ts`, `scripts/manual/test-rls-root.ts`, `scripts/manual/rls-fire-test.ts` y `scripts/e2e/post-rls-check.mjs` (que además pasó su `BASE` por defecto de `https://scaudit.vercel.app` a `http://localhost:3000`).
+- ⚠️ **Desviación: `src/scripts/setup-admin.ts` NO lleva guarda.** No genera datos falsos: crea el admin REAL y su vía de uso legítima *es* producción (con ella se hizo el traspaso de propiedad de D1-2). Bloquearlo impediría la operación documentada. `package.json` no necesitó cambios (el `argv` ya llega por `npx tsx`).
+- 🔍 **Límite conocido:** la guarda es por variable de entorno/URL. El `DATABASE_URL` de `.env.local` apunta a la Supabase compartida y no lleva marcador de prod, así que desde local los e2e siguen pudiendo escribir en esa BD — eso lo cubre la **limpieza ON por defecto** (los scripts borran lo que crean), no la guarda. Añadir el ref de Supabase como marcador bloquearía el flujo local legítimo.
+- ❗ `src/shared/db/test-rls.ts` tiene la guarda pero **no es ejecutable en pie**: importa `src/shared/db/index.ts` → `server-only`, que lanza fuera del runtime de Next (defecto preexistente, no introducido por la Fase 2).
+- 🔍 Residual no tocado: `e2e/realtime-overview.spec.ts` inserta una fila en `intelligence_run_events` con el service role, pero ya **se auto-salta** sin env y **borra** la fila al terminar; no es un generador de datos demo.
 
 ---
 
