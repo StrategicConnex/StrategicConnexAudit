@@ -1,20 +1,26 @@
 # Plan: Eliminar los datos falsos del proyecto (y que no vuelvan a entrar)
 
-**Estado:** `EN_EJECUCION_FASE_0` (2026-10-10) — **no archivado**: en ejecución.
+**Estado:** `PREPARANDO_FASE_1` (2026-10-11) — **no archivado**: en ejecución.
 
-- **Fase 0 (medición) — Task 1 entregada:** `scripts/db/fake-data-audit.mjs` (read-only,
-  exit 1 si hay `DELETE`) + script `pnpm db:fake-audit`. Sesión Postgres abierta en
-  read-only y salida redactada (PK + columnas coincidentes, nunca la fila completa).
-- **D1:** D1-1 cerrada (`Pipeline Test` → DELETE). **D1-2 y D1-3 vuelven a la mesa** con la
-  evidencia de la auditoría ya ejecutada (ver *Decisiones asumidas*): `admin@strategicaudit.pro`
-  tiene toda la pinta de fila del seed (pendiente de tu confirmación) y **los 4 `exec_briefs`
-  NO son falsos**: cuelgan del proyecto real `Consultora BPOMA`.
+- **Fase 0 (medición) — COMPLETA.** Task 1 entregada: `scripts/db/fake-data-audit.mjs`
+  (read-only, exit 1 si hay `DELETE`) + script `pnpm db:fake-audit`. Sesión Postgres abierta
+  en read-only y salida redactada (PK + columnas coincidentes, nunca la fila completa).
+  Task 2 (backup) **ejecutada y verificada el 2026-10-11** (ver Task 2).
+- **D1 — CERRADA (2026-10-11).** D1-1 `Pipeline Test` → DELETE · **D1-2
+  `admin@strategicaudit.pro` → DELETE, confirmado por el operador** · **D1-3 `exec_briefs`
+  revertida**: los 4 briefs cuelgan del proyecto real `Consultora BPOMA` y **no se borran**.
+  Evidencia en *D1-1..D1-3*; consecuencia aplicada al auditor y al allowlist de purga.
+- **Bug de SSL corregido antes de la Fase 1 (2026-10-11):** `pg@8.20` pisaba el objeto `ssl`
+  con el `sslmode` del DSN y `backup-manager.ts` **además invertía el flag**
+  `DB_ALLOW_INSECURE_SSL` → política única en `scripts/lib/db-connection.mjs` + guard
+  `tests/security/db-connection-ssl.test.ts`. Es lo que desbloqueó la Task 2.
 - **CI fuera de producción (parcial):** el job `api-contract-test` ya no puede apuntar a
   producción (guard `target`: `TEST_ENV` ∈ {staging,test} + `SCAUDIT_CONTRACT_BASE_URL` no
   productivo + colección reapuntable). **Abierto:** el job `e2e` sigue usando el secreto
   `DATABASE_URL` — si ese secreto apunta a producción, el job escribe en producción.
-- Fase 1 (purga) sigue **bloqueada por diseño**: exige backup (Task 2) y confirmación del
-  listado antes de cualquier `--apply`.
+- Fase 1 (purga): **backup ya hecho** (Task 2, 2026-10-11) y **allowlist ampliada** con los
+  hallazgos del auditor. Sigue **bloqueada por diseño**: falta la aprobación del listado del
+  dry-run (Task 3.3) antes de cualquier `--apply`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: `writing-plans` (este documento ya cumple su
 > formato; léelo completo antes de ejecutar tareas). Global constraints: ver sección
@@ -80,19 +86,20 @@ No bloqueo el arranque; si una es errónea, se corrige antes de su tarea.
 - **D1-1 · `Pipeline Test - strategicconnex.com.ar` → DELETE.** Decisión del operador: se
   confirma como dato de prueba. Pasa de `REVIEW` a `DELETE` en el inventario, en los
   `PATTERNS` del auditor y en los de la purga.
-- **D1-2 · `admin@strategicaudit.pro` → KEEP sólo si es el login real del operador.**
-  El plan lo atribuía al seed, pero **`seed.ts` se elimina (Task 6)**, así que no puede ser
-  su origen en el estado final: el alta legítima del admin es `pnpm setup-admin <email>`
-  (`src/scripts/setup-admin.ts`, se conserva y sólo se le añade la guarda de entorno de la
-  Task 7). Mientras no se confirme que es el login del operador, se queda en `REVIEW` y la
-  purga no lo toca; si NO lo es, pasa a `DELETE` (una palabra del operador lo cierra).
+- **D1-2 · `admin@strategicaudit.pro` → DELETE (CONFIRMADO por el operador, 2026-10-11).**
+  Es una identidad de login de prueba, no el admin real: el alta legítima del admin es
+  `pnpm setup-admin <email>` (`src/scripts/setup-admin.ts`, se conserva y sólo recibe la
+  guarda de entorno de la Task 7) y **`seed.ts` se elimina (Task 6)**, así que no puede ser
+  su origen en el estado final. El operador lo confirmó el 2026-10-11.
   **Evidencia (auditoría 2026-10-10):** es la única fila `REVIEW`; su `id` es
   `d4e8c1fa-8a5f-4a3e-b2d9-1c9f2a0b3e1a` (patrón escrito a mano, no aleatorio), su
   `full_name` es "Admin User", se creó en el MISMO segundo que `client@company.com`
   ("Client User") y tiene 0 filas en `project_members`. Los admins con pinta real son otros
-  (`adm***@strategicconnex.com.ar` y el del smoke). **Recomendación: DELETE**, a falta de tu
-  confirmación explícita por tratarse de una identidad de login.
-- **D1-3 · `exec_briefs` (4 filas) → REVERTIDA a REVIEW: no son datos falsos.** La auditoría
+  (`adm***@strategicconnex.com.ar` y el del smoke).
+  **Consecuencia aplicada:** el patrón `ambiguous-admin` del auditor pasa de `REVIEW` a
+  `DELETE` y el allowlist de purga incorpora el mismo patrón. Sin ese cambio, una fila
+  `REVIEW` habría quedado fuera de la purga y habría sobrevivido al `--apply`.
+- **D1-3 · `exec_briefs` (4 filas) → NO SE BORRAN (reversión confirmada, 2026-10-11).** La auditoría
   ejecutada contradice la decisión inicial: las 4 filas cuelgan del proyecto
   **`Consultora BPOMA` (`bpoma.com`)**, que es un proyecto real (2026-05-20, con escaneos
   propios), y son briefs generados de verdad (`is_fallback = false`). Ninguna fila está
@@ -108,13 +115,13 @@ No bloqueo el arranque; si una es errónea, se corrige antes de su tarea.
 | Proyectos demo `example.com/.org` | 4 (Main E-commerce, SaaS Landing, E2E RLS Check, Prueba Real Smoke, Proyecto Smoke Mimo ≈ 5) | `seed.ts` + `post-rls-check.mjs` + smoke |
 | Proyecto `Pipeline Test - strategicconnex.com.ar` | 1 → **DELETE** (D1-1: confirmado dato de prueba) | scripts pipeline |
 | Usuarios falsos | 12 `usera_*/userb_*@test.com` + `client@company.com` | `test-rls.ts`, `rls-fire-test.ts`, seed |
-| `admin@strategicaudit.pro` | 1 → **REVIEW** (D1-2: KEEP sólo si es el login real del operador) | seed |
+| `admin@strategicaudit.pro` | 1 → **DELETE** (D1-2: confirmado identidad de login de prueba) | seed |
 | `whois_history` | 2 filas con registrador fabricado `ICANN Registrar Corp` | `osint-executors.ts:55-103` |
 | Integraciones + `integration_data` (ga4/bing) | 2 + 2 | seed 2026-05-08 |
 | SEO: `competitors`(1), `competitor_keywords`(1), `keyword_targets`(2), `rank_history`(1), `backlinks`(1), `backlink_history`(1) | 7 | seed |
 | `ab_tests`(1), `ab_test_results`(1) | 2 | seed |
 | `adversary_assessments` | 3 (runs simulados) | `scenario-runner.ts` |
-| `exec_briefs` | 4 → **REVIEW** (D1-3: son de un proyecto real, `bpoma.com` — no se borran) | seed/backfill |
+| `exec_briefs` | 4 → **KEEP** (D1-3: son de un proyecto real, `bpoma.com` — no se borran) | seed/backfill |
 | `findings [SIM]` / `203.0.113.*` | **0** (esas rutas aún no persistieron) | — |
 | Usuario E2E `smoke-test@strategicconnex.test` | 1 → **KEEP** (credencial del gate de smoke, `.env.local`) | smoke |
 
@@ -158,6 +165,8 @@ Marcadores `DEMO_EVENTS|DEMO_EVIDENCES|simulateConsoleLogs|COPILOT_STEPS|generat
 
 ```
 scripts/db/fake-data-audit.mjs          # NUEVO  Task 1  (read-only, --fail-on-error)
+scripts/lib/db-connection.mjs           # NUEVO  Task 2  (política TLS única de los scripts de BD)
+tests/security/db-connection-ssl.test.ts # NUEVO Task 2  (guard: el `sslmode` no puede pisar el `ssl`)
 scripts/db/fake-data-purge.mjs          # NUEVO  Task 3  (dry-run por defecto, --apply --confirm)
 scripts/lib/assert-env.mjs              # NUEVO  Task 7  (assertNotProd / assertAllowProd)
 scripts/guard-fake-data.mjs             # NUEVO  Task 19 (guard estático pnpm guard:fakedata)
@@ -258,7 +267,12 @@ async function main() {
   const url = process.env.DATABASE_URL || process.env.DIRECT_URL;
   if (!url) { console.error("ERROR: DATABASE_URL/DIRECT_URL no encontrada en .env.local"); process.exit(2); }
 
-  const pool = new pg.Pool({ connectionString: url, ssl: { rejectUnauthorized: process.env.DB_ALLOW_INSECURE_SSL === "true" } });
+  // Corregido el 2026-10-11: la política TLS vive en `scripts/lib/db-connection.mjs`
+  // (import { connectionFor } from "../lib/db-connection.mjs"). NO reintroducir
+  // `rejectUnauthorized: DB_ALLOW_INSECURE_SSL === "true"`: invierte el flag (con la
+  // variable a `true` exigía verificación estricta) y `pg@8.20` además pisa el objeto
+  // `ssl` con el `sslmode` del DSN.
+  const pool = new pg.Pool({ ...connectionFor(url), max: 2 });
   try {
     const tablesRes = await pool.query(`
       SELECT tablename FROM pg_tables
@@ -363,6 +377,12 @@ hashes ni secretos; la sesión se abre en modo read-only.
      (la carpeta `backups/` ya está en `.gitignore` → el fichero no se commitea).
    - Si devuelve exit 2, es un problema de conexión (revisa `.env.local`), no un falso verde.
 
+**Ejecutado el 2026-10-11 tras cerrar D1-2 (SOLO LECTURA):** mismo barrido (71 tablas, 6
+proyectos demo) con `admin@strategicaudit.pro` ya clasificado como `DELETE` → **DELETE = 155,
+REVIEW = 0**. El auditor queda así alineado con la decisión del operador: la Fase 1 puede
+exigir `DELETE=0` como criterio de aceptación sin que una fila `REVIEW` decidida por el
+operador quede fuera de la purga.
+
 **Ejecutado el 2026-10-10 contra la BD real (SOLO LECTURA):** 71 tablas escaneadas,
 6 proyectos demo, **DELETE = 153**, **REVIEW = 2** (ambas, `admin@strategicaudit.pro`).
 Señales que el inventario base no tenía: `intelligence_tool_runs` (47), `intelligence_findings`
@@ -380,24 +400,53 @@ coincidentes con el inventario base (≥5 proyectos `example.*`, ≥12 usuarios 
 
 ## Task 2: Backup completo previo a cualquier purga
 
-**Files:** ninguno nuevo (usa `scripts/manual/backup-manager.ts`, ya existente)
+**Files:** `scripts/manual/backup-manager.ts` (EDITADO: fix de SSL + modo `--check`)
+
+**Requisito previo (resuelto el 2026-10-11):** este script **no podía conectar**. Tenía el
+mismo bug de SSL que el auditor, por partida doble: `pg@8.20`
+(`connection-parameters.js:59-60`) parsea el `connectionString` DESPUÉS y pisa el objeto
+`ssl`, y su cálculo `rejectUnauthorized: DB_ALLOW_INSECURE_SSL === "true"` **invertía el
+flag** (con `DB_ALLOW_INSECURE_SSL=true` en `.env.local`, es decir pidiendo inseguridad,
+exigía verificación estricta). Ambos se corrigen en `scripts/lib/db-connection.mjs`, con
+guard de regresión en `tests/security/db-connection-ssl.test.ts`.
 
 **Pasos:**
 
-1. [ ] Confirmar que `/backups/` sigue en `.gitignore` (verificado: sí).
-2. [ ] Ejecutar el volcado completo de `public` como INSERTs restaurables:
+1. [x] Confirmado que `/backups/` sigue en `.gitignore` (verificado: sí).
+2. [x] Prueba de conexión seca (no escribe nada):
+   ```powershell
+   npx tsx scripts/manual/backup-manager.ts --check
+   ```
+   Resultado real (2026-10-11): `✅ Conexión OK — base: postgres · TLS en el socket: sí`,
+   servidor PostgreSQL 17.6, exit 0. El `--check` lee el cifrado **del socket local**: por el
+   pooler la conexión backend↔pooler es local y `pg_stat_ssl.ssl` diría `false` aunque
+   nuestro tramo sí vaya cifrado, así que no sirve como señal.
+3. [x] Volcado completo de `public` como INSERTs:
    ```powershell
    npx tsx --env-file=.env.local scripts/manual/backup-manager.ts
    ```
-3. [ ] Verificar que se creó `backups/strategic_audit_pro_backup_<timestamp>.sql` y que
-   contiene `INSERT INTO public.projects` (grep):
+   Resultado real (2026-10-11): `backups/strategic_audit_pro_backup_2026-10-11T14-26-58-557Z.sql`,
+   **8,45 MB**, exit 0.
+4. [x] Verificar el contenido con **identificadores entrecomillados**, que es como los emite
+   el script (`INSERT INTO public."projects"`, no `INSERT INTO public.projects`: el grep
+   original de este plan no encontraba nada y hacía parecer vacío un backup correcto):
    ```powershell
-   Get-ChildItem backups\*.sql | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-   Select-String -Path (Get-ChildItem backups\*.sql | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName -Pattern "INSERT INTO public.projects" | Select-Object -First 1
+   $f = (Get-ChildItem backups\*.sql | Sort-Object LastWriteTime -Descending)[0].FullName
+   (Select-String -Path $f -Pattern 'INSERT INTO public\."projects"'   -AllMatches).Matches.Count  # 21
+   (Select-String -Path $f -Pattern 'INSERT INTO public\."users"'      -AllMatches).Matches.Count  # 21
+   (Select-String -Path $f -Pattern 'INSERT INTO public\."exec_briefs"' -AllMatches).Matches.Count  # 4
    ```
+   Medido: 27 672 líneas `INSERT` en 51 tablas distintas, 21 `projects`, 21 `users` y
+   4 `exec_briefs` (coincide con D1-3: los briefs existen y son de proyectos reales).
 
-**Verificación:** fichero de backup con fecha de hoy y con INSERTs de `projects` y `users`.
+**Verificación:** fichero de backup con fecha de hoy y con INSERTs de `projects` y `users`. ✅
 **No se commitea** (`backups/` ignorado).
+
+**Limitación conocida (no bloqueante, anotada):** el volcado es **sólo datos** — no emite DDL
+(`CREATE TABLE`) ni cubre `auth.users`, así que una restauración exige que el schema ya exista
+(migraciones aplicadas) antes de reinyectar los INSERT. Es el comportamiento del script
+existente; para un dump restaurable desde cero hace falta `pg_dump` o generar el DDL aparte
+(ver *Riesgos y pendientes abiertos*).
 
 ---
 
@@ -418,6 +467,16 @@ coincidentes con el inventario base (≥5 proyectos `example.*`, ≥12 usuarios 
 borra filas en las tablas permitidas de `PURGE_TABLES` y siempre por **PK extraída del propio
 registro** (`to_jsonb`). Borra en orden FK-safe introspectando `pg_constraint` (hijos sin
 `ON DELETE CASCADE` primero) y respeta la allowlist `KEEP` (usuario del smoke).
+
+Dos matices que conviene tener escritos:
+
+- **`KEEP` es más fuerte en la purga que en el auditor.** El auditor respeta `KEEP` sólo si la
+  fila no trae además basura `DELETE`; la purga se salta la fila siempre (`if (kept) continue;`).
+  Es deliberado: prefiero dejar una fila de más que romper el gate de smoke.
+- **Hijo sin `CASCADE` de un proyecto demo:** si existe y no tiene patrón de texto propio, no
+  entra en `byTable` y el `DELETE` del padre falla por FK → `ROLLBACK` completo. Es el fallo
+  ruidoso que queremos (nada a medias); la tabla se añade a `PURGE_TABLES` con su patrón o se
+  decide a mano en la revisión (Task 3.3).
 
 **Pasos:**
 
@@ -453,13 +512,40 @@ const confirm = confirmIdx === -1 ? undefined : process.argv[confirmIdx + 1];
 const tableIdx = process.argv.indexOf("--tables");
 const onlyTables = tableIdx === -1 ? [] : process.argv[tableIdx + 1].split(",").map((s) => s.trim());
 
-/** Tablas donde SÍ se permite borrar. Todo lo demás es sólo informar (REVIEW). */
+/**
+ * Tablas donde SÍ se permite borrar. **AMPLIADA el 2026-10-11** con los
+ * hallazgos reales del auditor, por tabla: la lista original sólo cubría 18
+ * tablas y dejaba fuera el grueso de la basura (los `intelligence_*`, los
+ * logs y los históricos de dominio), así que la purga habría terminado en
+ * `DELETE>0` perpetuo. Todo lo que no esté aquí se informa como REVIEW.
+ *
+ * `exec_briefs` queda FUERA a propósito (D1-3: sus 4 filas son de un proyecto
+ * real y no se borran; las de un proyecto demo las retira el `ON DELETE
+ * CASCADE` de `exec_briefs.project_id`).
+ */
 const PURGE_TABLES = new Set([
-  "projects", "users", "project_members", "audits",
+  // núcleo
+  "projects", "project_members", "audits",
+  // SEO
   "competitors", "competitor_keywords", "keyword_targets", "rank_history",
-  "backlinks", "backlink_history", "ab_tests", "ab_test_results",
-  "integrations", "integration_data", "whois_history",
-  "adversary_assessments", "scenario_runs", "exec_briefs",
+  "backlinks", "backlink_history", "internal_links",
+  // experimentos
+  "ab_tests", "ab_test_results",
+  // integraciones y sus datos por proveedor
+  "integrations", "integration_data", "integration_data_bing",
+  "integration_data_gsc", "integration_data_ga4",
+  // histórico de dominio
+  "whois_history", "dns_history",
+  // inteligencia (el grueso de los hallazgos: 24 + 47 + 8 + 1)
+  "intelligence_investigations", "intelligence_findings",
+  "intelligence_tool_runs", "intelligence_run_events",
+  // telemetría y auditoría que los flujos de prueba escribieron
+  "security_audit_logs", "user_logs", "schema_validations",
+  "performance_results", "crawl_results", "heatmap_sessions", "issues",
+  // escenarios simulados
+  "adversary_assessments", "scenario_runs",
+  // identidades (KEEP_ROWS protege al usuario del smoke)
+  "users",
 ]);
 const KEEP_ROWS = [
   { table: "users", match: "smoke-test@strategicconnex.test" },
@@ -469,6 +555,12 @@ const PATTERNS = [
   "client@company.com", "usera_", "userb_",
   "ICANN Registrar Corp", "203.0.113.", "[SIM]", "site1.", "competitor1.com",
   "pipeline test",
+  // `.domain.net` es la mitad que faltaba del patrón `fake-cohosted` del
+  // auditor (aparece en `intelligence_findings` e `intelligence_tool_runs`).
+  ".domain.net",
+  // D1-2 (confirmada por el operador el 2026-10-11): identidad de login de
+  // prueba, no el admin real. Sin este patrón la purga NO la tocaría.
+  "admin@strategicaudit.pro",
 ];
 const TEXT_TYPES = new Set(["text", "character varying", "json", "jsonb", "xml"]);
 
@@ -543,7 +635,12 @@ async function main() {
   const url = process.env.DATABASE_URL || process.env.DIRECT_URL;
   if (!url) { console.error("ERROR: falta DATABASE_URL/DIRECT_URL en .env.local"); process.exit(2); }
 
-  const pool = new pg.Pool({ connectionString: url, ssl: { rejectUnauthorized: process.env.DB_ALLOW_INSECURE_SSL === "true" } });
+  // Corregido el 2026-10-11: la política TLS vive en `scripts/lib/db-connection.mjs`
+  // (import { connectionFor } from "../lib/db-connection.mjs"). NO reintroducir
+  // `rejectUnauthorized: DB_ALLOW_INSECURE_SSL === "true"`: invierte el flag (con la
+  // variable a `true` exigía verificación estricta) y `pg@8.20` además pisa el objeto
+  // `ssl` con el `sslmode` del DSN.
+  const pool = new pg.Pool({ ...connectionFor(url), max: 2 });
   try {
     const candidates = await findCandidates(pool);
     const byTable = {};
@@ -620,10 +717,10 @@ main();
    Salvar la salida (`backups/fake-data-purge-dryrun-2026-10-06.txt`) y compararla con el
    inventario base de este plan.
 
-3. [ ] **Revisión obligatoria (D1):** presentar el listado al usuario y esperar confirmación
-   antes de cualquier `--apply`. Resolver las ambigüedades:
-   - `Pipeline Test - strategicconnex.com.ar` → ¿borrar o conservar?
-   - `admin@strategicaudit.pro` → ¿borrar o conservar (login del operador)?
+3. [ ] **Revisión obligatoria (D1) — ambigüedades YA RESUELTAS (2026-10-11):** presentar el
+   listado al operador y esperar confirmación antes de cualquier `--apply`.
+   - `Pipeline Test - strategicconnex.com.ar` → **DELETE** (D1-1, decidido por el operador).
+   - `admin@strategicaudit.pro` → **DELETE** (D1-2, confirmado por el operador).
    - `exec_briefs` (4) → **NO se borran**: cuelgan del proyecto real `Consultora BPOMA` (D1-3).
    - Si algún candidato no está en `PURGE_TABLES`, se informa como REVIEW (no se borra).
 
@@ -633,9 +730,24 @@ en la purga por su FK al proyecto demo (cascade) o por su propio patrón.
 **`exec_briefs` queda FUERA:** sus 4 filas pertenecen a `Consultora BPOMA` (`bpoma.com`),
 un proyecto real — ver D1-3. El dry-run debe mostrar 0 filas de esa tabla.
 **Orden obligatorio:** borrar los proyectos demo antes que sus dependientes, y **verificar
-en el dry-run, tabla por tabla**, que el recuento cuadra con el inventario base antes de
-cualquier `--apply`.
-**Verificación:** dry-run exit 0 sin escribir (confirmar con
+en el dry-run, tabla por tabla**, que el recuento cuadra con la línea base antes de cualquier
+`--apply`.
+
+**Recuento esperado en el dry-run** (línea base del auditor, 2026-10-10, con D1-2 ya aplicada:
+`user_logs` y `users` suman la fila `admin@strategicaudit.pro` a las de seed — **155 en total**):
+
+| Tabla | Filas | Tabla | Filas |
+|---|---:|---|---:|
+| `intelligence_tool_runs` | 47 | `dns_history` | 11 |
+| `intelligence_findings` | 24 | `intelligence_investigations` | 8 |
+| `security_audit_logs` | 16 | `projects` | 6 |
+| `user_logs` | 14 | `crawl_results` | 2 |
+| `users` | 14 | `whois_history` | 2 |
+| `ab_tests`, `backlinks`, `competitors`, `heatmap_sessions`, `integration_data_bing`, `integration_data_gsc`, `intelligence_run_events`, `internal_links`, `issues`, `performance_results`, `schema_validations` | 1 cada una (11) | **`exec_briefs`** | **0** (D1-3) |
+
+Si un dry-run se desvía de esta tabla, **se investiga antes de aplicar**: la diferencia es
+o un cambio real en la BD desde el 2026-10-10 o un patrón que no entró en la purga.
+**Verificación:** dry-run exit 0 sin escribir (confirmar después con
 `node scripts/db/fake-data-audit.mjs` → los mismos DELETE que antes de la ejecución).
 
 **Commit:** `feat(db): purga de datos falsos con dry-run obligatorio y backup`
@@ -1446,7 +1558,9 @@ smoke pendiente; commit/push **sólo** con orden explícita.
 | Borrar un proyecto/usuario real (Pipeline Test, admin@strategicaudit.pro) | dry-run + aprobación explícita (Task 3.3); REVIEW nunca se borra automáticamente |
 | Romper el gate de smoke (usuario E2E) | `KEEP` allowlist: `smoke-test@strategicconnex.test` |
 | Colisión con WIP sin commitear en `src/features/dashboard/**` y `src/components/**` | `git status --porcelain` antes de cada tarea 12-17; pausar y preguntar |
-| Cascada FK no contemplada en la purga | introspección de `pg_constraint` + una sola transacción + backup completo previo |
+| Cascada FK no contemplada en la purga | introspección de `pg_constraint` + una sola transacción + backup completo previo (si un hijo sin CASCADE impide el borrado, hay `ROLLBACK` total en vez de purga parcial) |
+| **Drift duro PREEXISTENTE** (detectado por `db:drift-check` el 2026-10-11, no relacionado con la purga): faltan 5 tablas en la BD respecto al schema (`distributed_cache`, `idempotency_keys`, `outbox_events`, `scan_queue`, `scan_queue_slots` → migraciones 0040/0041 sin aplicar) | `drizzle-kit migrate` antes de Fase 1 (o aceptar el rojo documentado). El job `db-drift-check` de CI está en rojo por esto, no por el bug de SSL |
+| Backup **sólo-datos** (sin DDL ni `auth.users`) | Restaurar reinyectando los INSERT con el schema ya migrado; para un dump desde cero, generar DDL aparte (`pg_dump --schema-only`) |
 | CI sigue escribiendo en prod (Newman) | decisión pendiente: API key de sólo lectura o BD de staging (Task 19.4) |
 | Crons Trigger.dev siguen activos (`adversary.trigger` 6h) | Task 11 desactiva la simulación; verificar en dashboard de Trigger.dev que no quedan runs |
 
@@ -1455,7 +1569,7 @@ smoke pendiente; commit/push **sólo** con orden explícita.
 ## Orden de ejecución resumido
 
 ```
-Fase 0:  Task 1 (auditor) → Task 2 (backup)
+Fase 0:  Task 1 (auditor) ✅ → Task 2 (backup) ✅  [+ fix SSL: scripts/lib/db-connection.mjs]
 Fase 1:  Task 3 (purga dry-run) → [APROBACIÓN USUARIO] → Task 4 (apply + re-auditoría)
 Fase 2:  Task 5 (seed) → 6 (assert-env) → 7 (network) → 8 (osint) → 9 (ct) → 10 (advanced) → 11 (adversary) → 12 (graph)
 Fase 3:  Task 13 (chat) → 14 (shell) → 15 (console) → 16 (monitoring) → 17 (panels)
