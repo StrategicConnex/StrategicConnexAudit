@@ -1,5 +1,21 @@
 # Plan: Eliminar los datos falsos del proyecto (y que no vuelvan a entrar)
 
+**Estado:** `EN_EJECUCION_FASE_0` (2026-10-10) — **no archivado**: en ejecución.
+
+- **Fase 0 (medición) — Task 1 entregada:** `scripts/db/fake-data-audit.mjs` (read-only,
+  exit 1 si hay `DELETE`) + script `pnpm db:fake-audit`. Sesión Postgres abierta en
+  read-only y salida redactada (PK + columnas coincidentes, nunca la fila completa).
+- **D1:** D1-1 cerrada (`Pipeline Test` → DELETE). **D1-2 y D1-3 vuelven a la mesa** con la
+  evidencia de la auditoría ya ejecutada (ver *Decisiones asumidas*): `admin@strategicaudit.pro`
+  tiene toda la pinta de fila del seed (pendiente de tu confirmación) y **los 4 `exec_briefs`
+  NO son falsos**: cuelgan del proyecto real `Consultora BPOMA`.
+- **CI fuera de producción (parcial):** el job `api-contract-test` ya no puede apuntar a
+  producción (guard `target`: `TEST_ENV` ∈ {staging,test} + `SCAUDIT_CONTRACT_BASE_URL` no
+  productivo + colección reapuntable). **Abierto:** el job `e2e` sigue usando el secreto
+  `DATABASE_URL` — si ese secreto apunta a producción, el job escribe en producción.
+- Fase 1 (purga) sigue **bloqueada por diseño**: exige backup (Task 2) y confirmación del
+  listado antes de cualquier `--apply`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: `writing-plans` (este documento ya cumple su
 > formato; léelo completo antes de ejecutar tareas). Global constraints: ver sección
 > **Global Constraints** (son obligatorias, no sugerencias).
@@ -59,6 +75,30 @@ No bloqueo el arranque; si una es errónea, se corrige antes de su tarea.
 
 ---
 
+### D1-1..D1-3 — ambigüedades de la Fase 1 (resueltas 2026-10-10)
+
+- **D1-1 · `Pipeline Test - strategicconnex.com.ar` → DELETE.** Decisión del operador: se
+  confirma como dato de prueba. Pasa de `REVIEW` a `DELETE` en el inventario, en los
+  `PATTERNS` del auditor y en los de la purga.
+- **D1-2 · `admin@strategicaudit.pro` → KEEP sólo si es el login real del operador.**
+  El plan lo atribuía al seed, pero **`seed.ts` se elimina (Task 6)**, así que no puede ser
+  su origen en el estado final: el alta legítima del admin es `pnpm setup-admin <email>`
+  (`src/scripts/setup-admin.ts`, se conserva y sólo se le añade la guarda de entorno de la
+  Task 7). Mientras no se confirme que es el login del operador, se queda en `REVIEW` y la
+  purga no lo toca; si NO lo es, pasa a `DELETE` (una palabra del operador lo cierra).
+  **Evidencia (auditoría 2026-10-10):** es la única fila `REVIEW`; su `id` es
+  `d4e8c1fa-8a5f-4a3e-b2d9-1c9f2a0b3e1a` (patrón escrito a mano, no aleatorio), su
+  `full_name` es "Admin User", se creó en el MISMO segundo que `client@company.com`
+  ("Client User") y tiene 0 filas en `project_members`. Los admins con pinta real son otros
+  (`adm***@strategicconnex.com.ar` y el del smoke). **Recomendación: DELETE**, a falta de tu
+  confirmación explícita por tratarse de una identidad de login.
+- **D1-3 · `exec_briefs` (4 filas) → REVERTIDA a REVIEW: no son datos falsos.** La auditoría
+  ejecutada contradice la decisión inicial: las 4 filas cuelgan del proyecto
+  **`Consultora BPOMA` (`bpoma.com`)**, que es un proyecto real (2026-05-20, con escaneos
+  propios), y son briefs generados de verdad (`is_fallback = false`). Ninguna fila está
+  ligada a un proyecto demo, así que ni el auditor las marca ni la purga las tocaría:
+  **no se borran.** La regla `PROJECT_SCOPED` del auditor queda como red de seguridad para
+  filas huérfanas futuras, no como instrucción de borrado.
 ## Inventario base (evidencia 2026-10-06, sondeos `fake-data-audit.cjs` + `cookie-probe.mjs`, sólo SELECT)
 
 **Ya persistido en prod (patrón `qwebfomwtwxxbkxbrrwm`, 21 proyectos / 21 usuarios):**
@@ -66,15 +106,15 @@ No bloqueo el arranque; si una es errónea, se corrige antes de su tarea.
 | Qué | Cuánto | Origen |
 |---|---|---|
 | Proyectos demo `example.com/.org` | 4 (Main E-commerce, SaaS Landing, E2E RLS Check, Prueba Real Smoke, Proyecto Smoke Mimo ≈ 5) | `seed.ts` + `post-rls-check.mjs` + smoke |
-| Proyecto `Pipeline Test - strategicconnex.com.ar` | 1 → **REVIEW** (dominio real, puede ser del usuario) | scripts pipeline |
+| Proyecto `Pipeline Test - strategicconnex.com.ar` | 1 → **DELETE** (D1-1: confirmado dato de prueba) | scripts pipeline |
 | Usuarios falsos | 12 `usera_*/userb_*@test.com` + `client@company.com` | `test-rls.ts`, `rls-fire-test.ts`, seed |
-| `admin@strategicaudit.pro` | 1 → **REVIEW** (¿es el login del operador?) | seed |
+| `admin@strategicaudit.pro` | 1 → **REVIEW** (D1-2: KEEP sólo si es el login real del operador) | seed |
 | `whois_history` | 2 filas con registrador fabricado `ICANN Registrar Corp` | `osint-executors.ts:55-103` |
 | Integraciones + `integration_data` (ga4/bing) | 2 + 2 | seed 2026-05-08 |
 | SEO: `competitors`(1), `competitor_keywords`(1), `keyword_targets`(2), `rank_history`(1), `backlinks`(1), `backlink_history`(1) | 7 | seed |
 | `ab_tests`(1), `ab_test_results`(1) | 2 | seed |
 | `adversary_assessments` | 3 (runs simulados) | `scenario-runner.ts` |
-| `exec_briefs` | 4 → **REVIEW** | seed/backfill |
+| `exec_briefs` | 4 → **REVIEW** (D1-3: son de un proyecto real, `bpoma.com` — no se borran) | seed/backfill |
 | `findings [SIM]` / `203.0.113.*` | **0** (esas rutas aún no persistieron) | — |
 | Usuario E2E `smoke-test@strategicconnex.test` | 1 → **KEEP** (credencial del gate de smoke, `.env.local`) | smoke |
 
@@ -192,8 +232,8 @@ const PATTERNS = [
   { id: "sim-marker",         kind: "DELETE", find: ["[SIM]"] },
   { id: "fake-cohosted",      kind: "DELETE", find: ["site1.", ".domain.net"] },
   { id: "seed-competitor",    kind: "DELETE", find: ["competitor1.com"] },
-  { id: "ambigous-admin",     kind: "REVIEW", find: ["admin@strategicaudit.pro"] },
-  { id: "ambigous-pipeline",  kind: "REVIEW", find: ["pipeline test"] },
+  { id: "ambiguous-admin",    kind: "REVIEW", find: ["admin@strategicaudit.pro"] },
+  { id: "seed-pipeline",      kind: "DELETE", find: ["pipeline test"] },
 ];
 
 /** Excepciones que NUNCA se reportan como hallazgo (operativas). */
@@ -301,6 +341,13 @@ async function main() {
 main();
 ```
 
+**Ampliación D1-3 (2026-10-10):** además de los patrones de texto, el auditor resuelve las
+filas que **no** tienen patrón propio por su FK al proyecto demo (`exec_briefs.project_id`
+→ los `id` de los proyectos marcados `DELETE`), y las reporta como `DELETE` con el patrón
+sintético `DELETE:demo-project-fk`. Es la evidencia que faltaba para cerrar D1-3.
+Salida redactada: el informe guarda PK y **sólo** las columnas que contienen el patrón
+(truncadas), nunca la fila completa — así los logs y el artefacto de CI no arrastran
+hashes ni secretos; la sesión se abre en modo read-only.
 2. [ ] Añadir a `package.json` → `"scripts"` (junto a `db:drift-check`):
    ```json
    "db:fake-audit": "node scripts/db/fake-data-audit.mjs"
@@ -315,6 +362,13 @@ main();
      `node scripts/db/fake-data-audit.mjs --json > backups/fake-data-baseline-2026-10-06.json`
      (la carpeta `backups/` ya está en `.gitignore` → el fichero no se commitea).
    - Si devuelve exit 2, es un problema de conexión (revisa `.env.local`), no un falso verde.
+
+**Ejecutado el 2026-10-10 contra la BD real (SOLO LECTURA):** 71 tablas escaneadas,
+6 proyectos demo, **DELETE = 153**, **REVIEW = 2** (ambas, `admin@strategicaudit.pro`).
+Señales que el inventario base no tenía: `intelligence_tool_runs` (47), `intelligence_findings`
+(24), `security_audit_logs` (16), `user_logs` (14), `users` (14), `dns_history` (11) e
+`intelligence_investigations` (8). El marcador `[SIM]` sigue en 0. Línea base guardada en
+`backups/fake-data-baseline-2026-10-10.json` (carpeta ignorada por git).
 
 **Verificación:** `node scripts/db/fake-data-audit.mjs; $LASTEXITCODE` → `1` con hallazgos
 coincidentes con el inventario base (≥5 proyectos `example.*`, ≥12 usuarios `usera/userb_`).
@@ -414,6 +468,7 @@ const PATTERNS = [
   "example.com", "example.org", "example.net",
   "client@company.com", "usera_", "userb_",
   "ICANN Registrar Corp", "203.0.113.", "[SIM]", "site1.", "competitor1.com",
+  "pipeline test",
 ];
 const TEXT_TYPES = new Set(["text", "character varying", "json", "jsonb", "xml"]);
 
@@ -569,9 +624,17 @@ main();
    antes de cualquier `--apply`. Resolver las ambigüedades:
    - `Pipeline Test - strategicconnex.com.ar` → ¿borrar o conservar?
    - `admin@strategicaudit.pro` → ¿borrar o conservar (login del operador)?
-   - `exec_briefs` (4) → ¿revisar contenido antes de decidir?
+   - `exec_briefs` (4) → **NO se borran**: cuelgan del proyecto real `Consultora BPOMA` (D1-3).
    - Si algún candidato no está en `PURGE_TABLES`, se informa como REVIEW (no se borra).
 
+**Filas sin patrón propio:** hay tablas (p. ej. `integrations`, `integration_data`,
+`adversary_assessments`) que puede que no coincidan con ningún patrón de texto; sólo entran
+en la purga por su FK al proyecto demo (cascade) o por su propio patrón.
+**`exec_briefs` queda FUERA:** sus 4 filas pertenecen a `Consultora BPOMA` (`bpoma.com`),
+un proyecto real — ver D1-3. El dry-run debe mostrar 0 filas de esa tabla.
+**Orden obligatorio:** borrar los proyectos demo antes que sus dependientes, y **verificar
+en el dry-run, tabla por tabla**, que el recuento cuadra con el inventario base antes de
+cualquier `--apply`.
 **Verificación:** dry-run exit 0 sin escribir (confirmar con
 `node scripts/db/fake-data-audit.mjs` → los mismos DELETE que antes de la ejecución).
 
