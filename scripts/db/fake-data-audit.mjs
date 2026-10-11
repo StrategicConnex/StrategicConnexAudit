@@ -46,6 +46,9 @@ dotenv.config({ path: path.join(ROOT, ".env.local"), quiet: true });
  * Patrones globales: se aplican a TODAS las tablas de `public`.
  * D1-1 (2026-10-10): el proyecto `Pipeline Test - strategicconnex.com.ar` pasó
  * de REVIEW a DELETE por decisión del operador.
+ *
+ * D1-2 (2026-10-11): `admin@strategicaudit.pro` pasó de REVIEW a DELETE por la
+ * misma vía que D1-1 (ver el patrón `ambiguous-admin`).
  */
 const PATTERNS = [
   { id: "demo-domain", kind: "DELETE", find: ["example.com", "example.org", "example.net"] },
@@ -56,7 +59,13 @@ const PATTERNS = [
   { id: "fake-cohosted", kind: "DELETE", find: ["site1.", ".domain.net"] },
   { id: "seed-competitor", kind: "DELETE", find: ["competitor1.com"] },
   { id: "seed-pipeline", kind: "DELETE", find: ["pipeline test"] },
-  { id: "ambiguous-admin", kind: "REVIEW", find: ["admin@strategicaudit.pro"] },
+  // D1-2 (2026-10-11): el operador confirmó que es una identidad de login de
+  // PRUEBA (fila del seed: mismo segundo que `client@company.com`, 0 filas en
+  // `project_members`) y que el alta legítima es `pnpm setup-admin`, no el
+  // seed. Marcarla DELETE (antes REVIEW) es lo que evita que quede fuera del
+  // allowlist de purga y que la Fase 1 cierre con un REVIEW decidido por el
+  // operador pero nunca ejecutado.
+  { id: "ambiguous-admin", kind: "DELETE", find: ["admin@strategicaudit.pro"] },
 ];
 
 /** Excepciones que NUNCA se reportan como hallazgo (operativas). */
