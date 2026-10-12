@@ -372,6 +372,13 @@
       "when": 1791676800000,
       "tag": "0041_platform_idempotency_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1791763200000,
+      "tag": "0042_revoke_truncate_authenticated",
+      "breakpoints": true
     }
   ]
 }

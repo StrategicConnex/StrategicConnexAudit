@@ -205,6 +205,26 @@ jobs:
           fi
           node scripts/db/drift-check.mjs
 
+      # Hallazgo #6 (auditoría de BD 2026-10-11): `TRUNCATE` estaba concedido a
+      # `authenticated` en 33 tablas de `public`. TRUNCATE NO pasa por RLS, así
+      # que anulaba el aislamiento multi-tenant para ese comando. El guard
+      # estático de vitest (tests/security/truncate-grant-guard.test.ts) protege
+      # la migración; este paso verifica el estado REAL de la base.
+      - name: Grant audit (TRUNCATE a roles expuestos)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::warning::Secreto DIRECT_URL no configurado — grant audit OMITIDO (el guard estático de vitest SÍ corrió)."
+            {
+              echo '## 🔐 Grant Audit'
+              echo ''
+              echo '⚠️ **Omitido** — falta el secreto `DIRECT_URL`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node scripts/db/grant-audit.mjs
+
       - name: Report drift status
         if: always()
         run: |
