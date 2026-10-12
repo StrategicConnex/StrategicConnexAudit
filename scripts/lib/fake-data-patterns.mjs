@@ -21,9 +21,9 @@
    a correr el auditor y actualiza los recuentos con lo que diga — nunca al
    revés.
 
-   Última revisión del recuento: 2026-10-11, tras la decisión del operador
-   sobre D1-2 y el alcance (barrido por patrón 158 + regla project-scoped 4430;
-   auditor read-only con `readOnlyEnforced=true`).
+   Última revisión del recuento: 2026-10-12 (P0.5), tras la decisión del
+   operador sobre los proyectos placeholder y los usuarios sintéticos
+   (ver `PLACEHOLDER_PROJECT_NAMES` y el patrón `synthetic-user`).
    ═══════════════════════════════════════════════════════════════════════ */
 
 /**
@@ -63,7 +63,31 @@ export const PATTERNS = [
   // posee el proyecto demo y el gate de dependencias ya no ve proyectos
   // ajenos colgando de esta fila. El traspaso está registrado en el plan.
   { id: "ambiguous-admin", kind: "DELETE", find: ["admin@strategicaudit.pro"] },
+  // P0.5 (2026-10-12, decisión del operador): identidades de login SINTÉTICAS.
+  //   · `dev@localhost.dev` — cuenta del bypass de desarrollo
+  //     (`src/shared/lib/auth.ts`, `NEXT_PUBLIC_DEV_BYPASS_AUTH`); su id es
+  //     `00000000-…-0001`, tiene 0 proyectos y NO existe en `auth.users`.
+  //   · `e2e.rls.*` — fixture del E2E de RLS (`scripts/e2e/post-rls-check.mjs`),
+  //     0 proyectos.
+  // `smoke-test@strategicconnex.test` NO entra: es la credencial operativa del
+  // gate de smoke y vive en `KEEP`.
+  { id: "synthetic-user", kind: "DELETE", find: ["dev@localhost.dev", "e2e.rls."] },
 ];
+
+/**
+ * NOMBRES EXACTOS (comparados en minúsculas contra `projects.name`) de los
+ * proyectos placeholder que el operador decidió purgar en P0.5 (override de
+ * D1-2, 2026-10-12 — ver `docs/superpowers/plans/2026-10-06-eliminar-datos-falsos.md`).
+ *
+ * POR QUÉ POR NOMBRE Y NO POR SUBCADENA DE DOMINIO: el dominio
+ * `strategicconnex.com.ar` también aparece en el email del admin real
+ * (`adminsc@strategicconnex.com.ar`) y en dos proyectos `StrategicConnex's Org`
+ * (que NO se purgan). Una regla de subcadena —o meter el dominio en `PATTERNS`
+ * global— marcaría al admin real como candidato y su
+ * `projects.owner_id ON DELETE CASCADE` se llevaría sus proyectos. La igualdad
+ * exacta contra `name` aísla los 3 proyectos sin ese pie de barro.
+ */
+export const PLACEHOLDER_PROJECT_NAMES = ["runrun", "strategic connex", "Strategic Connex COM AR"];
 
 /** Excepciones que NUNCA se reportan como hallazgo ni se borran (operativas). */
 export const KEEP = ["smoke-test@strategicconnex.test"];
@@ -98,11 +122,18 @@ export const DEMO_PROJECT_PATTERNS = [
 export const PROJECT_SCOPED_CASCADE_TABLES = new Set([
   "ab_test_results",
   "backlink_history",
+  "crawl_results",
   "competitor_keywords",
   "developer_api_keys",
   "integration_sync_logs",
   "rank_history",
   "report_exports",
+  // P0.5 (drizzle/0043): `intelligence_run_events` cuelga de una investigación
+  // por `investigation_id ON DELETE CASCADE` (la FK que faltaba en la BD). Al
+  // purgar las investigaciones de un proyecto candidato, sus eventos caen por
+  // cascada; sin declararlo aquí, el cierre los vería como ampliación de alcance
+  // no declarada y bloquearía el `--apply`.
+  "intelligence_run_events",
 ]);
 
 /**
@@ -167,35 +198,26 @@ export const PURGE_TABLES = new Set([
  * configuración que la purga rechaza al arrancar (mejor un fallo ruidoso que un
  * `⚠️` que se ignora). `uptime_logs` está fuera por eso: su basura se cuenta en
  * `PURGE_EXPECTED_PROJECT_SCOPED`, que es quien la puede borrar.
- * Fuente: auditoría read-only del 2026-10-11 (línea base en
- * `backups/fake-data-baseline-2026-10-11.json`, ignorado por git).
- * Si un dry-run se desvía >5% de esto, se investiga ANTES de aplicar.
+ *
+ * Fuente: dry-run de la purga del 2026-10-12 (P0.5), DESPUÉS de aplicar la
+ * Fase 1 — los recuentos de la línea base 2026-10-11 quedaron a 0 cuando
+ * aquellos candidatos se borraron, así que se reconstruye aquí con lo que mide
+ * el dry-run actual (regla del plan: se actualiza el esperado con lo que diga el
+ * auditor/la purga, nunca al revés). Si un dry-run se desvía >5% de esto, se
+ * investiga ANTES de aplicar.
  */
 export const PURGE_EXPECTED = {
-  ab_tests: 1,
-  backlinks: 1,
-  competitors: 1,
-  crawl_results: 2,
-  dns_history: 11,
-  heatmap_sessions: 1,
-  integration_data_bing: 1,
-  integration_data_gsc: 1,
-  intelligence_findings: 24,
-  intelligence_investigations: 8,
-  intelligence_run_events: 1,
-  intelligence_tool_runs: 47,
-  internal_links: 1,
-  issues: 1,
-  performance_results: 1,
-  projects: 9,
-  schema_validations: 1,
-  security_audit_logs: 16,
-  user_logs: 14,
-  users: 14,
-  whois_history: 2,
+  // P0.5 APLICADA el 2026-10-12 (8.985 filas borradas): los 3 proyectos
+  // placeholder (`PLACEHOLDER_PROJECT_NAMES`), los 2 usuarios sintéticos
+  // (`dev@localhost.dev`, `e2e.rls.*`) y sus 2 `user_logs` ya no existen, así
+  // que el esperado vuelve a 0. Se mantienen las claves a 0 a propósito: si
+  // vuelve a aparecer un candidato aquí, el gate avisa (>5%) y se investiga.
+  projects: 0,
+  users: 0,
+  user_logs: 0,
 };
 
-export const PURGE_EXPECTED_TOTAL = Object.values(PURGE_EXPECTED).reduce((a, b) => a + b, 0); // 158
+export const PURGE_EXPECTED_TOTAL = Object.values(PURGE_EXPECTED).reduce((a, b) => a + b, 0); // 0
 
 /**
  * REGLA «PROJECT-SCOPED» (decisión del operador, 2026-10-11).
@@ -258,46 +280,18 @@ export const PROJECT_SCOPED_TABLES = new Set([
 ]);
 
 /**
- * Filas project-scoped medidas el 2026-10-11 (9 proyectos candidatos), con la
- * regla directa (`project_id`) **más** el cierre por CASCADE. Es el recuento que
- * la purga debe cuadrar: `dns_history` = 19 directas + 2 de cierre; y las 7
- * tablas de `PROJECT_SCOPED_CASCADE_TABLES` (3 de ellas en
- * `developer_api_keys`, la clave del usuario de prueba).
+ * Filas project-scoped medidas el 2026-10-12 (P0.5, 3 proyectos placeholder),
+ * con la regla directa (`project_id`) **más** el cierre por CASCADE. Es el
+ * recuento que la purga debe cuadrar: `crawl_results` (3) entra por cierre desde
+ * `audits`; `uptime_logs` (2.988 × 3) es el grueso. El resto de la línea base
+ * 2026-10-11 quedó a 0 al aplicarse la Fase 1.
  */
 export const PURGE_EXPECTED_PROJECT_SCOPED = {
-  ab_test_results: 1,
-  ab_tests: 1,
-  adversary_runs: 2,
-  audit_logs: 1,
-  audits: 2,
-  backlinks: 1,
-  backlink_history: 1,
-  competitor_keywords: 1,
-  competitors: 1,
-  developer_api_keys: 3,
-  dns_history: 21,
-  heatmap_sessions: 1,
-  integration_data_bing: 1,
-  integration_data_ga4: 1,
-  integration_data_gsc: 1,
-  integration_sync_logs: 1,
-  integrations: 2,
-  intelligence_assets: 1,
-  intelligence_findings: 21,
-  intelligence_investigations: 1,
-  intelligence_tool_runs: 34,
-  intelligence_usage_events: 34,
-  issues: 1,
-  keyword_targets: 2,
-  monitoring_schedules: 1,
-  project_audit_rules: 2,
-  rank_history: 1,
-  report_exports: 1,
-  reports: 1,
-  schema_validations: 1,
-  subscriptions: 1,
-  uptime_logs: 4285,
-  whois_history: 1,
+  // P0.5 aplicada el 2026-10-12 → 0. Ver el comentario de `PURGE_EXPECTED`.
+  audits: 0,
+  crawl_results: 0,
+  issues: 0,
+  uptime_logs: 0,
 };
 
 /**

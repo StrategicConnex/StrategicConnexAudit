@@ -68,6 +68,7 @@ import { connectionFor } from "../lib/db-connection.mjs";
 import {
   PATTERNS,
   DEMO_PROJECT_PATTERNS,
+  PLACEHOLDER_PROJECT_NAMES,
   KEEP,
   PURGE_TABLES,
   PURGE_EXPECTED,
@@ -213,7 +214,13 @@ async function inboundFks(client, table) {
   return res.rows;
 }
 
-const RULE = { c: "CASCADE", n: "NO ACTION", r: "RESTRICT", d: "SET NULL", a: "SET DEFAULT" };
+// Códigos de `pg_constraint.confdeltype` (PostgreSQL):
+//   a = NO ACTION · r = RESTRICT · c = CASCADE · n = SET NULL · d = SET DEFAULT
+// Estaban mal mapeados (`n`→NO ACTION, `a`→SET DEFAULT): un `ON DELETE SET NULL`
+// —la conducta que el schema pidió al declarar la FK— se trataba como BLOQUEO
+// DURO, y un `SET DEFAULT` se colaba como simple aviso. Verificado contra
+// audit_logs.user_id (def `ON DELETE SET NULL`, `confdeltype='n'`).
+const RULE = { a: "NO ACTION", r: "RESTRICT", c: "CASCADE", n: "SET NULL", d: "SET DEFAULT" };
 
 /**
  * Tablas que la BD tiene como project-scoped (FK de una columna `project_id`
@@ -333,22 +340,62 @@ async function findCandidates(client) {
     if (kept.length > 0) line(`   (KEEP) ${table}: ${kept.length} fila(s) excluidas por allowlist`);
   }
 
+  const inScope = (t) => onlyTables.length === 0 || onlyTables.includes(t);
+
+  // 2) Proyectos placeholder/fixture POR SÍ MISMOS. En Fase 1 estos proyectos
+  //    coincidían además con un PATTERN de texto y el barrido ya los capturaba;
+  //    los placeholder de P0.5 sólo se identifican por NOMBRE EXACTO
+  //    (`PLACEHOLDER_PROJECT_NAMES`), así que sin esto se enumerarían sus hijos
+  //    pero no el padre. Se cuentan como candidatos `projects` (ver el gate de
+  //    recuento: `PURGE_EXPECTED.projects` incluye ambos orígenes).
+  const projectPk = await primaryKey(client, "projects");
+  const demoRowsByPattern = await selectMatches(
+    client,
+    "projects",
+    await textColumns(client, "projects"),
+    [{ id: "demo-project", kind: "DELETE", find: DEMO_PROJECT_PATTERNS }]
+  );
+  const demoRowsByName = (
+    await client.query(
+      `SELECT to_jsonb(t) AS row FROM "public"."projects" t WHERE lower(t.name) = ANY($1::text[])`,
+      [PLACEHOLDER_PROJECT_NAMES.map((n) => n.toLowerCase())]
+    )
+  ).rows.map((r) => r.row);
+  // `demoIds` se calcula SIEMPRE (no depende de `--tables`): es el origen de la
+  // regla project-scoped. Las filas del proyecto sólo se añaden si están en alcance.
+  const demoIds = [];
+  for (const row of [...demoRowsByPattern, ...demoRowsByName]) {
+    const blob = JSON.stringify(row).toLowerCase();
+    if (KEEP_ROWS.some((k) => blob.includes(k.match.toLowerCase()))) continue;
+    const id = String(row[projectPk[0]]);
+    if (!demoIds.includes(id)) demoIds.push(id);
+    if (inScope("projects")) add("projects", projectPk, row);
+  }
+
+  // 2b) Huérfanos INVERSOS: `public.users` sin identidad en `auth.users` (hoy el
+  //     bypass de desarrollo `dev@localhost.dev`). Es integridad referencial, no
+  //     un patrón de texto; se cuenta como candidato `users`.
+  const userPk = await primaryKey(client, "users");
+  if (userPk.length > 0 && inScope("users")) {
+    const orphans = (
+      await client.query(
+        `SELECT to_jsonb(t) AS row FROM "public"."users" t
+          WHERE NOT EXISTS (SELECT 1 FROM auth.users a WHERE a.id = t.id)`
+      )
+    ).rows.map((r) => r.row);
+    for (const row of orphans) {
+      const blob = JSON.stringify(row).toLowerCase();
+      if (KEEP_ROWS.some((k) => k.table === "users" && blob.includes(k.match.toLowerCase())))
+        continue;
+      add("users", userPk, row);
+    }
+  }
+
+  // Los recuentos "por patrón" incluyen ya el barrido, los placeholder por
+  // nombre y los huérfanos inversos — pero NO las filas project-scoped, que van
+  // por su propio gate.
   const patternIds = {};
   for (const [t, c] of Object.entries(byTable)) patternIds[t] = c.ids.length;
-
-  // 2) Regla project-scoped. Los proyectos candidatos se calculan SIEMPRE (no
-  // dependen del alcance de `--tables`) porque son el origen de la regla.
-  const projectPk = await primaryKey(client, "projects");
-  const demoRows =
-    byTable.projects?.rows ??
-    (await selectMatches(client, "projects", await textColumns(client, "projects"), [
-      { id: "demo-project", kind: "DELETE", find: DEMO_PROJECT_PATTERNS },
-    ]));
-  const demoIds = demoRows
-    .filter(
-      (r) => !KEEP_ROWS.some((k) => JSON.stringify(r).toLowerCase().includes(k.match.toLowerCase()))
-    )
-    .map((r) => String(r[projectPk[0]]));
 
   const discovered = await discoveredProjectScoped(client);
   const projectScoped = {};

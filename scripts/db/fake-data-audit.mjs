@@ -40,6 +40,7 @@ import {
   PATTERNS,
   KEEP,
   DEMO_PROJECT_PATTERNS,
+  PLACEHOLDER_PROJECT_NAMES,
   PROJECT_SCOPED_FK,
   PROJECT_SCOPED_TABLES,
   PROJECT_SCOPED_CASCADE_TABLES,
@@ -269,14 +270,34 @@ async function main() {
       console.warn(`AVISO: tablas solicitadas que no existen en public: ${missing.join(", ")}`);
     }
 
-    // 1) Proyectos demo (origen del que cuelgan las filas sin patrón propio).
-    const demoRows = await selectMatches(
+    // 1) Proyectos demo/fixture (origen del que cuelgan las filas sin patrón
+    //    propio). Dos vías: los patrones de texto (`DEMO_PROJECT_PATTERNS`) y la
+    //    lista de NOMBRES EXACTOS decidida por el operador en P0.5
+    //    (`PLACEHOLDER_PROJECT_NAMES`); el porqué de la igualdad exacta está en
+    //    ese módulo.
+    const projectCols = await textColumns(pool, "projects");
+    const demoRowsByPattern = await selectMatches(
       pool,
       "projects",
-      await textColumns(pool, "projects"),
+      projectCols,
       [{ id: "demo-project", kind: "DELETE", find: DEMO_PROJECT_PATTERNS }],
       200
     );
+    const demoRowsByName = (
+      await roQuery(
+        pool,
+        `SELECT to_jsonb(t) AS row FROM "public"."projects" t WHERE lower(t.name) = ANY($1::text[])`,
+        [PLACEHOLDER_PROJECT_NAMES.map((n) => n.toLowerCase())]
+      )
+    ).rows.map((r) => r.row);
+    const demoRows = [...demoRowsByPattern];
+    const demoSeen = new Set(demoRows.map((r) => r.id));
+    for (const r of demoRowsByName) {
+      if (r.id && !demoSeen.has(r.id)) {
+        demoSeen.add(r.id);
+        demoRows.push(r);
+      }
+    }
     const demoIds = demoRows.map((r) => r.id).filter(Boolean);
 
     // 2) Barrido por patrones de texto.
@@ -294,13 +315,65 @@ async function main() {
       }
     }
 
+    // 2b) Los PROYECTOS placeholder son candidatos POR SÍ MISMOS, no sólo por
+    //     las filas que cuelgan de ellos. En Fase 1 coincidían además con un
+    //     PATTERN de texto y el barrido ya los capturaba; los de P0.5 sólo se
+    //     identifican por nombre (ver `PLACEHOLDER_PROJECT_NAMES`), así que sin
+    //     esto se enumerarían sus hijos pero no el padre. Dedup por PK: una fila
+    //     que ya salió por patrón no se cuenta dos veces.
+    const seenKeys = new Set(findings.map((f) => `${f.table}|${JSON.stringify(f.pk)}`));
+    const projectPk = await primaryKey(pool, "projects");
+    for (const row of demoRows) {
+      const pkValue = Object.fromEntries(projectPk.map((c) => [c, row[c]]));
+      const key = `projects|${JSON.stringify(pkValue)}`;
+      if (seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      const blob = JSON.stringify(row).toLowerCase();
+      if (KEEP.some((k) => blob.includes(k.toLowerCase()))) continue;
+      findings.push({
+        table: "projects",
+        kind: "DELETE",
+        patterns: ["DELETE:placeholder-project"],
+        pk: pkValue,
+        matched: { name: String(row.name ?? "") },
+      });
+    }
+
+    // 2c) Huérfanos INVERSOS: filas de `public.users` sin identidad en
+    //     `auth.users`. El usuario legítimo siempre tiene login; una fila sin él
+    //     es un residuo (hoy: el bypass de desarrollo `dev@localhost.dev`). Es
+    //     una comprobación de integridad general, no un patrón de texto: se
+    //     añade sólo si la fila no había salido ya por `synthetic-user`.
+    const userPk = await primaryKey(pool, "users");
+    const orphanRows = (
+      await roQuery(
+        pool,
+        `SELECT to_jsonb(t) AS row FROM "public"."users" t
+          WHERE NOT EXISTS (SELECT 1 FROM auth.users a WHERE a.id = t.id)`
+      )
+    ).rows.map((r) => r.row);
+    for (const row of orphanRows) {
+      const pkValue = Object.fromEntries(userPk.map((c) => [c, row[c]]));
+      const key = `users|${JSON.stringify(pkValue)}`;
+      if (seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      const blob = JSON.stringify(row).toLowerCase();
+      if (KEEP.some((k) => blob.includes(k.toLowerCase()))) continue;
+      findings.push({
+        table: "users",
+        kind: "DELETE",
+        patterns: ["DELETE:orphan-inverse"],
+        pk: pkValue,
+        matched: { email: String(row.email ?? "") },
+      });
+    }
+
     // 3) D1-3/D4 — regla «project-scoped»: filas sin patrón de texto propio que
     //    pertenecen a un proyecto demo. Dos vías, la MISMA política que la purga:
     //      · directa: FK de una columna `project_id` hacia `projects`.
     //      · cierre : hijo de una fila candidata por `ON DELETE CASCADE`.
     //    La clave es la PK: una fila que ya salió por patrón no se cuenta dos
     //    veces, así el `DELETE` del auditor coincide con la unión de la purga.
-    const seenKeys = new Set(findings.map((f) => `${f.table}|${JSON.stringify(f.pk)}`));
     const candidateIds = new Map(); // tabla → ids de filas candidatas (DELETE)
     const remember = (table, pkValue) => {
       const first = Object.keys(pkValue)[0];
@@ -409,6 +482,7 @@ async function main() {
       readOnlyEnforced,
       tablesScanned: scanned.length,
       projectsDemo: demoIds.length,
+      orphanInverse: orphanRows.length,
       delete: count("DELETE"),
       review: count("REVIEW"),
       byTable,
@@ -423,7 +497,9 @@ async function main() {
       out(
         `BD: ${report.url} · tablas escaneadas: ${report.tablesScanned} · proyectos demo: ${report.projectsDemo}`
       );
-      out(`DELETE=${report.delete}  REVIEW=${report.review}`);
+      out(
+        `DELETE=${report.delete}  REVIEW=${report.review}  huérfanos-inversos=${report.orphanInverse}`
+      );
       // Agrupado por tabla: una tabla demo con miles de filas (`uptime_logs`)
       // convertiría el informe en un volcado. El detalle completo va en --json.
       const LIST_MAX = 10;
