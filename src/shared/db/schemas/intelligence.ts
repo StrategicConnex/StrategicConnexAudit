@@ -5,6 +5,16 @@ import {
 import { sql, desc } from "drizzle-orm";
 import { users, projects } from "./index";
 
+// ─── ON DELETE de las FK nullable de intelligence_* (2026-10-12) ─────────────
+// Las tres columnas nullable que apuntan a una investigación usan SET NULL, no
+// CASCADE: un hallazgo, un tool_run o un activo descubierto tienen valor
+// forense propio y deben sobrevivir al borrado de la investigación que los
+// originó (trazabilidad, cumplimiento, análisis de tendencias). Migración:
+// drizzle/0045_intelligence_set_null_on_delete.sql.
+// OJO: las tres tablas también cascada desde `projects` por su `project_id
+// NOT NULL`, así que borrar el proyecto entero SIGUE borrándolas. Este cambio
+// sólo afecta al borrado de una investigación suelta.
+
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export const targetTypeEnum = pgEnum("target_type", [
@@ -50,7 +60,7 @@ export const intelligenceInvestigations = pgTable("intelligence_investigations",
 // 2. Ejecuciones de Herramientas de Inteligencia (Tool Runs)
 export const intelligenceToolRuns = pgTable("intelligence_tool_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
-  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "cascade" }),
+  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "set null" }),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
   toolId: text("tool_id").notNull(),
   category: text("category").notNull(),
@@ -77,7 +87,7 @@ export const intelligenceFindings = pgTable("intelligence_findings", {
   id: uuid("id").defaultRandom().primaryKey(),
   // Nullable desde 2026-08-25: los hallazgos [ADV-REAL] nacen de assessments
   // de adversario sin investigación padre (drizzle/2026-08-25_adversary_real.sql).
-  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "cascade" }),
+  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "set null" }),
   toolRunId: uuid("tool_run_id").references(() => intelligenceToolRuns.id, { onDelete: "set null" }),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
   severity: findingSeverityEnum("severity").notNull(),
@@ -127,7 +137,7 @@ export const intelligenceFindings = pgTable("intelligence_findings", {
 export const intelligenceAssets = pgTable("intelligence_assets", {
   id: uuid("id").defaultRandom().primaryKey(),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
-  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "cascade" }),
+  investigationId: uuid("investigation_id").references(() => intelligenceInvestigations.id, { onDelete: "set null" }),
   assetType: text("asset_type").notNull(),
   value: text("value").notNull(),
   ip: text("ip"), // Stored as text for high reliability and type safety
