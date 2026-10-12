@@ -36,3 +36,17 @@ jobs:
             exit 0
           fi
           node scripts/db/drift-check.mjs
+
+      # P0.5 (2026-10-12): chequeo DURO del conjunto de FK. `drift-check.mjs` las
+      # trata como drift adhesivo y por eso 11 FK declaradas en el schema llevaban
+      # meses ausentes en producción (250 filas huérfanas). Falla si una FK
+      # declarada falta o su ON DELETE no es el declarado.
+      - name: FK drift guard (declaradas vs BD)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::warning::Secreto DIRECT_URL no configurado — guard de FK OMITIDO."
+            exit 0
+          fi
+          node scripts/db/fk-schema-drift-guard.mjs

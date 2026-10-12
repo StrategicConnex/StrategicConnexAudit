@@ -205,6 +205,26 @@ jobs:
           fi
           node scripts/db/drift-check.mjs
 
+      # Defecto raíz de P0.5 (2026-10-12): `drift-check.mjs` trata las FK como
+      # drift ADHESIVO (avisa, no falla), así que 11 FK declaradas en el schema
+      # estuvieron ausentes en producción sin que nada se pusiera rojo (250 filas
+      # huérfanas). Este guard hace del conjunto de FK un chequeo DURO: falla si
+      # una FK declarada no existe o si su ON DELETE difiere del declarado.
+      - name: FK drift guard (declaradas vs BD)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::warning::Secreto DIRECT_URL no configurado — guard de FK OMITIDO (el journal de migraciones SÍ se validó arriba)."
+            {
+              echo '## 🔗 FK Drift Guard'
+              echo ''
+              echo '⚠️ **Omitido** — falta el secreto `DIRECT_URL`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node scripts/db/fk-schema-drift-guard.mjs
+
       # Hallazgo #6 (auditoría de BD 2026-10-11): `TRUNCATE` estaba concedido a
       # `authenticated` en 33 tablas de `public`. TRUNCATE NO pasa por RLS, así
       # que anulaba el aislamiento multi-tenant para ese comando. El guard
