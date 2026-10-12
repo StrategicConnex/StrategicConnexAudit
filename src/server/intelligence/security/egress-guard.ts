@@ -156,23 +156,41 @@ export function isBlockedAddress(address: string): boolean {
 }
 
 /**
+ * Quita los corchetes de un literal IPv6.
+ *
+ * `URL.hostname` NO los elimina: `new URL("http://[::1]/").hostname === "[::1]"`
+ * (así lo serializa el estándar WHATWG). Y `net.isIP("[::1]")` es 0, es decir
+ * que un literal IPv6 con corchetes no se reconocía como IP y caía al camino de
+ * DNS: `lookup("[::1]")`. En Linux/CI eso da `getaddrinfo ENOTFOUND` y en otras
+ * plataformas resuelve, así que el mismo destino interno era rechazado por dos
+ * motivos distintos según la máquina (nunca aceptado —el rechazo era
+ * fail-closed— pero tampoco clasificado por lo que es). Un literal no necesita
+ * DNS: se normaliza y se clasifica localmente.
+ */
+function normalizeHostname(hostname: string): string {
+  return hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
+}
+
+/**
  * Asserts that a hostname resolves exclusively to public, safe internet IP addresses.
  * Throws a security exception if resolving to any blocked private range.
  */
 export async function assertPublicHostname(hostname: string) {
+  const host = normalizeHostname(hostname);
+
   // Allow development bypass if explicitly configured
   if (process.env.NODE_ENV === "development" && process.env.BYPASS_EGRESS_GUARD_DEV === "true") {
-    return [{ address: hostname, family: net.isIPv6(hostname) ? 6 : 4 }];
+    return [{ address: host, family: net.isIPv6(host) ? 6 : 4 }];
   }
 
-  if (net.isIP(hostname)) {
-    if (isBlockedAddress(hostname)) {
-      throw new Error(`SSRF Prevention: Blocked private or reserved IP target: ${hostname}`);
+  if (net.isIP(host)) {
+    if (isBlockedAddress(host)) {
+      throw new Error(`SSRF Prevention: Blocked private or reserved IP target: ${host}`);
     }
-    return [{ address: hostname, family: net.isIPv6(hostname) ? 6 : 4 }];
+    return [{ address: host, family: net.isIPv6(host) ? 6 : 4 }];
   }
 
-  const addresses = await lookup(hostname, { all: true, verbatim: false });
+  const addresses = await lookup(host, { all: true, verbatim: false });
   if (!addresses.length) {
     throw new Error("SSRF Prevention: Target hostname did not resolve to any addresses.");
   }
@@ -288,7 +306,10 @@ export async function validateSafeUrl(targetUrl: string): Promise<string> {
     throw new Error(`Protocolo no soportado: ${parsedUrl.protocol}. Solo se admiten HTTP y HTTPS.`);
   }
 
-  const hostname = parsedUrl.hostname;
+  // `hostname` de WHATWG conserva los corchetes de los literales IPv6 (ver
+  // normalizeHostname): sin quitarlos, un destino `[::1]` no se reconocía como
+  // IP y acababa dependiendo de una resolución DNS para ser bloqueado.
+  const hostname = normalizeHostname(parsedUrl.hostname);
 
   // 2. Direct validation if hostname is raw IP
   if (net.isIP(hostname)) {

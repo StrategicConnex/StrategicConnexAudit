@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { safeFetchFollow } from "@/server/intelligence/security/egress-guard";
+import { assertPublicHostname, safeFetchFollow } from "@/server/intelligence/security/egress-guard";
 
 /**
  * SA-01 — Regresión del SSRF por redirección (P0.1).
@@ -78,6 +78,29 @@ describe("SA-01 — safeFetchFollow no sigue redirecciones a destinos internos",
     await expect(safeFetchFollow("http://93.184.216.0")).rejects.toThrow(/SSRF|Acceso denegado|private|reserved/i);
     expect(transport).toHaveBeenCalledTimes(1);
   });
+
+  /**
+   * Regresión del defecto que hacía fallar el caso `[::1]` sólo en Linux/CI:
+   * `URL.hostname` conserva los corchetes de los literales IPv6 y
+   * `net.isIP("[::1]")` es 0, así que un literal interno se colaba al camino de
+   * DNS (`lookup("[::1]")`): en el runner daba `getaddrinfo ENOTFOUND` y en
+   * otras plataformas resolvía. El destino se rechazaba igual (fail-closed),
+   * pero por un motivo distinto según la máquina.
+   *
+   * La aserción clave es el TEXTO: sólo el camino de literal dice «Blocked
+   * private or reserved IP target», y el camino de DNS dice «Blocked DNS
+   * resolution…» o revienta con un error de resolución. Así queda clavado que
+   * un literal reservado se clasifica sin pedir DNS, en cualquier plataforma.
+   */
+  it.each(["[::1]", "[fc00::1]", "[fe80::1]", "[2001:db8::1]", "[::]"]) (
+    "clasifica el literal IPv6 %s sin depender del DNS de la máquina",
+    async (literal) => {
+      const error = await assertPublicHostname(literal).catch((e: Error) => e);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toMatch(/Blocked private or reserved IP target/i);
+      expect((error as Error).message).not.toMatch(/fallo DNS|ENOTFOUND|did not resolve|EAI_AGAIN/i);
+    },
+  );
 
   it("control positivo: un 302 a un host público SÍ se sigue y devuelve el 200 final", async () => {
     const transport = vi
