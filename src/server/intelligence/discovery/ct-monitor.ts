@@ -46,19 +46,12 @@ const MAX_RESULTS = 500;
 /** Timeout de la API de crt.sh */
 const API_TIMEOUT_MS = 15000;
 
-/** Dame un hash determinista de un string para simular IPs */
-function deterministicIp(input: string): string {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    hash = (hash << 5) - hash + input.charCodeAt(i);
-    hash |= 0;
-  }
-  hash = Math.abs(hash);
-
-  const d = hash & 0xff;
-  // Generar IP tipo 203.0.113.x (TEST-NET-3) para evitar leaks de IP real
-  return `203.0.113.${(d % 200) + 1}`;
-}
+/* NOTA (Task 9, 2026-10-11): aquí vivía una función que fabricaba una IP de
+   rango de documentación (TEST-NET-3) a partir del hash del subdominio para "no
+   filtrar la IP real". El resultado se persistía en `intelligence_assets.ip` y
+   la UI lo pintaba como si fuera una resolución real. Un CT log NO aporta la IP
+   del subdominio: el dato honesto es `null`. Si se necesita la IP, se obtiene
+   resolviendo DNS (dns.lookup), no deduciéndola de un hash. */
 
 // ─── Módulo principal ─────────────────────────────────────────────────────────
 
@@ -147,7 +140,9 @@ export async function runCtMonitor(
         assets.push({
           assetType: "subdomain",
           value: normalized,
-          ip: deterministicIp(normalized),
+          // crt.sh no expone IPs: el CT log sólo prueba la existencia del
+          // certificado. `null` = desconocido, nunca un rango TEST-NET fabricado.
+          ip: null,
           metadata: {
             discoveryMethod: "certificate-transparency",
             source: "crt.sh",
