@@ -3,7 +3,7 @@ import { directDb } from "@/shared/db";
 import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { CircuitBreaker } from "@/shared/lib/circuit-breaker";
-import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
+import { validateSafeUrl, normalizeUrl, safeFetchFollow } from "@/server/intelligence/security/egress-guard";
 import { logger } from "@/lib/logger";
 import { runWithCorrelation } from "@/lib/request-context";
 import { invalidateCacheScope } from "@/server/ai/ai-cache";
@@ -44,7 +44,9 @@ async function analyzeUrl(targetUrl: string): Promise<AnalyzeResult> {
 
   const response = await crawlerCircuitBreaker.execute(async () => {
     logger.info(`[Crawler] Solicitando URL: ${targetUrl}`);
-    return await fetch(targetUrl, {
+    // SA-01: era `fetch` nativo (redirect: "follow" implícito) tras validar sólo
+    // el primer host. safeFetchFollow revalida cada salto y corta a los 3.
+    return await safeFetchFollow(targetUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 StrategicAuditBot/1.1",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",

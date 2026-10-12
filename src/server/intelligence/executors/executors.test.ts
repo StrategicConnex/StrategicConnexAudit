@@ -18,15 +18,24 @@ import { safeFetch } from "../security/egress-guard";
 import { logger } from "@/lib/logger";
 
 // Mock del EgressGuard para que los tests pasen de forma determinista e inmediata sin tocar red real
-vi.mock("../security/egress-guard", () => ({
-  assertPublicHostname: vi.fn().mockImplementation(async (host: string) => {
-    if (host.includes("private") || host.includes("127.0.0.1")) {
-      throw new Error("EgressGuard: Acceso a host privado bloqueado (SSRF)");
-    }
-    return host;
-  }),
-  safeFetch: vi.fn(),
-}));
+vi.mock("../security/egress-guard", () => {
+  const safeFetch = vi.fn();
+  return {
+    assertPublicHostname: vi.fn().mockImplementation(async (host: string) => {
+      if (host.includes("private") || host.includes("127.0.0.1")) {
+        throw new Error("EgressGuard: Acceso a host privado bloqueado (SSRF)");
+      }
+      return host;
+    }),
+    safeFetch,
+    // SA-01: website.cookies y website.csp pasaron a usar safeFetchFollow (que
+    // revalida cada salto). Delegamos en el mismo mock para que los tests que
+    // configuran `safeFetch` sigan siendo válidos sin duplicar cada
+    // `mockResolvedValueOnce`.
+    safeFetchFollow: (...args: unknown[]) =>
+      (safeFetch as unknown as (...a: unknown[]) => unknown)(...args),
+  };
+});
 
 // Mock DNS globalmente antes de todos los tests
 vi.mock("node:dns/promises", () => {

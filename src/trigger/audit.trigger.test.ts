@@ -51,6 +51,10 @@ vi.mock("@/shared/db/schemas", () => ({
 vi.mock("@/server/intelligence/security/egress-guard", () => ({
   validateSafeUrl: vi.fn(async (url: string) => url),
   normalizeUrl: vi.fn((url: string) => url),
+  // SA-01: analyzeUrl pasó a usar safeFetchFollow. Se delega en el `fetch`
+  // global (que el test sustituye con vi.stubGlobal) para no cambiar la
+  // intención del test: el guard de red ya está cubierto en tests/security.
+  safeFetchFollow: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
 }));
 
 class MockBreaker {

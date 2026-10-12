@@ -176,6 +176,10 @@ vi.mock("@/trigger/audit.trigger", () => ({}));
 vi.mock("@/server/intelligence/security/egress-guard", () => ({
   validateSafeUrl: mockValidateSafeUrl,
   normalizeUrl: mockNormalizeUrl,
+  // SA-01: analyzeUrl pasó a usar safeFetchFollow (revalida cada salto). Se
+  // delega en el `fetch` global que cada test sustituye con vi.stubGlobal; el
+  // comportamiento del guard se cubre en tests/security/egress-redirect.test.ts.
+  safeFetchFollow: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
 }));
 
 // ─── Import under test ──────────────────────────────────────────────────────

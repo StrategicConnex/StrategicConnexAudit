@@ -7,7 +7,7 @@ import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq, and, gt, count } from "drizzle-orm";
 import { tasks } from "@trigger.dev/sdk";
 import type { runProjectAudit } from "@/trigger/audit.trigger";
-import { validateSafeUrl, normalizeUrl } from "@/server/intelligence/security/egress-guard";
+import { validateSafeUrl, normalizeUrl, safeFetchFollow } from "@/server/intelligence/security/egress-guard";
 import { headers } from "next/headers";
 import { directDb } from "@/shared/db";
 
@@ -122,7 +122,11 @@ async function runLocalAudit(projectId: string, auditId: string, userId: string)
 
 async function analyzeUrl(targetUrl: string) {
   await validateSafeUrl(targetUrl);
-  const response = await fetch(targetUrl, {
+  // SA-01: `fetch` nativo con el `redirect: "follow"` por defecto validaba sólo
+  // el primer host; un 302 a 127.0.0.1 / 169.254.169.254 se seguía sin revalidar
+  // y el HTML interno se persistía en `crawl_results`. safeFetchFollow revalida
+  // el DNS de CADA salto y corta a los 3 saltos.
+  const response = await safeFetchFollow(targetUrl, {
     headers: { "User-Agent": "Mozilla/5.0 StrategicAuditBot/1.1", "Accept": "text/html,*/*" },
     signal: AbortSignal.timeout(25000),
   });

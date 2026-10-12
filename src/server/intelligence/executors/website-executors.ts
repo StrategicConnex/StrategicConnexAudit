@@ -1,6 +1,6 @@
 import { z } from "zod";
 import tls from "node:tls";
-import { assertPublicHostname, safeFetch } from "../security/egress-guard";
+import { assertPublicHostname, safeFetch, safeFetchFollow } from "../security/egress-guard";
 import {
   ToolExecutor, ExecutionContext, ExecutionResult, Finding, TlsScanOutput,
   WebsiteHeadersOutput, WebsiteSecurityHeadersOutput, WebsiteRobotsOutput,
@@ -444,7 +444,9 @@ export const websiteCookiesExecutor: ToolExecutor<{ url: string }, WebsiteCookie
 
     let setCookieHeaders: string[] = [];
     try {
-      const res = await safeFetch(url, { method: "GET", redirect: "follow" });
+      // SA-01: era safeFetch(..., { redirect: "follow" }), que sólo validaba el
+      // primer host. safeFetchFollow revalida el DNS de cada salto.
+      const res = await safeFetchFollow(url, { method: "GET" });
       setCookieHeaders = res.headers.getSetCookie?.() || [];
       if (setCookieHeaders.length === 0) {
         // Fallback if getSetCookie not available
@@ -540,13 +542,13 @@ export const websiteCspExecutor: ToolExecutor<{ url: string }, WebsiteCspOutput>
 
     let cspHeader = "";
     try {
-      const res = await safeFetch(url, { method: "HEAD", redirect: "follow" });
+      const res = await safeFetchFollow(url, { method: "HEAD" });
       cspHeader = res.headers.get("content-security-policy") ||
                   res.headers.get("content-security-policy-report-only") || "";
 
       if (!cspHeader) {
         // Fallback a GET si HEAD no devuelve CSP
-        const res2 = await safeFetch(url, { method: "GET", redirect: "follow" });
+        const res2 = await safeFetchFollow(url, { method: "GET" });
         cspHeader = res2.headers.get("content-security-policy") ||
                     res2.headers.get("content-security-policy-report-only") || "";
       }
