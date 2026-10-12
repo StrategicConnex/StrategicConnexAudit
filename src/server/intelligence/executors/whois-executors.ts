@@ -141,8 +141,9 @@ function parseRdapToSnapshot(domain: string, rdapData: RdapResponse): WhoisSnaps
     else if (action === "last changed") updatedDate = d;
   }
 
-  if (!createdDate) createdDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-  if (!expiresDate) expiresDate = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000);
+  // Task 8 (2026-10-11): si RDAP no trae el evento, el dato es DESCONOCIDO.
+  // Antes se fabricaban alta (hoy - 1 año) y expiración (hoy + 180 días) y de
+  // ellas salía un `daysRemaining` que alimentaba el aviso de "expira pronto".
   if (!updatedDate) updatedDate = createdDate;
 
   const entities = rdapData.entities || [];
@@ -291,22 +292,22 @@ async function buildFallbackResponse(
     nsList = [];
   }
 
-  const creationDate = new Date();
-  creationDate.setFullYear(creationDate.getFullYear() - 5);
-  const expirationDate = new Date();
-  expirationDate.setDate(expirationDate.getDate() + 90);
-
+  // Task 8 (2026-10-11): antes el fallback devolvía alta hace 5 años, expiración
+  // en 90 días, `status: ["active"]` y `daysRemaining: 90` — datos inventados
+  // para un dominio del que NO pudimos leer el registro. Se conserva el flag
+  // `isFallback`, el mensaje honesto y los nameservers que sí resolvimos por DNS;
+  // las fechas y el estado quedan desconocidos (null / []).
   const output = {
     success: true,
     domain,
     fromCache: false,
     isFallback: true,
     registrar: "No disponible (RDAP sin conexión)",
-    createdDate: creationDate.toISOString(),
-    updatedDate: creationDate.toISOString(),
-    expiresDate: expirationDate.toISOString(),
-    daysRemaining: 90,
-    status: ["active"],
+    createdDate: null,
+    updatedDate: null,
+    expiresDate: null,
+    daysRemaining: null,
+    status: [],
     nameservers: nsList,
     abuseContact: null,
     registrantOrg: null,
@@ -316,8 +317,8 @@ async function buildFallbackResponse(
     {
       severity: "info",
       confidence: 0.9,
-      title: "Consulta WHOIS en Modo Degradado",
-      description: `No se pudo consultar RDAP público para ${domain}. Los datos mostrados son una estimación basada en DNS.`,
+      title: "Consulta WHOIS no disponible (RDAP sin conexión)",
+      description: `No se pudo consultar RDAP público para ${domain}. No hay datos de registro que mostrar más allá de los nameservers resueltos por DNS; no se estiman fechas ni estados.`,
       recommendation: "Intente nuevamente más tarde, o verifique manualmente en https://who.is/",
       affectedAsset: domain,
       evidence: { rdapFallback: true },

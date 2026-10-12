@@ -14,6 +14,7 @@ import { getExecutor, listToolDefinitions } from "../core/tool-registry";
 import { ExecutionContext, Finding } from "../types/executor.types";
 import { dnsDnssecExecutor, dnsPropagationExecutor, dnsZoneExecutor } from "./dns-advanced";
 import { websiteRedirectsExecutor, websiteCookiesExecutor, websiteCspExecutor } from "./website-executors";
+import { safeFetch } from "../security/egress-guard";
 import { logger } from "@/lib/logger";
 
 // Mock del EgressGuard para que los tests pasen de forma determinista e inmediata sin tocar red real
@@ -587,10 +588,37 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
 
   // ─────────────────────────────────────────────
   describe("Phase 3 Network & Threat Executors", () => {
-    it("Debería consultar y enriquecer datos de ASN", async () => {
+    // Task 7 (2026-10-11): estos tests daban por bueno el FALLBACK INVENTADO
+    // (ASN de Google por defecto, dominios co-alojados `site1.<ip>.domain.net`,
+    // reputación "100/100 limpio"). Ahora se fijan las dos ramas honestas con
+    // safeFetch mockeado (ya se mockea arriba): sin API → no disponible; con API
+    // → el dato real se propaga tal cual.
+    it("ASN: sin datos de las APIs → success:false, sin ASN inventado ni hallazgos", async () => {
+      const result = await networkAsnExecutor.execute(dummyCtx, { ip: "8.8.8.8" });
+      expect(result.success).toBe(false);
+      expect(result.output.asn).toBe("");
+      expect(result.output.asnOrg).toBe("");
+      expect(result.output.country).toBe("");
+      expect(result.findings).toHaveLength(0);
+      expect(result.error).toMatch(/ASN_DATA_UNAVAILABLE/);
+    });
+
+    it("ASN: con respuesta real de la API → propaga el ASN y la organización reales", async () => {
+      (safeFetch as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          countryName: "Estados Unidos",
+          countryCode: "US",
+          regionName: "California",
+          cityName: "Mountain View",
+          asn: 15169,
+          isp: "Google LLC",
+        }),
+      });
       const result = await networkAsnExecutor.execute(dummyCtx, { ip: "8.8.8.8" });
       expect(result.success).toBe(true);
-      expect(result.output.asn).toBeDefined();
+      expect(result.output.asn).toBe("AS15169");
+      expect(result.output.asnOrg).toBe("Google LLC");
       expect(result.findings.length).toBeGreaterThan(0);
     });
 
@@ -608,18 +636,22 @@ describe("Cybersecurity Executing Suite — Test de Componentes Core", () => {
       expect(result.findings.length).toBeGreaterThan(0);
     });
 
-    it("Debería realizar consulta reverse IP de dominios co-alojados", async () => {
+    it("Reverse IP: sin PTR reales → NO inventa dominios co-alojados", async () => {
+      // `dns.reverse` no está en el mock global → lanza → se trata como "sin PTR".
       const result = await networkReverseIpExecutor.execute(dummyCtx, { ip: "1.1.1.1" });
       expect(result.success).toBe(true);
-      expect(result.output.domains).toBeDefined();
-      expect(result.findings.length).toBeGreaterThan(0);
+      expect(result.output.domains).toEqual([]);
+      expect(result.output.coHostedCount).toBe(0);
+      expect(result.findings).toHaveLength(0);
     });
 
-    it("Debería realizar análisis de reputación de IP", async () => {
+    it("Reputación: sin fuente real de listas negras → sin veredicto de reputación", async () => {
       const result = await threatIpReputationExecutor.execute(dummyCtx, { ip: "8.8.8.8" });
-      expect(result.success).toBe(true);
-      expect(result.output.reputationScore).toBeDefined();
-      expect(result.findings.length).toBeGreaterThan(0);
+      expect(result.success).toBe(false);
+      expect(result.output.reputationScore).toBeNull();
+      expect(result.output.blacklistsListed).toEqual([]);
+      expect(result.findings).toHaveLength(0);
+      expect(result.error).toMatch(/REPUTATION_UNAVAILABLE/);
     });
   });
 });

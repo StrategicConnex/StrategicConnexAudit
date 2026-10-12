@@ -14,9 +14,6 @@ const domainSchema = z.object({ domain: z.string().min(3).max(253) });
 const ipSchema = z.object({ ip: z.string().min(3).max(64) });
 const urlSchema = z.object({ url: z.string().min(3).max(2048) });
 
-/**
- * Helper para hashing de IP para generar datos de fallback deterministas pero realistas
- */
 /** Datos GeoIP normalizados (contrato interno de network.geoip / network.asn / threat.ip_reputation) */
 interface GeoIpData {
   countryName?: string;
@@ -30,37 +27,13 @@ interface GeoIpData {
   longitude?: number;
 }
 
-function getLocalGeoIPFallback(ip: string) {
-  let hash = 0;
-  for (let i = 0; i < ip.length; i++) {
-    hash = (hash << 5) - hash + ip.charCodeAt(i);
-    hash |= 0;
-  }
-  hash = Math.abs(hash);
-
-  const locations = [
-    { country: "Estados Unidos", code: "US", region: "Virginia", city: "Ashburn", lat: 39.0438, lon: -77.4874, asn: "AS16509", isp: "Amazon.com, Inc." },
-    { country: "Alemania", code: "DE", region: "Hesse", city: "Frankfurt", lat: 50.1109, lon: 8.6821, asn: "AS559", isp: "Deutsche Telekom AG" },
-    { country: "Irlanda", code: "IE", region: "Leinster", city: "Dublin", lat: 53.3498, lon: -6.2603, asn: "AS16509", isp: "Amazon.com, Inc." },
-    { country: "Singapur", code: "SG", region: "Central Singapore", city: "Singapore", lat: 1.3521, lon: 103.8198, asn: "AS13335", isp: "Cloudflare, Inc." },
-    { country: "España", code: "ES", region: "Madrid", city: "Madrid", lat: 40.4168, lon: -3.7038, asn: "AS12430", isp: "Telefonica de Espana" },
-    { country: "Japón", code: "JP", region: "Tokyo", city: "Chiyoda", lat: 35.6762, lon: 139.6503, asn: "AS2516", isp: "KDDI Corporation" },
-    { country: "Reino Unido", code: "GB", region: "England", city: "London", lat: 51.5074, lon: -0.1278, asn: "AS13335", isp: "Cloudflare, Inc." },
-  ];
-
-  const loc = locations[hash % locations.length]!;
-  return {
-    countryName: loc.country,
-    countryCode: loc.code,
-    regionName: loc.region,
-    cityName: loc.city,
-    asn: loc.asn.replace("AS", ""),
-    isp: loc.isp,
-    isProxy: false,
-    latitude: loc.lat,
-    longitude: loc.lon
-  };
-}
+/* NOTA (Task 7, 2026-10-11): aquí vivía el fallback GeoIP local, que devolvía
+   país/ciudad/ASN/ISP/coordenadas elegidos por hash del IP ("100% de éxito
+   garantizado"). Sustituía un fallo de las APIs públicas por una geolocalización
+   INVENTADA que acababa persistida en `intelligence_assets` y pintada en el mapa
+   de la UI como si fuera real. Sin fuente real el dato honesto es `null` +
+   `isFallback` + `error` (los tres consumidores —geoip, traceroute y asn— lo
+   aplican ahora). Mi portal no puede "estimar" una ciudad a partir de una IP. */
 
 /**
  * Helper para hacer ping por socket TCP
@@ -93,19 +66,22 @@ function tcpPing(host: string, port: number, timeoutMs = 1500): Promise<{ durati
 /**
  * Helper para hacer ping de forma serverless (TCP o HTTP Head fallback)
  */
-async function serverlessPing(host: string, timeoutMs = 2500): Promise<{ durationMs: number; open: boolean; port: number }> {
+async function serverlessPing(
+  host: string,
+  timeoutMs = 2500
+): Promise<{ durationMs: number | null; open: boolean; port: number | null; measured: boolean }> {
   // 1. Intentar TCP local (para desarrollo o entornos abiertos)
   try {
     const tcpResult = await tcpPing(host, 443, 800);
     if (tcpResult.open) {
-      return { ...tcpResult, port: 443 };
+      return { ...tcpResult, port: 443, measured: true };
     }
   } catch {}
 
   try {
     const tcpResult80 = await tcpPing(host, 80, 800);
     if (tcpResult80.open) {
-      return { ...tcpResult80, port: 80 };
+      return { ...tcpResult80, port: 80, measured: true };
     }
   } catch {}
 
@@ -123,7 +99,7 @@ async function serverlessPing(host: string, timeoutMs = 2500): Promise<{ duratio
 
     clearTimeout(id);
     if (res.ok || res.status < 500) {
-      return { durationMs: Date.now() - started, open: true, port: 443 };
+      return { durationMs: Date.now() - started, open: true, port: 443, measured: true };
     }
   } catch {
     // Intentar por puerto 80 sin SSL
@@ -139,13 +115,16 @@ async function serverlessPing(host: string, timeoutMs = 2500): Promise<{ duratio
 
       clearTimeout(id);
       if (res.ok || res.status < 500) {
-        return { durationMs: Date.now() - started, open: true, port: 80 };
+        return { durationMs: Date.now() - started, open: true, port: 80, measured: true };
       }
     } catch {}
   }
 
-  // Si todo falla, simular una latencia limpia de red basado en DNS o local
-  return { durationMs: 45 + Math.round(Math.random() * 20), open: true, port: 443 };
+  // Task 7 (2026-10-11): antes se devolvía aquí una latencia ALEATORIA
+  // (`45 + random*20 ms`) con `open: true`, es decir un "host alcanzable, 52 ms"
+  // inventado para cualquier host que no respondiera. Si no se pudo medir, no se
+  // mide: el ejecutor reporta NO DISPONIBLE en vez de un éxito fabricado.
+  return { durationMs: null, open: false, port: null, measured: false };
 }
 
 /**
@@ -164,12 +143,38 @@ export const networkPingExecutor: ToolExecutor<{ host: string }, PingOutput> = {
 
     const r = await serverlessPing(host, 2500);
 
+    // Task 7 (2026-10-11): "no medido" ≠ "caído". Si ni el socket TCP (443/80)
+    // ni el HTTP HEAD llegaron a completarse, no hay medición posible: no se
+    // emite latencia (antes se inventaba con un valor aleatorio) ni veredicto de
+    // alcance, y por tanto tampoco el finding de "host inaccesible" — que
+    // también sería una conclusión sin evidencia.
+    if (!r.measured) {
+      ctx.log(`Sin medición de latencia para ${host}: ni TCP 443/80 ni HTTP HEAD completaron.`);
+      return {
+        success: false,
+        output: {
+          success: false,
+          host,
+          latencyMs: null,
+          port: null,
+          durationMs: null,
+          reachable: false,
+          method: "Unavailable",
+        },
+        findings: [],
+        error:
+          "PING_UNAVAILABLE: el entorno de ejecución no permitió medir latencia real " +
+          "(TCP 443/80 y HTTP HEAD sin respuesta). No se emite veredicto de alcance.",
+      };
+    }
+
+    const measuredMs = r.durationMs;
     const output = {
       success: r.open,
       host,
-      latencyMs: r.open ? r.durationMs : null,
+      latencyMs: r.open ? measuredMs : null,
       port: r.port,
-      durationMs: r.open ? r.durationMs : null,
+      durationMs: r.open ? measuredMs : null,
       reachable: r.open,
       method: "TCP/HTTP Handshake",
     };
@@ -186,15 +191,15 @@ export const networkPingExecutor: ToolExecutor<{ host: string }, PingOutput> = {
         affectedAsset: host,
         evidence: { unreachable: true },
       });
-    } else if (r.durationMs > 300) {
+    } else if (measuredMs !== null && measuredMs > 300) {
       findings.push({
         severity: "low",
         confidence: 0.85,
         title: "Latencia de Red Elevada",
-        description: `El tiempo de ida y vuelta (RTT) registrado hacia ${host} es de ${r.durationMs}ms, lo cual supera los estándares recomendados (150ms). Esto provocará una experiencia de navegación notablemente lenta para sus usuarios finales.`,
+        description: `El tiempo de ida y vuelta (RTT) registrado hacia ${host} es de ${measuredMs}ms, lo cual supera los estándares recomendados (150ms). Esto provocará una experiencia de navegación notablemente lenta para sus usuarios finales.`,
         recommendation: "Es recomendable desplegar un servicio CDN (ej. Cloudflare, CloudFront) enfrente del servidor web para aproximar el contenido al borde.",
         affectedAsset: host,
-        evidence: { durationMs: r.durationMs },
+        evidence: { durationMs: measuredMs },
       });
     }
 
@@ -317,10 +322,40 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, GeoIpOutput> = {
       }
     }
 
-    // 3. Fallback a base de datos local simulada determinista (100% de éxito garantizado)
+    // 3. Task 7 (2026-10-11): SIN fallback fabricado. Si freeipapi e ip-api no
+    //    devolvieron datos, el resultado es NO DISPONIBLE — no una ciudad/ASN
+    //    elegidos por hash del IP. Un mapa con la ubicación equivocada es una
+    //    conclusión falsa, no un placeholder.
     if (!data) {
-      ctx.log(`Todos los servicios GeoIP públicos fallaron. Utilizando base de datos local.`);
-      data = getLocalGeoIPFallback(targetIp);
+      ctx.log(`Ninguna API GeoIP devolvió datos para ${targetIp}. Se reporta no disponible.`);
+      return {
+        success: false,
+        output: {
+          success: false,
+          ip,
+          ipAddress: targetIp,
+          ipv4,
+          ipv6,
+          ipVersion: targetIp.includes(":") ? 6 : 4,
+          country: "",
+          countryName: "",
+          countryCode: "",
+          region: "",
+          regionName: "",
+          city: "",
+          cityName: "",
+          asn: "",
+          isp: "",
+          asName: "",
+          vpn: false,
+          latitude: null,
+          longitude: null,
+        },
+        findings: [],
+        error:
+          "GEOIP_UNAVAILABLE: freeipapi.com e ip-api.com no devolvieron datos para este objetivo. " +
+          "No se emite geolocalización estimada.",
+      };
     }
 
     const output = {
@@ -341,8 +376,11 @@ export const networkGeoIpExecutor: ToolExecutor<{ ip: string }, GeoIpOutput> = {
       isp: data.isp || "Desconocido",
       asName: data.isp || "Desconocido", // Mapeo para frontend
       vpn: data.isProxy || false,
-      latitude: Number(data.latitude) || 0.0,
-      longitude: Number(data.longitude) || 0.0,
+      // Sin coordenadas reales el valor honesto es null (la UI ya lo tipa y lo
+      // trata como "sin mapa"): `Number(undefined) || 0` pintaba el punto (0,0)
+      // del golfo de Guinea como si fuera la ubicación del objetivo.
+      latitude: typeof data.latitude === "number" && Number.isFinite(data.latitude) ? data.latitude : null,
+      longitude: typeof data.longitude === "number" && Number.isFinite(data.longitude) ? data.longitude : null,
     };
 
     const findings: Finding[] = [];
@@ -390,113 +428,20 @@ export const networkTracerouteExecutor: ToolExecutor<{ host: string }, Tracerout
       }
     }
 
-    // Obtener detalles GeoIP de destino para estructurar hops realistas
-    let geo = {
-      countryName: "Estados Unidos",
-      countryCode: "US",
-      cityName: "Ashburn",
-      asn: "AS16509",
-      isp: "Amazon.com, Inc.",
-      latitude: 39.0438,
-      longitude: -77.4874
-    };
-
-    try {
-      const geoIpRes = await safeFetch(`https://freeipapi.com/api/json/${ip}`);
-      if (geoIpRes.ok) {
-        const geoData = await geoIpRes.json();
-        if (geoData) {
-          geo = {
-            countryName: geoData.countryName || geo.countryName,
-            countryCode: geoData.countryCode || geo.countryCode,
-            cityName: geoData.cityName || geo.cityName,
-            asn: geoData.asn ? `AS${geoData.asn}` : geo.asn,
-            isp: geoData.isp || geo.isp,
-            latitude: geoData.latitude || geo.latitude,
-            longitude: geoData.longitude || geo.longitude
-          };
-        }
-      }
-    } catch {
-      const fallback = getLocalGeoIPFallback(ip);
-      geo = {
-        countryName: fallback.countryName,
-        countryCode: fallback.countryCode,
-        cityName: fallback.cityName,
-        asn: `AS${fallback.asn}`,
-        isp: fallback.isp,
-        latitude: fallback.latitude,
-        longitude: fallback.longitude
-      };
-    }
-
-    // Simulamos un camino geográficamente coherente mapeando todas las propiedades que espera la UI
-    const hops = [
-      {
-        hop: 1,
-        ip: "192.168.1.1",
-        hostname: "gateway.local",
-        type: "gateway",
-        countryCode: "LAN",
-        cityName: "Local",
-        latencyMs: 1,
-        asnOrg: "Proveedor Local Gateway",
-        asn: "LAN",
-      },
-      {
-        hop: 2,
-        ip: "10.0.0.1",
-        hostname: "backbone.isp.net",
-        type: "router",
-        countryCode: "LAN",
-        cityName: "Local ISP Transit",
-        latencyMs: 3,
-        asnOrg: "Proveedor Local Backbone",
-        asn: "LAN",
-      },
-      {
-        hop: 3,
-        ip: "89.23.4.12",
-        hostname: "edge-router.transit.net",
-        type: "router",
-        countryCode: geo.countryCode,
-        cityName: geo.cityName,
-        latencyMs: Math.max(10, Math.round(geo.latitude ? Math.abs(geo.latitude) * 0.8 : 12)),
-        asnOrg: "Global Network Transit Link",
-        asn: "AS2914",
-      },
-      {
-        hop: 4,
-        ip: ip,
-        hostname: host,
-        type: "destination",
-        countryCode: geo.countryCode,
-        cityName: geo.cityName,
-        latencyMs: Math.max(15, Math.round(geo.latitude ? Math.abs(geo.latitude) * 1.5 : 45)),
-        asnOrg: geo.isp,
-        asn: geo.asn,
-      }
-    ];
-
-    const output = {
-      destination: host,
-      ip,
-      hops,
-    };
-
+    // Task 7 (2026-10-11): aquí se devolvía una traza INVENTADA: un hop
+    // "gateway.local" (192.168.1.1), otro "backbone.isp.net" (10.0.0.1) y un
+    // destino final con latencias derivadas de la LATITUD del destino
+    // (`Math.abs(lat)*0.8`). Ninguno de esos saltos se midió, y los rangos
+    // privados no son ni transitables. Un traceroute real necesita ICMP/UDP con
+    // TTL incremental, imposible desde este runtime serverless: sin él, el dato
+    // honesto es NO DISPONIBLE (y sin finding, que también sería inventado).
     return {
-      success: true,
-      output,
-      findings: [
-        {
-          severity: "info",
-          confidence: 0.9,
-          title: "Tránsito de Red Estructurado (Hops)",
-          description: `El trazado de red finalizó con éxito en ${hops.length} saltos con un RTT final de ${hops[hops.length - 1]!.latencyMs}ms.`,
-          affectedAsset: host,
-          evidence: { hopsCount: hops.length },
-        },
-      ],
+      success: false,
+      output: { destination: host, ip, hops: [] },
+      findings: [],
+      error:
+        "TRACEROUTE_UNAVAILABLE: el entorno de ejecución no permite enviar paquetes con TTL " +
+        "incremental. No se emite traza estimada ni latencias por salto.",
     };
   },
 };
@@ -552,15 +497,36 @@ export const networkAsnExecutor: ToolExecutor<{ ip: string }, AsnOutput> = {
       }
     }
 
-    // 3. Fallback determinista
+    // 3. Task 7 (2026-10-11): sin datos reales NO se atribuye la IP a Google
+    //    (`AS15169 / Google LLC / United States` era el default inventado) ni a
+    //    ninguna otra organización. Un ASN falso hace que el operador persiga al
+    //    proveedor equivocado.
     if (!data) {
-      data = getLocalGeoIPFallback(ip);
+      ctx.log(`Ninguna API devolvió datos ASN para ${ip}. Se reporta no disponible.`);
+      return {
+        success: false,
+        output: {
+          success: false,
+          ip,
+          ipAddress: ip,
+          asn: "",
+          asnOrg: "",
+          asName: "",
+          country: "",
+          countryName: "",
+          range: "",
+        },
+        findings: [],
+        error:
+          "ASN_DATA_UNAVAILABLE: freeipapi.com e ip-api.com no devolvieron datos para esta IP. " +
+          "No se emite ASN/organización estimada.",
+      };
     }
 
-    const asn = data.asn ? `AS${data.asn}` : "AS15169";
-    const asnOrg = data.isp || "Google LLC";
-    const country = data.countryName || "United States";
-    const range = `${ip.split(".").slice(0, 3).join(".")}.0/24`;
+    const asn = data.asn ? `AS${data.asn}` : "";
+    const asnOrg = data.isp ?? "";
+    const country = data.countryName ?? "";
+    const range = net.isIP(ip) === 4 ? `${ip.split(".").slice(0, 3).join(".")}.0/24` : "";
 
     const output = {
       success: true, // Crucial para la UI
@@ -819,8 +785,10 @@ export const networkReverseIpExecutor: ToolExecutor<{ ip: string }, ReverseIpOut
       // Ignorar si no hay PTR directos
     }
 
-    // Dominios co-alojados simulados basados en PTR u origen
-    const coHosted = ptrHosts.length > 0 ? ptrHosts : [`site1.${ip}.domain.net`, `panel.${ip}.company.org`];
+    // Task 7 (2026-10-11): el vecindario IP sólo puede afirmarse con PTR reales.
+    // Antes, a falta de PTR, se inventaban dominios co-alojados con plantilla
+    // `<sub>.<ip>.domain.net` (y el finding de "noisy neighbors" derivado).
+    const coHosted = ptrHosts;
 
     const output = {
       ip,
@@ -860,7 +828,8 @@ export const threatIpReputationExecutor: ToolExecutor<{ ip: string }, IpReputati
     ctx.log(`Iniciando análisis de Reputación de IP: ${ip}`);
     await assertPublicHostname(ip);
 
-    // Hacemos un chequeo de reputación simulado altamente creíble y estructurado
+    // Único dato real disponible aquí: el flag `isProxy` del proveedor GeoIP
+    // (el score y las listas negras NO vienen de ninguna API real).
     let data: GeoIpData | null = null;
     try {
       const res = await safeFetch(`https://freeipapi.com/api/json/${ip}`);
@@ -868,45 +837,45 @@ export const threatIpReputationExecutor: ToolExecutor<{ ip: string }, IpReputati
         data = await res.json();
       }
     } catch {
-      // Fallback
+      ctx.log(`Sin datos de proveedor GeoIP para ${ip}; no se puede evaluar proxy/VPN.`);
     }
 
-    const isProxyOrVpn = data?.isProxy || false;
-    // Puntuación base limpia de 100, se resta 30 si es vpn/proxy
-    const score = isProxyOrVpn ? 70 : 100;
-    const isListed = isProxyOrVpn;
-    const blacklists = isProxyOrVpn ? ["Spamhaus ZEN (Simulado)", "Tor Exit Nodes List (Simulado)"] : [];
+    // Task 7 (2026-10-11): antes se emitía un veredicto de reputación INVENTADO:
+    // una reputación perfecta para cualquier IP que no fuera proxy, o 70 con listas
+    // "Spamhaus ZEN (Simulado)" / "Tor Exit Nodes List (Simulado)" si el CEO de
+    // freeipapi decía isProxy. No existe consulta real a DNSBL/Spamhaus aquí, y
+    // un veredicto de reputación falso es un dato de seguridad falso (un "limpio"
+    // puede hacer que el operador ignore una IP realmente listada).
+    if (!data) {
+      return {
+        success: false,
+        output: { ip, reputationScore: null, isListed: false, blacklistsListed: [] },
+        findings: [],
+        error:
+          "REPUTATION_UNAVAILABLE: no hay consulta real a listas negras (DNSBL/Spamhaus). " +
+          "No se emite veredicto de reputación.",
+      };
+    }
 
-    const output = {
-      ip,
-      reputationScore: score,
-      isListed,
-      blacklistsListed: blacklists,
-    };
-
+    // Con datos reales de proxy/VPN sí se puede afirmar el único hecho medido:
+    // la IP está catalogada como proxy anónimo por el proveedor consultado.
     const findings: Finding[] = [];
-
-    if (isListed) {
+    if (data.isProxy) {
       findings.push({
         severity: "medium",
-        confidence: 0.9,
-        title: "Dirección IP Registrada en Listas de Reputación Negativa (Spam/Proxy)",
-        description: `El direccionamiento perimetral ${ip} figura listado como proxy o nodo anónimo en las bases de datos de reputación (${blacklists.join(", ")}), lo que reduce su reputación de red a ${score}/100. Muchos firewalls enterprise y pasarelas de pago bloquean por defecto peticiones desde estas IPs.`,
-        recommendation: "Inspeccione si su servidor web está actuando involuntariamente como proxy abierto o si ha sido vulnerado. Solicite la remoción del rango en los portales correspondientes.",
+        confidence: 0.8,
+        title: "IP Catalogada como Proxy o Nodo Anónimo/VPN",
+        description: `El direccionamiento perimetral ${ip} está catalogado como proxy anónimo o VPN pública por el proveedor de geolocalización consultado. No se verificaron listas negras (no hay integración con DNSBL).`,
+        recommendation: "Verifique manualmente la IP en las listas DNSBL/Spamhaus de su confianza.",
         affectedAsset: ip,
-        evidence: { reputationScore: score, blacklists },
-      });
-    } else {
-      findings.push({
-        severity: "info",
-        confidence: 0.95,
-        title: "Dirección IP Limpia en Bases de Datos de Reputación",
-        description: `El host perimetral con dirección IP ${ip} presenta una reputación impecable de 100/100, sin reportes de spam, malware o proxying en las bases de datos públicas de reputación analizadas.`,
-        affectedAsset: ip,
-        evidence: { reputationScore: 100, isListed: false },
+        evidence: { isProxy: true },
       });
     }
 
-    return { success: true, output, findings };
+    return {
+      success: true,
+      output: { ip, reputationScore: null, isListed: false, blacklistsListed: [] },
+      findings,
+    };
   },
 };

@@ -53,53 +53,31 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
     const findings: Finding[] = [];
 
     if (!rdapData) {
-      // Fallback a un mock coherente si el servidor RDAP falla o tiene rate limit
-      ctx.log("Servicios RDAP caídos o no disponibles. Utilizando estimación estructurada local.");
-      const creationDate = new Date();
-      creationDate.setFullYear(creationDate.getFullYear() - 5);
-      const expirationDate = new Date();
-      expirationDate.setDate(expirationDate.getDate() + 90); // 90 días remanentes
-
-      // Intentar obtener nameservers del dominio por DNS
-      let nsList = ["ns1.host.com", "ns2.host.com"];
-      try {
-        nsList = await dns.resolve(domain, "NS");
-      } catch {}
-
-      const output = {
-        success: true,
-        domain,
-        registrar: "ICANN Registrar Corp",
-        createdDate: creationDate.toISOString(),
-        updatedDate: creationDate.toISOString(),
-        expiresDate: expirationDate.toISOString(),
-        daysRemaining: 90,
-        status: ["active"],
-        nameservers: nsList,
+      // Task 8 (2026-10-11): antes este camino devolvía un WHOIS INVENTADO
+      // (registrador ficticio, alta hace 5 años, expiración en 90 días y
+      // nameservers de relleno) y lo PERSISTÍA en `whois_history` como si fuera
+      // un snapshot real, con el riesgo añadido de disparar alertas de "cambio
+      // WHOIS" sobre datos que nunca existieron. Sin RDAP no hay registro: no se
+      // emite estimación y no se escribe nada.
+      ctx.log("RDAP no disponible: no se emite ni se persiste ningún dato WHOIS.");
+      return {
+        success: false,
+        output: {
+          success: false,
+          domain,
+          registrar: "",
+          createdDate: null,
+          updatedDate: null,
+          expiresDate: null,
+          daysRemaining: null,
+          status: [],
+          nameservers: [],
+        },
+        findings: [],
+        error:
+          "RDAP_UNAVAILABLE: no se pudo consultar el registro RDAP del dominio. " +
+          "No se emite estimación ni se persiste historial.",
       };
-
-      // Persistir snapshot histórico (fire-and-forget)
-      const fallbackSnapshot: WhoisSnapshot = {
-        domain,
-        registrar: "ICANN Registrar Corp",
-        createdDate: creationDate,
-        expiresDate: expirationDate,
-        updatedDate: creationDate,
-        status: ["active"],
-        nameservers: nsList,
-        abuseContact: null,
-        registrantOrg: null,
-        originalData: { fallback: true, note: "RDAP no disponible, datos estimados vía DNS" },
-      };
-      persistWhoisSnapshot(ctx.projectId, ctx.investigationId, fallbackSnapshot)
-        .then((result) => {
-          if (result.changes.length > 0) {
-            ctx.log(`[OSINT WHOIS] Cambios detectados en ${domain}: ${result.changes.map(c => `${c.label} (${c.severity})`).join(', ')}`);
-          }
-        })
-        .catch((err) => logger.error(`[OSINT WHOIS] Error history para ${domain}:`, err));
-
-      return { success: true, output, findings };
     }
 
     // Parsea eventos clave de la respuesta estándar RDAP (RFC 7483)
@@ -120,13 +98,14 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
       }
     }
 
-    // Si no se encuentran eventos estándar, usar fallbacks
-    if (!createdAt) createdAt = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
-    if (!expiresAt) expiresAt = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString();
+    // Task 8 (2026-10-11): si RDAP no trae un evento, el dato es DESCONOCIDO.
+    // Antes se inventaban alta hace 1 año y expiración en 180 días (y de ahí
+    // salía un daysRemaining y un finding de "expiración" ficticios).
     if (!updatedAt) updatedAt = createdAt;
 
-    const expiresTime = new Date(expiresAt).getTime();
-    const daysRemaining = Math.round((expiresTime - Date.now()) / (1000 * 60 * 60 * 24));
+    const daysRemaining = expiresAt
+      ? Math.round((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : null;
 
     // Buscar el Registrador
     const entities = rdapData.entities || [];
@@ -149,10 +128,12 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
       nameservers = rdapData.nameservers.map((ns) => ns.ldhName ?? "").filter(Boolean);
     }
     if (nameservers.length === 0) {
+      // El fallback a DNS directo es real (consulta NS); si tampoco responde,
+      // el resultado honesto es [] — antes se rellenaba con ns1/ns2.host.com.
       try {
         nameservers = await dns.resolve(domain, "NS");
       } catch {
-        nameservers = ["ns1.host.com", "ns2.host.com"];
+        nameservers = [];
       }
     }
 
@@ -168,7 +149,7 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
       nameservers,
     };
 
-    if (daysRemaining < 30 && daysRemaining > 0) {
+    if (daysRemaining !== null && daysRemaining < 30 && daysRemaining > 0) {
       findings.push({
         severity: "high",
         confidence: 0.99,
@@ -182,13 +163,14 @@ export const osintWhoisExecutor: ToolExecutor<{ domain: string }, OsintWhoisOutp
 
     ctx.log(`Consulta OSINT RDAP completada. Registrador: ${registrar}, Expiración: ${expiresAt}`);
 
-    // Persistir snapshot histórico (fire-and-forget)
+    // Persistir snapshot histórico (fire-and-forget). Sólo con datos reales de
+    // RDAP: las fechas ausentes quedan null (nunca se fabrica "hoy - 1 año").
     const historySnapshot: WhoisSnapshot = {
       domain,
       registrar,
-      createdDate: new Date(createdAt!),
-      expiresDate: new Date(expiresAt!),
-      updatedDate: updatedAt ? new Date(updatedAt) : new Date(createdAt!),
+      createdDate: createdAt ? new Date(createdAt) : null,
+      expiresDate: expiresAt ? new Date(expiresAt) : null,
+      updatedDate: updatedAt ? new Date(updatedAt) : null,
       status: rdapData.status || [],
       nameservers,
       abuseContact: null,

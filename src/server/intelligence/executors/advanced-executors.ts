@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { assertPublicHostname } from "../security/egress-guard";
 import {
-  ToolExecutor, ExecutionContext, ExecutionResult, Finding,
+  ToolExecutor, ExecutionContext, ExecutionResult,
   NetworkBgpOutput, ThreatCustomIntelOutput,
 } from "../types/executor.types";
 
@@ -10,7 +10,14 @@ const hostSchema = z.object({ host: z.string().min(3).max(253) });
 
 /**
  * P1: BGP Analysis Executor
- * Simula la extracción y validación de rutas BGP buscando anomalías
+ *
+ * Task 10 (2026-10-11): antes devolvía SIEMPRE un resultado inventado
+ * (un bloque de documentación como prefijo, un ASN de ejemplo y `rpkiStatus`
+ * marcado como "invalid") y un hallazgo `high` derivado de esos datos. Un
+ * hallazgo de severidad alta
+ * basado en datos ficticios es el peor tipo de falso positivo: el operador no
+ * puede distinguirlo de una detección real. No existe integración real con un
+ * looking glass / validador RPKI, así que el resultado honesto es NO DISPONIBLE.
  */
 export const networkBgpExecutor: ToolExecutor<{ host: string }, NetworkBgpOutput> = {
   id: "network.bgp",
@@ -23,47 +30,35 @@ export const networkBgpExecutor: ToolExecutor<{ host: string }, NetworkBgpOutput
     ctx.log(`Iniciando análisis de enrutamiento BGP para: ${host}`);
     await assertPublicHostname(host);
 
-    // En un escenario real, consultaríamos a RIPE Stat o BGPView.
-    // Simulación avanzada:
-    const output = {
-      host,
-      prefixes: ["192.0.2.0/24"],
-      originAsn: "AS64496",
-      announcingPeers: ["AS64500", "AS64501"],
-      roaValid: false,
-      rpkiStatus: "invalid",
+    // Sin fuente real (RIPE Stat / BGPView) no se emite NINGÚN dato: ni
+    // prefijos, ni ASN, ni veredicto RPKI. Tampoco findings: un hallazgo
+    // (`high` incluido) derivado de datos inventados es un falso positivo.
+    return {
+      success: false,
+      output: {
+        host,
+        prefixes: [],
+        originAsn: "",
+        announcingPeers: [],
+        roaValid: false,
+        rpkiStatus: "unknown",
+        isFallback: true,
+      },
+      findings: [],
+      error:
+        "BGP_DATA_UNAVAILABLE: no hay integración con un looking glass/RPKI validator. " +
+        "No se emite análisis de enrutamiento (antes se devolvía un resultado simulado).",
     };
-
-    const findings: Finding[] = [];
-
-    if (output.rpkiStatus === "invalid") {
-      findings.push({
-        severity: "high",
-        confidence: 0.95,
-        title: "Vulnerabilidad de Enrutamiento BGP (RPKI Inválido)",
-        description: `La ruta BGP originada por ${output.originAsn} para el host ${host} no posee validación RPKI (Resource Public Key Infrastructure) o es explícitamente inválida. Esto expone el prefijo a ataques de BGP Hijacking o Route Leaks.`,
-        recommendation: "Firme sus prefijos IP creando un ROA (Route Origin Authorization) en su RIR local (ARIN, RIPE, LACNIC).",
-        affectedAsset: host,
-        evidence: { rpkiStatus: output.rpkiStatus, asn: output.originAsn },
-      });
-    } else {
-      findings.push({
-        severity: "info",
-        confidence: 0.9,
-        title: "Enrutamiento BGP Estable",
-        description: `El prefijo para ${host} está siendo anunciado correctamente por ${output.announcingPeers.length} peers BGP sin señales de secuestro de ruta.`,
-        affectedAsset: host,
-        evidence: { peers: output.announcingPeers },
-      });
-    }
-
-    return { success: true, output, findings };
   },
 };
 
 /**
  * P2: Custom Threat Intel Feeds Executor
- * Cruza el host contra feeds de inteligencia personalizados (simulado)
+ *
+ * Task 10 (2026-10-11): antes bastaba con que el nombre del dominio contuviera
+ * ciertas palabras para emitir un hallazgo `critical` con feeds inventados
+ * (nombres de campañas y feeds que no existen). No hay feeds propietarios
+ * configurados, así que el resultado honesto es NO DISPONIBLE.
  */
 export const threatCustomIntelExecutor: ToolExecutor<{ domain: string }, ThreatCustomIntelOutput> = {
   id: "threat.custom_intel",
@@ -76,39 +71,16 @@ export const threatCustomIntelExecutor: ToolExecutor<{ domain: string }, ThreatC
     ctx.log(`Cruzando el dominio ${domain} con Threat Intel Feeds privados`);
     await assertPublicHostname(domain);
 
-    // Simulación de cruce con Feeds (Alienvault OTX, MISP)
-    // Randomizar para simular un motor real (si el dominio es 'malicious.com' falla)
-    const isMalicious = domain.includes("malicious") || domain.includes("test-threat");
-
-    const output = {
-      domain,
-      iocMatched: isMalicious,
-      matchedFeeds: isMalicious ? ["Private_Botnet_Feed_v2", "Phishing_Campaign_Q1"] : [],
+    // Sin feeds propietarios configurados no hay veredicto posible: no se
+    // "adivina" por el nombre del dominio ni se inventan nombres de feed.
+    // Un veredicto `critical` ficticio es indistinguible de una detección real.
+    return {
+      success: false,
+      output: { domain, iocMatched: false, matchedFeeds: [], isFallback: true },
+      findings: [],
+      error:
+        "THREAT_INTEL_UNAVAILABLE: no hay feeds propietarios configurados para este tenant. " +
+        "No se emite veredicto de amenaza (antes se devolvía un match simulado por nombre de dominio).",
     };
-
-    const findings: Finding[] = [];
-
-    if (isMalicious) {
-      findings.push({
-        severity: "critical",
-        confidence: 0.99,
-        title: "Indicador de Compromiso (IoC) Activo Detectado",
-        description: `El dominio perimetral ${domain} ha hecho match con nuestras bases de datos cerradas de inteligencia de amenazas (${output.matchedFeeds.join(", ")}). Esto indica que la infraestructura está participando activamente en campañas maliciosas recientes.`,
-        recommendation: "Aísle el host inmediatamente de la red corporativa e inicie un proceso forense (IR).",
-        affectedAsset: domain,
-        evidence: { matchedFeeds: output.matchedFeeds },
-      });
-    } else {
-      findings.push({
-        severity: "info",
-        confidence: 0.85,
-        title: "Limpio en Threat Intel Feeds Propietarios",
-        description: `El dominio ${domain} no reporta cruces con indicadores de compromiso conocidos (IoC) en las bases de datos de malware o phishing privadas asociadas a su tenant.`,
-        affectedAsset: domain,
-        evidence: { iocMatched: false },
-      });
-    }
-
-    return { success: true, output, findings };
   },
 };

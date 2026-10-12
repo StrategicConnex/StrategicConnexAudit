@@ -108,7 +108,8 @@ export interface PingOutput {
   success: boolean;
   host: string;
   latencyMs: number | null;
-  port: number;
+  /** null cuando no se completó ninguna medición (method "Unavailable"). */
+  port: number | null;
   durationMs: number | null;
   reachable: boolean;
   method: string;
@@ -140,8 +141,9 @@ export interface GeoIpOutput {
   isp: string;
   asName: string;
   vpn: boolean;
-  latitude: number;
-  longitude: number;
+  /** null ⇒ el proveedor GeoIP no devolvió coordenadas (nunca 0,0 inventado). */
+  latitude: number | null;
+  longitude: number | null;
 }
 
 /** Hop individual de network.traceroute */
@@ -204,7 +206,8 @@ export interface ReverseIpOutput {
 /** Salida de threat.ip_reputation */
 export interface IpReputationOutput {
   ip: string;
-  reputationScore: number;
+  /** null ⇒ no se consultaron listas reales (no hay veredicto que emitir). */
+  reputationScore: number | null;
   isListed: boolean;
   blacklistsListed: string[];
 }
@@ -337,11 +340,13 @@ export interface WhoisFullOutput {
 export interface OsintWhoisOutput {
   success: boolean;
   domain: string;
+  /** "" cuando RDAP no devolvió registrador (nunca un nombre inventado). */
   registrar: string;
-  createdDate: string;
-  updatedDate: string;
-  expiresDate: string;
-  daysRemaining: number;
+  createdDate: string | null;
+  updatedDate: string | null;
+  expiresDate: string | null;
+  /** null ⇒ RDAP no reportó expiración (nunca 90/180 días estimados). */
+  daysRemaining: number | null;
   status: string[];
   nameservers: string[];
 }
@@ -476,7 +481,10 @@ export interface NetworkBgpOutput {
   originAsn: string;
   announcingPeers: string[];
   roaValid: boolean;
+  /** "unknown" cuando no hay consulta RPKI real (nunca un veredicto inventado). */
   rpkiStatus: string;
+  /** true ⇒ el ejecutor NO pudo obtener datos reales (ver `error`). */
+  isFallback?: boolean;
 }
 
 /** Salida de threat.custom_intel */
@@ -484,6 +492,8 @@ export interface ThreatCustomIntelOutput {
   domain: string;
   iocMatched: boolean;
   matchedFeeds: string[];
+  /** true ⇒ el ejecutor NO pudo cruzar feeds reales (ver `error`). */
+  isFallback?: boolean;
 }
 
 // ─── Salidas de website.tech_stack ─────────────────────────────────────────
