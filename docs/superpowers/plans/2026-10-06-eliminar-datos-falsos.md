@@ -133,6 +133,11 @@ No bloqueo el arranque; si una es errónea, se corrige antes de su tarea.
   ya sólo posee el proyecto demo, así que `projects.owner_id ON DELETE CASCADE` **no arrastra
   nada ajeno** y la fila se borra como cualquier otro candidato. Sin ese paso, la purga la
   habría reportado como BLOCKER y la Fase 1 no cerraría.
+
+  **OVERRIDE (2026-10-12, P0.5):** el operador revirtió parte de esta decisión.
+  3 de los 4 proyectos conservados aquí (`runrun`, `strategic connex`,
+  `Strategic Connex COM AR`) se **borraron** en P0.5 (ver la sección «P0.5»);
+  el 4º (`hola` / pepe.com.ar) sigue soft-deleted (`is_deleted=true`) y no se tocó.
 - **D1-3 · `exec_briefs` (4 filas) → NO SE BORRAN (reversión confirmada, 2026-10-11).** La auditoría
   ejecutada contradice la decisión inicial: las 4 filas cuelgan del proyecto
   **`Consultora BPOMA` (`bpoma.com`)**, que es un proyecto real (2026-05-20, con escaneos
@@ -1777,6 +1782,43 @@ smoke pendiente; commit/push **sólo** con orden explícita.
 | Backup **sólo-datos** (sin DDL ni `auth.users`) | Restaurar reinyectando los INSERT con el schema ya migrado; para un dump desde cero, generar DDL aparte (`pg_dump --schema-only`) |
 | CI sigue escribiendo en prod (Newman) | decisión pendiente: API key de sólo lectura o BD de staging (Task 19.4) |
 | Crons Trigger.dev siguen activos (`adversary.trigger` 6h) | Task 11 desactiva la simulación; verificar en dashboard de Trigger.dev que no quedan runs |
+
+---
+
+## P0.5 — Placeholder + integridad referencial (2026-10-12)
+
+**Contexto.** Con la Fase 1 cerrada (`DELETE=0`) el auditor seguía en verde, pero
+el operador pidió purgar `ops`/`runrun`, los usuarios sintéticos y los 217
+huérfanos de `intelligence_run_events`. Una sonda **read-only** de la BD
+contradijo parte de la premisa: `ops` (opssrl.com.ar) y `runrun`
+(runrunenergetico.com) son **proyectos ACTIVOS con 2 988 chequeos de uptime
+reales cada uno** (sep-2026, latencias variadas 17–426 ms, status 200) y
+`runrun`, `strategic connex` y `Strategic Connex COM AR` eran **los proyectos
+reales que D1-2 había conservado por traspaso**. El agente **paró y pidió
+decisión explícita** en vez de ejecutar la premisa.
+
+**Decisión del operador (2026-10-12).** PURGAR `runrun`, `strategic connex` y
+`Strategic Connex COM AR` (**override explícito de D1-2**), más los usuarios
+sintéticos `dev@localhost.dev` y `e2e.rls.*`; **NO** tocar `ops`; aplicar 0043
+tras backup.
+
+**Ejecutado.** (1) Política ampliada (`synthetic-user`, `PLACEHOLDER_PROJECT_NAMES`
+por igualdad exacta contra `name`, huérfanos inversos) + regresión
+`tests/db/fake-data-policy.test.ts` (12/12). (2) Bug del mapa
+`pg_constraint.confdeltype` corregido (un `SET NULL` se leía como bloqueo duro).
+(3) `drizzle/0043_intelligence_run_events_fk.sql`: 217 huérfanos fuera y las 2 FK
+del schema creadas (`run_events` 417→200, 0 huérfanos). (4) Backup
+(7 327 336 bytes) → `--apply` → **8 985 filas** en una transacción → auditor
+**`DELETE=0  REVIEW=0`**.
+
+**Efecto colateral aceptado.** Los 3 `audit_logs` que apuntan al usuario
+`e2e.rls.*` (logs de error del propio E2E) quedan con `user_id = NULL`
+(`ON DELETE SET NULL`, la conducta que el schema pidió); no se borran.
+
+**Abierto.** Las otras 3 FK `investigation_id` que faltan en la BD
+(`intelligence_tool_runs` 147 huérfanas, `intelligence_findings` 102,
+`intelligence_assets` 1): al ser **NULLABLE**, el arreglo correcto es
+**re-parentar a NULL** + añadir la FK, no borrar — sesión aparte.
 
 ---
 
