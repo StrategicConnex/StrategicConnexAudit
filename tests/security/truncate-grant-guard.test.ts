@@ -38,10 +38,14 @@ describe("Hallazgo #6 — TRUNCATE no debe estar concedido a roles expuestos", (
     const entrada = journal.entries.find((e) => e.tag === TAG);
     expect(entrada, `falta ${TAG} en _journal.json`).toBeDefined();
 
-    // `when` debe ser mayor que el máximo previo o drizzle-kit migrate la
-    // saltaría silenciosamente.
-    const maxOtros = Math.max(...journal.entries.filter((e) => e.tag !== TAG).map((e) => e.when));
-    expect(entrada!.when).toBeGreaterThan(maxOtros);
+    // `when` debe ser mayor que el de TODAS las migraciones ANTERIORES (idx
+    // menor) o drizzle-kit migrate la saltaría silenciosamente. Se compara
+    // contra las previas y no contra todas: al añadirse migraciones posteriores
+    // (0043+) una comparación global fallaba sin que nada estuviera mal.
+    const maxPrevio = Math.max(
+      ...journal.entries.filter((e) => e.idx < entrada!.idx).map((e) => e.when)
+    );
+    expect(entrada!.when).toBeGreaterThan(maxPrevio);
   });
 
   it("la migración revoca TRUNCATE de authenticated y anon", () => {
