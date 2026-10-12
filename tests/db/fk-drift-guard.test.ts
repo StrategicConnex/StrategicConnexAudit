@@ -48,11 +48,17 @@ describe("P0.5-E — migración que restituye las FK ausentes", () => {
     const entrada = journal.entries.find((e) => e.tag === TAG);
     expect(entrada, `falta ${TAG} en _journal.json`).toBeDefined();
 
-    // Si `when` no es mayor que el máximo previo, `drizzle-kit migrate` la salta
-    // en silencio: la migración quedaría escrita pero nunca aplicada.
-    const maxOtros = Math.max(...journal.entries.filter((e) => e.tag !== TAG).map((e) => e.when));
-    expect(entrada!.when).toBeGreaterThan(maxOtros);
-    expect(journal.entries.at(-1)!.tag).toBe(TAG);
+    // `drizzle-kit migrate` sólo aplica las entradas cuyo `when` supera el de la
+    // última migración aplicada: si `when` no crece, la migración queda escrita
+    // pero nunca se aplica. La comparación correcta es contra las PREDECESORAS
+    // (idx menor), no contra «las demás» ni contra «la última del journal».
+    // [Corregido 2026-10-12 al crear 0045]: la versión previa exigía que 0044
+    // fuera la última entrada, lo que convertía en fallo la llegada de cualquier
+    // migración posterior — es decir, rompía justo cuando el proyecto avanza.
+    const predecesoras = journal.entries.filter((e) => e.idx < entrada!.idx);
+    expect(predecesoras.length).toBeGreaterThan(0);
+    expect(entrada!.when).toBeGreaterThan(Math.max(...predecesoras.map((e) => e.when)));
+    expect(journal.entries.filter((e) => e.tag === TAG)).toHaveLength(1);
   });
 
   it("limpia los huérfanos ANTES de añadir la FK de esa tabla", () => {
@@ -150,5 +156,90 @@ describe("P0.5-F — el guard de FK es de solo lectura y no se calla", () => {
       status = (error as { status?: number }).status ?? -1;
     }
     expect(status).toBe(2);
+  });
+});
+
+/**
+ * P0.5-I (2026-10-12) — decisión de producto: en un sistema de auditoría los
+ * hallazgos (`findings`), las ejecuciones de herramienta (`tool_runs`) y los
+ * activos descubiertos (`assets`) tienen valor forense propio, así que su FK a
+ * `intelligence_investigations` pasa de CASCADE a SET NULL: sobreviven al
+ * borrado de la investigación que los originó. Esta suite protege la decisión
+ * sin necesidad de BD — que schema y migración digan lo mismo, que la migración
+ * sea idempotente, y que no toque `run_events` (NOT NULL: ahí SET NULL es
+ * imposible y la regla es CASCADE).
+ */
+describe("P0.5-I — 0045: SET NULL en las FK nullable de intelligence_*", () => {
+  const TAG45 = "0045_intelligence_set_null_on_delete";
+  const sql45 = fs.readFileSync(path.join(MIGRATIONS_DIR, `${TAG45}.sql`), "utf8");
+  const limpio45 = sinComentarios(sql45);
+  const stmts45 = sql45
+    .split(/--> statement-breakpoint/)
+    .map((s) => s.replace(/^[ \t]*--[^\n]*$/gm, "").trim())
+    .filter(Boolean);
+  const TABLAS = ["intelligence_tool_runs", "intelligence_findings", "intelligence_assets"];
+
+  it("está registrada en el journal con un `when` posterior a sus predecesoras", () => {
+    const journal = JSON.parse(fs.readFileSync(JOURNAL, "utf8")) as {
+      entries: { idx: number; tag: string; when: number }[];
+    };
+    const entrada = journal.entries.find((e) => e.tag === TAG45);
+    expect(entrada, `falta ${TAG45} en _journal.json`).toBeDefined();
+    const predecesoras = journal.entries.filter((e) => e.idx < entrada!.idx);
+    expect(entrada!.when).toBeGreaterThan(Math.max(...predecesoras.map((e) => e.when)));
+  });
+
+  it("el schema y la migración coinciden: SET NULL en las 3 nullable, CASCADE intacto en run_events", () => {
+    const schemaSrc = fs
+      .readFileSync(path.join(ROOT, "src/shared/db/schemas/intelligence.ts"), "utf8")
+      .replace(/\/\/[^\n]*/g, " "); // los comentarios documentan la decisión, no son código
+
+    const columna = (tabla: string) => {
+      const desde = schemaSrc.indexOf(`pgTable("${tabla}"`);
+      expect(desde, `no existe pgTable("${tabla}")`).toBeGreaterThan(-1);
+      const siguiente = schemaSrc.indexOf("pgTable(", desde + 1);
+      const body = schemaSrc.slice(desde, siguiente === -1 ? undefined : siguiente);
+      const m = body.match(/investigationId: uuid\("investigation_id"\)[\s\S]*?\)(?:\.notNull\(\))?,/);
+      expect(m, `sin investigation_id en ${tabla}`).not.toBeNull();
+      return m![0];
+    };
+
+    for (const tabla of TABLAS) expect(columna(tabla)).toContain('onDelete: "set null"');
+
+    // NOT NULL: SET NULL sería inválido, la regla debe seguir siendo CASCADE.
+    const runEvents = columna("intelligence_run_events");
+    expect(runEvents).toContain(".notNull()");
+    expect(runEvents).toContain('onDelete: "cascade"');
+  });
+
+  it("declara SET NULL y sólo toca las 3 tablas nullable", () => {
+    const acciones = [...limpio45.matchAll(/ON DELETE ([A-Z ]+?)\s*;/g)].map((m) => m[1]!.trim());
+    expect(acciones).toEqual(["SET NULL", "SET NULL", "SET NULL"]);
+    for (const tabla of TABLAS) expect(limpio45).toContain(`ALTER TABLE "${tabla}"`);
+    // `run_events` es NOT NULL: excluirla es parte de la decisión, no un olvido.
+    expect(limpio45).not.toContain("intelligence_run_events");
+  });
+
+  it("es idempotente: DROP CONSTRAINT IF EXISTS (nombre real + alternativo) antes de cada ADD", () => {
+    const adds = stmts45.filter((s) => /^ALTER TABLE\s+"[a-z_]+"\s+ADD CONSTRAINT/i.test(s));
+    expect(adds).toHaveLength(3);
+
+    for (const add of adds) {
+      const tabla = add.match(/^ALTER TABLE\s+"([a-z_]+)"/i)![1]!;
+      const drop = stmts45.find((s) => new RegExp(`^ALTER TABLE\\s+"${tabla}"\\s+DROP CONSTRAINT`, "i").test(s));
+      expect(drop, `sin DROP previo para ${tabla}`).toBeDefined();
+
+      // El nombre que Postgres guardó de verdad: drizzle-kit propone el largo y
+      // el motor lo trunca a 63 bytes. Un DROP del nombre sin truncar no
+      // encontraría nada y el ADD fallaría por FK duplicada al re-ejecutar.
+      const truncado = `${tabla}_investigation_id_intelligence_investigations_id_fk`.slice(0, 63);
+      expect(drop).toContain(`"${truncado}"`);
+      // Red de seguridad para entornos que las crearon a mano con la convención
+      // `_fkey` de Postgres.
+      expect(drop).toContain(`"${tabla}_investigation_id_fkey"`);
+
+      // Y el DROP va antes del ADD, no después.
+      expect(stmts45.indexOf(drop!)).toBeLessThan(stmts45.indexOf(add));
+    }
   });
 });
