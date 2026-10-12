@@ -1848,6 +1848,44 @@ el defecto duró meses sin poner CI en rojo. Enganchado en `ci.yml` (job
 
 ---
 
+## P0.5-I — Decisión de producto: SET NULL (2026-10-12)
+
+**Decisión del operador.** La pregunta de producto que quedó abierta en
+P0.5-E/F se resolvió **a favor de la trazabilidad**: en un sistema de auditoría
+un hallazgo, una ejecución de herramienta y un activo descubierto tienen valor
+forense propio, así que **sobreviven** al borrado de la investigación que los
+originó. CASCADE habría quemado esos expedientes al archivar una investigación.
+
+**Ejecutado (P0.5-I-A/B).** El schema (`src/shared/db/schemas/intelligence.ts`)
+pasa las tres FK nullable de `cascade` a `set null`; `intelligence_run_events`
+se queda en `cascade` porque su `investigation_id` es **NOT NULL** (ahí SET NULL
+es imposible). `drizzle/0045_intelligence_set_null_on_delete.sql` (journal
+`idx 56`, ledger 57) alinea la BD tras backup
+(`backups/strategic_audit_pro_backup_2026-10-12T12-57-07-656Z.sql`, 4 710,83 KB)
+y dry-run en transacción con `ROLLBACK` (6 sentencias OK). Verificado tras
+aplicar: `confdeltype='n'` en las tres, **93 FK** en `pg_constraint` (sin
+duplicados), **0 huérfanos** y totales intactos (330/149/7); el guard de FK
+sigue en **exit 0** (93 declaradas = 93 en BD). Los `DROP CONSTRAINT IF EXISTS`
+usan el nombre REAL truncado a 63 bytes por Postgres **y** el alternativo
+`_fkey`, así que re-ejecutar la migración es idempotente.
+
+**Alcance real (no vender de más).** Las tres tablas también cascada desde
+`projects` por su `project_id NOT NULL`, de modo que **borrar un proyecto
+entero las sigue borrando**: el cambio sólo altera el borrado de una
+investigación suelta, camino que hoy ningún código ejecuta. Si el objetivo
+fuera preservar esta evidencia ante el borrado de un proyecto, habría que
+revisar ese segundo nivel de cascada — otra decisión de producto, no tomada.
+
+**Corregido un test propio (P0.5-I-D).** `tests/db/fk-drift-guard.test.ts`
+exigía que `0044` fuera la **última** entrada del journal; eso convertía en
+fallo la llegada de cualquier migración posterior (y falló, en efecto, al crear
+0045). Ahora compara su `when` contra las PREDECESORAS — la invariante real que
+evita que `drizzle-kit migrate` la salte — y se añadieron 4 pruebas para 0045:
+registro en el journal, coherencia schema↔migración, únicamente `SET NULL` en
+las tres nullable y idempotencia `DROP`→`ADD`. Suite `tests/db` **23/23**.
+
+---
+
 ## Orden de ejecución resumido
 
 ```
