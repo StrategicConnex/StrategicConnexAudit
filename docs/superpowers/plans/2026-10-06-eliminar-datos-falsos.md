@@ -1106,7 +1106,7 @@ flag ⇒ mensaje de bloqueo (no toca prod).
 
 **Cambio (D2: sin fuente real ⇒ fallo honesto, no ficción):**
 
-1. [ ] `:147-148` — el ping **no puede** ser `Math.random()`:
+1. [x] `:147-148` — el ping **no puede** ser `Math.random()`:
    ```ts
    // ANTES (inventado)
    const latencyMs = Math.floor(Math.random() * 120) + 20;
@@ -1128,13 +1128,13 @@ flag ⇒ mensaje de bloqueo (no toca prod).
    return result;
    ```
    **No se emite finding** por este resultado (un "ping OK" ficticio era un finding falso).
-2. [ ] `:33-63`, `:320-324`, `:421-431`, `:555-562` — GeoIP/ASN deterministas → devolver
+2. [x] `:33-63`, `:320-324`, `:421-431`, `:555-562` — GeoIP/ASN deterministas → devolver
    `data: null` + `isFallback: true` + `error: "GEOIP_UNAVAILABLE"`. Comprobar con
    `Select-String` que no queda ningún `country: "US"`/`asn:` constante.
-3. [ ] `:394-479` y finding `:490-499` — traceroute simulado → eliminar el bloque
+3. [x] `:394-479` y finding `:490-499` — traceroute simulado → eliminar el bloque
    (el finding `high` derivado de un traceroute inventado se cae solo).
-4. [ ] `:812-843` — dominios `site1.<ip>.domain.net` → eliminar el bloque completo.
-5. [ ] `:863-910` — reputación 100/100 → `data: null` + `isFallback: true`.
+4. [x] `:812-843` — dominios `site1.<ip>.domain.net` → eliminar el bloque completo.
+5. [x] `:863-910` — reputación 100/100 → `data: null` + `isFallback: true`.
 
 **Verificación (rojo→verde):**
 ```powershell
@@ -1155,13 +1155,13 @@ esperar `isFallback: true`.
 
 **Pasos:**
 
-1. [ ] `:55-103` — el fallback RDAP devuelve un registrador inventado y **se escribe en
+1. [x] `:55-103` — el fallback RDAP devuelve un registrador inventado y **se escribe en
    `whois_history`**. Cambiar:
    - si RDAP falla → `return { success: false, isFallback: true, error: "RDAP_UNAVAILABLE", data: null }`;
    - **no** insertar fila en `whois_history` cuando `isFallback === true`.
-2. [ ] `:124-126` — fechas `created/updated` sintéticas → `null` (la columna debe admitirlo;
+2. [x] `:124-126` — fechas `created/updated` sintéticas → `null` (la columna debe admitirlo;
    si no, no insertar la fila).
-3. [ ] `whois-executors.ts:281-328` (marcado `isFallback`) → mantener el flag, pero eliminar
+3. [x] `whois-executors.ts:281-328` (marcado `isFallback`) → mantener el flag, pero eliminar
    las fechas y el registrador inventados; si sólo queda un finding explicativo, conservar
    **ese** finding (es honesto: "no se pudo consultar").
 
@@ -1181,11 +1181,11 @@ pnpm test ; npx tsc --noEmit
 
 **Pasos:**
 
-1. [ ] `ct-monitor.ts:49-61,150` — sustituir el rango TEST-NET-3 generado por
+1. [x] `ct-monitor.ts:49-61,150` — sustituir el rango TEST-NET-3 generado por
    `ip: null` (o `ip: undefined` + no persistir el campo) en los certs que no traigan IP real.
-2. [ ] `orchestrator.ts:104-113` — no guardar `ip` cuando venga vacío/sintético
+2. [x] `orchestrator.ts:104-113` — no guardar `ip` cuando venga vacío/sintético
    (`if (ip) { … }`).
-3. [ ] Añadir test: `tests/unit/ct-monitor.test.ts` debe fallar si aparece `203.0.113.` en la
+3. [x] Añadir test: `tests/unit/ct-monitor.test.ts` debe fallar si aparece `203.0.113.` en la
    salida (incluso con `vi.mock` de la respuesta del CT log).
 
 **Verificación:**
@@ -1204,11 +1204,11 @@ pnpm test
 
 **Pasos:**
 
-1. [ ] `:27-35` + findings `:39-58` — BGP/RPKI fake con `severity: "high"` → reemplazar por
+1. [x] `:27-35` + findings `:39-58` — BGP/RPKI fake con `severity: "high"` → reemplazar por
    `success:false / isFallback:true / error:"BGP_DATA_UNAVAILABLE"` y **eliminar** los
    findings generados (un hallazgo `high` basado en datos inventados es el peor tipo de falso).
-2. [ ] `:79-110` — threat-intel `critical` fake → idem (`THREAT_INTEL_UNAVAILABLE`).
-3. [ ] Buscar otros findings generados en este fichero con valores de ejemplo y aplicar la
+2. [x] `:79-110` — threat-intel `critical` fake → idem (`THREAT_INTEL_UNAVAILABLE`).
+3. [x] Buscar otros findings generados en este fichero con valores de ejemplo y aplicar la
    misma regla:
    ```powershell
    Select-String -Path src\server\intelligence\executors\advanced-executors.ts -Pattern "severity:|severity =" | ForEach-Object { $_.LineNumber.ToString() + ": " + $_.Line.Trim() }
@@ -1227,7 +1227,7 @@ pnpm test
 
 **Pasos:**
 
-1. [ ] Decisión D2 aplicada al sandbox adversarial: **si el escenario es simulado, no se
+1. [x] Decisión D2 aplicada al sandbox adversarial: **si el escenario es simulado, no se
    ejecuta** (no run ⇒ no output ⇒ no findings `[SIM]`):
    ```ts
    // scenario-runner.ts — al inicio de run()
@@ -1239,10 +1239,10 @@ pnpm test
    }
    ```
    Eliminar `generateSimulatedOutput` (`:132-206`) y el bloque que inserta el output + findings.
-2. [ ] `adversary.trigger.ts:26-28` — el cron de 6h debe pasar a `mode: "live"` o
+2. [x] `adversary.trigger.ts:26-28` — el cron de 6h debe pasar a `mode: "live"` o
    desactivarse (`if (!live) return skip`). Confirmar con el usuario si el cron se apaga
    (recomendado hasta tener credenciales de escenarios reales).
-3. [ ] Borrar los tests que assertaban findings `[SIM]`.
+3. [x] Borrar los tests que assertaban findings `[SIM]`.
 
 **Verificación:** `Select-String -Path src\server\intelligence\adversary\*.ts -Pattern "generateSimulatedOutput|\[SIM\]"` → 0 hits; `pnpm test`.
 
@@ -1266,12 +1266,12 @@ pnpm test
 
 **Pasos:**
 
-1. [ ] Confirmar que no hay otros consumidores de la ruta mock:
+1. [x] Confirmar que no hay otros consumidores de la ruta mock:
    ```powershell
    Select-String -Path (Get-ChildItem -Recurse -Include *.ts,*.tsx src,e2e,tests | Select-Object -ExpandProperty FullName) -Pattern "intelligence/graph" | ForEach-Object { $_.Path + ":" + $_.LineNumber }
    ```
    (esperado: sólo `AttackSurfaceGraph.tsx`, `graph/route.ts`, `graph/route.test.ts`).
-2. [ ] Reemplazar `handleNodeClick` — sin fetch sintético; la selección sólo resalta vecinos
+2. [x] Reemplazar `handleNodeClick` — sin fetch sintético; la selección sólo resalta vecinos
    **ya cargados** en el grafo real (`ns`/`es` de este componente, o el grafo de
    `assets/graph` si el componente lo recibe por props):
 
@@ -1293,9 +1293,9 @@ const handleNodeClick = (nodeId: string) => {
    > distinto, adaptar el nombre — la regla es **no** inventar nodos nuevos. Si hace falta
    > estado nuevo, declararlo junto a `:65`:
    > `const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());`
-3. [ ] Borrar `src/app/api/intelligence/graph/route.ts` y `route.test.ts`
+3. [x] Borrar `src/app/api/intelligence/graph/route.ts` y `route.test.ts`
    (`git rm` cuando el usuario autorice el commit).
-4. [ ] Verificar que `dynamicNodes/dynamicEdges` quedan **sin fuente de escritura** →
+4. [x] Verificar que `dynamicNodes/dynamicEdges` quedan **sin fuente de escritura** →
    borrarlos también (`:65-66` y sus usos en el `useMemo` `:148-149`) para que no quede
    estado muerto.
 
@@ -1306,6 +1306,32 @@ pnpm lint ; npx tsc --noEmit ; pnpm test ; pnpm build
 ```
 
 **Commit:** `refactor(intelligence): eliminar grafo mock; selección de nodo honesta`.
+
+---
+
+## Resultado Fase 2 — Tasks 7-11 ejecutadas (2026-10-11)
+
+Regla aplicada en todo el barrido: **sin fuente real ⇒ fallo honesto** (`success: false` +
+`isFallback`/`error`), nunca un dato de relleno. Un `null` es honesto; un valor inventado, no.
+
+| Task | Archivo | Qué se eliminó | Sustituido por |
+|---|---|---|---|
+| 7 | `executors/network-executors.ts` | `getLocalGeoIPFallback` (país/ciudad/ASN/ISP/coords por hash); latencia `Math.random` del ping; traza inventada (gateway `192.168.x`, backbone `10.x`, hops y latencias derivadas de la latitud); ASN por defecto de Google; dominios co-alojados `site1.<ip>.domain.net`; reputación "limpia" con listas negras ficticias | `PING_UNAVAILABLE` / `GEOIP_UNAVAILABLE` / `TRACEROUTE_UNAVAILABLE` / `ASN_DATA_UNAVAILABLE` / `REPUTATION_UNAVAILABLE` sin findings; `latitude`/`longitude`/`port`/`reputationScore` a `null`; PTR reales o `[]` |
+| 8 | `executors/osint-executors.ts`, `executors/whois-executors.ts` | WHOIS inventado (registrador ficticio, alta −5 años, expiración +90 días, `daysRemaining: 90`, `status: ["active"]`, `ns1/ns2.host.com`) **persistido en `whois_history`** con alertas de cambio incluidas; y fechas sintéticas cuando RDAP no traía eventos | `RDAP_UNAVAILABLE` sin estimación ni snapshot; `createdDate`/`expiresDate`/`daysRemaining` a `null` (el fallback conserva `isFallback` + el finding explicativo) |
+| 9 | `discovery/ct-monitor.ts` | IP determinista por hash en rango TEST-NET-3 persistida en `intelligence_assets.ip` | `ip: null` (crt.sh no aporta IPs) |
+| 10 | `executors/advanced-executors.ts` | BGP inventado (bloque de documentación, ASN de ejemplo, `rpkiStatus: invalid`) + hallazgo `high` derivado; threat-intel `critical` por nombre de dominio con feeds inexistentes | `BGP_DATA_UNAVAILABLE` / `THREAT_INTEL_UNAVAILABLE` con `isFallback: true` y **cero findings** |
+| 11 | `adversary/scenario-runner.ts`, `trigger/adversary.trigger.ts` | Transcript decorativo de "simulación" + hallazgo `[SIM]` con `evidence.sandbox: null` + run cerrada como `missed` para escenarios que **nunca se ejecutaron** | Sin ejecución real (y no manual) ⇒ `skipped: true`, **sin run, sin output, sin findings**; con ejecución ⇒ run con transcript real y hallazgo `[ADV]`; escenarios `manual` ⇒ run con la referencia del comando, sin findings; el trigger cuenta `skipped` aparte (no como fallo de detección) |
+
+**Tests actualizados** (dependían de los datos ficticios): `executors/executors.test.ts` (3 casos
+reescritos: rama "sin API" y rama "con API real" mockeando `safeFetch`), `adversary/scenario-runner.test.ts`
+(3 casos: manual sin findings, `[ADV]` en vez de `[SIM]`, y `skipped` sin run). `trigger/adversary.trigger.test.ts`
+seguía verde sin cambios.
+
+**Verificación:** `git grep` de `Math.random|ICANN Registrar Corp|site1\.|203\.0\.113|192\.0\.2\.|100/100|generateSimulatedOutput|\[SIM\]|getLocalGeoIPFallback` en `src/**` → **0 hits reales** (sólo quedan los `Math.random` de UI decorativa y el del grafo mock, y las NOTA de este barrido). `npx tsc --noEmit` → exit 0. `eslint --max-warnings=0` sobre los ficheros tocados → exit 0. Suites afectadas en verde.
+
+**Fuera de alcance (pendiente, ya planificado):** Task 12 (ruta mock `intelligence/graph`) y Fase 3
+(UI sin teatro: `AuditControl.tsx` con progreso aleatorio, `IntelligenceTab.tsx` con "velocidad"
+aleatoria, estados vacíos que afirman timeout/traza en curso).
 
 ---
 
