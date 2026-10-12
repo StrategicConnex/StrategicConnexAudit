@@ -386,6 +386,13 @@
       "when": 1791849600000,
       "tag": "0043_intelligence_run_events_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1791936000000,
+      "tag": "0044_restore_missing_fks",
+      "breakpoints": true
     }
   ]
 }
