@@ -1815,10 +1815,36 @@ del schema creadas (`run_events` 417→200, 0 huérfanos). (4) Backup
 `e2e.rls.*` (logs de error del propio E2E) quedan con `user_id = NULL`
 (`ON DELETE SET NULL`, la conducta que el schema pidió); no se borran.
 
-**Abierto.** Las otras 3 FK `investigation_id` que faltan en la BD
-(`intelligence_tool_runs` 147 huérfanas, `intelligence_findings` 102,
-`intelligence_assets` 1): al ser **NULLABLE**, el arreglo correcto es
-**re-parentar a NULL** + añadir la FK, no borrar — sesión aparte.
+**Cerrado en P0.5-E/F (2026-10-12).** El barrido real fue **más grande que la
+premisa**: un guard nuevo (`scripts/db/fk-schema-drift-guard.mjs`) midió
+**93 FK declaradas en el schema contra 82 existentes en la BD → 11 ausentes**,
+no las 3 previstas. Además de las tres `investigation_id` de `intelligence_*`
+faltaban `whois_history`, `anomaly_detections`, y **cinco de la familia
+`adversary_*`** — incluida `adversary_engagements.project_id`, con la tabla
+padre sin ninguna FK.
+
+**Ejecutado (P0.5-E).** `drizzle/0044_restore_missing_fks.sql` (journal `idx 55`,
+ledger 56): **250 huérfanos re-parentados a NULL** por las columnas nullable
+(`intelligence_tool_runs` 147 de 330 filas · `intelligence_findings` 102 de 149 ·
+`intelligence_assets` 1 de 7) y **ninguna fila borrada**; las otras 8 tablas
+estaban vacías (0 huérfanos, `DELETE` inerte sobre las 2 columnas NOT NULL) y ya
+tienen su FK. Verificado tras aplicar: **0 huérfanos**, **93/93 FK** en
+`pg_constraint`, totales intactos (330/149/7).
+
+**Desviación de la instrucción (documentada).** La orden pedía `ON DELETE SET
+NULL` en las tres `investigation_id` nullable; el **schema** de Drizzle declara
+`cascade` en las tres (`src/shared/db/schemas/intelligence.ts`). Se aplicó lo que
+dice el schema: usar `SET NULL` habría creado un drift de ACCIÓN recién nacido y
+habría hecho fallar el guard nuevo. **Queda como pregunta de producto** si
+borrar una investigación debe llevarse sus tool_runs/findings/assets (CASCADE,
+estado actual) o desvincularlos (SET NULL, que exige cambiar el schema primero).
+
+**Ejecutado (P0.5-F).** Guard estático+BD `scripts/db/fk-schema-drift-guard.mjs`
+(`pnpm db:fk-guard`, solo `SELECT`, exit 2 si no puede verificar) que convierte
+las FK en chequeo **duro** — `drift-check.mjs` las trata como adhesivas y por eso
+el defecto duró meses sin poner CI en rojo. Enganchado en `ci.yml` (job
+`db-drift-check`) y en el chequeo diario `db-drift.yml`; regresión estática
+`tests/db/fk-drift-guard.test.ts` (7/7). Estado tras el arreglo: **exit 0**.
 
 ---
 
