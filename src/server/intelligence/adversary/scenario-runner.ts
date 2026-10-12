@@ -33,6 +33,8 @@ export interface RunScenarioOutput {
   scoreImpact?: number;
   output?: string;
   error?: string;
+  /** true ⇒ el escenario NO se ejecutó: no se persistió run, output ni findings. */
+  skipped?: boolean;
 }
 
 /**
@@ -128,7 +130,54 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
     //     attributed to its scenario (fix P0: scenario_id ya no queda NULL).
     const scenarioId = await getOrCreateScenarioId(scenarioDef);
 
-    // 2. Create a new run record
+    // 2. Resolve the target (project domain) to substitute $TARGET in the
+    //    executor command, y ejecutar el comando dentro del sandbox.
+    const [project] = await db
+      .select({ domain: projects.domain })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    let sandboxResult: SandboxExecutionResult | null = null;
+    // Gate de seguridad operativa: ADVERSARY_SANDBOX_ENABLED=false desactiva
+    // la ejecución real. Default: habilitado.
+    const sandboxEnabled = process.env.ADVERSARY_SANDBOX_ENABLED !== "false";
+    if (sandboxEnabled && project?.domain && scenarioDef.executorType !== "manual") {
+      sandboxResult = await runSandboxedCommand({
+        executorType: scenarioDef.executorType,
+        executorCommand: scenarioDef.executorCommand,
+        target: project.domain,
+        timeoutMs: 15_000,
+      });
+    }
+
+    const executed = sandboxResult?.executed === true;
+    const isManual = scenarioDef.executorType === "manual";
+
+    // 3. Task 11 (2026-10-11) — CORTE DE LA SIMULACIÓN.
+    //    Si el escenario no se ejecutó de verdad (sandbox deshabilitado, comando
+    //    fuera de la allowlist, bloqueado por egress-guard, target sin dominio o
+    //    powershell sin host Windows), NO se registra nada: ni run, ni output, ni
+    //    finding. Antes se persistía un transcript decorativo y un hallazgo de
+    //    simulación (con `evidence.sandbox: null`) para cualquier escenario, y la
+    //    run quedaba cerrada como "missed": una no-detección indistinguible de
+    //    una real.
+    if (!executed && !isManual) {
+      const detail =
+        sandboxResult?.detail ??
+        sandboxResult?.status ??
+        "sandbox deshabilitado o proyecto sin dominio";
+      return {
+        success: false,
+        skipped: true,
+        error:
+          `SANDBOX_UNAVAILABLE: el escenario ${scenarioDef.mitreId} no se ejecutó (${detail}). ` +
+          "No se registra run, output ni hallazgo.",
+      };
+    }
+
+    // 4. Crear la run: sólo hay run si hubo ejecución real, o si el escenario es
+    //    manual (lo ejecuta el operador y reporta el resultado con PATCH).
     const [run] = await db
       .insert(adversaryRuns)
       .values({
@@ -140,50 +189,31 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
       .returning();
     if (!run) throw new Error("Fallo al crear el registro de ejecución del escenario");
 
-    // 2.5 Resolve the target (project domain) to substitute $TARGET in the
-    //     executor command, and run the command inside the sandbox.
-    const [project] = await db
-      .select({ domain: projects.domain })
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
+    // 5. Output: transcript REAL del sandbox o —sólo en escenarios manuales— la
+    //    referencia del comando que debe ejecutar el operador. Nunca un
+    //    transcript de "simulación" que afirme algo que no se observó.
+    const output = executed
+      ? sandboxResult!.output
+      : [
+          `[MANUAL] ${scenarioDef.mitreId} — la ejecución la realiza el operador contra ${project?.domain ?? "el objetivo"}.`,
+          "Comando de referencia:",
+          `  ${scenarioDef.executorCommand}`,
+          "",
+          "Cuando lo hayas ejecutado, reporta el resultado real con PATCH (detected | missed).",
+        ].join("\n");
 
-    let sandboxResult: SandboxExecutionResult | null = null;
-    // Gate de seguridad operativa: ADVERSARY_SANDBOX_ENABLED=false desactiva
-    // la ejecución real (fallback al output simulado). Default: habilitado.
-    const sandboxEnabled = process.env.ADVERSARY_SANDBOX_ENABLED !== "false";
-    if (sandboxEnabled && project?.domain && scenarioDef.executorType !== "manual") {
-      sandboxResult = await runSandboxedCommand({
-        executorType: scenarioDef.executorType,
-        executorCommand: scenarioDef.executorCommand,
-        target: project.domain,
-        timeoutMs: 15_000,
-      });
-    }
-
-    // 3. Output: usa el transcript real del sandbox cuando hubo ejecución
-    //    real; de lo contrario cae al output simulado informativo. Cuando el
-    //    sandbox devuelve unsupported (powershell/manual), surfacea el
-    //    advisory en vez de descartarlo silenciosamente.
-    const simulatedOutput = generateSimulatedOutput(scenarioDef);
-    const output =
-      sandboxResult && sandboxResult.executed
-        ? sandboxResult.output
-        : sandboxResult && sandboxResult.status === "unsupported"
-          ? `${sandboxResult.output}\n\n${simulatedOutput}`
-          : simulatedOutput;
-
-    // 4. Findings: el hallazgo base [SIM] (visibilidad en dashboard) + los
-    //    hallazgos parseados del output real del sandbox.
-    if (investigationId) {
+    // 6. Findings: sólo de evidencia real. El hallazgo base describe una técnica
+    //    que SÍ se ejecutó; los `[ADV-SANDBOX]` salen del parseo del output real.
+    //    Un escenario manual no genera findings propios: no hay nada observado.
+    if (investigationId && executed) {
       await db.insert(intelligenceFindings).values({
         investigationId,
         projectId,
         severity: (scenarioDef.severity === "critical" || scenarioDef.severity === "high" || scenarioDef.severity === "medium" || scenarioDef.severity === "low")
           ? scenarioDef.severity : "medium",
         confidence: "0.800",
-        title: `[SIM] ${scenarioDef.name}`,
-        description: `Simulación de adversario: ${scenarioDef.description}`,
+        title: `[ADV] ${scenarioDef.name}`,
+        description: `Técnica de adversario ejecutada en sandbox: ${scenarioDef.description}`,
         recommendation: scenarioDef.detectionAdvice,
         evidence: {
           mitreId: scenarioDef.mitreId,
@@ -193,22 +223,20 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
           detectionAdvice: scenarioDef.detectionAdvice,
           prerequisites: scenarioDef.prerequisites,
           tags: scenarioDef.tags,
-          sandbox: sandboxResult
-            ? {
-                executed: sandboxResult.executed,
-                status: sandboxResult.status,
-                durationMs: sandboxResult.durationMs,
-                findingsCount: sandboxResult.findings.length,
-              }
-            : null,
+          sandbox: {
+            executed: true,
+            status: sandboxResult!.status,
+            durationMs: sandboxResult!.durationMs,
+            findingsCount: sandboxResult!.findings.length,
+          },
         },
         affectedAsset: project?.domain ?? "simulation",
       });
 
       // Hallazgos parseados del output real (puertos abiertos, endpoints
       // expuestos, etc.) — solo cuando el sandbox produjo evidencia real.
-      if (sandboxResult && sandboxResult.findings.length > 0) {
-        for (const finding of sandboxResult.findings.slice(0, 5)) {
+      if (sandboxResult!.findings.length > 0) {
+        for (const finding of sandboxResult!.findings.slice(0, 5)) {
           await db.insert(intelligenceFindings).values({
             investigationId,
             projectId,
@@ -219,8 +247,8 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
             evidence: {
               ...finding.evidence,
               mitreId: scenarioDef.mitreId,
-              sandboxStatus: sandboxResult.status,
-              sandboxDurationMs: sandboxResult.durationMs,
+              sandboxStatus: sandboxResult!.status,
+              sandboxDurationMs: sandboxResult!.durationMs,
             },
             affectedAsset: project?.domain ?? "simulation",
           });
@@ -228,7 +256,11 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
       }
     }
 
-    // 5. Update run with result
+    // 7. Cerrar la run.
+    //    NOTA: `result` sigue arrancando en "missed" — es el valor por defecto
+    //    del producto ("no reportado") que el operador corrige con PATCH a
+    //    "detected". Lo que esta tarea elimina es el output y los findings
+    //    INVENTADOS para escenarios que nunca se ejecutaron.
     const result: ScenarioResult = "missed";
     const scoreImpact = scenarioDef.severity === "critical" ? -15
       : scenarioDef.severity === "high" ? -10
@@ -265,41 +297,12 @@ export async function runScenario(input: RunScenarioInput): Promise<RunScenarioO
   }
 }
 
-/**
- * Genera output simulado para el escenario.
- * En Fase 1 (MVP), esto es texto informativo.
- */
-function generateSimulatedOutput(
-  scenario: AdversaryScenarioDefinition
-): string {
-  const lines: string[] = [
-    `╔══════════════════════════════════════════════════════════╗`,
-    `║  SCAUDIT — Adversary Simulation Engine v1              ║`,
-    `╠══════════════════════════════════════════════════════════╣`,
-    `║  MITRE ID:       ${scenario.mitreId.padEnd(42)}║`,
-    `║  Tactic:         ${scenario.mitreTactic.padEnd(42)}║`,
-    `║  Technique:      ${scenario.mitreTechnique.padEnd(42)}║`,
-    `║  Severity:       ${scenario.severity.padEnd(42)}║`,
-    `╠══════════════════════════════════════════════════════════╣`,
-    `║  Description:                                          ║`,
-    `║  ${scenario.description.substring(0, 56).padEnd(56)}║`,
-    `╠══════════════════════════════════════════════════════════╣`,
-    `║  Detection Advice:                                      ║`,
-    `║  ${scenario.detectionAdvice.substring(0, 56).padEnd(56)}║`,
-    `╠══════════════════════════════════════════════════════════╣`,
-    `║  Prerequisites:                                         ║`,
-    ...scenario.prerequisites.map((p) =>
-      `║  • ${p.substring(0, 55).padEnd(55)}║`
-    ),
-    `╠══════════════════════════════════════════════════════════╣`,
-    `║  Note: This is a SAFE simulation. No actual exploits    ║`,
-    `║  were executed. Report if your EDR/SIEM detected this   ║`,
-    `║  activity pattern in your logs.                         ║`,
-    `╚══════════════════════════════════════════════════════════╝`,
-  ];
-
-  return lines.join("\n");
-}
+/* NOTA (Task 11, 2026-10-11): aquí vivía el generador de transcript simulado,
+   que fabricaba un texto decorativo (una cabecera de "engine" de simulación y la
+   nota de que no se ejecutó ningún exploit) para cualquier escenario que no se
+   hubiera ejecutado. Ese texto se persistía como `adversary_runs.output` y se
+   mostraba en el dashboard como si fuera el resultado de una prueba. Un escenario
+   sin ejecución real no tiene transcript. */
 
 /**
  * Lista los escenarios disponibles para un proyecto, incluyendo

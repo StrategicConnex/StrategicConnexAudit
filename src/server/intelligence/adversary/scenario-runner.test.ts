@@ -201,7 +201,7 @@ describe("getOrCreateScenarioId — race condition fix (0018)", () => {
 });
 
 describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox", () => {
-  it("crea el template del escenario, persiste scenario_id y actualiza la run (output simulado)", async () => {
+  it("escenario manual: registra la run con la referencia del comando, sin findings ni transcript simulado", async () => {
     // getOrCreateScenarioId: fast path miss → insert template → re-read
     dbState.selectQueue.set(adversaryScenarios, [[], [{ id: "scenario-1" }]]);
     dbState.returningQueue.set(adversaryRuns, [[{ id: "run-1" }]]);
@@ -218,7 +218,11 @@ describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox",
     expect(result.runId).toBe("run-1");
     expect(result.result).toBe("missed");
     expect(result.scoreImpact).toBe(-10); // high
-    expect(result.output).toContain("Adversary Simulation Engine");
+    // Task 11 (2026-10-11): el output ya NO es el transcript decorativo de
+    // "simulación"; es la referencia del comando que debe ejecutar el operador.
+    expect(result.output).toContain("[MANUAL] T1078.001");
+    expect(result.output).toContain(SCENARIO.executorCommand);
+    expect(result.output).not.toContain("Adversary Simulation Engine");
 
     // Template creado (insert en adversaryScenarios) con los datos del catálogo
     const scenarioInserts = dbState.inserted.filter((i) => i.table === adversaryScenarios);
@@ -240,14 +244,12 @@ describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox",
     });
     expect(runUpdate.values.output).toBe(result.output);
 
-    // Finding base [SIM] con evidence.sandbox = null (sin ejecución real)
-    const simFinding = dbState.inserted.find(
-      (i) => i.table === intelligenceFindings && (i.values as { title?: string }).title?.startsWith("[SIM]")
-    )!;
-    expect((simFinding.values as { title: string }).title).toBe(`[SIM] ${SCENARIO.name}`);
-    expect((simFinding.values as { severity: string }).severity).toBe("high");
-    expect((simFinding.values as { affectedAsset: string }).affectedAsset).toBe("example.com");
-    expect((simFinding.values as { evidence: { sandbox: unknown } }).evidence.sandbox).toBeNull();
+    // Task 11: sin ejecución real NO hay findings. Antes se insertaba un hallazgo
+    // base `[SIM] <escenario>` (con `evidence.sandbox: null`) que pintaba una
+    // técnica high/critical como si se hubiera probado contra el objetivo.
+    expect(
+      dbState.inserted.filter((i) => i.table === intelligenceFindings)
+    ).toHaveLength(0);
 
     // Ejecutor manual → el sandbox NUNCA se invoca
     expect(sandboxMock.runSandboxedCommand).not.toHaveBeenCalled();
@@ -314,14 +316,22 @@ describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox",
       expect.objectContaining({ executorType: "http", target: "example.com", timeoutMs: 15_000 })
     );
 
-    // [SIM] con evidence.sandbox real
-    const simFinding = dbState.inserted.find(
-      (i) => i.table === intelligenceFindings && (i.values as { title?: string }).title?.startsWith("[SIM]")
+    // Task 11: el hallazgo base se titula `[ADV]` (técnica REALMENTE ejecutada en
+    // el sandbox), no `[SIM]`, y su evidence.sandbox confirma la ejecución.
+    const advBase = dbState.inserted.find(
+      (i) => i.table === intelligenceFindings && (i.values as { title?: string }).title?.startsWith("[ADV] ")
     )!;
-    const simSandbox = (simFinding.values as { evidence: { sandbox: unknown } }).evidence.sandbox as {
+    expect((advBase.values as { title: string }).title).toMatch(/^\[ADV\] /);
+    expect((advBase.values as { title: string }).title).not.toMatch(/^\[SIM\]/);
+    const advSandbox = (advBase.values as { evidence: { sandbox: unknown } }).evidence.sandbox as {
       executed: boolean; status: string; findingsCount: number;
     };
-    expect(simSandbox).toMatchObject({ executed: true, status: "ok", findingsCount: 1 });
+    expect(advSandbox).toMatchObject({ executed: true, status: "ok", findingsCount: 1 });
+    expect(
+      dbState.inserted.filter(
+        (i) => i.table === intelligenceFindings && (i.values as { title?: string }).title?.startsWith("[SIM]")
+      )
+    ).toHaveLength(0);
 
     // [ADV-SANDBOX] con evidencia del finding parseado + mitreId del escenario
     const advFinding = dbState.inserted.find(
@@ -332,7 +342,7 @@ describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox",
     expect(advEvidence).toMatchObject({ mitreId: "T1190", sandboxStatus: "ok" });
   });
 
-  it("gate ADVERSARY_SANDBOX_ENABLED=false → el sandbox NO se ejecuta y se usa el fallback simulado", async () => {
+  it("gate ADVERSARY_SANDBOX_ENABLED=false → skipped: no se persiste run, output ni findings", async () => {
     process.env.ADVERSARY_SANDBOX_ENABLED = "false";
     dbState.selectQueue.set(adversaryScenarios, [[{ id: "scenario-1" }]]);
     dbState.returningQueue.set(adversaryRuns, [[{ id: "run-1" }]]);
@@ -340,9 +350,13 @@ describe("runScenario — fix P0 (scenario_id persistido) + template + sandbox",
 
     const result = await runScenario({ scenarioMitreId: "T1190", projectId: "proj-1" });
 
-    expect(result.success).toBe(true);
+    // Task 11: sin ejecución real no hay nada que registrar.
+    expect(result.success).toBe(false);
+    expect(result.skipped).toBe(true);
+    expect(result.error).toMatch(/SANDBOX_UNAVAILABLE/);
     expect(sandboxMock.runSandboxedCommand).not.toHaveBeenCalled();
-    expect(result.output).toContain("Adversary Simulation Engine");
+    expect(dbState.inserted.filter((i) => i.table === adversaryRuns)).toHaveLength(0);
+    expect(dbState.inserted.filter((i) => i.table === intelligenceFindings)).toHaveLength(0);
   });
 
   it("error de BD durante la ejecución → success:false con el mensaje", async () => {

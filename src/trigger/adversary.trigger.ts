@@ -45,6 +45,8 @@ export const periodicAdversarySimulation = task({
       scenariosRun: number;
       scenariosPassed: number;
       scenariosFailed: number;
+      /** Task 11: escenarios que no se ejecutaron (allowlist/egress/sandbox off). */
+      scenariosSkipped: number;
       scoreImpacts: number[];
       error?: string;
     };
@@ -54,6 +56,7 @@ export const periodicAdversarySimulation = task({
         let scenariosRun = 0;
         let scenariosPassed = 0;
         let scenariosFailed = 0;
+        let scenariosSkipped = 0;
         const scoreImpacts: number[] = [];
 
         for (const mitreId of SCHEDULED_SCENARIOS) {
@@ -75,6 +78,10 @@ export const periodicAdversarySimulation = task({
             if (result.result === "detected") scenariosPassed++;
             else scenariosFailed++;
             if (result.scoreImpact) scoreImpacts.push(result.scoreImpact);
+          } else if (result.skipped) {
+            // Task 11: no se ejecutó nada (no hay run ni evidencia). No es un
+            // fallo de detección: contarlo como tal inflaba las métricas.
+            scenariosSkipped++;
           } else {
             scenariosRun++;
             scenariosFailed++;
@@ -87,6 +94,7 @@ export const periodicAdversarySimulation = task({
           scenariosRun,
           scenariosPassed,
           scenariosFailed,
+          scenariosSkipped,
           scoreImpacts,
         };
       } catch (err: unknown) {
@@ -99,6 +107,7 @@ export const periodicAdversarySimulation = task({
           scenariosRun: 0,
           scenariosPassed: 0,
           scenariosFailed: 0,
+          scenariosSkipped: 0,
           scoreImpacts: [],
         };
       }
@@ -107,12 +116,13 @@ export const periodicAdversarySimulation = task({
     const totalRun = summaries.reduce((s, r) => s + r.scenariosRun, 0);
     const totalPassed = summaries.reduce((s, r) => s + r.scenariosPassed, 0);
     const totalFailed = summaries.reduce((s, r) => s + r.scenariosFailed, 0);
+    const totalSkipped = summaries.reduce((s, r) => s + r.scenariosSkipped, 0);
     const errors = summaries.filter((r) => r.error);
     const successCount = summaries.length - errors.length;
 
     logger.info(
       `[AdversaryTrigger] Done: ${successCount}/${activeProjects.length} OK, ` +
-      `${totalRun} scenarios (${totalPassed} passed, ${totalFailed} failed), ${errors.length} errors.`
+      `${totalRun} scenarios (${totalPassed} passed, ${totalFailed} failed, ${totalSkipped} skipped), ${errors.length} errors.`
     );
 
     return {
@@ -122,6 +132,7 @@ export const periodicAdversarySimulation = task({
       totalScenariosRun: totalRun,
       totalPassed,
       totalFailed,
+      totalSkipped,
       summaries,
       timestamp: new Date().toISOString(),
     };
