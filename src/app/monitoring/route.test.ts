@@ -26,14 +26,43 @@ vi.stubGlobal("fetch", mockFetch);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** Envelope mínimo válido: cabecera con event_id + ítem de evento. */
+/** Envelope mínimo válido: cabecera con el dsn del proyecto + ítem de evento. */
 const validEnvelope = () =>
   [
-    JSON.stringify({ event_id: "abc123", sent_at: "2026-10-05T00:00:00.000Z" }),
+    JSON.stringify({ dsn: DSN, sent_at: "2026-10-05T00:00:00.000Z", event_id: "abc123" }),
     JSON.stringify({
       type: "event",
       event: { event_id: "abc123", message: "prueba" },
     }),
+    "",
+  ].join("\n");
+
+/**
+ * Envelope de SESIÓN (release health): la cabecera NO trae `event_id`. Es la
+ * forma exacta que el SDK enviaba y que la ruta rechazaba con 400.
+ */
+const sessionEnvelope = () =>
+  [
+    JSON.stringify({
+      sent_at: "2026-10-12T01:13:21.443Z",
+      sdk: { name: "sentry.javascript.nextjs", version: "11.4.0" },
+      dsn: DSN,
+    }),
+    JSON.stringify({ type: "session" }),
+    JSON.stringify({ sid: "58aa7857111c4cfbb106ea3958ffd070", init: true, status: "ok" }),
+    "",
+  ].join("\n");
+
+/** Envelope de TRAZA/performance: cabecera con `trace`, sin `event_id`. */
+const transactionEnvelope = () =>
+  [
+    JSON.stringify({
+      sent_at: "2026-10-12T01:13:23.547Z",
+      trace: { environment: "development", transaction: "GET /login", sampled: "true" },
+      dsn: DSN,
+    }),
+    JSON.stringify({ type: "transaction" }),
+    JSON.stringify({ transaction: "GET /login" }),
     "",
   ].join("\n");
 
@@ -85,8 +114,52 @@ describe("POST /monitoring (túnel de Sentry)", () => {
     ).toContain("sentry_key=publickey123");
   });
 
-  it("rechaza un JSON que no es un envelope de Sentry (sin event_id)", async () => {
-    const res = await POST(makeRequest('{"basura":true}'));
+  it("acepta un envelope de SESIÓN (release health) aunque no traiga event_id", async () => {
+    const res = await POST(makeRequest(sessionEnvelope()));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("acepta un envelope de TRANSACCIÓN/performance (cabecera con trace, sin event_id)", async () => {
+    const res = await POST(makeRequest(transactionEnvelope()));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("rechaza un envelope cuyo dsn no corresponde al proyecto configurado", async () => {
+    const ajeno = [
+      JSON.stringify({ dsn: "https://otra@o999.ingest.us.sentry.io/123", sent_at: "2026-10-05T00:00:00.000Z" }),
+      JSON.stringify({ type: "event" }),
+      JSON.stringify({ message: "ajeno" }),
+      "",
+    ].join("\n");
+
+    const res = await POST(makeRequest(ajeno));
+
+    expect(res.status).toBe(400);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("rechaza un envelope sin dsn en la cabecera", async () => {
+    const sinDsn = [
+      JSON.stringify({ sent_at: "2026-10-05T00:00:00.000Z", event_id: "abc123" }),
+      JSON.stringify({ type: "event" }),
+      JSON.stringify({ message: "x" }),
+      "",
+    ].join("\n");
+
+    const res = await POST(makeRequest(sinDsn));
+
+    expect(res.status).toBe(400);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("rechaza un JSON que no es un envelope de Sentry", async () => {
+    const res = await POST(makeRequest('{"basura":true}'))
 
     expect(res.status).toBe(400);
     expect(mockFetch).not.toHaveBeenCalled();

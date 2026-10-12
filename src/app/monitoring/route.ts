@@ -26,8 +26,13 @@ export const dynamic = "force-dynamic";
 /** Los envelopes de sesión/replay pueden ser grandes; 1 MB es holgado. */
 const MAX_ENVELOPE_BYTES = 1024 * 1024;
 
-/** Deriva la URL del endpoint de envelopes y la clave pública del DSN. */
-function parseDsn(dsn: string): { endpoint: string; publicKey: string } | null {
+/** Deriva endpoint, clave pública y destino (host+proyecto) del DSN. */
+function parseDsn(dsn: string): {
+  endpoint: string;
+  publicKey: string;
+  host: string;
+  project: string;
+} | null {
   const match = dsn.match(/^https:\/\/([^@]+)@([^/]+)\/(.+)$/);
   if (!match) return null;
   const [, publicKey, host, project] = match;
@@ -35,24 +40,107 @@ function parseDsn(dsn: string): { endpoint: string; publicKey: string } | null {
   if (!publicKey || !host || !project) return null;
   return {
     publicKey,
+    host,
+    project,
     endpoint: `https://${host}/api/${project}/envelope/`,
   };
 }
 
 /**
- * El envelope es un texto con un ítem JSON por línea; la primera es la cabecera
- * y debe traer `event_id`. Sin esa comprobación, un POST con cualquier cuerpo
- * se reenviaría a Sentry.
+ * Tipos de ítem que envía el SDK de Sentry (v11). La lista se usa para avisar
+ * de tipos nuevos, NO para descartarlos (ver `validarEnvelope`).
  */
-function isSentryEnvelope(text: string): boolean {
-  const firstLine = text.split("\n", 1)[0]?.trim();
-  if (!firstLine) return false;
-  try {
-    const header = JSON.parse(firstLine) as { event_id?: unknown };
-    return typeof header.event_id === "string" && header.event_id.length > 0;
-  } catch {
-    return false;
+const TIPOS_CONOCIDOS = new Set([
+  "event",
+  "session",
+  "sessions",
+  "transaction",
+  "span",
+  "attachment",
+  "user_report",
+  "profile",
+  "profile_chunk",
+  "replay_event",
+  "replay_recording",
+  "client_report",
+  "check_in",
+  "raw_security",
+  "feedback",
+]);
+
+type ValidacionEnvelope =
+  | { ok: true; tipoDesconocido?: string }
+  | { ok: false; motivo: string };
+
+/**
+ * Valida que el cuerpo sea un envelope real de Sentry y que vaya dirigido al
+ * MISMO proyecto que el DSN configurado (anti open-relay y anti quema de la
+ * cuota de un tercero).
+ *
+ * ── Por qué NO se exige `event_id` (bug corregido el 2026-10-11) ──
+ * La versión anterior sólo aceptaba envelopes cuya cabecera trajese
+ * `event_id`. Los envelopes de **sesión** (release health) y de
+ * **traza/performance** no lo llevan: la ruta les devolvía 400, así que Sentry
+ * nunca recibía esos datos y el navegador registraba dos errores de consola en
+ * cada carga de `/login` (además rompía el E2E `app.spec.ts:120`).
+ *
+ * Formato de un envelope: línea 1 = cabecera (con `dsn` y `sent_at`); después
+ * pares descriptor/payload. Un descriptor es un JSON con `type`.
+ *
+ * Política de tipos: se exige que exista al menos un ítem con `type` string,
+ * pero un tipo no listado se **reenvía igual** con un aviso en el log. Rechazar
+ * lo desconocido reintroduciría el mismo fallo en cuanto el SDK añada un tipo.
+ */
+function validarEnvelope(
+  text: string,
+  dsnConfigurado: { host: string; project: string },
+): ValidacionEnvelope {
+  const lineas = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lineas.length < 2) {
+    return { ok: false, motivo: "el envelope no tiene cabecera e ítems" };
   }
+
+  let cabecera: { dsn?: unknown };
+  try {
+    cabecera = JSON.parse(lineas[0]!) as { dsn?: unknown };
+  } catch {
+    return { ok: false, motivo: "la cabecera del envelope no es JSON" };
+  }
+  if (typeof cabecera.dsn !== "string" || !cabecera.dsn) {
+    return { ok: false, motivo: "la cabecera no trae dsn" };
+  }
+
+  const dsnItem = parseDsn(cabecera.dsn);
+  if (!dsnItem) {
+    return { ok: false, motivo: "el dsn del envelope tiene formato inválido" };
+  }
+  if (dsnItem.host !== dsnConfigurado.host || dsnItem.project !== dsnConfigurado.project) {
+    return { ok: false, motivo: "el dsn del envelope no corresponde al proyecto configurado" };
+  }
+
+  let items = 0;
+  let tipoDesconocido: string | undefined;
+  for (let i = 1; i < lineas.length; i++) {
+    let item: { type?: unknown } | null = null;
+    try {
+      item = JSON.parse(lineas[i]!) as { type?: unknown };
+    } catch {
+      item = null; // payload no-JSON (p. ej. minidump): se ignora
+    }
+    if (!item || typeof item.type !== "string" || !item.type) continue;
+    items++;
+    if (!TIPOS_CONOCIDOS.has(item.type) && tipoDesconocido === undefined) {
+      tipoDesconocido = item.type;
+    }
+  }
+  if (items === 0) {
+    return { ok: false, motivo: "el envelope no contiene ningún ítem con type" };
+  }
+
+  return tipoDesconocido === undefined ? { ok: true } : { ok: true, tipoDesconocido };
 }
 
 async function rawPost(req: NextRequest) {
@@ -98,12 +186,23 @@ async function rawPost(req: NextRequest) {
   }
 
   const envelope = new TextDecoder().decode(buffer);
-  if (!isSentryEnvelope(envelope)) {
-    // No es un envelope: se descarta sin reenviar (ni consumir cuota).
+  const validacion = validarEnvelope(envelope, parsed);
+  if (!validacion.ok) {
+    // No es un envelope nuestro: se descarta sin reenviar (ni consumir cuota).
+    logger.warn("Envelope de Sentry descartado por la validación", {
+      module: "sentry/tunnel",
+      motivo: validacion.motivo,
+    });
     return NextResponse.json(
-      { success: false, error: "Envelope inválido" },
+      { success: false, error: `Envelope inválido: ${validacion.motivo}` },
       { status: 400 },
     );
+  }
+  if (validacion.tipoDesconocido) {
+    logger.warn("Envelope con tipo de ítem no listado; se reenvía igual", {
+      module: "sentry/tunnel",
+      type: validacion.tipoDesconocido,
+    });
   }
 
   try {
