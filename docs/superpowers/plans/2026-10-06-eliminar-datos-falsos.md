@@ -1872,9 +1872,17 @@ usan el nombre REAL truncado a 63 bytes por Postgres **y** el alternativo
 **Alcance real (no vender de más).** Las tres tablas también cascada desde
 `projects` por su `project_id NOT NULL`, de modo que **borrar un proyecto
 entero las sigue borrando**: el cambio sólo altera el borrado de una
-investigación suelta, camino que hoy ningún código ejecuta. Si el objetivo
-fuera preservar esta evidencia ante el borrado de un proyecto, habría que
-revisar ese segundo nivel de cascada — otra decisión de producto, no tomada.
+investigación suelta, camino que hoy ningún código ejecuta.
+
+**Decidido el segundo nivel: `CASCADE` en `project_id` se queda.** Preguntado
+explícitamente, el operador mantiene la cascada hacia `projects`: `project_id`
+es la raíz de tenencia y un hallazgo sin proyecto deja de ser evidencia para
+ser un dato huérfano que ninguna query actual sabe leer. El caso real
+(«archivar sin destruir») ya tiene mecanismo — `projects.is_deleted` /
+`deleted_at` — y lo que falla es su **aplicación**: es el hallazgo #8 de la
+auditoría de BD (§8.2, queries que olvidan el filtro), que se cierra en **P1**
+(filtro en queries y en RLS, y borrado físico sólo como operación admin con
+backup), no en P0.5.
 
 **Corregido un test propio (P0.5-I-D).** `tests/db/fk-drift-guard.test.ts`
 exigía que `0044` fuera la **última** entrada del journal; eso convertía en
