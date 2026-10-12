@@ -393,6 +393,13 @@
       "when": 1791936000000,
       "tag": "0044_restore_missing_fks",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1792022400000,
+      "tag": "0045_intelligence_set_null_on_delete",
+      "breakpoints": true
     }
   ]
 }
