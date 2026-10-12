@@ -379,6 +379,13 @@
       "when": 1791763200000,
       "tag": "0042_revoke_truncate_authenticated",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1791849600000,
+      "tag": "0043_intelligence_run_events_fk",
+      "breakpoints": true
     }
   ]
 }
