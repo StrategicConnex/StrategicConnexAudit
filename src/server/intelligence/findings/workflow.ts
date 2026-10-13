@@ -1,6 +1,6 @@
 import "server-only";
 import { and, desc, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
-import { directDb } from "@/shared/db";
+import type { DbExecutor } from "@/shared/db/executor";
 import { withRLS } from "@/shared/db/rls";
 import { intelligenceFindings, findingActivity } from "@/shared/db/schemas/intelligence";
 import type { FindingSeverity } from "@/shared/db/schemas/intelligence";
@@ -18,6 +18,21 @@ import type { FindingSeverity } from "@/shared/db/schemas/intelligence";
  * vuelve a detectar lo mismo no debe reabrir un ticket ya triado — eso lo
  * decide una persona, no el escáner. Por eso los estados terminales no tienen
  * salidas.
+ *
+ * AUTORIDAD DE BD (P0.2, Oleada 2): las escrituras del ciclo de vida reciben el
+ * manejador (`DbExecutor`) del llamante en lugar de importar `directDb`. Quien
+ * llama decide:
+ *   - route handler con sesión → `withRLS(userId, (tx) => transitionFinding(tx, …))`,
+ *     y son las policies de `intelligence_findings` (0022 SELECT, 0023 INSERT y
+ *     0046 UPDATE) las que acotan la fila, además del gate de permiso de la ruta.
+ *   - bot de integraciones / jobs sin sesión → `transitionFinding(directDb, …)`
+ *     explícito en el call site (no hay usuario de plataforma al que atribuirlo).
+ * Antes esto escribía siempre con `directDb` porque la tabla no concedía UPDATE a
+ * `authenticated`: la autorización vivía sólo en el código de cada ruta.
+ *
+ * Excepción deliberada: `listFindingsForBoard` sigue eligiendo su propia
+ * autoridad (`withRLS`) porque es una lectura de tablero que ya nace filtrada
+ * por la política; moverlo a inyección no cambiaría el aislamiento.
  */
 
 export const FINDING_STATUSES = [
@@ -88,27 +103,36 @@ export type TransitionResult =
 /**
  * Aplica una transición y deja constancia en `finding_activity`.
  *
- * Escritura con directDb (role de servicio) porque `intelligence_findings` no
- * concede UPDATE a `authenticated`: la autorización se comprueba en la ruta
- * (requireProjectPermission) ANTES de llamar, igual que hace remediation. La
- * lectura del tablero sí pasa por withRLS (defensa en profundidad).
+ * La escritura va con la autoridad del llamante (P0.2): dentro de una ruta con
+ * sesión, `tx` es la transacción de `withRLS`, así que la policy de UPDATE de
+ * `intelligence_findings` (0046) filtra la fila y el `WITH CHECK` impide sacarla
+ * del proyecto. La lectura previa del estado también va por ahí: un hallazgo de
+ * otro tenant simplemente no existe para ese usuario (0 filas), y eso se traduce
+ * en `not_found` — sin fuga de que el id existe en otro sitio.
  */
-export async function transitionFinding(input: {
-  findingId: string;
-  toStatus: FindingStatus;
-  actorId: string | null;
-  note?: string | null;
-}): Promise<TransitionResult> {
-  const finding = await directDb.query.intelligenceFindings.findFirst({
-    where: eq(intelligenceFindings.id, input.findingId),
-    columns: {
-      id: true,
-      status: true,
-      severity: true,
-      slaHours: true,
-      acknowledgedAt: true,
-    },
-  });
+export async function transitionFinding(
+  tx: DbExecutor,
+  input: {
+    findingId: string;
+    toStatus: FindingStatus;
+    actorId: string | null;
+    note?: string | null;
+  },
+): Promise<TransitionResult> {
+  // Query builder (no `tx.query.*`): el ejecutor inyectado puede ser cualquier
+  // `PgDatabase`/transacción, con o sin schema adjunto — es el mismo criterio
+  // que siguieron los servicios del historial.
+  const [finding] = await tx
+    .select({
+      id: intelligenceFindings.id,
+      status: intelligenceFindings.status,
+      severity: intelligenceFindings.severity,
+      slaHours: intelligenceFindings.slaHours,
+      acknowledgedAt: intelligenceFindings.acknowledgedAt,
+    })
+    .from(intelligenceFindings)
+    .where(eq(intelligenceFindings.id, input.findingId))
+    .limit(1);
   if (!finding) {
     return { ok: false, reason: "not_found", message: "Hallazgo no encontrado" };
   }
@@ -142,12 +166,14 @@ export async function transitionFinding(input: {
     patch.resolvedAt = now;
   }
 
-  await directDb.transaction(async (tx) => {
-    await tx
+  // Anidada (SAVEPOINT) cuando el llamante ya viene dentro de `withRLS`, propia
+  // cuando recibe el handle raíz: las dos escrituras siguen siendo atómicas.
+  await tx.transaction(async (write) => {
+    await write
       .update(intelligenceFindings)
       .set(patch)
       .where(eq(intelligenceFindings.id, input.findingId));
-    await tx.insert(findingActivity).values({
+    await write.insert(findingActivity).values({
       findingId: input.findingId,
       fromStatus: from,
       toStatus: input.toStatus,
@@ -164,15 +190,18 @@ export async function transitionFinding(input: {
  * el hallazgo sigue ahí y el barrido de SLA no lo escala mientras esté
  * suprimido. Es una decisión explícita del analista, con motivo obligatorio.
  */
-export async function suppressFinding(input: {
-  findingId: string;
-  actorId: string | null;
-  reason: string;
-  hours: number;
-}): Promise<{ ok: boolean; suppressedUntil: string | null }> {
+export async function suppressFinding(
+  tx: DbExecutor,
+  input: {
+    findingId: string;
+    actorId: string | null;
+    reason: string;
+    hours: number;
+  },
+): Promise<{ ok: boolean; suppressedUntil: string | null }> {
   const now = new Date();
   const until = computeDueAt(now, input.hours);
-  const updated = await directDb
+  const updated = await tx
     .update(intelligenceFindings)
     .set({ suppressedUntil: until, suppressedReason: input.reason })
     .where(eq(intelligenceFindings.id, input.findingId))
@@ -291,34 +320,46 @@ export async function listFindingsForBoard(input: {
 }
 
 /** Scope mínimo de un hallazgo: id, proyecto y estado actual. */
-export async function getFindingScope(findingId: string) {
-  return (
-    (await directDb.query.intelligenceFindings.findFirst({
-      where: eq(intelligenceFindings.id, findingId),
-      columns: { id: true, projectId: true, status: true },
-    })) ?? null
-  );
+export async function getFindingScope(tx: DbExecutor, findingId: string) {
+  const [scope] = await tx
+    .select({
+      id: intelligenceFindings.id,
+      projectId: intelligenceFindings.projectId,
+      status: intelligenceFindings.status,
+    })
+    .from(intelligenceFindings)
+    .where(eq(intelligenceFindings.id, findingId))
+    .limit(1);
+  return scope ?? null;
 }
 
 /** Historial de un hallazgo, del más reciente al más antiguo. */
-export async function listFindingActivity(findingId: string) {
-  return directDb.query.findingActivity.findMany({
-    where: eq(findingActivity.findingId, findingId),
-    orderBy: [desc(findingActivity.createdAt)],
-    limit: 100,
-  });
+export async function listFindingActivity(tx: DbExecutor, findingId: string) {
+  return tx
+    .select()
+    .from(findingActivity)
+    .where(eq(findingActivity.findingId, findingId))
+    .orderBy(desc(findingActivity.createdAt))
+    .limit(100);
 }
 
-/** Hallazgos vencidos y aún abiertos (no suprimidos). Alimenta el escalado (B6). */
-export async function listOverdueFindings(limit = 100) {
-  return directDb.query.intelligenceFindings.findMany({
-    where: and(
-      isNotNull(intelligenceFindings.dueAt),
-      lt(intelligenceFindings.dueAt, new Date()),
-      inArray(intelligenceFindings.status, ["open", "acknowledged", "in_progress"]),
-      sql`(${intelligenceFindings.suppressedUntil} IS NULL OR ${intelligenceFindings.suppressedUntil} < now())`,
-    ),
-    orderBy: [intelligenceFindings.dueAt],
-    limit,
-  });
+/**
+ * Hallazgos vencidos y aún abiertos (no suprimidos). Alimenta el escalado (B6).
+ * Barrido de worker sin sesión: el llamante pasa `directDb` explícitamente
+ * porque el barrido es de todo el sistema, no de un tenant.
+ */
+export async function listOverdueFindings(tx: DbExecutor, limit = 100) {
+  return tx
+    .select()
+    .from(intelligenceFindings)
+    .where(
+      and(
+        isNotNull(intelligenceFindings.dueAt),
+        lt(intelligenceFindings.dueAt, new Date()),
+        inArray(intelligenceFindings.status, ["open", "acknowledged", "in_progress"]),
+        sql`(${intelligenceFindings.suppressedUntil} IS NULL OR ${intelligenceFindings.suppressedUntil} < now())`,
+      ),
+    )
+    .orderBy(intelligenceFindings.dueAt)
+    .limit(limit);
 }

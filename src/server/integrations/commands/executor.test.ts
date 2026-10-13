@@ -19,6 +19,11 @@ const {
   mockRecentLimit,
   mockGetFindingScope,
   mockTransition,
+  // El bot no tiene sesión: pasa `directDb` explícito a la máquina de estados.
+  // La identidad de este objeto es lo que comprueba el caso de `ack`, así que
+  // tiene que nacer en `vi.hoisted` (el factory de `vi.mock` corre antes que
+  // cualquier `const` del archivo). La forma se rellena justo debajo.
+  mockDirectDb,
 } = vi.hoisted(() => ({
   mockProjectFindFirst: vi.fn(),
   mockAuditFindFirst: vi.fn(),
@@ -26,24 +31,23 @@ const {
   mockRecentLimit: vi.fn(),
   mockGetFindingScope: vi.fn(),
   mockTransition: vi.fn(),
+  mockDirectDb: {} as Record<string, unknown>,
 }));
 
-vi.mock("@/shared/db", () => ({
-  directDb: {
-    query: {
-      projects: { findFirst: mockProjectFindFirst },
-      audits: { findFirst: mockAuditFindFirst },
-    },
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          groupBy: mockGroupBy,
-          orderBy: () => ({ limit: mockRecentLimit }),
-        }),
-      }),
+mockDirectDb.query = {
+  projects: { findFirst: mockProjectFindFirst },
+  audits: { findFirst: mockAuditFindFirst },
+};
+mockDirectDb.select = () => ({
+  from: () => ({
+    where: () => ({
+      groupBy: mockGroupBy,
+      orderBy: () => ({ limit: mockRecentLimit }),
     }),
-  },
-}));
+  }),
+});
+
+vi.mock("@/shared/db", () => ({ directDb: mockDirectDb }));
 
 vi.mock("@/shared/db/schemas", () => ({
   projects: { id: "projects.id" },
@@ -201,7 +205,9 @@ describe("runScAuditCommand — ack", () => {
       source: "Slack (ana)",
     });
 
-    expect(mockTransition).toHaveBeenCalledWith({
+    // P0.2: scope y transición reciben el MISMO handle sin sesión (directDb).
+    expect(mockGetFindingScope).toHaveBeenCalledWith(mockDirectDb, "f-1");
+    expect(mockTransition).toHaveBeenCalledWith(mockDirectDb, {
       findingId: "f-1",
       toStatus: "acknowledged",
       actorId: null,

@@ -6,6 +6,17 @@ const mocks = vi.hoisted(() => ({
   requireProjectPermission: vi.fn(),
   transitionFinding: vi.fn(),
   getFindingScope: vi.fn(),
+  withRLS: vi.fn(),
+}));
+
+/** Transacción de la sesión RLS: el test comprueba que la ruta la propaga. */
+const RLS_TX = { __rlsTx: true };
+
+vi.mock("@/shared/db/rls", () => ({
+  withRLS: (userId: string, cb: (tx: unknown) => Promise<unknown>) => {
+    mocks.withRLS(userId, RLS_TX);
+    return cb(RLS_TX);
+  },
 }));
 
 vi.mock("@/shared/lib/auth", () => ({
@@ -101,6 +112,20 @@ describe("Finding transition — POST", () => {
     });
     const res = await POST(post({ projectId: PROJECT_ID, toStatus: "resolved" }), ctx);
     expect(res.status).toBe(400);
+  });
+
+  it("P0.2: scope y transición comparten la transacción RLS del usuario", async () => {
+    mocks.requireProjectPermission.mockResolvedValue(null);
+    mocks.transitionFinding.mockResolvedValue({ ok: true, status: "acknowledged", dueAt: null });
+
+    await POST(post({ projectId: PROJECT_ID, toStatus: "acknowledged", note: "visto" }), ctx);
+
+    expect(mocks.withRLS).toHaveBeenCalledWith("user-1", RLS_TX);
+    expect(mocks.getFindingScope).toHaveBeenCalledWith(RLS_TX, FINDING_ID);
+    expect(mocks.transitionFinding).toHaveBeenCalledWith(
+      RLS_TX,
+      expect.objectContaining({ findingId: FINDING_ID, toStatus: "acknowledged", actorId: "user-1" }),
+    );
   });
 
   it("sin autenticación → 500", async () => {

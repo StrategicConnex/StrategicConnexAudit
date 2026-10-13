@@ -152,7 +152,11 @@ async function runAck(command: ParsedCommand, ctx: CommandContext): Promise<Comm
     return formatError("Falta el findingId. Uso: `ack <findingId>`.");
   }
 
-  const scope = await getFindingScope(findingId);
+  // P0.2: el bot no tiene sesión de usuario, así que el alcance se decide aquí
+  // (`directDb`, bypass deliberado) y la allowlist de proyectos es la
+  // autorización. La máquina de estados —`transitionFinding`— es la misma que
+  // usa el panel, para no tener dos vías de escritura distintas.
+  const scope = await getFindingScope(directDb, findingId);
   if (!scope) {
     return formatError("Hallazgo no encontrado.");
   }
@@ -160,7 +164,7 @@ async function runAck(command: ParsedCommand, ctx: CommandContext): Promise<Comm
     return formatError(projectNotAllowedMessage(scope.projectId));
   }
 
-  const result = await transitionFinding({
+  const result = await transitionFinding(directDb, {
     findingId,
     toStatus: "acknowledged",
     // Sin identidad de plataforma: la nota deja constancia de quién lo hizo.

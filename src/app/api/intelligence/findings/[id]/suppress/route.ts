@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
+import { withRLS } from "@/shared/db/rls";
 import { requireProjectPermission } from "@/server/lib/project-access";
 import { suppressFinding, getFindingScope } from "@/server/intelligence/findings/workflow";
 import { withErrorHandler } from "@/server/lib/error-handler";
@@ -33,18 +34,21 @@ const rawPostHandler = withErrorHandler(
         : new ForbiddenError(denied);
     }
 
-    const scope = await getFindingScope(id);
-    if (!scope || scope.projectId !== projectId) {
-      throw new NotFoundError("Hallazgo", id);
-    }
+    // Scope + escritura en la misma transacción RLS: la policy de UPDATE de
+    // `intelligence_findings` (0046) es la segunda barrera, no sólo el check de
+    // permiso de esta ruta.
+    const result = await withRLS(user.id, async (tx) => {
+      const scope = await getFindingScope(tx, id);
+      if (!scope || scope.projectId !== projectId) return null;
 
-    const result = await suppressFinding({
-      findingId: id,
-      actorId: user.id,
-      reason,
-      hours,
+      return suppressFinding(tx, {
+        findingId: id,
+        actorId: user.id,
+        reason,
+        hours,
+      });
     });
-    if (!result.ok) {
+    if (!result?.ok) {
       throw new NotFoundError("Hallazgo", id);
     }
 

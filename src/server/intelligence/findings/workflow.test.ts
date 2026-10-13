@@ -1,32 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+// El barril de schemas se evalúa PRIMERO para romper el ciclo
+// intelligence.ts ↔ schemas/index.ts ↔ adversary.ts (targetTypeEnum).
+import "@/shared/db/schemas";
 
 const mocks = vi.hoisted(() => ({
-  findFirst: vi.fn(),
-  update: vi.fn(),
-  insert: vi.fn(),
-  insertValues: vi.fn(),
-  activityFindMany: vi.fn(),
   withRLS: vi.fn(),
 }));
 
-// importOriginal evita romper la importación circular schemas/index ↔ adversary
-// (adversary.ts lee targetTypeEnum de intelligence.ts).
-vi.mock("@/shared/db", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/shared/db")>();
-  return {
-    ...actual,
-    directDb: {
-      query: {
-        intelligenceFindings: { findFirst: mocks.findFirst },
-        findingActivity: { findMany: mocks.activityFindMany },
-      },
-      transaction: async (cb: (tx: unknown) => Promise<unknown>) =>
-        cb({ update: mocks.update, insert: mocks.insert }),
-    },
-  };
-});
-
+// `withRLS` sólo lo usa `listFindingsForBoard` (lectura del tablero); el resto de
+// las funciones del ciclo de vida reciben el ejecutor por parámetro (P0.2), así
+// que aquí se les pasa uno falso y no hace falta tocar `@/shared/db`.
 vi.mock("@/shared/db/rls", () => ({ withRLS: mocks.withRLS }));
+
+/** Cadena encadenable de drizzle: cada método se devuelve a sí mismo y el objeto
+ *  es «thenable», así que `await tx.select(...).from(...).where(...)` resuelve al
+ *  valor indicado sin tocar ninguna base de datos. */
+function chain(value: unknown) {
+  const builder: Record<string, unknown> = {};
+  for (const method of ["from", "where", "orderBy", "limit", "groupBy"]) {
+    builder[method] = () => builder;
+  }
+  builder.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+    Promise.resolve(value).then(resolve, reject);
+  return builder;
+}
+
+/**
+ * Ejecutor falso con la forma que usa el servicio: `select` para la lectura
+ * previa y un `transaction` que entrega las dos escrituras (UPDATE del estado e
+ * INSERT del historial).
+ */
+function fakeExecutor(selected: unknown[] = [], returning: unknown[] = []) {
+  const update = vi.fn(() => ({ set: () => ({ where: () => ({ returning: async () => returning }) }) }));
+  const insertValues = vi.fn(async () => undefined);
+  const insert = vi.fn(() => ({ values: insertValues }));
+  const select = vi.fn(() => chain(selected));
+  const transaction = vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb({ update, insert }));
+  return { select, update, insert, insertValues, transaction };
+}
 
 import {
   FINDING_TRANSITIONS,
@@ -42,11 +53,6 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.update.mockReturnValue({
-    set: () => ({ where: async () => undefined }),
-  });
-  mocks.insert.mockReturnValue({ values: mocks.insertValues });
-  mocks.insertValues.mockResolvedValue(undefined);
 });
 
 describe("máquina de estados", () => {
@@ -92,8 +98,8 @@ describe("SLA", () => {
 
 describe("transitionFinding", () => {
   it("hallazgo inexistente → not_found", async () => {
-    mocks.findFirst.mockResolvedValue(null);
-    const r = await transitionFinding({
+    const exec = fakeExecutor([]);
+    const r = await transitionFinding(exec, {
       findingId: "id",
       toStatus: "acknowledged",
       actorId: "u1",
@@ -103,22 +109,25 @@ describe("transitionFinding", () => {
   });
 
   it("transición ilegal no toca la BD", async () => {
-    mocks.findFirst.mockResolvedValue({ id: "id", status: "open", severity: "high", slaHours: null, acknowledgedAt: null });
-    const r = await transitionFinding({ findingId: "id", toStatus: "resolved", actorId: "u1" });
+    const exec = fakeExecutor([{ id: "id", status: "open", severity: "high", slaHours: null, acknowledgedAt: null }]);
+    const r = await transitionFinding(exec, { findingId: "id", toStatus: "resolved", actorId: "u1" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe("invalid_transition");
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(exec.update).not.toHaveBeenCalled();
+    expect(exec.transaction).not.toHaveBeenCalled();
   });
 
   it("acknowledged fija slaHours y dueAt, y registra actividad", async () => {
-    mocks.findFirst.mockResolvedValue({
-      id: "f1",
-      status: "open",
-      severity: "critical",
-      slaHours: null,
-      acknowledgedAt: null,
-    });
-    const r = await transitionFinding({
+    const exec = fakeExecutor([
+      {
+        id: "f1",
+        status: "open",
+        severity: "critical",
+        slaHours: null,
+        acknowledgedAt: null,
+      },
+    ]);
+    const r = await transitionFinding(exec, {
       findingId: "f1",
       toStatus: "acknowledged",
       actorId: "u1",
@@ -129,20 +138,25 @@ describe("transitionFinding", () => {
       expect(r.status).toBe("acknowledged");
       expect(r.dueAt).toBeTruthy();
     }
-    expect(mocks.insertValues).toHaveBeenCalledWith(
+    // Las dos escrituras van por el ejecutor recibido, en una transacción
+    // (savepoint si el llamante ya está dentro de la suya).
+    expect(exec.transaction).toHaveBeenCalledTimes(1);
+    expect(exec.insertValues).toHaveBeenCalledWith(
       expect.objectContaining({ findingId: "f1", fromStatus: "open", toStatus: "acknowledged" }),
     );
   });
 
   it("resolved marca resolvedAt y no toca SLA", async () => {
-    mocks.findFirst.mockResolvedValue({
-      id: "f1",
-      status: "in_progress",
-      severity: "high",
-      slaHours: 72,
-      acknowledgedAt: new Date("2026-10-01T00:00:00Z"),
-    });
-    const r = await transitionFinding({ findingId: "f1", toStatus: "resolved", actorId: "u1" });
+    const exec = fakeExecutor([
+      {
+        id: "f1",
+        status: "in_progress",
+        severity: "high",
+        slaHours: 72,
+        acknowledgedAt: new Date("2026-10-01T00:00:00Z"),
+      },
+    ]);
+    const r = await transitionFinding(exec, { findingId: "f1", toStatus: "resolved", actorId: "u1" });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.dueAt).toBeNull();
   });

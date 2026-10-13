@@ -1,5 +1,6 @@
 import { task } from "@trigger.dev/sdk";
 import type { CronJobPayload } from "./cron-plan";
+import { directDb } from "@/shared/db";
 import { listOverdueFindings } from "@/server/intelligence/findings/workflow";
 import {
   notifyProjectAdmins,
@@ -33,7 +34,9 @@ export const findingSlaSweep = task({
   run: async (payload: CronJobPayload) => {
     console.log(`[FindingSla] Inicio ${payload.timestamp.toISOString()}`);
 
-    const overdue = await listOverdueFindings(SLA_ESCALATION_LIMIT);
+    // P0.2: barrido de sistema, sin sesión → `directDb` explícito (el alcance lo
+    // decide el llamante; la lectura de tablero con sesión sí pasa por withRLS).
+    const overdue = await listOverdueFindings(directDb, SLA_ESCALATION_LIMIT);
     const alreadyEscalated = await listRecentlyEscalatedFindingIds(
       "finding_overdue",
       SLA_ESCALATION_DEDUP_HOURS,

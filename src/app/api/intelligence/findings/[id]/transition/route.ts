@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserOrThrow } from "@/shared/lib/auth";
+import { withRLS } from "@/shared/db/rls";
 import { requireProjectPermission } from "@/server/lib/project-access";
 import {
   transitionFinding,
@@ -38,19 +39,27 @@ const rawPostHandler = withErrorHandler(
         : new ForbiddenError(denied);
     }
 
-    // El hallazgo debe pertenecer al proyecto sobre el que se autorizó.
-    const scope = await getFindingScope(id);
-    if (!scope || scope.projectId !== projectId) {
-      throw new NotFoundError("Hallazgo", id);
-    }
+    // El scope y la transición van en la MISMA transacción RLS: dentro de ella
+    // la sesión es `authenticated`, así que las policies de
+    // `intelligence_findings` (0022 lee, 0046 actualiza) vuelven a acotar la
+    // fila. La autorización del cuerpo (`projectId`) sigue siendo la primera
+    // barrera —un id de otro tenant no sirve de nada— y la policy es la segunda:
+    // antes sólo existía la primera porque la escritura iba con `directDb`.
+    const result = await withRLS(user.id, async (tx) => {
+      const scope = await getFindingScope(tx, id);
+      if (!scope || scope.projectId !== projectId) return null;
 
-    const result = await transitionFinding({
-      findingId: id,
-      toStatus,
-      actorId: user.id,
-      note: note ?? null,
+      return transitionFinding(tx, {
+        findingId: id,
+        toStatus,
+        actorId: user.id,
+        note: note ?? null,
+      });
     });
 
+    if (!result) {
+      throw new NotFoundError("Hallazgo", id);
+    }
     if (!result.ok) {
       if (result.reason === "not_found") throw new NotFoundError("Hallazgo", id);
       throw new ValidationError(result.message);

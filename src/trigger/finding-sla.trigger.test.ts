@@ -5,9 +5,14 @@ const listOverdueFindings = vi.hoisted(() => vi.fn());
 const notifyProjectAdmins = vi.hoisted(() => vi.fn());
 const listRecentlyEscalatedFindingIds = vi.hoisted(() => vi.fn());
 
+// El barrido es de sistema (no de un tenant), así que el task decide el alcance
+// pasando `directDb` explícito: es el contrato que fija este marcador.
+const directDb = vi.hoisted(() => ({ __kind: "directDb" }));
+
 vi.mock("@trigger.dev/sdk", () => ({
   task: vi.fn((config: unknown) => config),
 }));
+vi.mock("@/shared/db", () => ({ directDb }));
 vi.mock("@/server/intelligence/findings/workflow", () => ({ listOverdueFindings }));
 vi.mock("@/server/notifications/emit", () => ({
   notifyProjectAdmins,
@@ -82,7 +87,7 @@ describe("Trigger: finding-sla-sweep", () => {
     notifyProjectAdmins.mockResolvedValue(2);
 
     const result = await task.run(payload);
-    expect(listOverdueFindings).toHaveBeenCalledWith(SLA_ESCALATION_LIMIT);
+    expect(listOverdueFindings).toHaveBeenCalledWith(directDb, SLA_ESCALATION_LIMIT);
     expect(result.escalated).toBe(3);
     expect(result.notifications).toBe(6);
     expect(result.perProject).toEqual({ p1: 2, p2: 1 });

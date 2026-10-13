@@ -6,6 +6,17 @@ const mocks = vi.hoisted(() => ({
   requireProjectPermission: vi.fn(),
   suppressFinding: vi.fn(),
   getFindingScope: vi.fn(),
+  withRLS: vi.fn(),
+}));
+
+/** Transacción de la sesión RLS: el test comprueba que la ruta la propaga. */
+const RLS_TX = { __rlsTx: true };
+
+vi.mock("@/shared/db/rls", () => ({
+  withRLS: (userId: string, cb: (tx: unknown) => Promise<unknown>) => {
+    mocks.withRLS(userId, RLS_TX);
+    return cb(RLS_TX);
+  },
 }));
 
 vi.mock("@/shared/lib/auth", () => ({
@@ -82,6 +93,20 @@ describe("Finding suppress — POST", () => {
     mocks.requireProjectPermission.mockResolvedValue("No tienes permiso para esta acción");
     const res = await POST(post({ projectId: PROJECT_ID, reason: "ruido conocido" }), ctx);
     expect(res.status).toBe(403);
+  });
+
+  it("P0.2: scope y supresión comparten la transacción RLS del usuario", async () => {
+    mocks.requireProjectPermission.mockResolvedValue(null);
+    mocks.suppressFinding.mockResolvedValue({ ok: true, suppressedUntil: null });
+
+    await POST(post({ projectId: PROJECT_ID, reason: "ruido conocido", hours: 24 }), ctx);
+
+    expect(mocks.withRLS).toHaveBeenCalledWith("user-1", RLS_TX);
+    expect(mocks.getFindingScope).toHaveBeenCalledWith(RLS_TX, FINDING_ID);
+    expect(mocks.suppressFinding).toHaveBeenCalledWith(
+      RLS_TX,
+      expect.objectContaining({ findingId: FINDING_ID, actorId: "user-1", reason: "ruido conocido" }),
+    );
   });
 
   it("sin autenticación → 500", async () => {
