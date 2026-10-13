@@ -45,11 +45,11 @@ async function handler(_req: NextRequest, userId: string) {
       return NextResponse.json({ success: false, error: "projectId es requerido" }, { status: 400 });
     }
 
-    // Ownership y lecturas WHOIS en la MISMA transacción: dentro de ella la
-    // sesión es `authenticated` con el `sub` del usuario, así que las policies de
-    // `whois_history` (0027) deciden qué filas existen. Antes el ownership se
-    // comprobaba aquí y la lectura se hacía con directDb (bypass de RLS): una
-    // única barrera, la de este archivo.
+    // Ownership y lecturas de historial en la MISMA transacción: dentro de ella
+    // la sesión es `authenticated` con el `sub` del usuario, así que las policies
+    // de `dns_history`/`whois_history` (0027) deciden qué filas existen. Antes el
+    // ownership se comprobaba aquí y las lecturas se hacían con directDb (bypass
+    // de RLS): una única barrera, la de este archivo.
     const access = await withRLS(userId, async (tx) => {
       const ownedProject = await tx.query.projects.findFirst({
         where: eq(projects.id, projectId),
@@ -59,6 +59,9 @@ async function handler(_req: NextRequest, userId: string) {
       if (!ownedProject) return null;
 
       return {
+        dns: type === "dns" || type === "all"
+          ? await queryDnsHistory(tx, { projectId, query, recordType, from, to, limit, offset })
+          : null,
         whois: type === "whois" || type === "all"
           ? await queryWhoisHistory(tx, { projectId, domain: query, from, to, limit, offset })
           : null,
@@ -75,15 +78,14 @@ async function handler(_req: NextRequest, userId: string) {
       );
     }
 
-    // DNS sigue leyéndose con directDb: `dns-history.ts` se migra en su propia
-    // iteración (el guard de superficie marca los sitios que quedan).
-    const dnsResult = type === "dns" || type === "all"
-      ? await queryDnsHistory({ projectId, query, recordType, from, to, limit, offset })
-      : null;
-    const whoisResult = access.whois;
-    const timeline = access.timeline;
-
-    return NextResponse.json({ success: true, type, projectId, dns: dnsResult, whois: whoisResult, timeline });
+    return NextResponse.json({
+      success: true,
+      type,
+      projectId,
+      dns: access.dns,
+      whois: access.whois,
+      timeline: access.timeline,
+    });
   } catch (error: unknown) {
     logger.error("[History API] Error:", { error: getErrorMessage(error) })
     return NextResponse.json({ success: false, error: `Error al consultar historial: ${getErrorMessage(error)}` }, { status: 500 });

@@ -6,6 +6,7 @@ import { persistDnsSnapshotsBatch } from "./dns-history";
 import { persistWhoisSnapshot } from "./whois-history";
 import { detectDnsChanges } from "./dns-history";
 import { detectWhoisChanges } from "./whois-history";
+import { directDb } from "@/shared/db";
 import type { DbExecutor } from "@/shared/db/executor";
 import { sendDnsChangeAlerts } from "@/server/security/dns-change-alert";
 import type { DnsChange, WhoisChange, WhoisSnapshot } from "./types";
@@ -42,7 +43,9 @@ export async function processDnsResults(params: {
   for (const txt of results.txt ?? []) allSnapshots.push({ recordType: "TXT", query: domain, value: txt, ttl: null });
 
   await persistDnsSnapshotsBatch(projectId, investigationId, allSnapshots);
-  const changes = await detectDnsChanges(projectId, domain);
+  // Camino de executor/worker: sin sesión de usuario no hay política que aplicar,
+  // así que la autoridad es `directDb` y se declara aquí, en el call site.
+  const changes = await detectDnsChanges(directDb, projectId, domain);
 
   // Fire SIEM alert for DNS changes (fire-and-forget, no await — non-blocking)
   if (changes.length > 0) {
@@ -81,11 +84,10 @@ export async function getProjectHistoryTimeline(
   projectId: string,
   domain?: string,
 ): Promise<{ dnsChanges: DnsChange[]; whoisChanges: WhoisChange[] }> {
-  // El detalle WHOIS se lee con la autoridad del llamante (`tx`). El DNS sigue
-  // con directDb dentro de `detectDnsChanges`: esa lectura se migra en su
-  // propia iteración (mismo patrón, otro servicio).
+  // Las dos lecturas van con la autoridad del llamante (`tx`): el timeline no
+  // puede mostrar cambios de un tenant que la policy no deja ver.
   const [dnsChanges, whoisChanges] = await Promise.all([
-    domain ? detectDnsChanges(projectId, domain) : Promise.resolve([] as DnsChange[]),
+    domain ? detectDnsChanges(tx, projectId, domain) : Promise.resolve([] as DnsChange[]),
     domain ? detectWhoisChanges(tx, projectId, domain) : Promise.resolve([] as WhoisChange[]),
   ]);
   return { dnsChanges, whoisChanges };

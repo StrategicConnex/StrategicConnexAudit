@@ -115,6 +115,7 @@ describe("Intelligence: History — GET", () => {
       timeline: null,
     });
     expect(mockQueryDns).toHaveBeenCalledWith(
+      lastTx,
       expect.objectContaining({ projectId: "p1", limit: 50, offset: 0 }),
     );
     expect(mockQueryWhois).toHaveBeenCalledWith(
@@ -134,6 +135,7 @@ describe("Intelligence: History — GET", () => {
     expect(body.dns).toEqual(dnsPayload);
     expect(body.whois).toBeNull();
     expect(mockQueryDns).toHaveBeenCalledWith(
+      lastTx,
       expect.objectContaining({
         query: "example.com",
         recordType: "A",
@@ -202,7 +204,13 @@ describe("Intelligence: History — GET", () => {
     expect(mockQueryWhois.mock.calls[0]![0]).toBe(lastTx);
   });
 
-  it("P0.2: el timeline WHOIS también corre dentro de la transacción RLS", async () => {
+  it("P0.2: las lecturas DNS corren dentro de la transacción RLS del usuario", async () => {
+    await GET(createRequest("?projectId=p1&type=dns&query=example.com") as never);
+
+    expect(mockQueryDns.mock.calls[0]![0]).toBe(lastTx);
+  });
+
+  it("P0.2: el timeline (DNS + WHOIS) corre dentro de la transacción RLS", async () => {
     await GET(createRequest("?projectId=p1&type=timeline&query=example.com") as never);
 
     expect(mockTimeline.mock.calls[0]![0]).toBe(lastTx);

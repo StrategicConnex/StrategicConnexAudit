@@ -1,8 +1,21 @@
 /**
  * history/dns-history.ts — DNS History Persistence & Query
+ *
+ * AUTORIDAD (P0.2): las LECTURAS reciben el manejador de BD del llamante
+ * (`DbExecutor`), igual que `whois-history.ts`: la ruta pasa la transacción de
+ * `withRLS` y las policies de `dns_history` (0027) deciden qué filas existen;
+ * un job sin sesión pasaría `directDb` explícito. Antes leían con `directDb`
+ * (rol postgres, `rolbypassrls`), así que el aislamiento dependía de que cada
+ * ruta recordara comprobar ownership antes.
+ *
+ * La ESCRITURA (`persistDnsSnapshot`) sigue en `directDb` en este paso: la
+ * invocan executors fire-and-forget del motor de escaneo (sin sesión
+ * garantizada) y migrarla exige propagar la transacción por el
+ * `ExecutorContext`.
  */
 
 import { directDb } from "@/shared/db";
+import type { DbExecutor } from "@/shared/db/executor";
 import { dnsHistory } from "@/shared/db/schemas/history";
 import { and, eq, gte, lte, desc } from "drizzle-orm";
 import crypto from "node:crypto";
@@ -73,15 +86,18 @@ export async function persistDnsSnapshotsBatch(
   }
 }
 
-export async function queryDnsHistory(params: {
-  projectId: string;
-  query?: string;
-  recordType?: string;
-  from?: Date;
-  to?: Date;
-  limit?: number;
-  offset?: number;
-}): Promise<HistoryQueryResult<DnsSnapshot>> {
+export async function queryDnsHistory(
+  tx: DbExecutor,
+  params: {
+    projectId: string;
+    query?: string;
+    recordType?: string;
+    from?: Date;
+    to?: Date;
+    limit?: number;
+    offset?: number;
+  },
+): Promise<HistoryQueryResult<DnsSnapshot>> {
   const { projectId: pid, query, recordType, from, to, limit = 50, offset = 0 } = params;
 
   const conditions = [eq(dnsHistory.projectId, pid)];
@@ -90,7 +106,7 @@ export async function queryDnsHistory(params: {
   if (from) conditions.push(gte(dnsHistory.snapshotDate, from));
   if (to) conditions.push(lte(dnsHistory.snapshotDate, to));
 
-  const rows = await directDb
+  const rows = await tx
     .select()
     .from(dnsHistory)
     .where(and(...conditions))
@@ -108,7 +124,7 @@ export async function queryDnsHistory(params: {
   }));
 
   const firstSeen = rows.length > 0
-    ? await directDb
+    ? await tx
         .select({ seenAt: dnsHistory.firstSeenAt })
         .from(dnsHistory)
         .where(and(...conditions))
@@ -120,8 +136,8 @@ export async function queryDnsHistory(params: {
   return { snapshots, totalCount: rows.length, firstSeen, lastSeen: rows[0]?.snapshotDate ?? null, changeCount: 0 };
 }
 
-export async function getDnsRecordHistory(projectId: string, query: string, recordType: string, limit = 20): Promise<DnsSnapshot[]> {
-  const rows = await directDb
+export async function getDnsRecordHistory(tx: DbExecutor, projectId: string, query: string, recordType: string, limit = 20): Promise<DnsSnapshot[]> {
+  const rows = await tx
     .select()
     .from(dnsHistory)
     .where(and(eq(dnsHistory.projectId, projectId), eq(dnsHistory.query, query), eq(dnsHistory.recordType, recordType)))
@@ -130,16 +146,16 @@ export async function getDnsRecordHistory(projectId: string, query: string, reco
   return rows.map((r) => ({ recordType: r.recordType, query: r.query, value: r.value, ttl: r.ttl, metadata: r.metadata ?? undefined }));
 }
 
-export async function detectDnsChanges(projectId: string, query: string): Promise<DnsChange[]> {
+export async function detectDnsChanges(tx: DbExecutor, projectId: string, query: string): Promise<DnsChange[]> {
   const changes: DnsChange[] = [];
-  const types = await directDb
+  const types = await tx
     .select({ recordType: dnsHistory.recordType })
     .from(dnsHistory)
     .where(and(eq(dnsHistory.projectId, projectId), eq(dnsHistory.query, query)))
     .groupBy(dnsHistory.recordType);
 
   for (const { recordType } of types) {
-    const snapshots = await directDb
+    const snapshots = await tx
       .select({ value: dnsHistory.value, snapshotDate: dnsHistory.snapshotDate })
       .from(dnsHistory)
       .where(and(eq(dnsHistory.projectId, projectId), eq(dnsHistory.query, query), eq(dnsHistory.recordType, recordType)))
