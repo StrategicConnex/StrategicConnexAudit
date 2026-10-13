@@ -13,7 +13,8 @@
  *   - policies de proyecto (`FOR ALL … user_has_project_access`): plantilla del
  *     bloque fase 2 de la migración 0027, instanciada para la tabla concreta;
  *   - funciones helper `current_auth_uid()` / `user_has_project_access()`: 0025;
- *   - tabla: su `CREATE TABLE` real (hoy 0010 para el historial);
+ *   - tabla: su `CREATE TABLE` real (0010 para el historial, 0003 para las tablas
+ *     de inteligencia) y, cuando hace falta, el `CREATE TYPE` de sus enums;
  *   - sesión: idéntica a `withRLS()`
  *     (`set_config('request.jwt.claims', …, true)` + `SET LOCAL ROLE authenticated`).
  *
@@ -32,9 +33,9 @@ import { sql } from "drizzle-orm";
 import { ROOT, splitStatements } from "../../scripts/db/rls-inventory.mjs";
 import type { DbExecutor } from "@/shared/db/executor";
 
-const MIGRATION_CORE = path.join(ROOT, "drizzle/0025_rls_core_defense_in_depth.sql");
-const MIGRATION_TABLES = path.join(ROOT, "drizzle/0010_dns_whois_history.sql");
-const MIGRATION_FASE2 = path.join(ROOT, "drizzle/0027_rls_fase2.sql");
+const MIGRATIONS_DIR = path.join(ROOT, "drizzle");
+const MIGRATION_CORE = path.join(MIGRATIONS_DIR, "0025_rls_core_defense_in_depth.sql");
+const MIGRATION_FASE2 = path.join(MIGRATIONS_DIR, "0027_rls_fase2.sql");
 
 /** Handle de drizzle sobre PGlite (el fixture solo lo usa para abrir sesión). */
 export type RlsOrm = ReturnType<typeof drizzle>;
@@ -46,13 +47,51 @@ export function helperFunctions(): string[] {
   );
 }
 
-/** `CREATE TABLE … "<table>" …` real, tal como lo escribió su migración. */
+/** Primera sentencia de las migraciones que casa con `re` (se leen en orden de archivo). */
+function findStatement(re: RegExp, what: string): string {
+  const files = fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
+  for (const file of files) {
+    const [stmt] = (splitStatements(fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8")) as string[]).filter(
+      (s) => re.test(s),
+    );
+    if (stmt) return stmt;
+  }
+  throw new Error(`No se encontró ${what} en drizzle/`);
+}
+
+/**
+ * `CREATE TABLE … "<table>" …` real, tal como lo escribió su migración. Se busca
+ * en **todas** las migraciones: 0003 declara las tablas de inteligencia y 0010 el
+ * historial DNS/WHOIS, y la primera que crea la tabla es la que manda.
+ */
 export function realTableDdl(table: string): string {
-  const [ddl] = (splitStatements(fs.readFileSync(MIGRATION_TABLES, "utf8")) as string[]).filter(
-    (s) => new RegExp(`^CREATE TABLE (IF NOT EXISTS )?"${table}"`).test(s),
+  return findStatement(
+    new RegExp(`^CREATE TABLE (IF NOT EXISTS )?"${table}"`),
+    `el CREATE TABLE de ${table}`,
   );
-  if (!ddl) throw new Error(`No se encontró el CREATE TABLE de ${table} en 0010`);
-  return ddl;
+}
+
+/** `CREATE TYPE "public"."<type>"` real: los enums que usan esas tablas. */
+export function realTypeDdl(type: string): string {
+  return findStatement(
+    new RegExp(`^CREATE TYPE (?:"public"\\.|public\\.)"?${type}"?`),
+    `el CREATE TYPE de ${type}`,
+  );
+}
+
+/** Sentencias de una migración concreta, ya sin comentarios. */
+export function migrationStatements(fileName: string): string[] {
+  const file = path.join(MIGRATIONS_DIR, fileName);
+  if (!fs.existsSync(file)) throw new Error(`No existe la migración ${fileName} en drizzle/`);
+  return splitStatements(fs.readFileSync(file, "utf8")) as string[];
+}
+
+/**
+ * Subconjunto de una migración que casa con `re` — para aplicar las policies
+ * REALES de una tabla concreta (grants y policies incluidas) sin imitarlas.
+ */
+export function statementsMatching(fileName: string, re: RegExp): string[] {
+  return migrationStatements(fileName).filter((s) => re.test(s));
 }
 
 /** Bloque dinámico de 0027 que crea las policies fase 2 (plantilla + listado). */
@@ -104,39 +143,52 @@ export interface RlsFixture {
   asUser<T>(userId: string, run: (tx: DbExecutor) => Promise<T>): Promise<T>;
 }
 
+/** Sesión idéntica a `withRLS()`: claims + `SET LOCAL ROLE` dentro de una transacción. */
+function sessionOf(orm: RlsOrm): RlsFixture["asUser"] {
+  return <T>(userId: string, run: (tx: DbExecutor) => Promise<T>): Promise<T> =>
+    orm.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT set_config('request.jwt.claims', ${JSON.stringify({ sub: userId, role: "authenticated" })}, true)`,
+      );
+      await tx.execute(sql`SET LOCAL ROLE authenticated`);
+      return run(tx as unknown as DbExecutor);
+    });
+}
+
 /**
- * Levanta un Postgres real con la tabla indicada, sus grants, RLS activado y la
- * policy REAL de la migración 0027 aplicada.
+ * Base sin políticas: tablas raíz multi-tenant, las funciones helper REALES de
+ * 0025 y el DDL adicional que pida el test (tablas y enums suyos). Existe para
+ * los tests que necesitan **componer** sus propias policies — el caso canónico es
+ * el de escritura de inteligencia, que compara el mismo escenario con y sin la
+ * migración que las crea.
  */
-export async function createRlsFixture(table: string, policyName: string): Promise<RlsFixture> {
+export async function createRlsBaseFixture(extraDdl = ""): Promise<RlsFixture> {
   const helpers = helperFunctions();
   if (helpers.length !== 2) {
     throw new Error(`Se esperaban 2 funciones helper en 0025, hay ${helpers.length}`);
   }
 
   const pg = new PGlite();
-  await pg.exec(realTableDdl(table));
   await pg.exec(BASE_TABLES);
-  await pg.exec(`GRANT SELECT, INSERT, UPDATE, DELETE ON projects, project_members, "${table}" TO authenticated;`);
   for (const stmt of helpers) await pg.exec(stmt);
-  await pg.exec(`ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`);
-  await pg.exec(instantiatePolicy(policyTemplate(), policyName, table));
+  if (extraDdl) await pg.exec(extraDdl);
 
   const orm = drizzle(pg);
+  return { pg, orm, asUser: sessionOf(orm) };
+}
 
-  return {
-    pg,
-    orm,
-    async asUser<T>(userId: string, run: (tx: DbExecutor) => Promise<T>): Promise<T> {
-      return orm.transaction(async (tx) => {
-        await tx.execute(
-          sql`SELECT set_config('request.jwt.claims', ${JSON.stringify({ sub: userId, role: "authenticated" })}, true)`,
-        );
-        await tx.execute(sql`SET LOCAL ROLE authenticated`);
-        return run(tx as unknown as DbExecutor);
-      });
-    },
-  };
+/**
+ * Levanta un Postgres real con la tabla indicada, sus grants, RLS activado y la
+ * policy REAL de la migración 0027 aplicada.
+ */
+export async function createRlsFixture(table: string, policyName: string): Promise<RlsFixture> {
+  const fixture = await createRlsBaseFixture(realTableDdl(table));
+  await fixture.pg.exec(
+    `GRANT SELECT, INSERT, UPDATE, DELETE ON projects, project_members, "${table}" TO authenticated;`,
+  );
+  await fixture.pg.exec(`ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`);
+  await fixture.pg.exec(instantiatePolicy(policyTemplate(), policyName, table));
+  return fixture;
 }
 
 /**
