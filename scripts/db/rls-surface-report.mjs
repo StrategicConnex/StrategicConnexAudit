@@ -32,9 +32,9 @@
    P0.2, que consumirá este mismo conteo contra su allowlist).
    ═══════════════════════════════════════════════════════════════════════ */
 
-import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
+import { countSurface } from "./rls-surface-patterns.mjs";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -62,45 +62,10 @@ const ZONAS = [
 
 const zona = (rel) => ZONAS.find(([p]) => rel.startsWith(p))?.[1] ?? "otro";
 
-/** `directDb.<método>(` — no coincide con `otroDirectDb.` por el lookbehind. */
-const RE_DIRECT = /(?<![\w.])directDb\.(query|insert|update|delete|select|execute|transaction|\$count)/g;
-/** `db.<método>(` crudo, excluyendo `directDb.` y `lazyDb.`/`getDb.` */
-const RE_BARE = /(?<![\w.$])db\.(query|insert|update|delete|select|execute|transaction)/g;
-
-function* walk(dir) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const abs = path.join(dir, entry.name);
-    const rel = path.relative(ROOT, abs).split(path.sep).join("/");
-    if (entry.isDirectory()) {
-      if (entry.name === "node_modules") continue;
-      yield* walk(abs);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.(test|spec)\.(ts|tsx)$/.test(entry.name)) {
-      yield { abs, rel };
-    }
-  }
-}
-
-const lineOf = (src, index) => src.slice(0, index).split(/\r?\n/).length;
-
-const archivos = [];
-for (const { abs, rel } of walk(SRC)) {
-  const src = fs.readFileSync(abs, "utf8");
-  const directas = [...src.matchAll(RE_DIRECT)].map((m) => lineOf(src, m.index));
-  const crudas = [...src.matchAll(RE_BARE)].map((m) => lineOf(src, m.index));
-  if (directas.length === 0 && crudas.length === 0) continue;
-  archivos.push({
-    archivo: rel,
-    zona: zona(rel),
-    directDb: directas,
-    dbSinEnvolver: crudas,
-    usaWithRLS: /\bwithRLS\b/.test(src),
-  });
-}
-
-const totales = archivos.reduce(
-  (acc, a) => ({ directDb: acc.directDb + a.directDb.length, dbSinEnvolver: acc.dbSinEnvolver + a.dbSinEnvolver.length }),
-  { directDb: 0, dbSinEnvolver: 0 },
-);
+/* Patrón y conteo compartidos con el guard (rls-surface-patterns.mjs): si uno
+   se corrige y el otro no, el gate y el informe contarían cosas distintas. */
+const { archivos: conteo, totales } = countSurface(SRC, ROOT);
+const archivos = conteo.map((a) => ({ ...a, zona: zona(a.archivo) }));
 
 /** Resumen agrupado por zona, con el solapamiento (withRLS + acceso crudo). */
 function porZona() {

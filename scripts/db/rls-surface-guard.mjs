@@ -21,50 +21,36 @@
    Falla en:
    - total supera los máximos declarados
    - aparece un archivo nuevo no en baseline (no requiere allowlist manual)
-   - cualquier archivo con presente en baseline incrementa su conteo (delta != 0)
+   - cualquier archivo con presente en baseline CAMBIA su conteo (delta != 0),
+     también si baja: una mejora se consolida con --snapshot en su commit
+
+   QUÉ CUENTA (y qué dejó de escaparse el 2026-10-13): el patrón tolera el salto
+   de línea (`directDb` + `.select()` en la línea siguiente), que es el estilo
+   dominante en este repo. Antes exigía el punto pegado al identificador, así que
+   190 de 330 llamadas reales —y cualquier sitio NUEVO escrito así— eran
+   invisibles para el gate. El conteo vive en rls-surface-patterns.mjs, compartido
+   con el informe para que ambos no puedan divergir.
    ═══════════════════════════════════════════════════════════════════════ */
 
 import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
+import { countSurface } from "./rls-surface-patterns.mjs";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
-/* ── árbol ────────────────────────────────────────────────────────────── */
-function* walk(dir) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const abs = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === "node_modules") continue;
-      yield* walk(abs);
-    } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.(test|spec)\.(ts|tsx)$/.test(entry.name)) {
-      yield abs;
-    }
-  }
-}
-
-/* ──正規表現 counts ────────────────────────────────────────────────────── */
-const RE_DIRECT = /(?<![\\w.])directDb\.(query|insert|update|delete|select|execute|transaction|\$count)/g;
-const RE_BARE = /(?<![\\w.$])db\.(query|insert|update|delete|select|execute|transaction)/g;
-
-const lineOf = (src, index) => src.slice(0, index).split(/\r?\n/).length;
-
-/* ── conteo léxico ─────────────────────────────────────────────────────── */
+/* ── conteo léxico (patrón compartido con el informe) ──────────────────── */
 function count() {
-  const archivos = [];
-  for (const abs of walk(path.resolve(__dirname, "..", "..", "src"))) {
-    const rel = path.relative(path.resolve(__dirname, "..", ".."), abs).split(path.sep).join("/");
-    const src = fs.readFileSync(abs, "utf8");
-    const directas = [...src.matchAll(RE_DIRECT)].map((m) => lineOf(src, m.index));
-    const crudas = [...src.matchAll(RE_BARE)].map((m) => lineOf(src, m.index));
-    if (directas.length === 0 && crudas.length === 0) continue;
-    archivos.push({ archivo: rel, directDb: directas.length, dbSinEnvolver: crudas.length });
-  }
-  const totales = archivos.reduce(
-    (a, b) => ({ directDb: a.directDb + b.directDb, dbSinEnvolver: a.dbSinEnvolver + b.dbSinEnvolver }),
-    { directDb: 0, dbSinEnvolver: 0 },
-  );
-  return { archivos, totales };
+  const root = path.resolve(__dirname, "..", "..");
+  const { archivos, totales } = countSurface(path.join(root, "src"), root);
+  return {
+    archivos: archivos.map((a) => ({
+      archivo: a.archivo,
+      directDb: a.directDb.length,
+      dbSinEnvolver: a.dbSinEnvolver.length,
+    })),
+    totales,
+  };
 }
 
 /* ── snapshot ──────────────────────────────────────────────────────────── */
@@ -153,7 +139,7 @@ for (const a of archivosAhora) {
     const deltaDb = a.dbSinEnvolver - bl.dbSinEnvolver;
     failed = true;
     errors.push(
-      `INCREMENTO en archivo: ${a.archivo} [antes ${bl.directDb}/${bl.dbSinEnvolver} → ahora ${a.directDb}/${a.dbSinEnvolver} (Δ ${deltaDirect ? (deltaDirect > 0 ? "+" : "") + deltaDirect : "0"} / ${deltaDb ? (deltaDb > 0 ? "+" : "") + deltaDb : "0"})]`,
+      `CAMBIO en archivo: ${a.archivo} [antes ${bl.directDb}/${bl.dbSinEnvolver} → ahora ${a.directDb}/${a.dbSinEnvolver} (Δ ${deltaDirect ? (deltaDirect > 0 ? "+" : "") + deltaDirect : "0"} / ${deltaDb ? (deltaDb > 0 ? "+" : "") + deltaDb : "0"})]${deltaDirect < 0 || deltaDb < 0 ? "  ← mejora: re-congela con --snapshot en este commit" : ""}`,
     );
   }
   // exact match → pasa, incluso si no estaba en allowedFiles
