@@ -245,6 +245,16 @@ jobs:
           fi
           node scripts/db/grant-audit.mjs
 
+      - name: RLS surface guard (anti-regresión de llamadas fuera de withRLS)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::warning::Secreto DIRECT_URL no configurado — guard de superficie RLS omitido (corre localmente y en otro pipeline con la BD real)."
+            exit 0
+          fi
+          pnpm db:rls-surface-guard
+
       - name: Report drift status
         if: always()
         run: |
