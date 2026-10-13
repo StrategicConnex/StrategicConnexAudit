@@ -13,7 +13,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/shared/lib/supabase/server";
-import { directDb } from "@/shared/db";
+import { withRLS } from "@/shared/db/rls";
+import type { DbExecutor } from "@/shared/db/executor";
 import { pushSubscriptions } from "@/shared/db/schemas/push-subscriptions";
 import { eq, and } from "drizzle-orm";
 import { getVapidPublicKey } from "@/server/notifications/push";
@@ -64,43 +65,48 @@ async function rawPost(req: NextRequest) {
 
     const endpoint = subscription.endpoint as string;
 
-    // 3. Check if already subscribed
-    // SECURITY: scoped por userId — un endpoint de OTRO usuario no se
-    // reactiva ni sobrescribe (evita hijacking de notificaciones)
-    const existing = await directDb
-      .select({ id: pushSubscriptions.id })
-      .from(pushSubscriptions)
-      .where(
-        and(
-          eq(pushSubscriptions.endpoint, endpoint),
-          eq(pushSubscriptions.userId, user.id),
-        ),
-      )
-      .limit(1);
-
-    if (existing.length > 0) {
-      // Reactivate if inactive
-      await directDb
-        .update(pushSubscriptions)
-        .set({
-          subscription: subscription as Record<string, unknown>,
-          active: true,
-          userAgent: req.headers.get("user-agent") || undefined,
-          updatedAt: new Date(),
-        })
-        .where(eq(pushSubscriptions.id, existing[0]!.id));
-
-      return NextResponse.json({ success: true, status: "reactivated" });
-    }
-
-    // 4. Insert new subscription (el endpoint es UNIQUE: si existe de otro
-    // usuario el insert falla con 23505 y se responde conflicto, sin filtrar datos)
+    // 3-4. (Oleada 3) Alta y reactivación bajo RLS: check + write viven en la
+    // MISMA transacción con la sesión `authenticated` del usuario, así que las
+    // policies de `push_subscriptions` (por user_id) son la segunda barrera y el
+    // WHERE manual la primera. Un endpoint de OTRO usuario no se reactiva ni
+    // sobrescribe (evita hijacking de notificaciones).
+    let status: "subscribed" | "reactivated";
     try {
-      await directDb.insert(pushSubscriptions).values({
-        userId: user.id,
-        endpoint,
-        subscription: subscription as Record<string, unknown>,
-        userAgent: req.headers.get("user-agent") || undefined,
+      status = await withRLS(user.id, async (tx: DbExecutor) => {
+        const existing = await tx
+          .select({ id: pushSubscriptions.id })
+          .from(pushSubscriptions)
+          .where(
+            and(
+              eq(pushSubscriptions.endpoint, endpoint),
+              eq(pushSubscriptions.userId, user.id),
+            ),
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          // Reactivate if inactive
+          await tx
+            .update(pushSubscriptions)
+            .set({
+              subscription: subscription as Record<string, unknown>,
+              active: true,
+              userAgent: req.headers.get("user-agent") || undefined,
+              updatedAt: new Date(),
+            })
+            .where(eq(pushSubscriptions.id, existing[0]!.id));
+          return "reactivated" as const;
+        }
+
+        // El endpoint es UNIQUE de tabla: si existe de otro usuario el insert
+        // falla con 23505 y se responde conflicto, sin filtrar datos.
+        await tx.insert(pushSubscriptions).values({
+          userId: user.id,
+          endpoint,
+          subscription: subscription as Record<string, unknown>,
+          userAgent: req.headers.get("user-agent") || undefined,
+        });
+        return "subscribed" as const;
       });
     } catch (err) {
       if ((err as { code?: string }).code === "23505") {
@@ -112,7 +118,7 @@ async function rawPost(req: NextRequest) {
       throw err;
     }
 
-    return NextResponse.json({ success: true, status: "subscribed" });
+    return NextResponse.json({ success: true, status });
   } catch (error: unknown) {
     logger.error("[PushSubscribe] POST error:", (error as Error).message);
     return NextResponse.json(
@@ -156,17 +162,20 @@ async function rawDelete(req: NextRequest) {
       );
     }
 
-    // 3. Deactivate subscription
-    // SECURITY: solo se puede desactivar una suscripción PROPIA
-    await directDb
-      .update(pushSubscriptions)
-      .set({ active: false, updatedAt: new Date() })
-      .where(
-        and(
-          eq(pushSubscriptions.endpoint, endpoint),
-          eq(pushSubscriptions.userId, user.id),
-        ),
-      );
+    // 3. (Oleada 3) Deactivate subscription bajo RLS: la sesión `authenticated`
+    // delimita las filas visibles por la policy de user_id; el WHERE manual
+    // sigue como primera barrera — solo se puede desactivar una PROPIA.
+    await withRLS(user.id, async (tx: DbExecutor) => {
+      await tx
+        .update(pushSubscriptions)
+        .set({ active: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(pushSubscriptions.endpoint, endpoint),
+            eq(pushSubscriptions.userId, user.id),
+          ),
+        );
+    });
 
     return NextResponse.json({ success: true, status: "unsubscribed" });
   } catch (error: unknown) {
@@ -191,22 +200,26 @@ async function rawGet(_req: NextRequest) {
 
     const publicKey = getVapidPublicKey();
 
-    // Buscar suscripciones activas del usuario autenticado
+    // (Oleada 3) Suscripciones activas bajo RLS: la policy de user_id filtra
+    // las filas; el WHERE manual queda como primera barrera. Sin sesión no se
+    // toca la BD.
     let userSubscriptions: Array<{ endpoint: string; createdAt: string }> = [];
     if (user) {
-      const subs = await directDb
-        .select({
-          endpoint: pushSubscriptions.endpoint,
-          createdAt: pushSubscriptions.createdAt,
-        })
-        .from(pushSubscriptions)
-        .where(
-          and(
-            eq(pushSubscriptions.userId, user.id),
-            eq(pushSubscriptions.active, true),
-          ),
-        )
-        .orderBy(pushSubscriptions.createdAt);
+      const subs = await withRLS(user.id, async (tx: DbExecutor) =>
+        await tx
+          .select({
+            endpoint: pushSubscriptions.endpoint,
+            createdAt: pushSubscriptions.createdAt,
+          })
+          .from(pushSubscriptions)
+          .where(
+            and(
+              eq(pushSubscriptions.userId, user.id),
+              eq(pushSubscriptions.active, true),
+            ),
+          )
+          .orderBy(pushSubscriptions.createdAt),
+      );
 
       userSubscriptions = subs.map((s) => ({
         endpoint: s.endpoint.slice(0, 40) + "...", // truncate for display

@@ -19,30 +19,37 @@ const mockSelectChain = vi.fn();
 const mockUpdate = vi.fn();
 const mockInsert = vi.fn();
 const mockGetVapidPublicKey = vi.fn();
+const mockWithRLS = vi.fn();
 
 vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser } })),
 }));
 
-vi.mock("@/shared/db", () => ({
-  directDb: {
-    select: () => {
-      const chain = {
-        from: () => chain,
-        where: () => chain,
-        orderBy: () => chain,
-        limit: () => chain,
-        then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
-          mockSelectChain().then(resolve, reject),
-      };
-      return chain;
-    },
-    update: () => ({
-      set: () => ({ where: (...args: unknown[]) => mockUpdate(...args) }),
-    }),
-    insert: () => ({
-      values: (...args: unknown[]) => mockInsert(...args),
-    }),
+// Oleada 3: la ruta ya no usa directDb — el mock replica la tx que entrega
+// withRLS (mismo patrón que intelligence/history/route.test.ts).
+vi.mock("@/shared/db/rls", () => ({
+  withRLS: (userId: string, cb: (tx: unknown) => Promise<unknown>) => {
+    const tx = {
+      select: () => {
+        const chain = {
+          from: () => chain,
+          where: () => chain,
+          orderBy: () => chain,
+          limit: () => chain,
+          then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
+            mockSelectChain().then(resolve, reject),
+        };
+        return chain;
+      },
+      update: () => ({
+        set: () => ({ where: (...args: unknown[]) => mockUpdate(...args) }),
+      }),
+      insert: () => ({
+        values: (...args: unknown[]) => mockInsert(...args),
+      }),
+    };
+    mockWithRLS(userId, cb);
+    return cb(tx);
   },
 }));
 
@@ -151,6 +158,8 @@ describe("Push Subscribe — POST", () => {
     expect(body.status).toBe("subscribed");
     expect(mockInsert).toHaveBeenCalledTimes(1);
     expect(mockUpdate).not.toHaveBeenCalled();
+    // Oleada 3: la escritura corre bajo la autoridad del usuario autenticado.
+    expect(mockWithRLS).toHaveBeenCalledWith("user-1", expect.any(Function));
   });
 
   it("POST existing subscription → 200 reactivated", async () => {
@@ -227,6 +236,8 @@ describe("Push Subscribe — DELETE", () => {
     expect(body.status).toBe("unsubscribed");
     expect(mockUpdate).toHaveBeenCalledTimes(1);
     expect(mockSelectChain).not.toHaveBeenCalled();
+    // Oleada 3: la desactivación corre bajo la autoridad del usuario autenticado.
+    expect(mockWithRLS).toHaveBeenCalledWith("user-1", expect.any(Function));
   });
 
   it("DELETE db error → 500", async () => {
