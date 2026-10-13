@@ -5,7 +5,7 @@ import { eq, and, desc, isNull, count } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRLS } from "@/shared/db/rls";
 import { checkIntelScanRateLimit } from "@/shared/lib/ratelimit";
-import { runDiscovery } from "@/server/intelligence/discovery/orchestrator";
+import { discoverAssets, persistDiscovery } from "@/server/intelligence/discovery/orchestrator";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { withRequestContext } from "@/lib/request-context";
@@ -134,15 +134,32 @@ async function rawPost(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
     }
 
-    // Ejecutar descubrimiento de forma asíncrona (no bloquear la respuesta)
-    const resultPromise = runDiscovery({
-      domain: projectData.domain,
-      projectId: projectData.id,
-      timeoutMs: 120_000,
-      dnsBruteForce: true,
-      ctMonitor: true,
-      shadowDetection: true,
-    });
+    // Descubrimiento en dos fases (P0.2): la de RED no puede ir dentro de una
+    // transacción —tarda hasta 120s y retendría una conexión del pool (max 2 en
+    // producción)—, así que solo la PERSISTENCIA corre bajo la autoridad del
+    // usuario, en una transacción corta. Ahí son las policies de
+    // `intelligence_assets` (0022 SELECT, 0023 INSERT, 0046 UPDATE) las que
+    // deciden qué se escribe, no un check manual de este archivo.
+    const resultPromise = (async () => {
+      const modules = await discoverAssets({
+        domain: projectData.domain,
+        projectId: projectData.id,
+        timeoutMs: 120_000,
+        dnsBruteForce: true,
+        ctMonitor: true,
+        shadowDetection: true,
+      });
+
+      const persisted = await withRLS(user.id, (tx) =>
+        persistDiscovery(tx, {
+          projectId: projectData.id,
+          domain: projectData.domain,
+          modules,
+        }),
+      );
+
+      return { modules, ...persisted };
+    })();
 
     // Timeout de 30s para la respuesta HTTP (el discovery completo puede tomar más)
     const timeoutPromise = new Promise<null>((resolve) =>

@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Intelligence: Discovery — Tests de endpoint (TD-03 lote 2)
 
-   GET lista activos descubiertos; POST dispara runDiscovery con timeout 28s.
+   GET lista activos descubiertos; POST descubre (fase de red, sin transacción)
+   y persiste dentro de la transacción RLS del usuario, con timeout de 28s.
    Verifica:
    - GET: 401 sin sesión, 400 sin projectId, 404 proyecto borrado/oculto/no
      propio (soft-delete), 200 con assets/total, error BD → 500
@@ -19,7 +20,10 @@ import "@/shared/db/schemas";
 let mockUser: { id: string } | null = { id: "u-1" };
 const mockSelect = vi.fn();
 const mockRateLimit = vi.fn();
-const mockRunDiscovery = vi.fn();
+const mockDiscoverAssets = vi.fn();
+const mockPersistDiscovery = vi.fn();
+/** Sesiones RLS abiertas durante la petición, para comprobar QUIÉN persiste. */
+const rlsSessions: Array<{ userId: string; tx: unknown }> = [];
 
 vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: async () => ({
@@ -28,16 +32,22 @@ vi.mock("@/shared/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/shared/db/rls", () => ({
-  withRLS: (_userId: string, cb: (tx: unknown) => Promise<unknown>) =>
-    cb({ select: (...args: unknown[]) => mockSelect(...args) }),
+  withRLS: (userId: string, cb: (tx: unknown) => Promise<unknown>) => {
+    const tx = { select: (...args: unknown[]) => mockSelect(...args) };
+    rlsSessions.push({ userId, tx });
+    return cb(tx);
+  },
 }));
 
 vi.mock("@/shared/lib/ratelimit", () => ({
   checkIntelScanRateLimit: (...args: unknown[]) => mockRateLimit(...args),
 }));
 
+// P0.2: el orquestador se usa en dos fases —red y persistencia— porque la de red
+// puede durar minutos y no debe retener una transacción.
 vi.mock("@/server/intelligence/discovery/orchestrator", () => ({
-  runDiscovery: (...args: unknown[]) => mockRunDiscovery(...args),
+  discoverAssets: (...args: unknown[]) => mockDiscoverAssets(...args),
+  persistDiscovery: (...args: unknown[]) => mockPersistDiscovery(...args),
 }));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -163,6 +173,9 @@ describe("Intelligence: Discovery", () => {
       vi.clearAllMocks();
       mockUser = { id: "u-1" };
       mockRateLimit.mockResolvedValue({ success: true, remaining: 30 });
+      mockDiscoverAssets.mockResolvedValue([]);
+      mockPersistDiscovery.mockResolvedValue({ totalNewAssets: 0, totalChanges: 0 });
+      rlsSessions.length = 0;
       setupSelects();
       const mod = await import("./route");
       POST = mod.POST;
@@ -176,13 +189,13 @@ describe("Intelligence: Discovery", () => {
 
       const body = await res.json();
       expect(body.retryAfter).toBe(60);
-      expect(mockRunDiscovery).not.toHaveBeenCalled();
+      expect(mockDiscoverAssets).not.toHaveBeenCalled();
     });
 
     it("sin projectId → 400", async () => {
       const res = await POST(postRequest({}) as never);
       expect(res.status).toBe(400);
-      expect(mockRunDiscovery).not.toHaveBeenCalled();
+      expect(mockDiscoverAssets).not.toHaveBeenCalled();
     });
 
     it("proyecto no encontrado → 404", async () => {
@@ -190,24 +203,21 @@ describe("Intelligence: Discovery", () => {
 
       const res = await POST(postRequest({ projectId: "p1" }) as never);
       expect(res.status).toBe(404);
-      expect(mockRunDiscovery).not.toHaveBeenCalled();
+      expect(mockDiscoverAssets).not.toHaveBeenCalled();
     });
 
     it("descubrimiento completo → 200 completed con módulos mapeados", async () => {
-      mockRunDiscovery.mockResolvedValue({
-        totalNewAssets: 3,
-        totalChanges: 1,
-        modules: [
-          {
-            moduleId: "dns",
-            moduleName: "DNS Brute Force",
-            success: true,
-            assets: [{ id: "a" }, { id: "b" }],
-            durationMs: 1200,
-            error: null,
-          },
-        ],
-      });
+      mockDiscoverAssets.mockResolvedValue([
+        {
+          moduleId: "dns",
+          moduleName: "DNS Brute Force",
+          success: true,
+          assets: [{ id: "a" }, { id: "b" }],
+          durationMs: 1200,
+          error: null,
+        },
+      ]);
+      mockPersistDiscovery.mockResolvedValue({ totalNewAssets: 3, totalChanges: 1 });
 
       const res = await POST(postRequest({ projectId: "p1" }) as never);
       expect(res.status).toBe(200);
@@ -223,7 +233,7 @@ describe("Intelligence: Discovery", () => {
         durationMs: 1200,
         error: null,
       });
-      expect(mockRunDiscovery).toHaveBeenCalledWith(
+      expect(mockDiscoverAssets).toHaveBeenCalledWith(
         expect.objectContaining({
           domain: "example.com",
           projectId: "p1",
@@ -233,9 +243,22 @@ describe("Intelligence: Discovery", () => {
       );
     });
 
+    it("P0.2: la persistencia corre dentro de la transacción RLS del usuario", async () => {
+      mockDiscoverAssets.mockResolvedValue([]);
+
+      await POST(postRequest({ projectId: "p1" }) as never);
+
+      const [tx, input] = mockPersistDiscovery.mock.calls[0]!;
+      // Mismo contrato que el resto de P0.2: si alguien pasa `directDb` en vez
+      // de la transacción de la sesión, este assert falla.
+      expect(rlsSessions.map((s) => s.userId)).toEqual(["u-1", "u-1"]);
+      expect(rlsSessions.some((s) => s.tx === tx)).toBe(true);
+      expect(input).toEqual(expect.objectContaining({ projectId: "p1", domain: "example.com" }));
+    });
+
     it("el discovery no termina en 28s → 200 status running", async () => {
       vi.useFakeTimers();
-      mockRunDiscovery.mockReturnValue(new Promise(() => {}));
+      mockDiscoverAssets.mockReturnValue(new Promise(() => {}));
 
       const pending = POST(postRequest({ projectId: "p1" }) as never);
       await vi.advanceTimersByTimeAsync(28_001);
@@ -247,8 +270,8 @@ describe("Intelligence: Discovery", () => {
       expect(body.message).toContain("Descubrimiento iniciado");
     });
 
-    it("runDiscovery rechaza → 500", async () => {
-      mockRunDiscovery.mockRejectedValue(new Error("scan failed"));
+    it("fallo al persistir → 500", async () => {
+      mockPersistDiscovery.mockRejectedValue(new Error("scan failed"));
 
       const res = await POST(postRequest({ projectId: "p1" }) as never);
       expect(res.status).toBe(500);

@@ -40,6 +40,8 @@ interface DiscoveryRunResult {
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockRunDiscovery = vi.fn<() => Promise<DiscoveryRunResult>>();
+/** Marcador del handle sin sesión que el cron pasa explícitamente (P0.2). */
+const mockDirectDb = { __kind: "directDb" };
 
 vi.mock("@/server/intelligence/discovery/orchestrator", () => ({
   runDiscovery: mockRunDiscovery,
@@ -51,6 +53,7 @@ const mockSelect = vi.fn(() => ({ from: mockFrom }));
 
 vi.mock("@/shared/db", () => ({
   db: { select: mockSelect },
+  directDb: mockDirectDb,
 }));
 
 vi.mock("@/shared/db/schemas", () => ({
@@ -128,7 +131,8 @@ describe("Trigger: Continuous Discovery", () => {
     const task = continuousDiscovery as unknown as DiscoveryTaskConfig;
     const result = await task.run(runPayload);
 
-    expect(mockRunDiscovery).toHaveBeenCalledWith({
+    // P0.2: el cron no tiene sesión, así que elige `directDb` en el call site.
+    expect(mockRunDiscovery).toHaveBeenCalledWith(mockDirectDb, {
       domain: "acme.com",
       projectId: "p1",
       timeoutMs: 120_000,

@@ -7,7 +7,7 @@
 
 import { task } from "@trigger.dev/sdk";
 import type { CronJobPayload } from "./cron-plan";
-import { db } from "@/shared/db";
+import { db, directDb } from "@/shared/db";
 import { projects } from "@/shared/db/schemas";
 import { runDiscovery } from "@/server/intelligence/discovery/orchestrator";
 import { and, eq, isNull } from "drizzle-orm";
@@ -49,7 +49,10 @@ export const continuousDiscovery = task({
       try {
         logger.info(`[Discovery] Running for ${project.name} (${project.domain})`);
 
-        const result = await runDiscovery({
+        // P0.2: el cron no tiene sesión, así que decide el alcance aquí mismo y
+        // pasa `directDb` (bypass de RLS deliberado y visible). El camino con
+        // sesión —el route handler— usa withRLS para la persistencia.
+        const result = await runDiscovery(directDb, {
           domain: project.domain,
           projectId: project.id,
           timeoutMs: 120_000,
