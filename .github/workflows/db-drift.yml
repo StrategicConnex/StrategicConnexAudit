@@ -50,3 +50,11 @@ jobs:
             exit 0
           fi
           node scripts/db/fk-schema-drift-guard.mjs
+
+      # P0.2-B: misma guarda que en ci.yml (job db-drift-check), aquí en el job
+      # PROGRAMADO: si alguien sube el número de llamadas fuera de withRLS, el
+      # ciclo diario lo detecta incluso sin push/PR asociado. Es ESTÁTICA
+      # (regex sobre src/, no consulta la BD) → corre SIEMPRE, sin depender del
+      # secreto DIRECT_URL: los otros pasos de este job la omitirían sin él.
+      - name: RLS surface guard (anti-regresión de llamadas fuera de withRLS)
+        run: pnpm db:rls-surface-guard

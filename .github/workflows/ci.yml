@@ -245,15 +245,13 @@ jobs:
           fi
           node scripts/db/grant-audit.mjs
 
+      # P0.2-A/B: la guarda es ESTÁTICA (cuenta llamadas fuera de withRLS con
+      # regex sobre src/; no consulta la BD) → corre SIEMPRE, igual que el
+      # RLS inventory guard de más arriba. Gatearla con `DIRECT_URL` la dejaba
+      # desactivada en cualquier entorno sin el secreto: justo el escenario
+      # donde más importa que el conteo no suba.
       - name: RLS surface guard (anti-regresión de llamadas fuera de withRLS)
-        env:
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          if [ -z "$DIRECT_URL" ]; then
-            echo "::warning::Secreto DIRECT_URL no configurado — guard de superficie RLS omitido (corre localmente y en otro pipeline con la BD real)."
-            exit 0
-          fi
-          pnpm db:rls-surface-guard
+        run: pnpm db:rls-surface-guard
 
       - name: Report drift status
         if: always()
