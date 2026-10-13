@@ -21,8 +21,13 @@
    Falla en:
    - total supera los máximos declarados
    - aparece un archivo nuevo no en baseline (no requiere allowlist manual)
-   - cualquier archivo con presente en baseline CAMBIA su conteo (delta != 0),
+   - cualquier archivo presente en baseline CAMBIA su conteo (delta != 0),
      también si baja: una mejora se consolida con --snapshot en su commit
+   - un archivo del baseline DESAPARECE del conteo (baja a 0 llamadas). Ese caso
+     —la migración completa de un servicio— era invisible hasta el 2026-10-13:
+     el gate iteraba solo los archivos medidos, así que el baseline se quedaba
+     por encima del árbol y el gate decía «OK» con totales que no cuadraban.
+     La comparación vive en rls-surface-patterns.mjs (diffBaseline).
 
    QUÉ CUENTA (y qué dejó de escaparse el 2026-10-13): el patrón tolera el salto
    de línea (`directDb` + `.select()` en la línea siguiente), que es el estilo
@@ -35,7 +40,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
-import { countSurface } from "./rls-surface-patterns.mjs";
+import { countSurface, diffBaseline, formatDiscrepancy } from "./rls-surface-patterns.mjs";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -96,12 +101,13 @@ if (PRINT_BASELINE) {
     {
       baselineFiles: Object.keys(baseline).length,
       actualFiles: archivosAhora.length,
-      discrepancies: archivosAhora.map(a => {
-        const bl = baseline[a.archivo];
-        return bl != null
-          ? { archivo: a.archivo, baseline: bl, now: { directDb: a.directDb, dbSinEnvolver: a.dbSinEnvolver }, delta: { directDb: a.directDb - bl.directDb, dbSinEnvolver: a.dbSinEnvolver - bl.dbSinEnvolver } }
-          : { archivo: a.archivo, baseline: null, now: { directDb: a.directDb, dbSinEnvolver: a.dbSinEnvolver }, delta: null };
-      }),
+      discrepancies: diffBaseline(baseline, archivosAhora).map((d) => ({
+        archivo: d.archivo,
+        tipo: d.tipo,
+        baseline: d.antes,
+        now: d.ahora,
+        delta: d.delta,
+      })),
       totals: { baselineExpected: threshold.maxTotalCalls ?? null, actualTotal: total },
       allowedFilesCount: (threshold.allowedFiles ?? []).length,
     },
@@ -127,21 +133,9 @@ if (total > threshold.maxTotalCalls) {
   errors.push(`TOTAL supera umbral: ${total} > ${threshold.maxTotalCalls}`);
 }
 
-for (const a of archivosAhora) {
-  const bl = baseline[a.archivo];
-  if (bl === undefined) {
-    failed = true;
-    errors.push(`ARCHIVO NUEVO (sin baseline): ${a.archivo} [directDb:${a.directDb} db:${a.dbSinEnvolver}]`);
-    continue;
-  }
-  if (a.directDb !== bl.directDb || a.dbSinEnvolver !== bl.dbSinEnvolver) {
-    const deltaDirect = a.directDb - bl.directDb;
-    const deltaDb = a.dbSinEnvolver - bl.dbSinEnvolver;
-    failed = true;
-    errors.push(
-      `CAMBIO en archivo: ${a.archivo} [antes ${bl.directDb}/${bl.dbSinEnvolver} → ahora ${a.directDb}/${a.dbSinEnvolver} (Δ ${deltaDirect ? (deltaDirect > 0 ? "+" : "") + deltaDirect : "0"} / ${deltaDb ? (deltaDb > 0 ? "+" : "") + deltaDb : "0"})]${deltaDirect < 0 || deltaDb < 0 ? "  ← mejora: re-congela con --snapshot en este commit" : ""}`,
-    );
-  }
+for (const d of diffBaseline(baseline, archivosAhora)) {
+  failed = true;
+  errors.push(formatDiscrepancy(d));
   // exact match → pasa, incluso si no estaba en allowedFiles
 }
 

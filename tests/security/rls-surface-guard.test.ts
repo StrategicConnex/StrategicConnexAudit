@@ -17,7 +17,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { countSurface } from "../../scripts/db/rls-surface-patterns.mjs";
+import {
+  countSurface,
+  diffBaseline,
+  formatDiscrepancy,
+} from "../../scripts/db/rls-surface-patterns.mjs";
 
 const ROOT = process.cwd();
 
@@ -80,6 +84,60 @@ describe("guard de superficie RLS — el patrón cuenta lo que el repo escribe",
       // pueden contar cosas distintas sin que nada avise.
       expect(src).not.toMatch(/const RE_(DIRECT|BARE)\s*=/);
     }
+  });
+
+  it("un archivo que baja a CERO llamadas se reporta (agujero del 2026-10-13)", () => {
+    // Antes el gate iteraba solo los archivos medidos: `migrado.ts` desaparecía
+    // del conteo y no generaba discrepancia, así que el baseline se quedaba por
+    // encima del árbol y el gate imprimía «OK» con totales que no cuadraban.
+    const baseline = { "migrado.ts": { directDb: 6, dbSinEnvolver: 0 } };
+    const discrepancias = diffBaseline(baseline, []);
+
+    expect(discrepancias).toHaveLength(1);
+    expect(discrepancias[0]).toMatchObject({
+      archivo: "migrado.ts",
+      tipo: "vacio",
+      ahora: { directDb: 0, dbSinEnvolver: 0 },
+      delta: { directDb: -6, dbSinEnvolver: 0 },
+    });
+    expect(formatDiscrepancy(discrepancias[0])).toContain("re-congela con --snapshot");
+  });
+
+  it("no inventa discrepancias cuando el árbol coincide con el baseline", () => {
+    const baseline = {
+      "a.ts": { directDb: 2, dbSinEnvolver: 1 },
+      "b.ts": { directDb: 0, dbSinEnvolver: 3 },
+    };
+    const iguales = [
+      { archivo: "a.ts", directDb: 2, dbSinEnvolver: 1 },
+      { archivo: "b.ts", directDb: 0, dbSinEnvolver: 3 },
+    ];
+
+    expect(diffBaseline(baseline, iguales)).toEqual([]);
+  });
+
+  it("distingue un archivo nuevo de un aumento en un archivo congelado", () => {
+    const baseline = { "a.ts": { directDb: 1, dbSinEnvolver: 0 } };
+    const discrepancias = diffBaseline(baseline, [
+      { archivo: "a.ts", directDb: 1, dbSinEnvolver: 0 },
+      { archivo: "nuevo.ts", directDb: 2, dbSinEnvolver: 0 },
+    ]);
+
+    expect(discrepancias).toEqual([
+      { archivo: "nuevo.ts", tipo: "nuevo", antes: null, ahora: { directDb: 2, dbSinEnvolver: 0 }, delta: null },
+    ]);
+    expect(formatDiscrepancy(discrepancias[0])).toContain("ARCHIVO NUEVO (sin baseline)");
+  });
+
+  it("una reducción parcial no marca mejora sólo por bajar el total", () => {
+    const baseline = { "a.ts": { directDb: 2, dbSinEnvolver: 1 } };
+    const [sube] = diffBaseline(baseline, [{ archivo: "a.ts", directDb: 3, dbSinEnvolver: 1 }]);
+    const [baja] = diffBaseline(baseline, [{ archivo: "a.ts", directDb: 1, dbSinEnvolver: 1 }]);
+
+    expect(formatDiscrepancy(sube)).toContain("(Δ +1 / 0)");
+    expect(formatDiscrepancy(sube)).not.toContain("re-congela");
+    expect(formatDiscrepancy(baja)).toContain("(Δ -1 / 0)");
+    expect(formatDiscrepancy(baja)).toContain("re-congela con --snapshot");
   });
 
   it("el baseline congelado coincide con el árbol (si no, falta --snapshot)", () => {

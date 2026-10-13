@@ -45,6 +45,65 @@ export const lineOf = (src, index) => src.slice(0, index).split(/\r?\n/).length;
  * `srcDir` suele ser `<root>/src`; `rootDir` es la raíz del repo (para las rutas
  * relativas que se guardan en el baseline).
  */
+/**
+ * Compara el baseline congelado con lo medido y devuelve SOLO las discrepancias.
+ *
+ * Existe por el agujero del 2026-10-13: el gate iteraba los archivos MEDIDOS, así
+ * que un archivo que bajaba a CERO llamadas desaparecía del conteo y no generaba
+ * ninguna discrepancia —el baseline quedaba por encima del árbol y el gate decía
+ * «OK» con totales que ya no cuadraban—. Aquí los archivos del baseline ausentes
+ * del conteo se reportan como `vacio`, que es exactamente la reducción a 0 que el
+ * propio guard exige consolidar con `--snapshot` en el commit de la migración.
+ *
+ * `archivos` viene de `countSurface` reducido a conteos: { archivo, directDb,
+ * dbSinEnvolver }. Cada discrepancia: { archivo, tipo: nuevo|cambio|vacio, antes,
+ * ahora, delta }.
+ */
+export function diffBaseline(baseline, archivos) {
+  const medidos = new Set(archivos.map((a) => a.archivo));
+  const discrepancias = [];
+
+  for (const a of archivos) {
+    const ahora = { directDb: a.directDb, dbSinEnvolver: a.dbSinEnvolver };
+    const bl = baseline[a.archivo];
+    if (bl == null) {
+      discrepancias.push({ archivo: a.archivo, tipo: "nuevo", antes: null, ahora, delta: null });
+      continue;
+    }
+    const delta = { directDb: ahora.directDb - bl.directDb, dbSinEnvolver: ahora.dbSinEnvolver - bl.dbSinEnvolver };
+    if (delta.directDb !== 0 || delta.dbSinEnvolver !== 0) {
+      discrepancias.push({ archivo: a.archivo, tipo: "cambio", antes: bl, ahora, delta });
+    }
+  }
+
+  for (const [archivo, bl] of Object.entries(baseline)) {
+    if (medidos.has(archivo)) continue;
+    discrepancias.push({
+      archivo,
+      tipo: "vacio",
+      antes: bl,
+      ahora: { directDb: 0, dbSinEnvolver: 0 },
+      delta: { directDb: 0 - bl.directDb, dbSinEnvolver: 0 - bl.dbSinEnvolver },
+    });
+  }
+
+  return discrepancias;
+}
+
+/**
+ * Formatea una discrepancia para el reporte del gate. `mejora` marca las bajadas
+ * (incluida la desaparición del archivo): son cambios igual de reales que un
+ * aumento y también exigen re-congelar el baseline.
+ */
+export function formatDiscrepancy(d) {
+  if (d.tipo === "nuevo") {
+    return `ARCHIVO NUEVO (sin baseline): ${d.archivo} [directDb:${d.ahora.directDb} db:${d.ahora.dbSinEnvolver}]`;
+  }
+  const fmt = (n) => (n > 0 ? `+${n}` : String(n));
+  const mejora = d.delta.directDb < 0 || d.delta.dbSinEnvolver < 0;
+  return `CAMBIO en archivo: ${d.archivo} [antes ${d.antes.directDb}/${d.antes.dbSinEnvolver} → ahora ${d.ahora.directDb}/${d.ahora.dbSinEnvolver} (Δ ${fmt(d.delta.directDb)} / ${fmt(d.delta.dbSinEnvolver)})]${mejora ? "  ← mejora: re-congela con --snapshot en este commit" : ""}`;
+}
+
 export function countSurface(srcDir, rootDir) {
   const archivos = [];
   for (const { abs, rel } of walkSourceFiles(srcDir, rootDir)) {
