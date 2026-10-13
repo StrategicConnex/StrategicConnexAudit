@@ -89,7 +89,8 @@ vi.mock("@/shared/lib/supabase/server", () => ({
 vi.mock("@/shared/db/rls", () => ({ withRLS: mockWithRLS }));
 
 vi.mock("@/shared/db", () => ({
-  directDb: {
+  directDb: (() => {
+    const underlying = {
     update: vi.fn(() => ({
       set: vi.fn((payload: unknown) => {
         ddState.updatedPayloads.push(payload);
@@ -146,7 +147,10 @@ vi.mock("@/shared/db", () => ({
         };
       }),
     })),
-  },
+  };
+    underlying.update["as unknown"] = underlying;
+    return underlying;
+  })(),
 }));
 
 vi.mock("@/shared/db/schemas", () => ({

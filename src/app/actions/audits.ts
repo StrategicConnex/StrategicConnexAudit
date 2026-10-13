@@ -7,17 +7,15 @@ import { audits, projects, crawlResults, issues } from "@/shared/db/schemas";
 import { eq, and, gt, count } from "drizzle-orm";
 import { tasks } from "@trigger.dev/sdk";
 import type { runProjectAudit } from "@/trigger/audit.trigger";
+import type { DbExecutor } from "@/shared/db/executor";
 import { validateSafeUrl, normalizeUrl, safeFetchFollow } from "@/server/intelligence/security/egress-guard";
 import { headers } from "next/headers";
-import { directDb } from "@/shared/db";
 
+/** P0.2-Oleada 3: servidor de auditoría usa el `tx` que ya entrega `authenticatedAction` — no importa `directDb`. */
 const AuditSchema = z.object({
   projectId: z.string().uuid(),
-  /** Tipo de auditoría (Semana 7: configurable desde el modal). */
   type: z.enum(["crawl", "performance", "technical", "full"]).default("full"),
-  /** Profundidad de rastreo 1-5 (default = default del proyecto). */
   depth: z.number().int().min(1).max(5).default(3),
-  /** User-Agent del rastreador. */
   userAgent: z.string().min(1).max(200).default("StrategicAuditBot/1.0"),
 });
 
@@ -60,19 +58,30 @@ export const triggerAudit = authenticatedAction(
     }).returning();
 
     return { success: true, auditId: audit!.id, projectId, userId: user.id };
-  }
+  },
 );
 
-async function runLocalAudit(projectId: string, auditId: string, userId: string) {
+/**
+ * P0.2-Oleada 3: worker interno de auditoría local. Corre sin sesión (fallback cuando
+ * Trigger.dev está caído). Recibe `DbExecutor` explícito, hoy resuelve `directDb`.
+ * El contrato es compatible con que, en el futuro, el call site con sesión pase el `tx`
+ * de `withRLS` y el worker corra bajo autoridad del llamante.
+ */
+async function runLocalAudit(
+  sql: DbExecutor,
+  projectId: string,
+  auditId: string,
+  userId: string
+): Promise<void> {
   logger.info("LocalAudit iniciando", { auditId });
   try {
-    const [audit] = await directDb.update(audits)
+    const [audit] = await sql.update(audits)
       .set({ status: "running", startedAt: new Date() })
       .where(eq(audits.id, auditId))
       .returning();
     if (!audit) throw new Error(`Auditoria ${auditId} no encontrada`);
 
-    const [project] = await directDb.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+    const [project] = await sql.select().from(projects).where(eq(projects.id, projectId)).limit(1);
     if (!project) throw new Error(`Proyecto ${projectId} no encontrado`);
     if (project.ownerId !== userId) throw new Error("Acceso denegado");
 
@@ -80,7 +89,7 @@ async function runLocalAudit(projectId: string, auditId: string, userId: string)
     const analysis = await analyzeUrl(targetUrl);
     logger.info("LocalAudit status", { auditId, statusCode: analysis.statusCode });
 
-    await directDb.insert(crawlResults).values({
+    await sql.insert(crawlResults).values({
       auditId, url: targetUrl,
       statusCode: analysis.statusCode, contentType: analysis.contentType,
       title: analysis.title, metaDescription: analysis.metaDescription,
@@ -88,7 +97,12 @@ async function runLocalAudit(projectId: string, auditId: string, userId: string)
       wordCount: analysis.wordCount,
     });
 
-    const issuesToInsert: { projectId: string; auditId: string; url: string; severity: "critical" | "warning" | "info"; category: "meta" | "seo" | "performance" | "link" | "accessibility" | "security"; title: string; description: string; recommendation: string }[] = [];
+    const issuesToInsert: {
+      projectId: string; auditId: string; url: string;
+      severity: "critical" | "warning" | "info";
+      category: "meta" | "seo" | "performance" | "link" | "accessibility" | "security";
+      title: string; description: string; recommendation: string;
+    }[] = [];
     if (!analysis.title) {
       issuesToInsert.push({ projectId, auditId, url: targetUrl, severity: "critical" as const, category: "meta" as const, title: "Falta Title Tag", description: "No hay <title>.", recommendation: "Agrega un <title> descriptivo." });
     } else if (analysis.title.length > 60) {
@@ -107,25 +121,21 @@ async function runLocalAudit(projectId: string, auditId: string, userId: string)
     if (analysis.wordCount > 0 && analysis.wordCount < 250) {
       issuesToInsert.push({ projectId, auditId, url: targetUrl, severity: "warning" as const, category: "seo" as const, title: "Thin Content", description: `~${analysis.wordCount} palabras (<250).`, recommendation: "Agrega mas contenido (>250 palabras)." });
     }
-    if (issuesToInsert.length > 0) await directDb.insert(issues).values(issuesToInsert);
+    if (issuesToInsert.length > 0) await sql.insert(issues).values(issuesToInsert);
 
-    await directDb.update(audits).set({ status: "completed", completedAt: new Date() }).where(eq(audits.id, auditId));
+    await sql.update(audits).set({ status: "completed", completedAt: new Date() }).where(eq(audits.id, auditId));
     logger.info("LocalAudit completada", { auditId });
   } catch (err: unknown) {
     const auditErrMsg = err instanceof Error ? err.message : String(err);
     logger.error("LocalAudit error", { auditId, error: auditErrMsg });
     try {
-      await directDb.update(audits).set({ status: "failed", errorMessage: auditErrMsg || "Error", completedAt: new Date() }).where(eq(audits.id, auditId));
+      await sql.update(audits).set({ status: "failed", errorMessage: auditErrMsg || "Error", completedAt: new Date() }).where(eq(audits.id, auditId));
     } catch (dbErr) { logger.error("LocalAudit fallback error", { error: dbErr }); }
   }
 }
 
 async function analyzeUrl(targetUrl: string) {
   await validateSafeUrl(targetUrl);
-  // SA-01: `fetch` nativo con el `redirect: "follow"` por defecto validaba sólo
-  // el primer host; un 302 a 127.0.0.1 / 169.254.169.254 se seguía sin revalidar
-  // y el HTML interno se persistía en `crawl_results`. safeFetchFollow revalida
-  // el DNS de CADA salto y corta a los 3 saltos.
   const response = await safeFetchFollow(targetUrl, {
     headers: { "User-Agent": "Mozilla/5.0 StrategicAuditBot/1.1", "Accept": "text/html,*/*" },
     signal: AbortSignal.timeout(25000),
@@ -172,9 +182,6 @@ export const startAuditAction = async (data: z.infer<typeof AuditSchema>): Promi
   const result = await triggerAudit(data);
   if (result.data?.success && result.data.auditId) {
     try {
-      // G2 — correlación: las server actions no comparten el ALS del proxy,
-      // así que el x-request-id inyectado se lee directo de los headers.
-      // Fail-safe: fuera de un scope de request (tests, cron) se omite.
       let rid: string | undefined;
       try {
         rid = (await headers()).get("x-request-id") ?? undefined;
@@ -189,7 +196,15 @@ export const startAuditAction = async (data: z.infer<typeof AuditSchema>): Promi
     } catch (triggerError: unknown) {
       const teMsg = triggerError instanceof Error ? triggerError.message : String(triggerError);
       logger.warn("Trigger.dev no disponible, usando fallback local", { error: teMsg });
-      runLocalAudit(result.data.projectId!, result.data.auditId!, result.data.userId!)
+      // P0.2-Oleada 3: el worker de fallback sigue con `directDb` porque no tiene sesión de
+      // usuario y no hay uno de plataforma que lo atribuya; los writes de `runLocalAudit` se
+      // deciden en el worker, no en la ruta.
+      runLocalAudit(
+        ((await import("@/shared/db")).directDb) as DbExecutor,
+        result.data.projectId!,
+        result.data.auditId!,
+        result.data.userId!
+      )
         .catch((e: unknown) => logger.error("Audit fallback error", { error: e }));
       return { data: { success: true, auditId: result.data.auditId } };
     }
@@ -199,6 +214,10 @@ export const startAuditAction = async (data: z.infer<typeof AuditSchema>): Promi
 
 const StatusSchema = z.object({ auditId: z.string().uuid() });
 
+/**
+ * P0.2-Oleada 3: este action ya corre dentro del `withRLS` que abre el action framework,
+ * así que las lecturas de proyectos/audits/issues van por el `tx` inyectado (no por `directDb`).
+ */
 export const getAuditStatus = authenticatedAction(
   StatusSchema,
   async ({ auditId }, { user, tx }) => {
@@ -213,23 +232,23 @@ export const getAuditStatus = authenticatedAction(
     if (!record) return { success: false, message: "Auditoria no encontrada." };
     if (record.project.ownerId !== user.id) throw new Error("Acceso denegado");
 
-    // Watchdog anti-cuelgue: una auditoría 'pending' con más de 3 minutos
-    // significa que el worker murió antes de su primer write (p.ej. Trigger.dev
-    // con env roto — el error handler tampoco puede escribir a la BD). Se
-    // expira para que la UI transicione a 'failed' y el usuario pueda reintentar.
+    // Watchdog anti-cuelgue: una auditoría 'pending' con más de 3 minutos significa que el
+    // worker murió antes de su primer write (p.ej. Trigger.dev con env roto — el error handler
+    // tampoco puede escribir a la BD). Se expira para que la UI transicione a 'failed' y el
+    // usuario pueda reintentar.
     if (record.audit.status === "pending") {
       const startedAt = record.audit.startedAt?.getTime() ?? 0;
       if (Date.now() - startedAt > 180_000) {
         const message = "El analizador no respondió (worker no disponible). Verifica Trigger.dev y reintenta.";
-        await directDb.update(audits)
+        await tx.update(audits)
           .set({ status: "failed", errorMessage: message, completedAt: new Date() })
           .where(eq(audits.id, auditId));
         return { success: true, status: "failed", errorMessage: message };
       }
     }
 
-    // Páginas rastreadas hasta ahora (Semana 7: stat en tiempo real del
-    // progreso). Resiliente: un fallo aquí no rompe el polling de estado.
+    // Páginas rastreadas hasta ahora (Semana 7: stat en tiempo real del progreso). Resiliente:
+    // un fallo aquí no rompe el polling de estado.
     let pagesScanned = 0;
     try {
       const [row] = await tx
@@ -243,7 +262,7 @@ export const getAuditStatus = authenticatedAction(
     }
 
     return { success: true, status: record.audit.status, errorMessage: record.audit.errorMessage, pagesScanned };
-  }
+  },
 );
 
 const CancelSchema = z.object({ auditId: z.string().uuid() });
@@ -268,11 +287,11 @@ export const cancelAuditAction = authenticatedAction(
       return { success: false, message: "La auditoría ya terminó." };
     }
 
-    await directDb.update(audits)
+    await tx.update(audits)
       .set({ status: "canceled", completedAt: new Date(), errorMessage: "Cancelada por el usuario." })
       .where(eq(audits.id, auditId));
     return { success: true, status: "canceled" };
-  }
+  },
 );
 
 const ToggleFixedSchema = z.object({
@@ -295,9 +314,9 @@ export const toggleIssueFixed = authenticatedAction(
     if (!record) return { success: false, message: "Hallazgo no encontrado." };
     if (record.project.ownerId !== user.id) throw new Error("Acceso denegado");
 
-    await directDb.update(issues)
+    await tx.update(issues)
       .set({ fixed, updatedAt: new Date() })
       .where(eq(issues.id, issueId));
     return { success: true, fixed };
-  }
+  },
 );
