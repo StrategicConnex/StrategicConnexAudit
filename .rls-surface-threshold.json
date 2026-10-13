@@ -3,135 +3,332 @@
   "maxDbCallsOutsideWithRLS": 50,
   "maxTotalCalls": 144,
   "allowedFiles": [
+    "src/app/actions/audits.ts",
+    "src/app/api/ai/healthcheck/route.ts",
+    "src/app/api/api-keys/[id]/usage/route.ts",
+    "src/app/api/billing/plans/route.ts",
+    "src/app/api/cron/uptime/route.ts",
+    "src/app/api/intelligence/adversary/assessment/route.ts",
+    "src/app/api/intelligence/adversary/mitre/route.ts",
+    "src/app/api/intelligence/adversary/route.ts",
+    "src/app/api/intelligence/adversary/vulnerabilities/route.ts",
+    "src/app/api/intelligence/bulk/route.ts",
+    "src/app/api/notifications/push-subscribe/route.ts",
+    "src/app/api/projects/[id]/members/route.ts",
+    "src/app/api/public/v1/adversary/route.ts",
+    "src/app/api/public/v1/audits/route.ts",
+    "src/app/api/public/v1/findings/route.ts",
+    "src/app/api/public/v1/intelligence/route.ts",
+    "src/app/api/public/v1/reports/route.ts",
+    "src/app/api/public/v1/uptime/route.ts",
+    "src/app/api/reports/pdf/route.tsx",
+    "src/app/api/telemetry/vitals/route.ts",
+    "src/app/p/[token]/page.tsx",
+    "src/app/pricing/page.tsx",
     "src/server/ai/ai-usage.ts",
     "src/server/ai/eval-runner.ts",
     "src/server/ai/finding-triage.ts",
+    "src/server/api/public-router.ts",
+    "src/server/integrations/commands/executor.ts",
     "src/server/intelligence/adversary/assessment/assessment-service.ts",
     "src/server/intelligence/adversary/mitre-eval/mitre-service.ts",
+    "src/server/intelligence/adversary/scenario-runner.ts",
+    "src/server/intelligence/anomaly/detector.ts",
+    "src/server/intelligence/core/policy-enforcer.ts",
+    "src/server/intelligence/discovery/orchestrator.ts",
+    "src/server/intelligence/enterprise/api-auth.ts",
     "src/server/intelligence/findings/workflow.ts",
     "src/server/intelligence/history/dns-history.ts",
     "src/server/intelligence/history/whois-history.ts",
+    "src/server/intelligence/plugins/plugin-executor.ts",
+    "src/server/intelligence/plugins/registry.ts",
     "src/server/intelligence/scan-queue.ts",
-    "src/server/intelligence/scan-queue-worker.ts",
-    "src/server/intelligence/types/executor.types.ts",
-    "src/server/api/public-router.ts",
-    "src/server/webhooks/delivery.ts",
-    "src/server/webhooks/outbox.ts",
+    "src/server/lib/entitlements.ts",
+    "src/server/lib/error-handler.ts",
+    "src/server/lib/invitations.ts",
+    "src/server/lib/project-access.ts",
+    "src/server/lib/rbac.ts",
+    "src/server/lib/remediation/service.ts",
+    "src/server/notifications/emit.ts",
     "src/server/observability/app-logs-sink.ts",
-    "src/server/rbac/service.ts",
-    "src/shared/lib/ratelimit.ts",
-    "src/shared/lib/webhook-events.ts",
-    "src/server/observability/enrichment.ts",
-    "src/server/ai/report-generator.ts",
-    "src/server/ai/llm-route.ts",
-    "src/server/ai/report-generator-variants.ts",
-    "src/server/observability/http-instrumentation.ts",
+    "src/server/reports/pdf-progress.ts",
+    "src/server/security/siem-exporter.ts",
+    "src/server/webhooks/outbox.ts",
+    "src/shared/db/rls.ts",
+    "src/shared/db/test-rls.ts",
+    "src/shared/lib/api-keys.ts",
+    "src/shared/lib/audit-log.ts",
     "src/shared/lib/distributed-cache.ts",
     "src/shared/lib/idempotency.ts",
-    "src/server/ai/rag/ingest.ts",
-    "src/server/ai/rag/vector-store.ts",
-    "src/server/ai/rag/retriever.ts",
-    "src/server/ai/intent-classifier.ts",
-    "src/server/ai/rag/documents.ts",
-    "src/server/ai/rag/query.ts",
-    "src/server/ai/rag/similarity.ts",
-    "src/server/ai/rag/middleware.ts",
-    "src/server/ai/rag/chunking.ts",
-    "src/server/ai/rag/embeddings.ts",
-    "src/server/ai/rag/llm-utils.ts",
-    "src/server/intelligence/executors/whois-executors.ts",
-    "src/server/intelligence/executors/osint-executors.ts",
-    "src/server/intelligence/executors/network-executors.ts",
-    "src/server/intelligence/core/dispatcher.ts",
-    "src/server/intelligence/executors/advanced-executors.ts",
-    "src/server/intelligence/core/scan-response.ts",
-    "src/server/intelligence/discovery/orchestrator.ts",
-    "src/server/intelligence/discovery/ct-monitor.ts",
-    "src/server/intelligence/core/policy-enforcer.ts",
-    "src/server/intelligence/adversary/sandbox-executor.ts",
-    "src/server/intelligence/adversary/scenario-runner.ts",
-    "src/server/intelligence/adversary/assessment/reports.ts",
-    "src/server/intelligence/adversary/assessment/assessment-evaluator.ts",
-    "src/server/intelligence/adversary/mitre-eval/mitre-report-generator.ts",
-    "src/server/intelligence/adversary/mitre-eval/mitre-data-loader.ts",
-    "src/server/intelligence/executors/executors.test.ts",
-    "src/app/api/cron/metrics/route.ts",
-    "src/app/api/cron/cleanup/route.ts",
-    "src/app/api/cron/discovery/route.ts",
-    "src/app/api/cron/retry/route.ts",
-    "src/app/api/intelligence/live/route.ts",
-    "src/app/api/intelligence/runs/route.ts",
-    "src/app/api/intelligence/graph/route.ts",
-    "src/app/api/intelligence/route.ts",
-    "src/app/api/intelligence/investigations/route.ts",
-    "src/app/api/ai/report/route.ts",
-    "src/app/actions/audits.ts",
-    "src/app/api/public/v1/intelligence/route.ts",
-    "src/shared/lib/flags.ts"
+    "src/shared/lib/logger.ts",
+    "src/shared/lib/ratelimit.ts",
+    "src/trigger/audit.trigger.ts",
+    "src/trigger/cleanup.trigger.ts",
+    "src/trigger/forecast.trigger.ts",
+    "src/trigger/monitoring.trigger.ts",
+    "src/trigger/uptime.trigger.ts",
+    "src/trigger/webhook.trigger.ts"
   ],
   "baseline": {
-    "src/server/ai/ai-usage.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/eval-runner.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/finding-triage.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/intelligence/adversary/assessment/assessment-service.ts":{"directDb":2,"dbSinEnvolver":0},
-    "src/server/intelligence/adversary/mitre-eval/mitre-service.ts":{"directDb":2,"dbSinEnvolver":0},
-    "src/server/intelligence/findings/workflow.ts":{"directDb":5,"dbSinEnvolver":0},
-    "src/server/intelligence/history/dns-history.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/intelligence/history/whois-history.ts":{"directDb":1,"dbSinEnvolver":4},
-    "src/server/intelligence/scan-queue.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/intelligence/scan-queue-worker.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/intelligence/types/executor.types.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/api/public-router.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/webhooks/delivery.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/webhooks/outbox.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/observability/app-logs-sink.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/rbac/service.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/shared/lib/ratelimit.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/shared/lib/webhook-events.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/observability/enrichment.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/report-generator.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/ai/llm-route.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/ai/report-generator-variants.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/observability/http-instrumentation.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/shared/lib/distributed-cache.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/shared/lib/idempotency.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/ai/rag/ingest.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/rag/vector-store.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/intent-classifier.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/rag/documents.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/rag/query.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/ai/rag/similarity.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/ai/rag/middleware.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/rag/chunking.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/rag/embeddings.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/ai/rag/llm-utils.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/intelligence/executors/whois-executors.ts":{"directDb":1,"dbSinEnvolver":1},
-    "src/server/intelligence/executors/osint-executors.ts":{"directDb":1,"dbSinEnvolver":1},
-    "src/server/intelligence/executors/network-executors.ts":{"directDb":1,"dbSinEnvolver":1},
-    "src/server/intelligence/core/dispatcher.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/intelligence/core/scan-response.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/intelligence/discovery/orchestrator.ts":{"directDb":1,"dbSinEnvolver":1},
-    "src/server/intelligence/discovery/ct-monitor.ts":{"directDb":1,"dbSinEnvolver":1},
-    "src/server/intelligence/core/policy-enforcer.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/intelligence/adversary/sandbox-executor.ts":{"directDb":1,"dbSinEnvolver":1},
-    "src/server/intelligence/adversary/scenario-runner.ts":{"directDb":1,"dbSinEnvolver":1},
-    "src/server/intelligence/adversary/assessment/reports.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/intelligence/adversary/assessment/assessment-evaluator.ts":{"directDb":0,"dbSinEnvolver":1},
-    "src/server/intelligence/adversary/mitre-eval/mitre-report-generator.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/intelligence/adversary/mitre-eval/mitre-data-loader.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/server/intelligence/executors/executors.test.ts":{"directDb":1,"dbSinEnvolver":1},
-    "src/app/api/cron/metrics/route.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/app/api/cron/cleanup/route.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/app/api/cron/discovery/route.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/app/api/cron/retry/route.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/app/api/intelligence/live/route.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/app/api/intelligence/runs/route.ts":{"directDb":1,"dbSinEnvolver":1},
-    "src/app/api/intelligence/graph/route.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/app/api/intelligence/route.ts":{"directDb":2,"dbSinEnvolver":0},
-    "src/app/api/intelligence/investigations/route.ts":{"directDb":2,"dbSinEnvolver":0},
-    "src/app/api/ai/report/route.ts":{"directDb":1,"dbSinEnvolver":0},
-    "src/app/actions/audits.ts":{"directDb":6,"dbSinEnvolver":1},
-    "src/app/api/public/v1/intelligence/route.ts":{"directDb":6,"dbSinEnvolver":0},
-    "src/shared/lib/flags.ts":{"directDb":0,"dbSinEnvolver":1}
+    "src/app/actions/audits.ts": {
+      "directDb": 9,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/ai/healthcheck/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/api-keys/[id]/usage/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/billing/plans/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/cron/uptime/route.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 2
+    },
+    "src/app/api/intelligence/adversary/assessment/route.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 1
+    },
+    "src/app/api/intelligence/adversary/mitre/route.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 1
+    },
+    "src/app/api/intelligence/adversary/route.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 1
+    },
+    "src/app/api/intelligence/adversary/vulnerabilities/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/intelligence/bulk/route.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 1
+    },
+    "src/app/api/notifications/push-subscribe/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/projects/[id]/members/route.ts": {
+      "directDb": 2,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/public/v1/adversary/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/public/v1/audits/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/public/v1/findings/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/public/v1/intelligence/route.ts": {
+      "directDb": 7,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/public/v1/reports/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/public/v1/uptime/route.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/reports/pdf/route.tsx": {
+      "directDb": 4,
+      "dbSinEnvolver": 0
+    },
+    "src/app/api/telemetry/vitals/route.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 2
+    },
+    "src/app/p/[token]/page.tsx": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/app/pricing/page.tsx": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/server/ai/ai-usage.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 1
+    },
+    "src/server/ai/eval-runner.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/server/ai/finding-triage.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/server/api/public-router.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/server/integrations/commands/executor.ts": {
+      "directDb": 2,
+      "dbSinEnvolver": 0
+    },
+    "src/server/intelligence/adversary/assessment/assessment-service.ts": {
+      "directDb": 2,
+      "dbSinEnvolver": 0
+    },
+    "src/server/intelligence/adversary/mitre-eval/mitre-service.ts": {
+      "directDb": 2,
+      "dbSinEnvolver": 0
+    },
+    "src/server/intelligence/adversary/scenario-runner.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 3
+    },
+    "src/server/intelligence/anomaly/detector.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 3
+    },
+    "src/server/intelligence/core/policy-enforcer.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 6
+    },
+    "src/server/intelligence/discovery/orchestrator.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 1
+    },
+    "src/server/intelligence/enterprise/api-auth.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 2
+    },
+    "src/server/intelligence/findings/workflow.ts": {
+      "directDb": 5,
+      "dbSinEnvolver": 0
+    },
+    "src/server/intelligence/history/dns-history.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/server/intelligence/history/whois-history.ts": {
+      "directDb": 5,
+      "dbSinEnvolver": 0
+    },
+    "src/server/intelligence/plugins/plugin-executor.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 2
+    },
+    "src/server/intelligence/plugins/registry.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 8
+    },
+    "src/server/intelligence/scan-queue.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/server/lib/entitlements.ts": {
+      "directDb": 2,
+      "dbSinEnvolver": 0
+    },
+    "src/server/lib/error-handler.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 1
+    },
+    "src/server/lib/invitations.ts": {
+      "directDb": 4,
+      "dbSinEnvolver": 0
+    },
+    "src/server/lib/project-access.ts": {
+      "directDb": 2,
+      "dbSinEnvolver": 0
+    },
+    "src/server/lib/rbac.ts": {
+      "directDb": 4,
+      "dbSinEnvolver": 0
+    },
+    "src/server/lib/remediation/service.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/server/notifications/emit.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/server/observability/app-logs-sink.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/server/reports/pdf-progress.ts": {
+      "directDb": 2,
+      "dbSinEnvolver": 0
+    },
+    "src/server/security/siem-exporter.ts": {
+      "directDb": 4,
+      "dbSinEnvolver": 0
+    },
+    "src/server/webhooks/outbox.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/shared/db/rls.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 1
+    },
+    "src/shared/db/test-rls.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 1
+    },
+    "src/shared/lib/api-keys.ts": {
+      "directDb": 5,
+      "dbSinEnvolver": 0
+    },
+    "src/shared/lib/audit-log.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/shared/lib/distributed-cache.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/shared/lib/idempotency.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/shared/lib/logger.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/shared/lib/ratelimit.ts": {
+      "directDb": 1,
+      "dbSinEnvolver": 0
+    },
+    "src/trigger/audit.trigger.ts": {
+      "directDb": 6,
+      "dbSinEnvolver": 0
+    },
+    "src/trigger/cleanup.trigger.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 4
+    },
+    "src/trigger/forecast.trigger.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 3
+    },
+    "src/trigger/monitoring.trigger.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 3
+    },
+    "src/trigger/uptime.trigger.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 2
+    },
+    "src/trigger/webhook.trigger.ts": {
+      "directDb": 0,
+      "dbSinEnvolver": 1
+    }
   }
 }
