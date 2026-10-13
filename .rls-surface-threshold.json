@@ -1,7 +1,7 @@
 {
-  "maxDirectDbCalls": 250,
-  "maxDbCallsOutsideWithRLS": 80,
-  "maxTotalCalls": 330,
+  "maxDirectDbCalls": 244,
+  "maxDbCallsOutsideWithRLS": 77,
+  "maxTotalCalls": 321,
   "allowedFiles": [
     "src/app/actions/audits.ts",
     "src/app/admin/actions.ts",
@@ -50,10 +50,8 @@
     "src/server/intelligence/adversary/scenario-runner.ts",
     "src/server/intelligence/anomaly/detector.ts",
     "src/server/intelligence/core/policy-enforcer.ts",
-    "src/server/intelligence/discovery/orchestrator.ts",
     "src/server/intelligence/enterprise/api-auth.ts",
     "src/server/intelligence/enterprise/usage-metering.ts",
-    "src/server/intelligence/findings/workflow.ts",
     "src/server/intelligence/history/dns-history.ts",
     "src/server/intelligence/history/whois-history.ts",
     "src/server/intelligence/plugins/plugin-executor.ts",
@@ -287,10 +285,6 @@
       "directDb": 0,
       "dbSinEnvolver": 6
     },
-    "src/server/intelligence/discovery/orchestrator.ts": {
-      "directDb": 0,
-      "dbSinEnvolver": 3
-    },
     "src/server/intelligence/enterprise/api-auth.ts": {
       "directDb": 0,
       "dbSinEnvolver": 2
@@ -298,10 +292,6 @@
     "src/server/intelligence/enterprise/usage-metering.ts": {
       "directDb": 0,
       "dbSinEnvolver": 1
-    },
-    "src/server/intelligence/findings/workflow.ts": {
-      "directDb": 6,
-      "dbSinEnvolver": 0
     },
     "src/server/intelligence/history/dns-history.ts": {
       "directDb": 2,
