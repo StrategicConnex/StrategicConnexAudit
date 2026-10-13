@@ -19,6 +19,11 @@ const mockQueryDns = vi.fn();
 const mockQueryWhois = vi.fn();
 const mockTimeline = vi.fn();
 
+/** Transacción que entrega el withRLS mockeado: la misma que deben recibir los
+ *  readers WHOIS (P0.2: la lectura va por la autoridad del llamante). */
+let lastTx: unknown;
+const mockWithRLS = vi.fn();
+
 vi.mock("@/shared/lib/ratelimit", () => ({
   withRateLimit: (
     _opts: unknown,
@@ -27,10 +32,13 @@ vi.mock("@/shared/lib/ratelimit", () => ({
 }));
 
 vi.mock("@/shared/db/rls", () => ({
-  withRLS: (_userId: string, cb: (tx: unknown) => Promise<unknown>) =>
-    cb({
+  withRLS: (userId: string, cb: (tx: unknown) => Promise<unknown>) => {
+    lastTx = {
       query: { projects: { findFirst: (...args: unknown[]) => mockFindFirst(...args) } },
-    }),
+    };
+    mockWithRLS(userId);
+    return cb(lastTx);
+  },
 }));
 
 vi.mock("@/shared/lib/supabase/server", () => ({
@@ -110,6 +118,7 @@ describe("Intelligence: History — GET", () => {
       expect.objectContaining({ projectId: "p1", limit: 50, offset: 0 }),
     );
     expect(mockQueryWhois).toHaveBeenCalledWith(
+      lastTx,
       expect.objectContaining({ projectId: "p1" }),
     );
     expect(mockTimeline).not.toHaveBeenCalled();
@@ -144,6 +153,7 @@ describe("Intelligence: History — GET", () => {
     expect(body.whois).toEqual(whoisPayload);
     expect(body.dns).toBeNull();
     expect(mockQueryWhois).toHaveBeenCalledWith(
+      lastTx,
       expect.objectContaining({ domain: "example.com" }),
     );
     expect(mockQueryDns).not.toHaveBeenCalled();
@@ -157,7 +167,7 @@ describe("Intelligence: History — GET", () => {
 
     const body = await res.json();
     expect(body.timeline).toEqual(timelinePayload);
-    expect(mockTimeline).toHaveBeenCalledWith("p1", "example.com");
+    expect(mockTimeline).toHaveBeenCalledWith(lastTx, "p1", "example.com");
     expect(mockQueryDns).not.toHaveBeenCalled();
     expect(mockQueryWhois).not.toHaveBeenCalled();
   });
@@ -180,5 +190,21 @@ describe("Intelligence: History — GET", () => {
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBe("Error al consultar historial: boom");
+  });
+
+  it("P0.2: las lecturas WHOIS corren dentro de la transacción RLS del usuario", async () => {
+    await GET(createRequest("?projectId=p1&type=whois&query=example.com") as never);
+
+    // La MISMA transacción del check de ownership es la que lee el historial:
+    // si la lectura se hiciera con un handle propio (directDb), este assert
+    // falla — que es exactamente la regresión que queremos detectar.
+    expect(mockWithRLS).toHaveBeenCalledWith("u-1");
+    expect(mockQueryWhois.mock.calls[0]![0]).toBe(lastTx);
+  });
+
+  it("P0.2: el timeline WHOIS también corre dentro de la transacción RLS", async () => {
+    await GET(createRequest("?projectId=p1&type=timeline&query=example.com") as never);
+
+    expect(mockTimeline.mock.calls[0]![0]).toBe(lastTx);
   });
 });

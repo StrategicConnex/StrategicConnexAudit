@@ -1,7 +1,7 @@
 {
-  "maxDirectDbCalls": 94,
+  "maxDirectDbCalls": 90,
   "maxDbCallsOutsideWithRLS": 50,
-  "maxTotalCalls": 144,
+  "maxTotalCalls": 140,
   "allowedFiles": [
     "src/app/actions/audits.ts",
     "src/app/api/ai/healthcheck/route.ts",
@@ -215,7 +215,7 @@
       "dbSinEnvolver": 0
     },
     "src/server/intelligence/history/whois-history.ts": {
-      "directDb": 5,
+      "directDb": 1,
       "dbSinEnvolver": 0
     },
     "src/server/intelligence/plugins/plugin-executor.ts": {

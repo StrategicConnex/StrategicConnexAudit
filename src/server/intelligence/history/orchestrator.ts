@@ -6,6 +6,7 @@ import { persistDnsSnapshotsBatch } from "./dns-history";
 import { persistWhoisSnapshot } from "./whois-history";
 import { detectDnsChanges } from "./dns-history";
 import { detectWhoisChanges } from "./whois-history";
+import type { DbExecutor } from "@/shared/db/executor";
 import { sendDnsChangeAlerts } from "@/server/security/dns-change-alert";
 import type { DnsChange, WhoisChange, WhoisSnapshot } from "./types";
 import { logger } from "@/lib/logger";
@@ -75,10 +76,17 @@ export async function processWhoisResults(params: {
   return await persistWhoisSnapshot(projectId, investigationId, snapshot);
 }
 
-export async function getProjectHistoryTimeline(projectId: string, domain?: string): Promise<{ dnsChanges: DnsChange[]; whoisChanges: WhoisChange[] }> {
+export async function getProjectHistoryTimeline(
+  tx: DbExecutor,
+  projectId: string,
+  domain?: string,
+): Promise<{ dnsChanges: DnsChange[]; whoisChanges: WhoisChange[] }> {
+  // El detalle WHOIS se lee con la autoridad del llamante (`tx`). El DNS sigue
+  // con directDb dentro de `detectDnsChanges`: esa lectura se migra en su
+  // propia iteración (mismo patrón, otro servicio).
   const [dnsChanges, whoisChanges] = await Promise.all([
     domain ? detectDnsChanges(projectId, domain) : Promise.resolve([] as DnsChange[]),
-    domain ? detectWhoisChanges(projectId, domain) : Promise.resolve([] as WhoisChange[]),
+    domain ? detectWhoisChanges(tx, projectId, domain) : Promise.resolve([] as WhoisChange[]),
   ]);
   return { dnsChanges, whoisChanges };
 }

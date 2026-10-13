@@ -45,37 +45,43 @@ async function handler(_req: NextRequest, userId: string) {
       return NextResponse.json({ success: false, error: "projectId es requerido" }, { status: 400 });
     }
 
-    // Verificar ownership del proyecto bajo RLS. Los readers de historial usan
-    // directDb (bypass de RLS), por lo que el control de acceso debe ocurrir aquí.
-    const ownedProject = await withRLS(userId, async (tx) =>
-      tx.query.projects.findFirst({
+    // Ownership y lecturas WHOIS en la MISMA transacción: dentro de ella la
+    // sesión es `authenticated` con el `sub` del usuario, así que las policies de
+    // `whois_history` (0027) deciden qué filas existen. Antes el ownership se
+    // comprobaba aquí y la lectura se hacía con directDb (bypass de RLS): una
+    // única barrera, la de este archivo.
+    const access = await withRLS(userId, async (tx) => {
+      const ownedProject = await tx.query.projects.findFirst({
         where: eq(projects.id, projectId),
         columns: { id: true },
-      })
-    );
+      });
 
-    if (!ownedProject) {
+      if (!ownedProject) return null;
+
+      return {
+        whois: type === "whois" || type === "all"
+          ? await queryWhoisHistory(tx, { projectId, domain: query, from, to, limit, offset })
+          : null,
+        timeline: type === "timeline" && query
+          ? await getProjectHistoryTimeline(tx, projectId, query)
+          : null,
+      };
+    });
+
+    if (!access) {
       return NextResponse.json(
         { success: false, error: "Proyecto no encontrado o acceso denegado" },
         { status: 404 }
       );
     }
 
-    let dnsResult = null;
-    let whoisResult = null;
-    let timeline = null;
-
-    if (type === "dns" || type === "all") {
-      dnsResult = await queryDnsHistory({ projectId, query, recordType, from, to, limit, offset });
-    }
-
-    if (type === "whois" || type === "all") {
-      whoisResult = await queryWhoisHistory({ projectId, domain: query, from, to, limit, offset });
-    }
-
-    if (type === "timeline" && query) {
-      timeline = await getProjectHistoryTimeline(projectId, query);
-    }
+    // DNS sigue leyéndose con directDb: `dns-history.ts` se migra en su propia
+    // iteración (el guard de superficie marca los sitios que quedan).
+    const dnsResult = type === "dns" || type === "all"
+      ? await queryDnsHistory({ projectId, query, recordType, from, to, limit, offset })
+      : null;
+    const whoisResult = access.whois;
+    const timeline = access.timeline;
 
     return NextResponse.json({ success: true, type, projectId, dns: dnsResult, whois: whoisResult, timeline });
   } catch (error: unknown) {

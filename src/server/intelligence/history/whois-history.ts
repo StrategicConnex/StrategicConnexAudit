@@ -1,8 +1,21 @@
 /**
  * history/whois-history.ts — WHOIS History Persistence & Query
+ *
+ * AUTORIDAD (P0.2): las LECTURAS reciben el manejador de BD del llamante
+ * (`DbExecutor`), así que quien consulta decide bajo qué autoridad se lee:
+ *   - route handler con sesión → `withRLS(userId, (tx) => queryWhoisHistory(tx, …))`
+ *     y las policies de `whois_history` (0027: FOR ALL + user_has_project_access)
+ *     son las que deciden qué filas existen para ese usuario.
+ *   - job sin sesión → `queryWhoisHistory(directDb, …)` explícito en el call site.
+ * Antes todas las lecturas usaban `directDb` (rol postgres, `rolbypassrls`), así
+ * que el aislamiento dependía de que cada ruta recordara comprobar ownership.
+ * La ESCRITURA (`persistWhoisSnapshot`) sigue en `directDb` en este paso: la
+ * invocan executors fire-and-forget del motor de escaneo (sin sesión garantizada)
+ * y migrarla exige propagar la transacción por el `ExecutorContext`.
  */
 
 import { directDb } from "@/shared/db";
+import type { DbExecutor } from "@/shared/db/executor";
 import { whoisHistory } from "@/shared/db/schemas/history";
 import { and, eq, desc, gte, lte } from "drizzle-orm";
 import crypto from "node:crypto";
@@ -75,21 +88,24 @@ export async function persistWhoisSnapshot(
   return { isNew, changes };
 }
 
-export async function queryWhoisHistory(params: {
-  projectId: string;
-  domain?: string;
-  from?: Date;
-  to?: Date;
-  limit?: number;
-  offset?: number;
-}): Promise<HistoryQueryResult<WhoisSnapshot>> {
+export async function queryWhoisHistory(
+  tx: DbExecutor,
+  params: {
+    projectId: string;
+    domain?: string;
+    from?: Date;
+    to?: Date;
+    limit?: number;
+    offset?: number;
+  },
+): Promise<HistoryQueryResult<WhoisSnapshot>> {
   const { projectId: pid, domain, from, to, limit = 50, offset = 0 } = params;
   const conditions = [eq(whoisHistory.projectId, pid)];
   if (domain) conditions.push(eq(whoisHistory.domain, domain));
   if (from) conditions.push(gte(whoisHistory.snapshotDate, from));
   if (to) conditions.push(lte(whoisHistory.snapshotDate, to));
 
-  const rows = await directDb.select().from(whoisHistory).where(and(...conditions)).orderBy(desc(whoisHistory.snapshotDate)).limit(limit).offset(offset);
+  const rows = await tx.select().from(whoisHistory).where(and(...conditions)).orderBy(desc(whoisHistory.snapshotDate)).limit(limit).offset(offset);
 
   const snapshots: (WhoisSnapshot & { snapshotDate: string })[] = rows.map((r) => ({
     domain: r.domain, registrar: r.registrar,
@@ -101,14 +117,14 @@ export async function queryWhoisHistory(params: {
   }));
 
   const firstSeen = rows.length > 0
-    ? await directDb.select({ seenAt: whoisHistory.firstSeenAt }).from(whoisHistory).where(and(...conditions)).orderBy(whoisHistory.firstSeenAt).limit(1).then((r) => r[0]?.seenAt ?? null)
+    ? await tx.select({ seenAt: whoisHistory.firstSeenAt }).from(whoisHistory).where(and(...conditions)).orderBy(whoisHistory.firstSeenAt).limit(1).then((r) => r[0]?.seenAt ?? null)
     : null;
 
   return { snapshots, totalCount: rows.length, firstSeen, lastSeen: rows[0]?.snapshotDate ?? null, changeCount: rows.filter((r) => r.diffSummary !== null).length };
 }
 
-export async function getWhoisDomainHistory(projectId: string, domain: string, limit = 20): Promise<WhoisSnapshot[]> {
-  const rows = await directDb.select().from(whoisHistory).where(and(eq(whoisHistory.projectId, projectId), eq(whoisHistory.domain, domain))).orderBy(desc(whoisHistory.snapshotDate)).limit(limit);
+export async function getWhoisDomainHistory(tx: DbExecutor, projectId: string, domain: string, limit = 20): Promise<WhoisSnapshot[]> {
+  const rows = await tx.select().from(whoisHistory).where(and(eq(whoisHistory.projectId, projectId), eq(whoisHistory.domain, domain))).orderBy(desc(whoisHistory.snapshotDate)).limit(limit);
   return rows.map((r) => ({
     domain: r.domain, registrar: r.registrar,
     createdDate: r.createdDate, expiresDate: r.expiresDate, updatedDate: r.updatedDate,
@@ -118,8 +134,8 @@ export async function getWhoisDomainHistory(projectId: string, domain: string, l
   }));
 }
 
-export async function detectWhoisChanges(projectId: string, domain: string): Promise<WhoisChange[]> {
-  const snapshots = await directDb.select().from(whoisHistory).where(and(eq(whoisHistory.projectId, projectId), eq(whoisHistory.domain, domain))).orderBy(desc(whoisHistory.snapshotDate)).limit(2);
+export async function detectWhoisChanges(tx: DbExecutor, projectId: string, domain: string): Promise<WhoisChange[]> {
+  const snapshots = await tx.select().from(whoisHistory).where(and(eq(whoisHistory.projectId, projectId), eq(whoisHistory.domain, domain))).orderBy(desc(whoisHistory.snapshotDate)).limit(2);
   if (snapshots.length < 2) return [];
 
   const curr = snapshots[0]!;
