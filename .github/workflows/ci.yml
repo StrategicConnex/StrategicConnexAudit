@@ -246,6 +246,30 @@ jobs:
           fi
           node scripts/db/fk-schema-drift-guard.mjs
 
+      # P1-10b (2026-10-14): `drift-check.mjs` compara tablas, columnas,
+      # nullability y defaults — NO índices. Gracias a ese hueco ciego, 32
+      # índices declarados con `CREATE INDEX IF NOT EXISTS` en 0012/0015/0019
+      # estuvieron ausentes en producción mientras el ledger los contaba como
+      # aplicados (61/61): 42 columnas FK sin índice cubridor y seq scans en
+      # rutas calientes, sin un solo gate en rojo. Este guard hace DURA la
+      # relación migraciones → BD: falla si un `CREATE INDEX` declarado no
+      # existe, y sólo avisa (sin fallar) de índices presentes que ninguna
+      # migración declara. Sale con 2 (no con 0) si no puede verificar.
+      - name: Index guard (índices declarados en migraciones vs BD)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::warning::Secreto DIRECT_URL no configurado — guard de índices OMITIDO (la lógica de parseo y diff SÍ está cubierta por los tests de vitest)."
+            {
+              echo '## 🧱 Index Guard'
+              echo ''
+              echo '⚠️ **Omitido** — falta el secreto `DIRECT_URL`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          pnpm db:index-guard
+
       # Hallazgo #6 (auditoría de BD 2026-10-11): `TRUNCATE` estaba concedido a
       # `authenticated` en 33 tablas de `public`. TRUNCATE NO pasa por RLS, así
       # que anulaba el aislamiento multi-tenant para ese comando. El guard
