@@ -15,7 +15,17 @@ export default defineConfig({
     // respondían y vitest reportaba 4 "Unhandled Errors" → exit 1 con todo en verde.
     maxWorkers: process.env.CI ? 2 : 4,
     environment: 'jsdom',
-    exclude: ['**/node_modules/**', '**/e2e/**', '**/.next/**', '**/test-results/**'],
+    // tests/integration/** y rls-bypassrls-proof.test.ts corren contra Postgres
+    // REAL vía `pnpm test:integration` (vitest.integration.config.ts): en la
+    // suite unitaria (sin BD) solo podrían fallar con ECONNREFUSED.
+    exclude: [
+      '**/node_modules/**',
+      '**/e2e/**',
+      '**/.next/**',
+      '**/test-results/**',
+      '**/tests/integration/**',
+      '**/tests/security/rls-bypassrls-proof.test.ts',
+    ],
     alias: {
       '@': path.resolve(__dirname, './src'),
       // El guard server-only lanza en el runtime default (node/jsdom); en

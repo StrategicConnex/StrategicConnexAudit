@@ -546,3 +546,71 @@ jobs:
               echo '❌ **Newman tests failed** — check artifacts for details'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ── P1-8: suite de integración contra Postgres REAL ───────────────────────
+  # Job SEPARADO del e2e (que conserva sus secrets intactos): aquí no hay
+  # servidor Next ni Playwright, solo el contenedor de BD y pruebas de
+  # integración (CRUD + aislamiento RLS multi-tenant). El Postgres vanilla NO
+  # trae Supabase, así que el orden importa:
+  #   1. db:prepare-test → roles anon/authenticated/service_role + auth.uid()
+  #      + default privileges: todo lo que las migraciones asumen de Supabase.
+  #      DEBE ir ANTES de migrate: `CREATE POLICY ... TO authenticated` y las
+  #      migraciones fechadas que usan auth.uid() fallarían sin esos stubs.
+  #   2. db:migrate → drizzle-kit migrate con el journal completo del repo.
+  #   3. test:integration → CRUD (projects/audits/findings) + proof BYPASSRLS
+  #      (antes imposible: ECONNREFUSED 127.0.0.1:5432 en todas las sesiones).
+  # sslmode=disable es obligatorio: la imagen oficial arranca SIN ssl y
+  # drizzle.config.ts fija ssl={rejectUnauthorized:false}; sin el parámetro
+  # pg intenta SSL y aborta con «The server does not support SSL connections».
+  integration:
+    name: Integration (Postgres real)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scaudit_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/scaudit_test?sslmode=disable
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/scaudit_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Prepare Supabase stubs (roles + auth.uid) ANTES de migrar
+        run: pnpm db:prepare-test
+
+      - name: Apply migrations (drizzle-kit migrate)
+        run: pnpm db:migrate
+
+      - name: Run integration tests (CRUD + aislamiento RLS multi-tenant)
+        run: pnpm test:integration
+
+      - name: Report integration status
+        if: always()
+        run: |
+          {
+            echo '## 🧪 Integration (Postgres real)'
+            echo ''
+            echo 'Estado: ${{ job.status }}'
+            echo ''
+            echo 'Suite P1-8: CRUD sobre projects/audits/findings + prueba negativa'
+            echo 'de aislamiento multi-tenant (withRLS vs directDb/BYPASSRLS) contra'
+            echo 'Postgres real. El job E2E conserva sus secrets intactos.'
+          } >> "$GITHUB_STEP_SUMMARY"
