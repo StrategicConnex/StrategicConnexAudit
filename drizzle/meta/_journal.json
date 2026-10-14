@@ -414,6 +414,13 @@
       "when": 1792195200000,
       "tag": "0047_soc2_pack_logs_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1792281600000,
+      "tag": "0048_api_key_usage_self_read",
+      "breakpoints": true
     }
   ]
 }

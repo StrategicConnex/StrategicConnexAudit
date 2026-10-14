@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/shared/lib/supabase/server';
-import { directDb } from '@/shared/db';
+import { withRLS } from '@/shared/db/rls';
+import type { DbExecutor } from '@/shared/db/executor';
 import { securityAuditLogs, developerApiKeys } from '@/shared/db/schemas';
 import { eq, and, sql, gte } from 'drizzle-orm';
 import { withRateLimit } from '@/shared/lib/ratelimit';
@@ -15,21 +16,18 @@ export const dynamic = 'force-dynamic';
  * Stats are derived from securityAuditLogs where eventType = 'api_key_usage'
  * and metadata->>'apiKeyId' matches the requested key ID.
  *
+ * P0.2 · ADR-010: la lectura corre dentro de `withRLS(userId)`. La propiedad de
+ * la key la impone la policy `developer_api_keys_select_own`
+ * (`user_id = current_auth_uid()`), así que una key de otro usuario es
+ * invisible → 404 (antes se leía la fila con `directDb` y se respondía 403,
+ * revelando que el id existía). El uso lo habilitan los grants sobre
+ * `security_audit_logs` (0047) y la policy de lectura propia
+ * `security_audit_logs_self_api_key_usage` (0048), limitada a las filas
+ * `event_type = 'api_key_usage'` del propio usuario.
+ *
  * Usage data is available from the moment this endpoint was created (after
  * public-router.ts started logging api_key_usage events). For retroactive
  * stats, only lastUsedAt from the developerApiKeys record is available.
- *
- * Response:
- * {
- *   success: true,
- *   keyName: string,
- *   totalRequests: number,
- *   todayRequests: number,
- *   thisWeekRequests: number,
- *   thisMonthRequests: number,
- *   lastUsedAt: string | null,
- *   dailyBreakdown: [ { date: string, count: number }, ... ]
- * }
  */
 export const GET = withRateLimit(
   {
@@ -59,90 +57,87 @@ export const GET = withRateLimit(
         );
       }
 
-      // Verify the key exists and belongs to this user
-      const keyRecord = await directDb.query.developerApiKeys.findFirst({
-        where: eq(developerApiKeys.id, keyId),
+      const outcome = await withRLS(userId, async (tx: DbExecutor) => {
+        // Ownership via RLS: la policy sólo devuelve la key si es del usuario.
+        const keyRecord = await tx.query.developerApiKeys.findFirst({
+          where: eq(developerApiKeys.id, keyId),
+        });
+
+        if (!keyRecord) {
+          return { kind: 'not_found' as const };
+        }
+
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+        startOfWeek.setHours(0, 0, 0, 0);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+
+        // WHERE filter: eventType = 'api_key_usage' AND metadata->>'apiKeyId' = keyId
+        const usageFilter = and(
+          eq(securityAuditLogs.eventType, 'api_key_usage'),
+          sql`${securityAuditLogs.metadata}->>'apiKeyId' = ${keyId}`,
+        );
+
+        const [totalResult] = await tx
+          .select({ count: sql<number>`COUNT(*)::int` })
+          .from(securityAuditLogs)
+          .where(usageFilter);
+
+        const [todayResult] = await tx
+          .select({ count: sql<number>`COUNT(*)::int` })
+          .from(securityAuditLogs)
+          .where(and(usageFilter, gte(securityAuditLogs.createdAt, startOfToday)));
+
+        const [weekResult] = await tx
+          .select({ count: sql<number>`COUNT(*)::int` })
+          .from(securityAuditLogs)
+          .where(and(usageFilter, gte(securityAuditLogs.createdAt, startOfWeek)));
+
+        const [monthResult] = await tx
+          .select({ count: sql<number>`COUNT(*)::int` })
+          .from(securityAuditLogs)
+          .where(and(usageFilter, gte(securityAuditLogs.createdAt, startOfMonth)));
+
+        const dailyRows = await tx
+          .select({
+            date: sql<string>`${securityAuditLogs.createdAt}::date`,
+            count: sql<number>`COUNT(*)::int`,
+          })
+          .from(securityAuditLogs)
+          .where(and(usageFilter, gte(securityAuditLogs.createdAt, thirtyDaysAgo)))
+          .groupBy(sql`${securityAuditLogs.createdAt}::date`)
+          .orderBy(sql`${securityAuditLogs.createdAt}::date`);
+
+        return {
+          kind: 'ok' as const,
+          payload: {
+            keyName: keyRecord.name,
+            keyPrefix: keyRecord.keyPrefix,
+            totalRequests: totalResult?.count ?? 0,
+            todayRequests: todayResult?.count ?? 0,
+            thisWeekRequests: weekResult?.count ?? 0,
+            thisMonthRequests: monthResult?.count ?? 0,
+            lastUsedAt: keyRecord.lastUsedAt?.toISOString() ?? null,
+            dailyBreakdown: dailyRows.map((r) => ({
+              date: r.date,
+              count: r.count,
+            })),
+          },
+        };
       });
 
-      if (!keyRecord) {
+      if (outcome.kind === 'not_found') {
         return NextResponse.json(
           { success: false, error: 'API Key no encontrada' },
           { status: 404 },
         );
       }
 
-      if (keyRecord.userId !== userId) {
-        return NextResponse.json(
-          { success: false, error: 'Acceso denegado' },
-          { status: 403 },
-        );
-      }
-
-      // Query securityAuditLogs for this key's usage
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
-      startOfWeek.setHours(0, 0, 0, 0);
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const thirtyDaysAgo = new Date(now);
-      thirtyDaysAgo.setDate(now.getDate() - 30);
-
-      // WHERE filter: eventType = 'api_key_usage' AND metadata->>'apiKeyId' = keyId
-      const usageFilter = and(
-        eq(securityAuditLogs.eventType, 'api_key_usage'),
-        sql`${securityAuditLogs.metadata}->>'apiKeyId' = ${keyId}`,
-      );
-
-      // Total requests
-      const [totalResult] = await directDb
-        .select({ count: sql<number>`COUNT(*)::int` })
-        .from(securityAuditLogs)
-        .where(usageFilter);
-
-      // Today
-      const [todayResult] = await directDb
-        .select({ count: sql<number>`COUNT(*)::int` })
-        .from(securityAuditLogs)
-        .where(and(usageFilter, gte(securityAuditLogs.createdAt, startOfToday)));
-
-      // This week
-      const [weekResult] = await directDb
-        .select({ count: sql<number>`COUNT(*)::int` })
-        .from(securityAuditLogs)
-        .where(and(usageFilter, gte(securityAuditLogs.createdAt, startOfWeek)));
-
-      // This month
-      const [monthResult] = await directDb
-        .select({ count: sql<number>`COUNT(*)::int` })
-        .from(securityAuditLogs)
-        .where(and(usageFilter, gte(securityAuditLogs.createdAt, startOfMonth)));
-
-      // Daily breakdown for last 30 days
-      const dailyRows = await directDb
-        .select({
-          date: sql<string>`${securityAuditLogs.createdAt}::date`,
-          count: sql<number>`COUNT(*)::int`,
-        })
-        .from(securityAuditLogs)
-        .where(and(usageFilter, gte(securityAuditLogs.createdAt, thirtyDaysAgo)))
-        .groupBy(sql`${securityAuditLogs.createdAt}::date`)
-        .orderBy(sql`${securityAuditLogs.createdAt}::date`);
-
-      return NextResponse.json({
-        success: true,
-        keyName: keyRecord.name,
-        keyPrefix: keyRecord.keyPrefix,
-        totalRequests: totalResult?.count ?? 0,
-        todayRequests: todayResult?.count ?? 0,
-        thisWeekRequests: weekResult?.count ?? 0,
-        thisMonthRequests: monthResult?.count ?? 0,
-        lastUsedAt: keyRecord.lastUsedAt?.toISOString() ?? null,
-        dailyBreakdown: dailyRows.map((r) => ({
-          date: r.date,
-          count: r.count,
-        })),
-      });
+      return NextResponse.json({ success: true, ...outcome.payload });
     } catch (error: unknown) {
       logger.error('GET /api/api-keys/[id]/usage failure:', error);
       return NextResponse.json(

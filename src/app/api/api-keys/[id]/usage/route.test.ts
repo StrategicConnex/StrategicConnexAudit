@@ -1,19 +1,24 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   API Keys: Usage (estadísticas de uso de una key) — Tests de endpoint (TD-03 lote 3)
+   API Keys: Usage (estadísticas de uso de una key) — Tests de endpoint (Oleada 3)
 
-   withRateLimit en passthrough (inyecta userId); directDb simulado con cola de
-   5 selects (total, hoy, semana, mes, breakdown diario). Verifica:
+   withRateLimit en passthrough (inyecta userId); withRLS simulado entrega la
+   `tx` con cola de 5 selects (total, hoy, semana, mes, breakdown diario).
+   Verifica:
    - 200 con keyName, contadores, lastUsedAt y dailyBreakdown
    - Sin eventos de uso → contadores en cero, breakdown vacío, lastUsedAt null
-   - Key inexistente → 404; key de otro usuario → 403
+   - Key inexistente → 404; key de otro usuario → 404 (RLS la hace invisible)
    - Sin keyId en la ruta → 400; error de BD → 500
+   P0.2: lecturas bajo la autoridad del usuario autenticado.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockFindFirst = vi.fn();
+const mocks = vi.hoisted(() => ({
+  findFirst: vi.fn(),
+  withRLS: vi.fn(),
+}));
 
 let selectQueue: unknown[][] = [];
 let selectCalls = 0;
@@ -23,35 +28,38 @@ function nextSelectResult(): Promise<unknown> {
   return Promise.resolve(selectQueue.shift() ?? []);
 }
 
+function buildTx() {
+  const chain = {
+    from: () => chain,
+    where: () => chain,
+    groupBy: () => chain,
+    orderBy: () => chain,
+    then: (
+      resolve: (v: unknown) => unknown,
+      reject: (e: unknown) => unknown,
+    ) => nextSelectResult().then(resolve, reject),
+  };
+  return {
+    select: () => chain,
+    query: {
+      developerApiKeys: { findFirst: (...args: unknown[]) => mocks.findFirst(...args) },
+    },
+  };
+}
+
 vi.mock("@/shared/lib/ratelimit", () => ({
   withRateLimit: (_cfg: unknown, handler: unknown) => handler,
 }));
 
-vi.mock("@/shared/lib/supabase/server", () => ({
-  createClient: vi.fn(),
+vi.mock("@/shared/db/rls", () => ({
+  withRLS: (userId: string, cb: (tx: unknown) => Promise<unknown>) => {
+    mocks.withRLS(userId, cb);
+    return cb(buildTx());
+  },
 }));
 
-vi.mock("@/shared/db", () => ({
-  directDb: {
-    select: () => {
-      const chain = {
-        from: () => chain,
-        where: () => chain,
-        groupBy: () => chain,
-        orderBy: () => chain,
-        then: (
-          resolve: (v: unknown) => unknown,
-          reject: (e: unknown) => unknown,
-        ) => nextSelectResult().then(resolve, reject),
-      };
-      return chain;
-    },
-    query: {
-      developerApiKeys: {
-        findFirst: (...args: unknown[]) => mockFindFirst(...args),
-      },
-    },
-  },
+vi.mock("@/shared/lib/supabase/server", () => ({
+  createClient: vi.fn(),
 }));
 
 vi.mock("@/shared/db/schemas", () => ({
@@ -121,7 +129,7 @@ describe("API Keys: Usage — GET", () => {
     vi.clearAllMocks();
     selectCalls = 0;
     setupSelects(defaultSelects);
-    mockFindFirst.mockResolvedValue(keyRecord);
+    mocks.findFirst.mockResolvedValue(keyRecord);
     const mod = await import("./route");
     GET = mod.GET;
   });
@@ -150,7 +158,7 @@ describe("API Keys: Usage — GET", () => {
 
   it("sin eventos de uso → contadores en cero y breakdown vacío", async () => {
     setupSelects([[], [], [], [], []]);
-    mockFindFirst.mockResolvedValue({ ...keyRecord, lastUsedAt: null });
+    mocks.findFirst.mockResolvedValue({ ...keyRecord, lastUsedAt: null });
 
     const res = await GET(createRequest() as never, "u-1");
     expect(res.status).toBe(200);
@@ -165,7 +173,7 @@ describe("API Keys: Usage — GET", () => {
   });
 
   it("key inexistente → 404 sin consultar el uso", async () => {
-    mockFindFirst.mockResolvedValue(undefined);
+    mocks.findFirst.mockResolvedValue(undefined);
 
     const res = await GET(createRequest("k-none") as never, "u-1");
     expect(res.status).toBe(404);
@@ -175,14 +183,17 @@ describe("API Keys: Usage — GET", () => {
     expect(selectCalls).toBe(0);
   });
 
-  it("key de otro usuario → 403", async () => {
-    mockFindFirst.mockResolvedValue({ ...keyRecord, userId: "u-other" });
+  it("key de otro usuario → 404 (RLS la hace invisible, sin revelar que existe)", async () => {
+    // Bajo RLS `developer_api_keys_select_own` no devuelve la fila ajena: el
+    // endpoint responde 404 igual que para una key inexistente (antes, con
+    // directDb, leía la fila y devolvía 403 revelando que el id existía).
+    mocks.findFirst.mockResolvedValue(undefined);
 
     const res = await GET(createRequest() as never, "u-1");
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
 
     const body = await res.json();
-    expect(body.error).toBe("Acceso denegado");
+    expect(body.error).toBe("API Key no encontrada");
     expect(selectCalls).toBe(0);
   });
 
@@ -195,11 +206,18 @@ describe("API Keys: Usage — GET", () => {
 
     const body = await res.json();
     expect(body.error).toBe("Key ID requerido");
-    expect(mockFindFirst).not.toHaveBeenCalled();
+    expect(mocks.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("P0.2: las lecturas corren bajo la autoridad del usuario autenticado", async () => {
+    await GET(createRequest() as never, "u-1");
+
+    expect(mocks.withRLS).toHaveBeenCalledWith("u-1", expect.any(Function));
+    expect(selectCalls).toBe(5);
   });
 
   it("error de BD → 500", async () => {
-    mockFindFirst.mockRejectedValue(new Error("db down"));
+    mocks.findFirst.mockRejectedValue(new Error("db down"));
 
     const res = await GET(createRequest() as never, "u-1");
     expect(res.status).toBe(500);
