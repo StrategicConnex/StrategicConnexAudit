@@ -1,0 +1,31 @@
+-- 0049 — Mínimo privilegio en `developer_api_keys` (DELETE / TRIGGER / REFERENCES).
+--
+-- HALLAZGO (auditoría 2026-10-13): `developer_api_keys` concedía a
+-- `authenticated` los privilegios `DELETE`, `TRIGGER` y `REFERENCES`, que
+-- exceden el mínimo necesario y no los usa ningún camino de la aplicación:
+--
+--   · DELETE       — el único borrado de keys vive en `src/shared/lib/api-keys.ts`
+--                    y corre con `directDb` (rol `postgres`), no con
+--                    `authenticated`. Además no existe policy de DELETE, así
+--                    que RLS ya lo denegaba; el grant era una mina latente.
+--   · REFERENCES   — no hay ninguna FK que referencie `developer_api_keys`
+--                    (verificado en `pg_constraint`).
+--   · TRIGGER      — no hay triggers en la tabla (verificado en `pg_trigger`).
+--
+-- CAUSA RAÍZ (verificada contra la base): **no** son los *default privileges* —
+-- `pg_default_acl` no tiene ninguna entrada para el esquema `public` (solo para
+-- auth/extensions/graphql/realtime/storage). Los concede el event trigger de
+-- Supabase **`pgrst_ddl_watch`** (`ddl_command_end`), que aplica `arwdDxtm`
+-- (INSERT/SELECT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN) a
+-- `anon`/`authenticated`/`service_role` en cada tabla nueva de `public`.
+-- Corregir ese trigger es competencia interna de Supabase, así que el arreglo
+-- aquí es el REVOKE puntual sobre la tabla afectada (y no un
+-- `ALTER DEFAULT PRIVILEGES`, que no tendría efecto).
+--
+-- ALCANCE: solo estos tres privilegios. `SELECT`/`INSERT`/`UPDATE` se mantienen
+-- (el endpoint `api-keys/[id]/usage` lee por RLS; las policies
+-- `developer_api_keys_*_own` siguen gobernando las filas). El rol de la
+-- aplicación (`postgres`) conserva todo. Es un cambio puramente restrictivo e
+-- idempotente.
+
+REVOKE DELETE, TRIGGER, REFERENCES ON public.developer_api_keys FROM authenticated;
