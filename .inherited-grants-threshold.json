@@ -1,0 +1,231 @@
+{
+  "_comment": "Baseline de grants peligrosos (DELETE/TRIGGER/REFERENCES) que `authenticated` tiene en tablas de public, heredados del event trigger pgrst_ddl_watch de Supabase. Re-congela con `--snapshot` tras una revisión aprobada (ver scripts/db/inherited-grants-guard.mjs).",
+  "_updated": "2026-10-14",
+  "dangerousPrivileges": [
+    "DELETE",
+    "TRIGGER",
+    "REFERENCES"
+  ],
+  "baseline": {
+    "ab_test_results": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "ab_tests": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "adversary_assessments": [
+      "DELETE"
+    ],
+    "adversary_runs": [
+      "DELETE"
+    ],
+    "adversary_vulnerabilities": [
+      "DELETE"
+    ],
+    "audit_logs": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "audit_rules": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "audits": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "backlink_history": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "backlinks": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "competitor_keywords": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "competitors": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "crawl_results": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "dns_history": [
+      "DELETE"
+    ],
+    "domain_technologies": [
+      "DELETE"
+    ],
+    "heatmap_sessions": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "integration_data_bing": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "integration_data_ga4": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "integration_data_gsc": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "integration_sync_logs": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "integrations": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "intelligence_assets": [
+      "DELETE"
+    ],
+    "intelligence_findings": [
+      "DELETE"
+    ],
+    "intelligence_investigations": [
+      "DELETE"
+    ],
+    "intelligence_run_events": [
+      "DELETE"
+    ],
+    "intelligence_tool_runs": [
+      "DELETE"
+    ],
+    "intelligence_usage_events": [
+      "DELETE"
+    ],
+    "internal_links": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "issues": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "keyword_targets": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "mitre_evaluations": [
+      "DELETE"
+    ],
+    "mitre_technique_results": [
+      "DELETE"
+    ],
+    "monitoring_alerts": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "monitoring_schedules": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "pdf_progress": [
+      "DELETE"
+    ],
+    "performance_results": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "plugin_instances": [
+      "DELETE"
+    ],
+    "project_audit_rules": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "project_invitations": [
+      "DELETE"
+    ],
+    "projects": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "push_subscriptions": [
+      "DELETE"
+    ],
+    "rank_history": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "report_exports": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "reports": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "schema_validations": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "subscription_plans": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "subscriptions": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "team_audit_logs": [
+      "DELETE"
+    ],
+    "users": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "web_vitals_logs": [
+      "DELETE"
+    ],
+    "webhook_configs": [
+      "DELETE",
+      "REFERENCES",
+      "TRIGGER"
+    ],
+    "whois_history": [
+      "DELETE"
+    ]
+  }
+}

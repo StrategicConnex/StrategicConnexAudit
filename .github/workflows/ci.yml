@@ -245,6 +245,28 @@ jobs:
           fi
           node scripts/db/grant-audit.mjs
 
+      # P0.2 (2026-10-13): el event trigger `pgrst_ddl_watch` de Supabase
+      # concede `DELETE`/`TRIGGER`/`REFERENCES` a `authenticated` en CADA tabla
+      # nueva de `public` (52 de 79 ya los tenían; `anon` en ninguna). No hay
+      # fix desde las migraciones del repo, así que cada tabla sensible nueva
+      # nacía con esos permisos sin que nada avisara. Este guard congela el
+      # conjunto actual y falla si aparece una tabla NUEVA con esos grants o si
+      # una congelada GANA uno. Sale con 2 (no con 0) si no puede verificar.
+      - name: Inherited grants guard (DELETE/TRIGGER/REFERENCES por tabla nueva)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::warning::Secreto DIRECT_URL no configurado — guard de grants heredados OMITIDO (la lógica de diff SÍ está cubierta por los tests de vitest)."
+            {
+              echo '## 🔓 Inherited Grants Guard'
+              echo ''
+              echo '⚠️ **Omitido** — falta el secreto `DIRECT_URL`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          pnpm db:inherited-grants-guard
+
       # P0.2-A/B: la guarda es ESTÁTICA (cuenta llamadas fuera de withRLS con
       # regex sobre src/; no consulta la BD) → corre SIEMPRE, igual que el
       # RLS inventory guard de más arriba. Gatearla con `DIRECT_URL` la dejaba

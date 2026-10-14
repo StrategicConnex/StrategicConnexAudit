@@ -26,6 +26,8 @@
     "db:rls-surface": "node scripts/db/rls-surface-report.mjs",
     "db:rls-surface-guard": "node scripts/db/rls-surface-guard.mjs",
     "db:grant-audit": "node scripts/db/grant-audit.mjs",
+    "db:inherited-grants": "node scripts/db/inherited-grants-guard.mjs --snapshot",
+    "db:inherited-grants-guard": "node scripts/db/inherited-grants-guard.mjs",
     "db:fake-audit": "node scripts/db/fake-data-audit.mjs",
     "db:fake-purge": "node scripts/db/fake-data-purge.mjs",
     "rls:inventory": "node scripts/db/rls-inventory.mjs",
