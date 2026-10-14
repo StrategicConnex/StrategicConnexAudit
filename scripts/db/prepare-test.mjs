@@ -1,4 +1,9 @@
-#!/usr/bin/env node import { createClient } from '@supabase/supabase-js'; import { execSync } from 'child_process'; import { writeFileSync } from 'fs'; import { resolve } from 'path';
+#!/usr/bin/env node
+import { createClient } from '@supabase/supabase-js';
+import { execSync } from 'child_process';
+import { writeFileSync } from 'fs';
+import { resolve } from 'path';
+import { Pool } from 'pg';
 
 // Load env vars
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/scaudit_test?sslmode=disable';
@@ -12,11 +17,8 @@ console.log('🔧 Preparing Supabase stubs for integration tests...\n');
 
 console.log('1. Creating Postgres roles...');
 try {
-  // Create the roles using psql via supabase or direct connection
-  // We'll use a simple approach: create roles if they don't exist
-  const { Pool } = require('pg');
   const pool = new Pool({
-    connectionString: databaseUrl.replace('postgresql://', 'postgresql://'),
+    connectionString: databaseUrl,
   });
 
   const createRole = async (roleName) => {
@@ -41,9 +43,8 @@ try {
 
 console.log('2. Creating _rls_project_sandbox table...');
 try {
-  const { Pool } = require('pg');
   const pool = new Pool({
-    connectionString: databaseUrl.replace('postgresql://', 'postgresql://'),
+    connectionString: databaseUrl,
   });
 
   // Create the sandbox table for RLS testing
@@ -96,9 +97,8 @@ try {
 // Step 3: Grant necessary permissions
 console.log('3. Granting permissions...');
 try {
-  const { Pool } = require('pg');
   const pool = new Pool({
-    connectionString: databaseUrl.replace('postgresql://', 'postgresql://'),
+    connectionString: databaseUrl,
   });
 
   await pool.query(`
