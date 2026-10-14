@@ -1,7 +1,7 @@
 {
-  "maxDirectDbCalls": 230,
+  "maxDirectDbCalls": 222,
   "maxDbCallsOutsideWithRLS": 77,
-  "maxTotalCalls": 307,
+  "maxTotalCalls": 299,
   "allowedFiles": [
     "src/app/admin/actions.ts",
     "src/app/admin/page.tsx",
@@ -10,7 +10,6 @@
     "src/app/api/ai/status/route.ts",
     "src/app/api/api-keys/[id]/usage/route.ts",
     "src/app/api/billing/plans/route.ts",
-    "src/app/api/compliance/soc2-pack/route.ts",
     "src/app/api/cron/uptime/route.ts",
     "src/app/api/intelligence/adversary/assessment/route.ts",
     "src/app/api/intelligence/adversary/mitre/report/pdf/route.tsx",
@@ -121,10 +120,6 @@
     },
     "src/app/api/billing/plans/route.ts": {
       "directDb": 1,
-      "dbSinEnvolver": 0
-    },
-    "src/app/api/compliance/soc2-pack/route.ts": {
-      "directDb": 8,
       "dbSinEnvolver": 0
     },
     "src/app/api/cron/uptime/route.ts": {
