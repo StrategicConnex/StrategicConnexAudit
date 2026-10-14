@@ -1,292 +1,301 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Intelligence: Adversary Vulnerabilities (PATCH) — Tests (TD-03 lote 2)
+   Adversary: Vulnerabilities PATCH — Tests de endpoint (Oleada 3 · P0.2)
 
-   Triage de falsos positivos + retest de assessments. Verifica:
-   - 401 sin sesión; 400 payload inválido; 404 vuln/assessment/sin acceso
-   - falsePositive booleano → update de triage
-   - retest: 403 sin consentimiento, 409 con evaluación en curso,
-     200 con nuevo assessmentId + Trigger.dev (y fallback local si falla)
-   - error → 500
+   La ruta ya no usa `directDb`: todo corre dentro de `withRLS(user.id, tx)`.
+   El mock de `withRLS` entrega una `tx` controlable (mismo patrón que
+   soc2-pack/route.test.ts / push-subscribe/route.test.ts). Verifica:
+   - 401 sin sesión (sin tocar la BD)
+   - 400 con payload inválido
+   - 404 cuando RLS acota la lectura a 0 filas (no-miembro)
+   - 404 cuando la barrera de membresía (assertProjectAccess) deniega
+   - 403 sin autorización de testing activa en el proyecto
+   - 409 si ya hay una evaluación en curso
+   - 200 triage (falsePositive) y 200 retest (inserta assessment + trigger)
+   - 500 ante error de BD
+   P0.2: la escritura/lectura corre bajo la autoridad del usuario autenticado.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 
-// ─── Mocks ──────────────────────────────────────────────────────────────────
+// ─── Mocks (hoisted) ─────────────────────────────────────────────────────────
 
-let mockUser: { id: string } | null = { id: "u-1" };
-const mockSelect = vi.fn();
-const mockUpdate = vi.fn();
-const mockInsert = vi.fn();
-const mockProjFindFirst = vi.fn();
-const mockAccess = vi.fn();
-const mockTrigger = vi.fn();
-
-vi.mock("@/shared/lib/supabase/server", () => ({
-  createClient: async () => ({
-    auth: { getUser: async () => ({ data: { user: mockUser } }) },
-  }),
+const mocks = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  withRLS: vi.fn(),
+  assertProjectAccess: vi.fn(),
+  trigger: vi.fn(),
 }));
 
-vi.mock("@/shared/db", () => ({
-  directDb: {
-    select: (...args: unknown[]) => mockSelect(...args),
-    update: (...args: unknown[]) => mockUpdate(...args),
-    insert: (...args: unknown[]) => mockInsert(...args),
-    query: {
-      projects: {
-        findFirst: (...args: unknown[]) => mockProjFindFirst(...args),
-      },
-    },
+vi.mock("@/shared/lib/supabase/server", () => ({
+  createClient: vi.fn(async () => ({ auth: { getUser: mocks.getUser } })),
+}));
+
+vi.mock("@/shared/db/rls", () => ({
+  withRLS: (userId: string, cb: (tx: unknown) => Promise<unknown>) => {
+    mocks.withRLS(userId, cb);
+    return cb(buildTx());
   },
-  db: {},
 }));
 
 vi.mock("@/server/lib/project-access", () => ({
-  assertProjectAccess: (...args: unknown[]) => mockAccess(...args),
+  assertProjectAccess: mocks.assertProjectAccess,
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("@/lib/request-context", () => ({
+  withRequestContext: <T>(handler: T): T => handler,
+  currentCorrelationId: () => "corr-test",
 }));
 
 vi.mock("@trigger.dev/sdk", () => ({
-  tasks: { trigger: (...args: unknown[]) => mockTrigger(...args) },
+  tasks: { trigger: mocks.trigger },
 }));
 
 vi.mock("@/server/intelligence/adversary/assessment/assessment-service", () => ({
   executeAssessment: vi.fn().mockResolvedValue(undefined),
 }));
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+vi.mock("drizzle-orm", () => ({
+  and: vi.fn(() => ({})),
+  eq: vi.fn(() => ({})),
+}));
 
-/** Cadena thenable de Drizzle: from/where/limit encadenables. */
-function chain(value: unknown) {
-  const c: Record<string, unknown> = {};
-  for (const m of ["from", "where", "orderBy", "limit"]) {
-    c[m] = () => c;
-  }
-  c.then = (
-    resolve: (v: unknown) => unknown,
-    reject: (e: unknown) => unknown,
-  ) => Promise.resolve(value).then(resolve, reject);
-  return c;
+vi.mock("@/shared/db/schemas", () => ({
+  adversaryAssessments: { id: "id", projectId: "projectId", status: "status" },
+  adversaryVulnerabilities: { id: "id", assessmentId: "assessmentId", falsePositive: "falsePositive" },
+  projects: { id: "id", domain: "domain", activeTestingAuthorized: "activeTestingAuthorized" },
+}));
+
+// ─── tx controlable ──────────────────────────────────────────────────────────
+
+/** Resultados de cada `tx.select(...)` await, en orden de llamada. */
+let selectResults: unknown[][] = [];
+const mockUpdateWhere = vi.fn();
+const mockInsertReturning = vi.fn();
+const mockFindFirst = vi.fn();
+
+function buildTx() {
+  const chain = {
+    from: () => chain,
+    where: () => chain,
+    orderBy: () => chain,
+    limit: () => chain,
+    then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+      Promise.resolve(selectResults.shift() ?? []).then(res, rej),
+  };
+  return {
+    select: () => chain,
+    update: () => ({ set: () => ({ where: mockUpdateWhere }) }),
+    insert: () => ({ values: () => ({ returning: mockInsertReturning }) }),
+    query: { projects: { findFirst: mockFindFirst } },
+  };
 }
 
-function patchRequest(body: unknown): Request {
-  return new Request(
-    "http://localhost:3000/api/intelligence/adversary/vulnerabilities",
-    {
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const PROJECT_ID = "123e4567-e89b-12d3-a456-426614174000";
+const VULN_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+const ASSESSMENT_ID = "b1b2c3d4-e5f6-7890-abcd-ef1234567891";
+
+function patch(body: unknown): NextRequest {
+  return new NextRequest(
+    new Request("http://localhost:3000/api/intelligence/adversary/vulnerabilities", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
-    },
+    }),
   );
 }
 
-const VULN_ID = "2a7cff00-0000-4000-8000-000000000010";
-const vuln = { id: VULN_ID, assessmentId: "as-1" };
-const assessment = { id: "as-1", projectId: "p1" };
-const authorizedProject = {
-  id: "p1",
-  domain: "example.com",
-  activeTestingAuthorized: true,
-};
+function resetDefaults(): void {
+  mocks.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  mocks.assertProjectAccess.mockResolvedValue({ ok: true, role: "owner" });
+  mocks.trigger.mockResolvedValue({ id: "run-1" });
+  mockFindFirst.mockResolvedValue({ id: PROJECT_ID, domain: "example.com", activeTestingAuthorized: true });
+  mockUpdateWhere.mockResolvedValue(undefined);
+  mockInsertReturning.mockResolvedValue([{ id: "new-assessment-id" }]);
+  selectResults = [];
+}
 
-// ─── Tests ──────────────────────────────────────────────────────────────────
+// ─── Tests ───────────────────────────────────────────────────────────────────
 
-describe("Intelligence: Adversary Vulnerabilities — PATCH", () => {
+describe("Adversary: Vulnerabilities — PATCH", () => {
   let PATCH: typeof import("./route").PATCH;
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockSelect.mockReset();
-    mockSelect.mockImplementation(() => chain([]));
-    mockUser = { id: "u-1" };
-    mockAccess.mockResolvedValue({ ok: true });
-    mockProjFindFirst.mockResolvedValue(authorizedProject);
-    mockUpdate.mockReturnValue({
-      set: () => ({ where: () => Promise.resolve() }),
-    });
-    mockInsert.mockReturnValue({
-      values: () => ({
-        returning: async () => [{ id: "re-1" }],
-      }),
-    });
-    mockTrigger.mockResolvedValue({ id: "run-1" });
+    resetDefaults();
     const mod = await import("./route");
     PATCH = mod.PATCH;
   });
 
-  it("sin sesión → 401", async () => {
-    mockUser = null;
+  it("sin sesión → 401 sin tocar la BD", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: null } });
 
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID }) as never,
-    );
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, falsePositive: true }) as never);
     expect(res.status).toBe(401);
-    expect(mockSelect).not.toHaveBeenCalled();
+    const body = await res.json();
+    expect(body.error).toBe("No autorizado");
+    expect(mocks.withRLS).not.toHaveBeenCalled();
   });
 
-  it("payload inválido (id no UUID) → 400", async () => {
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: "no-uuid", falsePositive: true }) as never,
-    );
+  it("payload inválido → 400", async () => {
+    const res = await PATCH(patch({ vulnerabilityId: "not-a-uuid" }) as never);
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Payload inválido");
-    expect(mockSelect).not.toHaveBeenCalled();
+    expect(mocks.withRLS).not.toHaveBeenCalled();
   });
 
-  it("vulnerabilidad inexistente → 404", async () => {
-    mockSelect.mockImplementationOnce(() => chain([]));
+  it("vulnerabilidad de otro proyecto (RLS → 0 filas) → 404 sin evaluar membresía", async () => {
+    selectResults = [[]];
 
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID }) as never,
-    );
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, falsePositive: true }) as never);
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe("Vulnerabilidad no encontrada");
+    expect(mocks.assertProjectAccess).not.toHaveBeenCalled();
   });
 
-  it("assessment huérfano → 404", async () => {
-    mockSelect
-      .mockImplementationOnce(() => chain([vuln]))
-      .mockImplementationOnce(() => chain([]));
+  it("membresía denegada por la barrera explícita → 404", async () => {
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [{ id: ASSESSMENT_ID, projectId: PROJECT_ID }],
+    ];
+    mocks.assertProjectAccess.mockResolvedValue({ ok: false, role: null });
 
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID }) as never,
-    );
-    expect(res.status).toBe(404);
-    const body = await res.json();
-    expect(body.error).toBe("Assessment no encontrado");
-    expect(mockAccess).not.toHaveBeenCalled();
-  });
-
-  it("sin acceso al proyecto → 404", async () => {
-    mockSelect
-      .mockImplementationOnce(() => chain([vuln]))
-      .mockImplementationOnce(() => chain([assessment]));
-    mockAccess.mockResolvedValue({ ok: false });
-
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID }) as never,
-    );
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, falsePositive: true }) as never);
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe("Proyecto no encontrado");
-    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it("triage falsePositive → update y 200 sin retest", async () => {
-    mockSelect
-      .mockImplementationOnce(() => chain([vuln]))
-      .mockImplementationOnce(() => chain([assessment]));
+  it("retest sin autorización de testing activa → 403", async () => {
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [{ id: ASSESSMENT_ID, projectId: PROJECT_ID }],
+    ];
+    mockFindFirst.mockResolvedValue({ id: PROJECT_ID, domain: "example.com", activeTestingAuthorized: false });
 
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID, falsePositive: true }) as never,
-    );
-    expect(res.status).toBe(200);
-
-    const body = await res.json();
-    expect(body).toEqual({ success: true, retestAssessmentId: null });
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
-    expect(mockInsert).not.toHaveBeenCalled();
-    expect(mockTrigger).not.toHaveBeenCalled();
-  });
-
-  it("retest sin consentimiento activo → 403", async () => {
-    mockSelect
-      .mockImplementationOnce(() => chain([vuln]))
-      .mockImplementationOnce(() => chain([assessment]));
-    mockProjFindFirst.mockResolvedValue({
-      ...authorizedProject,
-      activeTestingAuthorized: false,
-    });
-
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID, retest: true }) as never,
-    );
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, retest: true }) as never);
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.error).toBe("Proyecto sin autorización activa");
-    expect(mockInsert).not.toHaveBeenCalled();
   });
 
   it("retest con evaluación en curso → 409", async () => {
-    mockSelect
-      .mockImplementationOnce(() => chain([vuln]))
-      .mockImplementationOnce(() => chain([assessment]))
-      .mockImplementationOnce(() => chain([{ id: "as-running" }]));
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [{ id: ASSESSMENT_ID, projectId: PROJECT_ID }],
+      [{ id: "running-assessment" }],
+    ];
 
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID, retest: true }) as never,
-    );
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, retest: true }) as never);
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.error).toBe("Ya hay una evaluación en curso");
-    expect(mockInsert).not.toHaveBeenCalled();
   });
 
-  it("retest ok → 200 con nuevo assessmentId y trigger lanzado", async () => {
-    mockSelect
-      .mockImplementationOnce(() => chain([vuln]))
-      .mockImplementationOnce(() => chain([assessment]))
-      .mockImplementationOnce(() => chain([]));
+  it("triage falsePositive → 200 (sin retest)", async () => {
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [{ id: ASSESSMENT_ID, projectId: PROJECT_ID }],
+    ];
 
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID, retest: true }) as never,
-    );
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, falsePositive: true }) as never);
     expect(res.status).toBe(200);
-
     const body = await res.json();
-    expect(body).toEqual({ success: true, retestAssessmentId: "re-1" });
-    expect(mockTrigger).toHaveBeenCalledWith("adversary-real-assessment", {
-      assessmentId: "re-1",
-    });
+    expect(body.success).toBe(true);
+    expect(body.retestAssessmentId).toBeNull();
+    expect(mockUpdateWhere).toHaveBeenCalledTimes(1);
+    expect(mocks.trigger).not.toHaveBeenCalled();
   });
 
-  it("triage y retest combinados en la misma petición", async () => {
-    mockSelect
-      .mockImplementationOnce(() => chain([vuln]))
-      .mockImplementationOnce(() => chain([assessment]))
-      .mockImplementationOnce(() => chain([]));
+  it("retest válido → 200 con nuevo assessment y trigger disparado", async () => {
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [{ id: ASSESSMENT_ID, projectId: PROJECT_ID }],
+      [], // sin evaluación running
+    ];
 
-    const res = await PATCH(
-      patchRequest({
-        vulnerabilityId: VULN_ID,
-        falsePositive: false,
-        retest: true,
-      }) as never,
-    );
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, retest: true }) as never);
     expect(res.status).toBe(200);
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
-    expect(mockInsert).toHaveBeenCalledTimes(1);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.retestAssessmentId).toBe("new-assessment-id");
+    expect(mockInsertReturning).toHaveBeenCalledTimes(1);
+    expect(mocks.trigger).toHaveBeenCalledWith(
+      "adversary-real-assessment",
+      expect.objectContaining({ assessmentId: "new-assessment-id", correlationId: "corr-test" }),
+    );
+  });
+
+  it("P0.2: todas las operaciones corren bajo la autoridad del usuario autenticado", async () => {
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [{ id: ASSESSMENT_ID, projectId: PROJECT_ID }],
+    ];
+
+    await PATCH(patch({ vulnerabilityId: VULN_ID, falsePositive: true }) as never);
+
+    expect(mocks.withRLS).toHaveBeenCalledWith("user-1", expect.any(Function));
+  });
+
+  it("assessment huérfano → 404", async () => {
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [],
+    ];
+
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, falsePositive: true }) as never);
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe("Assessment no encontrado");
+    expect(mocks.assertProjectAccess).not.toHaveBeenCalled();
+  });
+
+  it("triage y retest combinados → 200 (update + insert)", async () => {
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [{ id: ASSESSMENT_ID, projectId: PROJECT_ID }],
+      [],
+    ];
+
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, falsePositive: false, retest: true }) as never);
+    expect(res.status).toBe(200);
+    expect(mockUpdateWhere).toHaveBeenCalledTimes(1);
+    expect(mockInsertReturning).toHaveBeenCalledTimes(1);
   });
 
   it("Trigger.dev no disponible → fallback local y 200 igualmente", async () => {
-    mockSelect
-      .mockImplementationOnce(() => chain([vuln]))
-      .mockImplementationOnce(() => chain([assessment]))
-      .mockImplementationOnce(() => chain([]));
-    mockTrigger.mockRejectedValue(new Error("no token"));
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [{ id: ASSESSMENT_ID, projectId: PROJECT_ID }],
+      [],
+    ];
+    mocks.trigger.mockRejectedValue(new Error("no token"));
 
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID, retest: true }) as never,
-    );
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, retest: true }) as never);
     expect(res.status).toBe(200);
 
-    const svc = await import(
-      "@/server/intelligence/adversary/assessment/assessment-service"
-    );
+    const svc = await import("@/server/intelligence/adversary/assessment/assessment-service");
     await vi.waitFor(() =>
-      expect(vi.mocked(svc.executeAssessment)).toHaveBeenCalledWith("re-1"),
+      expect(vi.mocked(svc.executeAssessment)).toHaveBeenCalledWith("new-assessment-id"),
     );
   });
 
   it("error de BD → 500", async () => {
-    mockSelect.mockImplementation(() => {
-      throw new Error("db down");
-    });
+    selectResults = [
+      [{ id: VULN_ID, assessmentId: ASSESSMENT_ID }],
+      [{ id: ASSESSMENT_ID, projectId: PROJECT_ID }],
+    ];
+    mockUpdateWhere.mockRejectedValue(new Error("db down"));
 
-    const res = await PATCH(
-      patchRequest({ vulnerabilityId: VULN_ID }) as never,
-    );
+    const res = await PATCH(patch({ vulnerabilityId: VULN_ID, falsePositive: true }) as never);
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBe("Error interno");

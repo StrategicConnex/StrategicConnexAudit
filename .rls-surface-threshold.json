@@ -1,7 +1,7 @@
 {
-  "maxDirectDbCalls": 222,
+  "maxDirectDbCalls": 216,
   "maxDbCallsOutsideWithRLS": 77,
-  "maxTotalCalls": 299,
+  "maxTotalCalls": 293,
   "allowedFiles": [
     "src/app/admin/actions.ts",
     "src/app/admin/page.tsx",
@@ -16,7 +16,6 @@
     "src/app/api/intelligence/adversary/mitre/route.ts",
     "src/app/api/intelligence/adversary/report/pdf/route.tsx",
     "src/app/api/intelligence/adversary/route.ts",
-    "src/app/api/intelligence/adversary/vulnerabilities/route.ts",
     "src/app/api/intelligence/bulk/route.ts",
     "src/app/api/internal/track-access/route.ts",
     "src/app/api/projects/[id]/members/route.ts",
@@ -145,10 +144,6 @@
     "src/app/api/intelligence/adversary/route.ts": {
       "directDb": 2,
       "dbSinEnvolver": 1
-    },
-    "src/app/api/intelligence/adversary/vulnerabilities/route.ts": {
-      "directDb": 6,
-      "dbSinEnvolver": 0
     },
     "src/app/api/intelligence/bulk/route.ts": {
       "directDb": 0,
