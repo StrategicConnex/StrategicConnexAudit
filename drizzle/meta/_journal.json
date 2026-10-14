@@ -407,6 +407,13 @@
       "when": 1792108800000,
       "tag": "0046_intelligence_update_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1792195200000,
+      "tag": "0047_soc2_pack_logs_grants",
+      "breakpoints": true
     }
   ]
 }
