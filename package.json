@@ -21,6 +21,7 @@
     "setup-admin": "npx tsx --env-file=.env.local src/scripts/setup-admin.ts",
     "e2e:report": "npx tsx --env-file=.env.local src/scripts/e2e-ai-report.ts",
     "db:generate": "drizzle-kit generate",
+    "db:check": "drizzle-kit check",
     "db:migrate": "drizzle-kit migrate",
     "db:drift-check": "node scripts/db/drift-check.mjs",
     "db:fk-guard": "node scripts/db/fk-schema-drift-guard.mjs",

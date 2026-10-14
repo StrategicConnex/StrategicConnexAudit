@@ -35,6 +35,7 @@ export const adversaryScenarios = pgTable("adversary_scenarios", {
   // fila template. Cierra la race condition de getOrCreateScenarioId (dos
   // POSTs concurrentes o POST+cron insertando duplicados). Migración 0018.
   uniqueIndex("uniq_adversary_mitre_id").on(t.mitreId),
+  index("idx_adversary_mitre_id").on(t.mitreId),
 ]);
 
 // ─── Ejecuciones de Escenarios por Proyecto ────────────────────────────────
@@ -59,6 +60,7 @@ export const adversaryRuns = pgTable("adversary_runs", {
   index("idx_adversary_runs_project_status").on(t.projectId, t.status),
   index("idx_adversary_runs_scenario").on(t.scenarioId),
   index("idx_adversary_runs_engagement").on(t.engagementId),
+  index("idx_adversary_runs_investigation").on(t.investigationId),
 ]);
 
 
@@ -103,6 +105,7 @@ export const adversaryEngagements = pgTable("adversary_engagements", {
 }, (t) => [
   index("idx_adv_engagements_project_status").on(t.projectId, t.status),
   index("idx_adv_engagements_project_created").on(t.projectId, t.createdAt),
+  index("idx_adv_engagements_owner").on(t.ownerId),
 ]);
 
 // ─── PTT: Task Nodes (Árbol de tareas) ─────────────────────────────────────

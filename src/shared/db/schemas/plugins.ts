@@ -56,6 +56,7 @@ export const pluginInstances = pgTable("plugin_instances", {
 }, (t) => [
   index("idx_plugin_instances_user").on(t.userId),
   index("idx_plugin_instances_package_project").on(t.packageId, t.projectId),
+  index("idx_plugin_instances_project").on(t.projectId),
 ]);
 
 // ─── Tipos exportados ──────────────────────────────────────────────────────

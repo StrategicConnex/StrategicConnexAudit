@@ -30,6 +30,7 @@ export const notifications = pgTable(
     index("idx_notifications_user_unread")
       .on(t.userId, desc(t.createdAt))
       .where(sql`read_at IS NULL`),
+    index("idx_notifications_project").on(t.projectId),
   ],
 );
 

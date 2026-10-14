@@ -44,4 +44,5 @@ export const anomalyDetections = pgTable("anomaly_detections", {
   index("idx_anomaly_severity_detected").on(t.severity, t.detectedAt),
   index("idx_anomaly_detected_at").on(t.detectedAt),
   index("idx_anomaly_unresolved").on(t.projectId, t.resolvedAt),
+  index("idx_anomaly_investigation").on(t.investigationId),
 ]);

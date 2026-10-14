@@ -55,6 +55,7 @@ export const intelligenceInvestigations = pgTable("intelligence_investigations",
   index("idx_intel_investigations_project_created").on(t.projectId, t.createdAt),
   index("idx_intel_investigations_project_status").on(t.projectId, t.status),
   index("idx_intel_investigations_target").on(t.normalizedTarget),
+  index("idx_intel_investigations_owner").on(t.ownerId),
 ]);
 
 // 2. Ejecuciones de Herramientas de Inteligencia (Tool Runs)
@@ -131,6 +132,7 @@ export const intelligenceFindings = pgTable("intelligence_findings", {
   index("idx_findings_due")
     .on(t.dueAt)
     .where(sql`due_at IS NOT NULL AND status NOT IN ('resolved', 'false_positive', 'accepted_risk')`),
+  index("idx_intel_findings_assignee").on(t.assigneeId),
 ]);
 
 // 4. Activos Descubiertos (Subdominios, IPs, etc.)
@@ -161,6 +163,7 @@ export const intelligenceRunEvents = pgTable("intelligence_run_events", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   index("idx_intel_run_events_investigation_created").on(t.investigationId, t.createdAt),
+  index("idx_intel_run_events_tool_run").on(t.toolRunId),
 ]);
 
 // 6. Registro de Métricas de Uso de la API (Quota Billing)
@@ -190,6 +193,7 @@ export const findingActivity = pgTable("finding_activity", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   index("idx_finding_activity_finding_created").on(t.findingId, t.createdAt),
+  index("idx_finding_activity_actor").on(t.actorId),
 ]);
 
 // ─── Tipos canónicos derivados del schema ────────────────────────────────────

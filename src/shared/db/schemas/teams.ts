@@ -51,4 +51,5 @@ export const teamAuditLogs = pgTable("team_audit_logs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   index("idx_team_audit_logs_project").on(t.projectId),
+  index("idx_team_audit_logs_actor").on(t.actorId),
 ]);

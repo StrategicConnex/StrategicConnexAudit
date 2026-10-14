@@ -45,6 +45,7 @@ export const dnsHistory = pgTable("dns_history", {
   ),
   // REC-07 (TSK-008): cambios de tipo de registro + diff — project+query por fecha.
   index("idx_dns_proj_query_date").on(t.projectId, t.query, desc(t.snapshotDate)),
+  index("idx_dns_history_investigation").on(t.investigationId),
 ]);
 
 // ─── WHOIS History ───────────────────────────────────────────────────────────
@@ -77,4 +78,5 @@ export const whoisHistory = pgTable("whois_history", {
   index("idx_whois_history_expires_date").on(t.expiresDate),
   // REC-06 (TSK-008): equality project+domain, order snapshotDate DESC (limit 2).
   index("idx_whois_proj_domain_date").on(t.projectId, t.domain, desc(t.snapshotDate)),
+  index("idx_whois_history_investigation").on(t.investigationId),
 ]);

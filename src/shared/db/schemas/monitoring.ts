@@ -33,6 +33,7 @@ export const monitoringAlerts = pgTable("monitoring_alerts", {
 }, (t) => [
   index("idx_monitoring_alerts_project_resolved").on(t.projectId, t.resolved),
   index("idx_monitoring_alerts_project_created").on(t.projectId, t.createdAt),
+  index("idx_monitoring_alerts_schedule").on(t.scheduleId),
 ]);
 
 // ─── 3. Keys de Desarrollo de la API ─────────────────────────────────────────

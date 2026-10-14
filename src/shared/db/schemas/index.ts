@@ -32,7 +32,9 @@ export const users = pgTable("users", {
   lastSignInAt: timestamp("last_sign_in_at", { withTimezone: true }),
   confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_users_plan").on(t.planId),
+]);
 
 // 2. Projects
 export const projects = pgTable("projects", {
@@ -58,7 +60,9 @@ export const projects = pgTable("projects", {
   activeTestingAuthorized: boolean("active_testing_authorized").notNull().default(false),
   // Secreto del beacon RUM (P0-3): cada proyecto tiene su propio secreto para autenticar eventos
   beaconSecret: text("beacon_secret"),
-});
+}, (t) => [
+  index("idx_projects_owner").on(t.ownerId),
+]);
 
 // 3. Subscription Plans
 export const subscriptionPlans = pgTable("subscription_plans", {
@@ -86,7 +90,10 @@ export const subscriptions = pgTable("subscriptions", {
   cancelAt: timestamp("cancel_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_subscriptions_project").on(t.projectId),
+  index("idx_subscriptions_plan").on(t.planId),
+]);
 
 // 5. Integrations
 export const integrations = pgTable("integrations", {
@@ -173,7 +180,10 @@ export const audits = pgTable("audits", {
   errorMessage: text("error_message"),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_audits_project").on(t.projectId),
+  index("idx_audits_created_by").on(t.createdBy),
+]);
 
 // 11. Crawl Results
 export const crawlResults = pgTable("crawl_results", {
@@ -197,7 +207,9 @@ export const crawlResults = pgTable("crawl_results", {
   crawlDepth: integer("crawl_depth"),
   isOrphan: boolean("is_orphan").default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_crawl_results_audit").on(t.auditId),
+]);
 
 // 12. Internal Links
 export const internalLinks = pgTable("internal_links", {
@@ -209,7 +221,9 @@ export const internalLinks = pgTable("internal_links", {
   rel: text("rel"),
   isFollow: boolean("is_follow").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_internal_links_crawl").on(t.crawlId),
+]);
 
 // 13. Performance Results
 export const performanceResults = pgTable("performance_results", {
@@ -227,7 +241,9 @@ export const performanceResults = pgTable("performance_results", {
   cruxData: jsonb("crux_data"),
   rawReport: jsonb("raw_report"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_performance_results_audit").on(t.auditId),
+]);
 
 // 14. Audit Rules
 export const auditRules = pgTable("audit_rules", {
@@ -252,7 +268,8 @@ export const projectAuditRules = pgTable("project_audit_rules", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
-  unique().on(t.projectId, t.ruleId)
+  unique().on(t.projectId, t.ruleId),
+  index("idx_project_audit_rules_rule").on(t.ruleId),
 ]);
 
 // 16. Issues
@@ -270,7 +287,11 @@ export const issues = pgTable("issues", {
   fixed: boolean("fixed").default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_issues_project").on(t.projectId),
+  index("idx_issues_audit").on(t.auditId),
+  index("idx_issues_rule").on(t.ruleId),
+]);
 
 // 17. Keyword Targets
 export const keywordTargets = pgTable("keyword_targets", {
@@ -325,7 +346,9 @@ export const competitorKeywords = pgTable("competitor_keywords", {
   difficulty: integer("difficulty"),
   checkedAt: date("checked_at").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_competitor_keywords_competitor").on(t.competitorId),
+]);
 
 // 21. Backlinks
 export const backlinks = pgTable("backlinks", {
@@ -357,7 +380,9 @@ export const backlinkHistory = pgTable("backlink_history", {
   toxicityScore: numeric("toxicity_score", { precision: 5, scale: 2 }),
   checkedAt: date("checked_at").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_backlink_history_backlink").on(t.backlinkId, t.checkedAt),
+]);
 
 // 23. AB Tests
 export const abTests = pgTable("ab_tests", {
@@ -388,7 +413,9 @@ export const abTestResults = pgTable("ab_test_results", {
   conversionRate: numeric("conversion_rate", { precision: 8, scale: 4 }),
   date: date("date").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_ab_test_results_test").on(t.testId),
+]);
 
 // 25. Heatmap Sessions
 export const heatmapSessions = pgTable("heatmap_sessions", {
@@ -398,7 +425,9 @@ export const heatmapSessions = pgTable("heatmap_sessions", {
   sessionData: jsonb("session_data").notNull(),
   anonymizedIp: text("anonymized_ip"),
   recordedAt: timestamp("recorded_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_heatmap_sessions_project").on(t.projectId),
+]);
 
 // 26. Schema Validations
 export const schemaValidations = pgTable("schema_validations", {
@@ -409,7 +438,9 @@ export const schemaValidations = pgTable("schema_validations", {
   isValid: boolean("is_valid"),
   errors: jsonb("errors"),
   validatedAt: timestamp("validated_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_schema_validations_project").on(t.projectId),
+]);
 
 // 27. Reports
 export const reports = pgTable("reports", {
@@ -437,7 +468,9 @@ export const reportExports = pgTable("report_exports", {
   status: exportStatusEnum("status").default("pending").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_report_exports_report").on(t.reportId),
+]);
 
 // 29. Audit Logs
 export const auditLogs = pgTable("audit_logs", {
@@ -452,7 +485,10 @@ export const auditLogs = pgTable("audit_logs", {
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => [
+  index("idx_audit_logs_project_created").on(t.projectId, t.createdAt),
+  index("idx_audit_logs_user").on(t.userId),
+]);
 
 // 30. Uptime Logs (Phase 2)
 export const uptimeLogs = pgTable("uptime_logs", {
@@ -463,7 +499,10 @@ export const uptimeLogs = pgTable("uptime_logs", {
   responseTimeMs: integer("response_time_ms"),
   errorMessage: text("error_message"),
   checkedAt: timestamp("checked_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [
+  index("idx_uptime_logs_project_checked").on(t.projectId, t.checkedAt),
+  index("idx_uptime_logs_checked").on(t.checkedAt),
+]);
 
 // 31. Web Vitals Logs (Phase 2 - Real User Monitoring)
 export const webVitalsLogs = pgTable("web_vitals_logs", {
