@@ -45,6 +45,27 @@ jobs:
       - name: Guard contrast (WCAG AA tokens)
         run: node scripts/contrast-guard.mjs
 
+  typecheck:
+    name: Typecheck (tsc --noEmit)
+    runs-on: ubuntu-latest
+    # P1-7 (2026-10-14): hasta ahora NINGÚN gate miraba los tipos. `pnpm build`
+    # compila con Turbopack, que transpila sin verificar tipos, así que un error
+    # de tipo llegaba a `main` sin que nada se pusiera rojo. Este job corre el
+    # `tsc --noEmit` del proyecto (tsconfig.json ya excluye `**/*.test.ts(x)`,
+    # `drizzle.config.ts` y `scripts/manual`). BARRERA DURA: sin
+    # `continue-on-error` — un error de tipo FALLA el pipeline.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
   secret-scan:
     name: Secret Scan (gitleaks)
     runs-on: ubuntu-latest
