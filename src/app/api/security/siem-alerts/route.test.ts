@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Security: SIEM Alerts — Tests de endpoint (TD-03 lote 1)
+   Security: SIEM Alerts — Tests de endpoint (Oleada 3)
 
    Verifica:
    - Gate requireAdmin: sin rol admin → 403 y NO consulta la BD
@@ -7,6 +7,7 @@
    - Respuesta completa: alerts (con nullables normalizados), total, ruleTypes,
      severities y breakdown success/failed
    - Error de BD → 500 con error interno
+   P0.2: las lecturas corren bajo withRLS (policy admin como segunda barrera).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -14,7 +15,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockRequireAdmin = vi.fn();
+const mocks = vi.hoisted(() => ({
+  requireAdmin: vi.fn(),
+  withRLS: vi.fn(),
+}));
 
 let dbResponses: unknown[] = [];
 let dbFail = false;
@@ -45,18 +49,22 @@ function chain(result: unknown) {
 }
 
 vi.mock("@/server/auth/admin", () => ({
-  requireAdmin: (...args: unknown[]) => mockRequireAdmin(...args),
+  requireAdmin: (...args: unknown[]) => mocks.requireAdmin(...args),
 }));
 
-vi.mock("@/shared/db", () => ({
-  directDb: {
-    select: () => {
-      const res = dbResponses[Math.min(selectCount, dbResponses.length - 1)] ?? [];
-      selectCount += 1;
-      return chain(res);
-    },
+// Oleada 3: la ruta ya no usa directDb — entrega la `tx` de withRLS.
+vi.mock("@/shared/db/rls", () => ({
+  withRLS: (userId: string, cb: (tx: unknown) => Promise<unknown>) => {
+    mocks.withRLS(userId, cb);
+    const tx = {
+      select: () => {
+        const res = dbResponses[Math.min(selectCount, dbResponses.length - 1)] ?? [];
+        selectCount += 1;
+        return chain(res);
+      },
+    };
+    return cb(tx);
   },
-  db: {},
 }));
 
 // ─── Datos ──────────────────────────────────────────────────────────────────
@@ -114,15 +122,16 @@ describe("Security: SIEM Alerts — GET", () => {
   });
 
   it("sin rol admin → 403 y NO toca la BD", async () => {
-    mockRequireAdmin.mockResolvedValue(gateDenied());
+    mocks.requireAdmin.mockResolvedValue(gateDenied());
 
     const res = await GET(createRequest());
     expect(res.status).toBe(403);
     expect(selectCount).toBe(0);
+    expect(mocks.withRLS).not.toHaveBeenCalled();
   });
 
   it("admin sin filtros → 200 con alerts, breakdown y facetas", async () => {
-    mockRequireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
+    mocks.requireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
     dbResponses = [...fullResponses];
 
     const res = await GET(createRequest());
@@ -143,7 +152,7 @@ describe("Security: SIEM Alerts — GET", () => {
   });
 
   it("filtros severity/status construyen condiciones where", async () => {
-    mockRequireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
+    mocks.requireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
     dbResponses = [[], [{ count: 0 }], [], [], []];
 
     const res = await GET(createRequest("?severity=high&status=failed&ruleEventType=all&ip=10."));
@@ -153,7 +162,7 @@ describe("Security: SIEM Alerts — GET", () => {
   });
 
   it("limit > 500 se aclampa a 500", async () => {
-    mockRequireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
+    mocks.requireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
     dbResponses = [[], [{ count: 0 }], [], [], []];
 
     const res = await GET(createRequest("?limit=10000"));
@@ -164,8 +173,17 @@ describe("Security: SIEM Alerts — GET", () => {
     expect(limitCalls).toContain(500);
   });
 
+  it("P0.2: las lecturas corren bajo la autoridad del admin autenticado", async () => {
+    mocks.requireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
+    dbResponses = [...fullResponses];
+
+    await GET(createRequest());
+    expect(mocks.withRLS).toHaveBeenCalledWith("u-admin", expect.any(Function));
+    expect(selectCount).toBe(5);
+  });
+
   it("falla de BD → 500 con error interno", async () => {
-    mockRequireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
+    mocks.requireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
     dbFail = true;
 
     const res = await GET(createRequest());

@@ -1,7 +1,7 @@
 {
-  "maxDirectDbCalls": 210,
+  "maxDirectDbCalls": 205,
   "maxDbCallsOutsideWithRLS": 77,
-  "maxTotalCalls": 287,
+  "maxTotalCalls": 282,
   "allowedFiles": [
     "src/app/admin/actions.ts",
     "src/app/admin/page.tsx",
@@ -26,7 +26,6 @@
     "src/app/api/public/v1/uptime/route.ts",
     "src/app/api/reports/pdf/route.tsx",
     "src/app/api/security/audit-logs/route.ts",
-    "src/app/api/security/siem-alerts/route.ts",
     "src/app/api/telemetry/vitals/route.ts",
     "src/app/api/webhooks/cicd/route.ts",
     "src/app/p/[token]/page.tsx",
@@ -182,10 +181,6 @@
     },
     "src/app/api/security/audit-logs/route.ts": {
       "directDb": 3,
-      "dbSinEnvolver": 0
-    },
-    "src/app/api/security/siem-alerts/route.ts": {
-      "directDb": 5,
       "dbSinEnvolver": 0
     },
     "src/app/api/telemetry/vitals/route.ts": {
