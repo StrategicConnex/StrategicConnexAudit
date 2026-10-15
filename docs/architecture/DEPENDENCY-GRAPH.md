@@ -264,7 +264,7 @@ Detalle completo de contratos y rate limit en [SYSTEM-MAP.md](SYSTEM-MAP.md) §6
 | Secretos | `shared/config/env.ts` (8 fan-in) valida `SUPABASE_SERVICE_ROLE_KEY`; solo `admin.ts` usa service-role | [VERIFIED] |
 | SSRF | Toda salida de red de executors/webhooks pasa por `egress-guard` (fan-in 27) | [VERIFIED] |
 | Multi-tenancy | `shared/db/rls.ts` (fan-in 24) impone `withRLS()` en accesos a datos | [VERIFIED] |
-| Rate limiting | `shared/lib/ratelimit.ts` (fan-in 17) + circuit-breaker fail-open | [VERIFIED] |
+| Rate limiting | `shared/lib/ratelimit.ts` (fan-in 17, fail-closed con fallback acotado) + `circuit-breaker.ts` (fail-open) | [VERIFIED] |
 
 ---
 

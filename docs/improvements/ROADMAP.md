@@ -29,7 +29,7 @@ Lo que ya tenemos y funciona:
 |---------|--------|----------------|
 | Magic Link Auth + email validation | ✅ | `src/app/login/`, `src/app/auth/` |
 | Security headers (CSP, HSTS) | ✅ | `src/proxy.ts`, `src/app/layout.tsx` |
-| Rate limiting fail-open (Postgres en prod / memoria en dev) | ✅ | `src/shared/lib/ratelimit.ts` |
+| Rate limiting fail-closed con fallback acotado (Postgres en prod / memoria en dev) | ✅ | `src/shared/lib/ratelimit.ts` |
 | AI Router con fallback multi-modelo | ✅ | `src/server/ai/ai-router.ts` |
 | Intelligence scanning (21 tools) | ✅ | `src/server/intelligence/executors/` |
 | Attack Surface Graph | ✅ | `src/app/components/AttackSurfaceGraph.tsx` |

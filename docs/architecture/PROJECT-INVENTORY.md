@@ -150,7 +150,7 @@ Métodos usados: `GET` (lectura/snapshots), `POST` (ejecución de scans, webhook
 |---------|-----------|--------|
 | CSP nonce + headers | `src/proxy.ts` | [VERIFIED] |
 | Egress-guard SSRF | `src/server/intelligence/security/egress-guard.ts` | [VERIFIED] |
-| Rate limit fail-open | `src/shared/lib/ratelimit.ts` | [VERIFIED] |
+| Rate limit fail-closed con fallback acotado | `src/shared/lib/ratelimit.ts` | [VERIFIED] |
 | Circuit breaker fail-open | `src/shared/lib/circuit-breaker.ts` | [VERIFIED] |
 | RLS multi-tenant (`SET LOCAL ROLE`) | `src/shared/db/rls.ts` | [VERIFIED] |
 | Service role solo server | `src/shared/lib/supabase/admin.ts` (comentario "never exposed to the client") | [VERIFIED] |
@@ -238,7 +238,8 @@ Casos cubiertos: executors DNS/network/TLS/email/OSINT, egress-guard, ratelimit,
 | route handler | Archivo `route.ts` de App Router (endpoint) |
 | barrel | Módulo `index.ts` que re-exporta símbolos de su directorio |
 | fan-in / fan-out | Nº de módulos que importan / son importados por un módulo (madge) |
-| fail-open | Degradación que prioriza disponibilidad sobre bloqueo |
+| fail-open | Degradación que prioriza disponibilidad sobre bloqueo (caché, circuit breaker, idempotencia) |
+| fail-closed acotado | El rate limit mantiene el límite aunque el store falle: memoria del proceso + techo global por instancia |
 | withRLS | Helper `src/shared/db/rls.ts` que ejecuta un callback en transacción con contexto RLS |
 | gateway SSRF | Guardia de egress que bloquea CIDRs privados y rebinding DNS |
 

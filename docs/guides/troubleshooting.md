@@ -908,7 +908,7 @@ flowchart LR
 |-----|-----------|------|--------|
 | REQ-001 Node ≥ 20 | Toolchain | TEST-001 (instalación) | CI `node-version: 22` |
 | REQ-002 Supabase configurado | `src/shared/lib/supabase` | `test-db` | Env vars Vercel |
-| REQ-003 Rate limit fail-open | `src/shared/lib/ratelimit.ts` | `ratelimit.test.ts` | Sin env vars |
+| REQ-003 Rate limit fail-closed con fallback acotado | `src/shared/lib/ratelimit.ts` | `ratelimit-store.test.ts` | Sin env vars |
 | REQ-004 AI key | `src/server/ai/ai-router.ts` | Fallback resiliente | Env vars Vercel |
 
 ---

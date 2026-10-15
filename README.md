@@ -113,7 +113,7 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 
 ### 🛡️ Seguridad & SIEM
 - **CSP dinámico**: Content-Security-Policy con nonce por request (Next.js 16 proxy)
-- **Rate limiting**: `withRateLimit` decorator genérico con contador en Postgres (producción) o memoria (dev/test), fail-open, por IP o user
+- **Rate limiting**: `withRateLimit` decorator genérico con contador en Postgres (producción) o memoria (dev/test), por IP o user. **Fail-closed con fallback acotado**: si el store cae, sigue limitando con la ventana en memoria del proceso + techo global por instancia (ADR-002 §16)
 - **Headers estándar**: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` en todas las respuestas
 - **Audit logging**: eventos estructurados en `security_audit_logs` con persistencia en Supabase
 - **SIEM Exporter**: detección de patrones sospechosos (open redirect attacks, rate limit bypass, CSP spikes)
@@ -234,7 +234,7 @@ flowchart TB
         end
 
         subgraph DOMAIN["Domain Engine (server-only)"]
-            CORE["dispatcher · rate-limiter<br/>circuit-breaker (fail-open)"]
+            CORE["dispatcher · rate-limiter<br/>(fail-closed acotado)<br/>circuit-breaker (fail-open)"]
             EXEC["13 ejecutores registrados<br/>DNS · OSINT · CVE · TLS · email<br/>tech-profiler · takeover"]
             EG["🔒 egress-guard.ts (SSRF)<br/>16 CIDRs v4 + 7 v6 + ::ffff:"]
             SEC["security/ · siem-exporter<br/>cicd-helper (HMAC) · api-auth"]
@@ -1020,7 +1020,8 @@ SCAUDIT Pro usa un **design system propietario** definido en OKLCH, inspirado en
 - **Decorator genérico**: `withRateLimit(config, handler)` envuelve cualquier route handler
 - **Headers estándar**: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` en todas las respuestas
 - **Identificación por IP**: extracción jerárquica (x-vercel-forwarded-for → x-real-ip → x-forwarded-for)
-- **Fail-open** ante cualquier error interno del limitador (nunca 429 masivos; ADR-002)
+- **Fail-closed con fallback acotado** ante un fallo del store (nunca "permitir todo"): ventana en memoria del proceso + techo global por instancia durante la ventana de enfriamiento (ADR-002 §16)
+- **Fail-open** en caché, circuit breaker e idempotencia: sólo el rate limit es fail-closed
 - **Audit logging**: cada rate limit hit se registra en `security_audit_logs`
 - **Rate limit por API Key**: 60 req/min en API pública
 

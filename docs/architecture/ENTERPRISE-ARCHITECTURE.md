@@ -32,7 +32,7 @@ SCAUDIT (StrategicAudit Pro) es una plataforma **enterprise-grade de inteligenci
 | **Repo** | [StrategicConnex/StrategicConnexAudit](https://github.com/StrategicConnex/StrategicConnexAudit) |
 | **Frontend** | Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript 5 |
 | **Backend** | Next.js Route Handlers, Drizzle ORM, Supabase (PostgreSQL + Auth + RLS) |
-| **Cache/Rate Limit** | Rate limit en Postgres propio (producción) o memoria (dev/test); circuit breaker y caché IA en memoria — fail-open |
+| **Cache/Rate Limit** | Rate limit en Postgres propio (producción) o memoria (dev/test), **fail-closed con fallback acotado** (memoria + techo global por instancia si el store cae, ADR-002 §16); circuit breaker y caché IA en memoria — fail-open |
 | **IA** | OpenRouter (pool de modelos `:free` + meta-modelo `openrouter/free`) |
 | **Jobs** | Vercel Cron (mecanismo garantizado: SIEM 5 min, uptime 15 min) + Trigger.dev **opcional** (12 tasks; deploy no verificado) |
 | **Docs** | GitHub Pages + Jekyll (just-the-docs) |
@@ -40,7 +40,7 @@ SCAUDIT (StrategicAudit Pro) es una plataforma **enterprise-grade de inteligenci
 
 ### Principios arquitectónicos
 
-1. **Resiliencia fail-open**: la disponibilidad de la app **nunca** depende de un servicio auxiliar (rate limit, circuit breaker) ni de la IA (degradación graciosa verificada en producción).
+1. **Resiliencia con degradación graciosa**: la disponibilidad de la app **nunca** depende de un servicio auxiliar (circuit breaker, caché) ni de la IA. Excepción deliberada: el **rate limit es fail-closed acotado** (un control de seguridad que degrada a "permitir todo" deja de proteger) — sigue limitando en memoria con techo global por instancia mientras el store no responde (ADR-002 §16).
 2. **Single Source of Truth**: `tool-registry.ts` es el único registro de tools (C05 consolidó 4 superficies en 1).
 3. **Defensa en profundidad**: RLS multi-tenant + egress-guard SSRF + CSP nonce + rate limiting + audit logging.
 4. **Seguridad por defecto**: egress-guard bloquea CIDRs privados/meta en TODA salida HTTP del engine.
@@ -393,7 +393,7 @@ erDiagram
 ├─────────────────────────────────────────────────────────┤
 │ Capa 2 — API                                            │
 │   · withErrorHandler + AppError                         │
-│   · Rate limit Postgres prod (fail-open)                │
+│   · Rate limit Postgres prod (fail-closed acotado)      │
 │   · Email allowlist bypass                              │
 ├─────────────────────────────────────────────────────────┤
 │ Capa 3 — Engine                                         │
@@ -515,7 +515,7 @@ flowchart TD
 | Tampering | Requests HTTP | HSTS + `upgrade-insecure-requests` + egress-guard |
 | Repudiation | Acciones de usuario | `security_audit_logs` + SIEM |
 | Information Disclosure | APIs | RLS + auth + `service_role` solo server |
-| DoS | Endpoints | rate limit fail-open (Postgres en prod) + semáforos de concurrencia + timeouts |
+| DoS | Endpoints | rate limit fail-closed acotado (Postgres en prod; fallback a memoria + techo global por instancia) + semáforos de concurrencia + timeouts |
 | Elevation of Privilege | Multi-tenant | RLS por `request.jwt.claims.sub` + `SET LOCAL ROLE authenticated` |
 | SSRF | Engine de escaneo | egress-guard CIDR + DNS rebinding |
 | Prompt injection | IA | Prompts con contexto acotado + modelo específico por tarea |
@@ -528,7 +528,7 @@ flowchart TD
 
 | # | Riesgo | Prob. | Impacto | Control mitigante | Residual |
 |---|--------|-------|---------|-------------------|----------|
-| R1 | Limitador/caída del circuit breaker | Media | Alto | Fail-open en memoria + estado local (sin red) | Bajo |
+| R1 | Limitador/caída del circuit breaker | Media | Alto | Rate limit fail-closed con fallback en memoria + techo global por instancia (techo efectivo N×600 req/60 s con N instancias); circuit breaker fail-open y local (sin red) | Bajo |
 | R2 | Outage de modelos IA | Media | Medio | Pool `:free` con cadena de fallback + template resiliente | Bajo |
 | R3 | Fuga multi-tenant | Baja | Crítico | RLS por `request.jwt.claims.sub` + `SET LOCAL ROLE` | Bajo |
 | R4 | SSRF desde el engine | Media | Alto | egress-guard CIDR + DNS rebinding + redirects validados | Bajo |
@@ -695,7 +695,7 @@ sequenceDiagram
 |---------|----------------|
 | Executors | DNS, network, TLS, email, OSINT con outputs tipados (ToolOutputMap) |
 | Seguridad | egress-guard SSRF, SIEM exporter, sandbox executor |
-| Core | scan-response, ratelimit (fail-open), report-utils (parseo de markdown) |
+| Core | scan-response, ratelimit (fail-closed acotado), report-utils (parseo de markdown) |
 
 ---
 
@@ -731,7 +731,8 @@ Durante la cross-check de este documento se detectó que la tabla §5 (Architect
 |---------|-----------|
 | egress-guard | Guardia de salida HTTP que bloquea CIDRs privados (RFC1918, loopback, link-local) y mitiga SSRF/DNS rebinding |
 | RLS | Row Level Security: filtro multi-tenant por query en Supabase (`withRLS`) |
-| fail-open | Degradación que prioriza disponibilidad: servicios auxiliares o IA caídos no tumban la app |
+| fail-open | Degradación que prioriza disponibilidad: caché, circuit breaker o IA caídos no tumban la app |
+| fail-closed acotado | El rate limit no degrada a "permitir todo": ante un fallo del store sigue limitando en memoria, con techo global por instancia (ADR-002 §16) |
 | ToolOutputMap | Mapa tipado tool → output concreto, reemplazó `Map<string, any>` en scan-response |
 | dispatcher | Pipeline central de ejecución de tools: policy → validate → cache → semaphore → exec |
 | sliding window | Algoritmo de rate limiting en ventanas de tiempo (store Postgres en producción, memoria en dev/test) |

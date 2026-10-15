@@ -144,7 +144,7 @@ flowchart LR
 
 ## Seguridad
 
-SCAUDIT aplica: CSP con nonce, rate limiting fail-open (Postgres en prod / memoria en dev), protección SSRF (egress guard), SIEM exporter multicanal y Magic Link auth. Detalle completo en [Seguridad](/docs/security). [VERIFIED]
+SCAUDIT aplica: CSP con nonce, rate limiting fail-closed con fallback acotado (Postgres en prod / memoria en dev; si el store cae, sigue limitando en memoria con techo global por instancia), protección SSRF (egress guard), SIEM exporter multicanal y Magic Link auth. Detalle completo en [Seguridad](/docs/security). [VERIFIED]
 
 ---
 

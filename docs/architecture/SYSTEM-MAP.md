@@ -128,7 +128,7 @@ sequenceDiagram
     R->>RL: checkRateLimit()
     RL-->>R: 429 + RateLimit-* (o permitido)
     R->>D: dispatch(scan)
-    D->>D: rate-limiter + circuit-breaker (fail-open)
+    D->>D: rate-limiter (fail-closed acotado) + circuit-breaker (fail-open)
     D->>E: ejecutar tool/executor
     E->>EG: assertPublicHostname(host)
     E->>DB: withRLS() → SELECT/INSERT
@@ -293,7 +293,7 @@ Los 42 route handlers de `src/app/api` son el contrato HTTP del sistema. Los mé
 
 **Notas [VERIFIED]:**
 - La sesión se gestiona en `src/proxy.ts` → `updateSession()`; rutas protegidas redirigen a login si no hay sesión.
-  - El rate limit global se aplica vía `src/shared/lib/ratelimit.ts` (Postgres en producción — tabla `rate_limit_windows` — y memoria en dev/test, fail-open; `EMAIL_ALLOWLIST` exime a `palacios_juan@hotmail.com`). Respuestas 429 con cabeceras `RateLimit-Limit/Remaining/Reset` + `X-RateLimit-*`.
+  - El rate limit global se aplica vía `src/shared/lib/ratelimit.ts` (Postgres en producción — tabla `rate_limit_windows` — y memoria en dev/test; **fail-closed con fallback acotado** (si el store cae, sigue limitando con la ventana en memoria del proceso + techo global por instancia — ADR-002 §16); `EMAIL_ALLOWLIST` exime a `palacios_juan@hotmail.com`). Respuestas 429 con cabeceras `RateLimit-Limit/Remaining/Reset` + `X-RateLimit-*`.
 - API pública v1: `src/app/api/public/v1/intelligence/route.ts` usa `withPublicApi()` de `src/server/api/public-router.ts`; resuelve el usuario desde `req.apiKeyAuth.userId`.
 - Webhooks CI/CD: `src/app/api/webhooks/cicd/route.ts` verifica firma con `verifyWebhookSignature()` de `src/server/security/cicd-helper.ts`.
 
@@ -307,7 +307,7 @@ Los 42 route handlers de `src/app/api` son el contrato HTTP del sistema. Los mé
 |---|---------------------|------------------|--------------|-----------|
 | TB-1 | Cliente → Edge (`proxy.ts`) | Clickjacking, XSS, mixed content, datos en el aire | CSP con nonce por request, `X-Frame-Options: DENY`, HSTS preload, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `report-uri /api/security/csp-report` | [VERIFIED] |
 | TB-2 | Edge → Route Handler | Acceso no autenticado | `updateSession()` (refresh + redirect) | [VERIFIED] |
-| TB-3 | Route Handler → Domain | Abuso de tasa, cascada de fallos | `ratelimit.ts` (fail-open, allowlist) + `circuit-breaker.ts` (fail-open, timeout 1500 ms) | [VERIFIED] |
+| TB-3 | Route Handler → Domain | Abuso de tasa, cascada de fallos | `ratelimit.ts` (fail-closed con fallback acotado, allowlist) + `circuit-breaker.ts` (fail-open, timeout 1500 ms) | [VERIFIED] |
 | TB-4 | Domain → Externo (executors/webhooks) | SSRF | `egress-guard.ts`: `assertPublicHostname()` bloquea IPs privadas (16 CIDRs v4 + 7 v6) y IPv4-mapped IPv6 (`::ffff:`, RFC 4291 — gap cerrado 2026-08-08) | [VERIFIED] |
 | TB-5 | Domain → DB | Fuga multi-tenant, acceso con privilegios | `rls.ts` `withRLS()` (`SET LOCAL ROLE authenticated` + claims JWT); `admin.ts` (service-role) solo server; secretos en `shared/config/env-secrets.ts` (server-only, guard CI `guard:secrets`) | [VERIFIED] |
 | TB-6 | Sistema → Cliente webhook | Endpoint falso / no autenticado | Firma HMAC `X-StrategicAudit-Signature` + comprobación de suscripción de eventos | [VERIFIED] |
@@ -406,7 +406,8 @@ Este documento no repite el ERD: su foco es el **flujo** de datos entre capas, n
 | Trigger.dev | Plataforma de jobs programados/on-demand (`@trigger.dev/sdk/v3`) |
 | Task / Job | Unidad de trabajo definida con `task()` o `schedules.task()` en `src/trigger` |
 | RLS | Row Level Security de Supabase; `withRLS()` en `src/shared/db/rls.ts` |
-| Fail-open | Degradación graciosa: ante un fallo del limitador, permite la operación |
+| Fail-open | Degradación graciosa para caché, circuit breaker e idempotencia: ante un fallo, la operación continúa |
+| Fail-closed acotado | Rate limit: ante un fallo del store, se sigue limitando con la ventana en memoria del proceso + techo global por instancia (ADR-002 §16) |
 | Fan-in / Fan-out | Conteo de dependencias entrantes/salientes por módulo (§5 de DEPENDENCY-GRAPH.md) |
 | SSRF | Server-Side Request Forgery; mitigado por `egress-guard.ts` |
 | Trust boundary | Frontera entre dominios de confianza; cada TB-* de §7 tiene su control |

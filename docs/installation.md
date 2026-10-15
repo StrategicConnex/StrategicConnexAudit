@@ -239,7 +239,7 @@ Desde la etapa 2026-09-27 **no hay ningún servicio de Redis**: se eliminaron
 
 | Función | Implementación | Alcance |
 |---------|----------------|---------|
-| Rate limiting (`withRateLimit`) | `src/shared/lib/ratelimit.ts` | Postgres en producción / memoria en dev, fail-open |
+| Rate limiting (`withRateLimit`) | `src/shared/lib/ratelimit.ts` | Postgres en producción / memoria en dev; fail-closed con fallback acotado (memoria + techo global por instancia, ADR-002 §16) |
 | Circuit breaker IA | `src/shared/lib/circuit-breaker.ts` | memoria por instancia |
 | Caché semántica IA (L1) | `src/server/ai/ai-cache.ts` | memoria por instancia |
 | Progreso de PDF (SSE) | tabla Postgres `pdf_progress` + RLS | compartido, sobrevive deploys |
@@ -838,7 +838,7 @@ flowchart LR
 |-----|-----------|------|--------|
 | REQ-001 Node.js ≥ 20 | Toolchain | TEST-001 | `.github/workflows/ci.yml` (node-version: 22) |
 | REQ-002 Supabase configurado | `src/shared/lib/supabase` | TEST-001 | Env vars de Vercel |
-| REQ-003 Rate limiting fail-open | `src/shared/lib/ratelimit.ts` | TEST-001 | Sin env vars |
+| REQ-003 Rate limiting fail-closed acotado | `src/shared/lib/ratelimit.ts` | TEST-001 | Sin env vars |
 | REQ-004 OpenRouter key | `src/server/ai/ai-router.ts` | TEST-001 | Env vars de Vercel |
 | REQ-005 Migraciones aplicadas | `drizzle/` (0017, 0018) | TEST-001 | `pnpm db:push` en deploy |
 
