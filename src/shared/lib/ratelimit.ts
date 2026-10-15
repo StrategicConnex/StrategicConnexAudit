@@ -7,9 +7,7 @@ import { readRequestId } from "@/lib/request-context";
 // Email allowlist (bypass de rate limit para cuentas autorizadas)
 // ═════════════════════════════════════════════════════════════════════════════
 
-const EMAIL_ALLOWLIST = new Set([
-  "palacios_juan@hotmail.com",
-]);
+const EMAIL_ALLOWLIST = new Set(["palacios_juan@hotmail.com"]);
 
 /**
  * Devuelve true si el email está en la allowlist de cuentas que NO deben
@@ -33,7 +31,12 @@ export function isEmailAllowlisted(email: string | null | undefined): boolean {
 // ═════════════════════════════════════════════════════════════════════════════
 
 const IP_BLOCKLIST = new Set([
-  "127.0.0.1", "::1", "::ffff:127.0.0.1", "0.0.0.0", "::", "localhost",
+  "127.0.0.1",
+  "::1",
+  "::ffff:127.0.0.1",
+  "0.0.0.0",
+  "::",
+  "localhost",
 ]);
 
 /**
@@ -73,7 +76,7 @@ export function extractClientIp(request: Request | { headers: Headers }): string
   const str = `${userAgent}${acceptLang}`;
   for (let i = 0; i < str.length; i++) {
     const chr = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + chr;
+    hash = (hash << 5) - hash + chr;
     hash |= 0;
   }
   return `anon-${Math.abs(hash).toString(36).padStart(6, "0")}`;
@@ -123,7 +126,10 @@ export function buildRateLimitHeaders(result: RateLimitResult): Headers {
 /**
  * Crea una respuesta 429 (Too Many Requests) con headers estándar.
  */
-export function rateLimitResponse(result: RateLimitResult, extraBody: Record<string, unknown> = {}): NextResponse {
+export function rateLimitResponse(
+  result: RateLimitResult,
+  extraBody: Record<string, unknown> = {}
+): NextResponse {
   const headers: Record<string, string> = {
     "Retry-After": String(result.retryAfter),
     "RateLimit-Limit": String(result.limit),
@@ -174,8 +180,9 @@ export interface RateLimitConfig {
  * Dos stores intercambiables con la MISMA semántica de ventana:
  * - `postgres` (producción): upsert atómico sobre `rate_limit_windows` vía
  *   `directDb` — todas las instancias serverless cuentan contra la misma
- *   fila. Cualquier fallo del store hace fail-open (allowed=true): la
- *   operación nunca se bloquea por el limitador.
+ *   fila. Si el store falla, el limitador NO se desactiva: degrada al store
+ *   en memoria con el mismo límite más un techo global por instancia, y lo
+ *   registra como evento de seguridad (P2-13 / SA-04).
  * - `memory` (desarrollo/test): sliding window local por instancia, sin red.
  *
  * Selección: `RATE_LIMIT_STORE` (override de emergencia) o, si no aplica,
@@ -244,6 +251,169 @@ export function resolveRateLimitStore(): "postgres" | "memory" {
   return process.env.NODE_ENV === "production" ? "postgres" : "memory";
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// P2-13 — Degradación acotada del store distribuido (SA-04)
+//
+// Antes: cualquier error de Postgres devolvía allowed=true y el límite
+// desaparecía por completo, justo donde más importa (validate-email y el
+// callback de auth no tienen otro control anti fuerza bruta).
+//
+// Ahora: se degrada al sliding window en memoria del proceso con el MISMO
+// límite configurado, más un techo global por instancia que acota el abuso
+// durante el outage. La entrada en degradado se audita una vez por entrada.
+//
+// Trade-off aceptado (ADR-002 §16): durante la degradación el límite es por
+// instancia, no distribuido — con el store caído no puede ser de otra forma —
+// así que el techo global acota el daño por instancia, no el total.
+// ═════════════════════════════════════════════════════════════════════════════
+
+/** Ventana de enfriamiento: durante ella no se llama a Postgres. */
+function degradedCooldownMs(): number {
+  const raw = Number(process.env.RATE_LIMIT_DEGRADED_COOLDOWN_MS);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 15_000;
+}
+
+/** Techo global de peticiones atendidas en degradado, por instancia. */
+function fallbackGlobalLimit(): number {
+  const raw = Number(process.env.RATE_LIMIT_FALLBACK_GLOBAL_LIMIT);
+  return Number.isFinite(raw) && raw > 0 ? raw : 600;
+}
+
+/** La ventana del techo es del PROCESO, no del identificador: 60 s fijos. */
+const FALLBACK_GLOBAL_WINDOW_MS = 60_000;
+
+/** Suelo de los eventos de seguridad: evita inundar el SIEM si el store oscila. */
+const DEGRADED_EVENT_MIN_INTERVAL_MS = 60_000;
+
+/** Epoch ms hasta el que NO se intenta Postgres. `0` = store sano. */
+let degradedUntil = 0;
+/** Fallos seguidos del store desde la última respuesta correcta. */
+let consecutiveFailures = 0;
+/** Cuándo empezó la degradación actual (para reportar su duración). */
+let degradedSince = 0;
+/** Última emisión de `rate_limit_degraded` (dedupe anti-inundación). */
+let lastDegradedEventAt = 0;
+/** Última emisión del techo del fallback (dedupe separado del anterior). */
+let lastCeilingEventAt = 0;
+/** Timestamps de las peticiones atendidas en degradado (ventana global). */
+let fallbackGlobalHits: number[] = [];
+
+/** ¿Estamos dentro de la ventana de enfriamiento? */
+function isDegraded(now: number): boolean {
+  return now < degradedUntil;
+}
+
+/** Sólo para tests: limpia el estado de degradación del proceso. */
+export function resetRateLimitDegradation(): void {
+  degradedUntil = 0;
+  consecutiveFailures = 0;
+  degradedSince = 0;
+  lastDegradedEventAt = 0;
+  lastCeilingEventAt = 0;
+  fallbackGlobalHits = [];
+}
+
+/**
+ * Consume una unidad del techo global del fallback.
+ * `true` si todavía queda presupuesto en la ventana de 60 s del proceso.
+ */
+function consumeFallbackCeiling(now: number): boolean {
+  const cutoff = now - FALLBACK_GLOBAL_WINDOW_MS;
+  while (fallbackGlobalHits.length > 0 && fallbackGlobalHits[0]! <= cutoff) {
+    fallbackGlobalHits.shift();
+  }
+  fallbackGlobalHits.push(now);
+  return fallbackGlobalHits.length <= fallbackGlobalLimit();
+}
+
+/** 429 del techo global; el `limit` reportado sigue siendo el configurado. */
+function fallbackCeilingResult(config: RateLimitConfig, now: number): RateLimitResult {
+  const reset = (fallbackGlobalHits[0] ?? now) + FALLBACK_GLOBAL_WINDOW_MS;
+  return {
+    success: false,
+    limit: config.limit,
+    remaining: 0,
+    reset,
+    retryAfter: Math.max(1, Math.ceil((reset - now) / 1000)),
+  };
+}
+
+/**
+ * Atiende una petición mientras el store distribuido no responde.
+ *
+ * EL ORDEN IMPORTA: primero el chequeo por identificador y sólo después el
+ * techo global. Si el techo se consumiera antes, un atacante machacando un
+ * único identificador agotaría el presupuesto compartido de la instancia y
+ * dejaría sin servicio al resto (amplificación de DoS). Un identificador ya
+ * bloqueado consume CERO del techo.
+ */
+function checkFallback(identifier: string, config: RateLimitConfig, now: number): RateLimitResult {
+  const perIdentifier = checkRateLimitInMemory(identifier, config);
+  if (!perIdentifier.success) return perIdentifier;
+
+  if (!consumeFallbackCeiling(now)) {
+    if (now - lastCeilingEventAt >= DEGRADED_EVENT_MIN_INTERVAL_MS) {
+      lastCeilingEventAt = now;
+      logger.warn(
+        `[rate-limit:fallback] Techo global alcanzado (${fallbackGlobalLimit()}/${FALLBACK_GLOBAL_WINDOW_MS / 1000}s por instancia): rechazando`
+      );
+      logSecurityEvent("rate_limit_fallback_ceiling", {
+        metadata: {
+          prefix: config.prefix,
+          globalLimit: fallbackGlobalLimit(),
+          windowMs: FALLBACK_GLOBAL_WINDOW_MS,
+        },
+      });
+    }
+    return fallbackCeilingResult(config, now);
+  }
+
+  return perIdentifier;
+}
+
+/** Entra en degradación: fija la ventana de enfriamiento y audita la entrada. */
+function enterDegraded(error: unknown, config: RateLimitConfig, now: number): void {
+  // `firstEntry` es la transición de sano a degradado: es lo que define «una
+  // vez por entrada». Los fallos dentro de la ventana no vuelven a auditar.
+  const firstEntry = !isDegraded(now);
+  consecutiveFailures += 1;
+  degradedUntil = now + degradedCooldownMs();
+
+  if (!firstEntry) return;
+
+  degradedSince = now;
+  logger.warn(
+    `[rate-limit:postgres] Store no disponible para "${config.prefix}" — degradando a memoria acotada (P2-13):`,
+    error
+  );
+
+  // Suelo anti-inundación: con `RATE_LIMIT_DEGRADED_COOLDOWN_MS=0` el store
+  // podría fallar en cada petición y el SIEM recibiría un evento por request.
+  if (now - lastDegradedEventAt >= DEGRADED_EVENT_MIN_INTERVAL_MS) {
+    lastDegradedEventAt = now;
+    logSecurityEvent("rate_limit_degraded", {
+      metadata: {
+        prefix: config.prefix,
+        consecutiveFailures,
+        cooldownMs: degradedCooldownMs(),
+        globalLimit: fallbackGlobalLimit(),
+      },
+    });
+  }
+}
+
+/** Sale de degradación: el store volvió a responder. */
+function exitDegraded(now: number): void {
+  if (degradedUntil === 0) return;
+  const durationMs = now - (degradedSince || now);
+  degradedUntil = 0;
+  consecutiveFailures = 0;
+  degradedSince = 0;
+  logger.info(
+    `[rate-limit:postgres] Store recuperado tras ${durationMs} ms en degradado — vuelta al contador distribuido`
+  );
+}
+
 let pruneScheduled = false;
 
 /**
@@ -251,7 +421,9 @@ let pruneScheduled = false;
  * (una fila por prefix+identifier). El upsert poda los timestamps fuera de
  * la ventana y sólo anexa el actual si la ventana no está llena, de modo que
  * el recuento es correcto aunque N instancias corran en paralelo (el lock
- * de fila del ON CONFLICT serializa). Falla abierta ante cualquier error.
+ * de fila del ON CONFLICT serializa). Si el store no responde, NO se permite
+ * todo: degrada a memoria acotada (`checkFallback`) durante la ventana de
+ * enfriamiento (P2-13).
  */
 async function checkRateLimitPostgres(
   identifier: string,
@@ -259,8 +431,16 @@ async function checkRateLimitPostgres(
 ): Promise<RateLimitResult> {
   const now = Date.now();
   const windowMs = config.window * 1000;
+
+  // P2-13: durante la ventana de enfriamiento no se toca Postgres — el store
+  // que acaba de fallar no debe recibir una petición por cada request.
+  if (isDegraded(now)) return checkFallback(identifier, config, now);
+
   try {
-    const [{ directDb }, { sql }] = await Promise.all([import("@/shared/db"), import("drizzle-orm")]);
+    const [{ directDb }, { sql }] = await Promise.all([
+      import("@/shared/db"),
+      import("drizzle-orm"),
+    ]);
 
     // Sweep oportunista: una vez por proceso se descartan las filas con la
     // ventana ya vencida (sólo esas; la fila que va a usarse se actualiza).
@@ -290,6 +470,10 @@ async function checkRateLimitPostgres(
       RETURNING ts
     `);
 
+    // El store respondió: si veníamos degradados, se sale del modo (y queda
+    // registrado con cuánto duró).
+    if (degradedUntil !== 0) exitDegraded(Date.now());
+
     const rows = res.rows as Array<{ ts: Array<string | number> | null }>;
     const ts = (rows[0]?.ts ?? []).map(Number).sort((a, b) => a - b);
     const count = ts.length;
@@ -313,17 +497,8 @@ async function checkRateLimitPostgres(
       retryAfter: 0,
     };
   } catch (error) {
-    logger.error(
-      `[rate-limit:postgres] Store no disponible para "${config.prefix}" — fail-open (ADR-002):`,
-      error
-    );
-    return {
-      success: true,
-      limit: config.limit,
-      remaining: config.limit,
-      reset: now + windowMs,
-      retryAfter: 0,
-    };
+    enterDegraded(error, config, now);
+    return checkFallback(identifier, config, now);
   }
 }
 
@@ -331,10 +506,14 @@ async function checkRateLimitPostgres(
  * Verifica rate limit para un identificador con la configuración dada.
  *
  * Despacha al store resuelto por `resolveRateLimitStore()`: postgres en
- * producción (distribuido, fail-open), memoria fuera de ella. Ningún fallo
- * del store puede convertirse en fail-closed masivo (ADR-002).
+ * producción (distribuido), memoria fuera de ella. No hay fail-open: si el
+ * store distribuido falla, `checkRateLimitPostgres` sigue limitando con el
+ * store en memoria y el techo global por instancia (P2-13 / ADR-002 §16).
  */
-async function checkRateLimitInternal(identifier: string, config: RateLimitConfig): Promise<RateLimitResult> {
+async function checkRateLimitInternal(
+  identifier: string,
+  config: RateLimitConfig
+): Promise<RateLimitResult> {
   if (resolveRateLimitStore() === "postgres") {
     return checkRateLimitPostgres(identifier, config);
   }
@@ -395,9 +574,8 @@ export function withRateLimit<T extends Request = Request>(
   // catch) corre dentro del scope del `x-request-id`, de modo que los logs
   // de `rate_limit_hit` y los del handler comparten correlation id.
   return (req: T, ...args: unknown[]): Promise<Response> =>
-    runWithRequestContext(
-      { requestId: readRequestId(req) },
-      () => runRateLimited(config, handler, req, args)
+    runWithRequestContext({ requestId: readRequestId(req) }, () =>
+      runRateLimited(config, handler, req, args)
     );
 }
 
@@ -416,10 +594,7 @@ async function runRateLimited<T extends Request>(
     if (config.authenticate) {
       const user = await config.authenticate(req);
       if (!user) {
-        return NextResponse.json(
-          { success: false, error: "No autorizado" },
-          { status: 401 }
-        );
+        return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 });
       }
       identifier = user.id;
     } else {
@@ -474,10 +649,7 @@ async function runRateLimited<T extends Request>(
     });
   } catch (error) {
     logger.error(`[withRateLimit:${config.prefix}] Error:`, error);
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 

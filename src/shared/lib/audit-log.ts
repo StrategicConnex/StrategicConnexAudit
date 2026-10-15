@@ -24,6 +24,10 @@ export type SecurityEventType =
   | "auth_failure"
   | "auth_success"
   | "rate_limit_bypass"
+  // P2-13: el store distribuido del limitador no responde y se degrada a
+  // memoria acotada; el techo global del fallback también se audita.
+  | "rate_limit_degraded"
+  | "rate_limit_fallback_ceiling"
   | "invalid_input"
   | "ai_model_health";
 
