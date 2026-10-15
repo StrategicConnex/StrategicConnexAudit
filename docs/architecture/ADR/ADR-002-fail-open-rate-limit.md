@@ -3,13 +3,21 @@ layout: default
 title: ADR-002
 nav_order: 3.4.2
 permalink: /docs/architecture/adr/002
-version: 1.2
+version: 1.3
 fecha: 2026-08-02
 autor: StrategicConnex Engineering
-estado: Aprobado (enmendado 2026-10-02)
+estado: Aprobado (enmendado 2026-10-15)
 ---
 
-# ADR-002 — Fail-open en rate limit y circuit breaker (Redis)
+# ADR-002 — Fail-open en circuit breaker; fail-closed acotado en rate limit
+
+{: .warning }
+**Enmienda 2026-10-15 (v1.3) — P2-13:** el rate limit **deja de ser
+fail-open**. Un fallo del store distribuido ya **no** devuelve `allowed=true`:
+se sigue limitando con el sliding window en memoria del proceso más un techo
+global por instancia durante una ventana de enfriamiento. **Sólo** el rate
+limit cambia: la caché distribuida, el circuit breaker y el sink de app logs
+**siguen fail-open**. Ver §16.
 
 {: .warning }
 **Enmienda 2026-10-02 (v1.2):** el rate limit pasa a un **store distribuido en
@@ -144,6 +152,7 @@ N/A — decisión ya aplicada. Los consumidores importan safeRedis/rateLimit sin
 | 1.0 | 2026-08-02 | Registro de la decisión fail-open (T01-04) | Aprobado |
 | 1.1 | 2026-09-27 | Enmienda: eliminación de Upstash Redis; store en memoria | Aprobado |
 | 1.2 | 2026-10-02 | Enmienda: rate limit distribuido en Postgres (`rate_limit_windows`); circuit breaker y caché IA siguen en memoria | Aprobado |
+| 1.3 | 2026-10-15 | Enmienda: rate limit pasa a **fail-closed con fallback acotado** (memoria + techo global por instancia); caché, circuit breaker y app-logs siguen fail-open | Aprobado |
 
 **Resultado quality gate:** 100/100 (PASS, `--min 80`, 2026-08-02).
 
@@ -258,3 +267,116 @@ fail-open, sweep y parametrización), `pnpm build`, guards (`guard:secrets`,
 `guard:cdn`, `guard:i18n` 642/642, `contrast-guard`), `npx drizzle-kit check`
 (*Everything's fine*) y `pnpm db:drift-check` (**sin drift duro, 71/71
 tablas** — `rate_limit_windows` incluida, con RLS y sin drift).
+
+---
+
+## 16. Enmienda (2026-10-15) — fail-closed acotado en el rate limit (P2-13)
+
+**Contexto de la enmienda:** la enmienda §15 resolvió el problema de "no
+distribuido" llevando el contador a Postgres, pero conservó el invariante
+fail-open: si el store no respondía, `checkRateLimitPostgres` devolvía
+`allowed=true`. Eso convertía un fallo del store en una **ventana de
+rate-limit ilimitado**: con `DATABASE_URL` caída o saturada, cualquier
+endpoint protegido aceptaba tráfico sin tope mientras durase el fallo. El
+invariante era correcto para la caché (un miss sólo cuesta dinero) y para el
+circuit breaker (un timeout no debe descartar resultados), pero **no** para
+un control de seguridad: degradar a "permitir todo" es precisamente el efecto
+que el limitador existe para evitar.
+
+**Decisión:** el rate limit pasa a **fail-closed con fallback acotado**.
+Error del store ⇒ se sigue limitando, en dos capas:
+
+| Capa | Comportamiento |
+|------|----------------|
+| 1. Ventana por identificador | Sliding window en memoria del proceso con el **mismo `limit`/`window` configurados** (misma semántica que el store distribuido) |
+| 2. Techo global por instancia | `RATE_LIMIT_FALLBACK_GLOBAL_LIMIT` (600 por defecto) requests en 60 s fijos; superado → 429 |
+
+Detalles de implementación:
+
+- **Ventana de enfriamiento** (`RATE_LIMIT_DEGRADED_COOLDOWN_MS`, 15 s por
+defecto): tras el primer fallo no se vuelve a tocar Postgres hasta que
+expira, para no castigar con una petición por request a un store que acaba de
+fallar. Al expirar, se reintenta; si responde, se sale del modo y se registra
+la duración (`logger.info` «Store recuperado tras N ms»).
+- **El orden importa:** primero se evalúa el límite por identificador y sólo
+después se consume el techo global. Un identificador ya bloqueado consume
+**cero** del techo; si se consumiera antes, un atacante machacando un único
+identificador agotaría el presupuesto compartido de la instancia y dejaría sin
+servicio al resto (amplificación de DoS). Cubierto por test dedicado.
+- **Auditoría:** la entrada en degradado emite `rate_limit_degraded`
+(`security_audit_logs`, `event_type` es `text` —sin migración—) **una vez por
+entrada**, con suelo anti-inundación de 60 s por si el store oscila. El techo
+agotado emite `rate_limit_fallback_ceiling` con su propio dedupe.
+- **Headers intactos:** se sigue reportando el `limit` **configurado**, no el
+del techo, y se mantienen `RateLimit-Limit/Remaining/Reset` + legacy
+`X-RateLimit-*`. No se añaden cabeceras nuevas: un cliente no necesita saber
+que el backend está degradado.
+- **Config:** `RATE_LIMIT_STORE=postgres|memory` sigue siendo el override de
+emergencia; `RATE_LIMIT_STORE=memory` no pasa por el techo global (es el store
+normal fuera de producción, no una degradación).
+
+**Qué NO cambió:**
+
+- **La caché distribuida sigue fail-open:** un fallo del store es un *miss*
+(`get` → `undefined`), el executor se ejecuta y sólo se pierde el ahorro.
+- **El circuit breaker sigue fail-open:** un timeout de 1500 ms devuelve el
+fallback y nunca descarta un resultado exitoso.
+- **El sink de app logs sigue fail-open** (ADR-007): un fallo de inserción se
+descarta sin afectar al request.
+- La idempotencia mantiene su fail-open en los 5xx.
+
+**Trade-off explícito (aceptado):** durante la degradación el techo es **por
+instancia**, no global. Con el store caído el recuento distribuido es
+imposible por definición, así que el límite efectivo puede multiplicarse por
+el número de instancias serverless calientes. Se acepta porque (a) es
+estrictamente mejor que "permitir todo", (b) el techo acota el daño por
+instancia y (c) el rate limit perimetral y la `EMAIL_ALLOWLIST` siguen
+actuando. **Riesgo residual declarado:** con N instancias simultáneas el techo
+efectivo es N×600 req/60 s.
+
+**Nota de nomenclatura:** el archivo y el `permalink` conservan el nombre
+`ADR-002-fail-open-rate-limit` por estabilidad de enlaces; el título refleja
+el alcance real de la decisión tras esta enmienda.
+
+**Diseño y plan de ejecución:**
+[`docs/superpowers/plans/2026-10-15-P2-13-rate-limit-fail-closed.md`](../../superpowers/plans/2026-10-15-P2-13-rate-limit-fail-closed.md)
+(10 criterios de aceptación + lotes L1–L5).
+
+---
+
+## 17. Verificación de la enmienda §16 (2026-10-15)
+
+| Gate | Comando | Resultado |
+|------|---------|-----------|
+| Tipos | `pnpm typecheck` | **exit 0** |
+| Lint | `pnpm lint` | **exit 0** (0 errores; 38 warnings preexistentes, ninguno de estos archivos) |
+| Tests del limitador | `npx vitest run src/shared/lib/ratelimit` | **47/47 verde** (3 archivos) |
+| Tests del store + degradación | `npx vitest run src/shared/lib/ratelimit-store.test.ts` | **19/19 verde** — 7 casos nuevos P2-13 + el fail-open sustituido |
+| Formato | `npx prettier --check` sobre los 12 archivos tocados | Limpio |
+| Suite completa | `pnpm test` | **2738 passed / 2 failed** (284 archivos); los 2 fallos son preexistentes y ajenos (ver abajo) |
+
+**Los tests muerden (mutation check):** invertir el orden de `checkFallback`
+(consumir el techo global **antes** del chequeo por identificador) pone en rojo
+el caso anti-amplificación de DoS; la mutación se revirtió. El orden correcto
+queda así anclado por un test, no sólo por un comentario.
+
+**Los 2 fallos de la suite completa (mismo origen, P2-14):**
+
+- `tests/security/rls-surface-guard.test.ts` — baseline congelado
+  `dbSinEnvolver: 77` vs árbol `81` (idéntico al guard de abajo).
+- `src/trigger/cleanup.trigger.test.ts` — `No "appLogs" export is defined on the
+  "@/shared/db/schemas" mock`: P2-14 añadió el uso de `appLogs` en
+  `cleanup.trigger.ts` sin actualizar el mock del test.
+
+Ninguno toca el limitador: ambos provienen de `f3d8eea` (2026-10-14) y sus
+archivos están sin modificar en el árbol de trabajo. **No se han tocado**: son
+deuda de P2-14, no de esta enmienda.
+
+**Guard RLS (`node scripts/db/rls-surface-guard.mjs`): exit 1 — preexistente y
+ajeno.** Salta por `dbSinEnvolver 81 > 77` y `TOTAL 286 > 282`, con el único
+delta de archivo en `src/trigger/cleanup.trigger.ts` (`0/4 → 0/8`), introducido
+por `f3d8eea` (P2-14, 2026-10-14) **sin actualizar** `.rls-surface-threshold.json`.
+Ninguno de los archivos de esta enmienda aparece en el diff del guard: la
+superficie cruda añadida por P2-13 es **0**. No se tocó el umbral a propósito
+(sería blanquear un drift que no causó esta enmienda); queda como deuda
+reportada para P2-14.
