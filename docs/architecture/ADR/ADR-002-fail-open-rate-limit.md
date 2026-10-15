@@ -352,7 +352,7 @@ el alcance real de la decisión tras esta enmienda.
 | Lint | `pnpm lint` | **exit 0** (0 errores; 38 warnings preexistentes, ninguno de estos archivos) |
 | Tests del limitador | `npx vitest run src/shared/lib/ratelimit` | **47/47 verde** (3 archivos) |
 | Tests del store + degradación | `npx vitest run src/shared/lib/ratelimit-store.test.ts` | **19/19 verde** — 7 casos nuevos P2-13 + el fail-open sustituido |
-| Formato | `npx prettier --check` sobre los 12 archivos tocados | Limpio |
+| Formato | `npx prettier --check` sobre 12 de los 13 archivos tocados | Limpio. `audit-log.ts` queda fuera del gate por ser **preexistente**: ya estaba sin formatear antes de esta enmienda (`import 'server-only'` con comillas simples, `catch` de una línea); las 4 líneas añadidas sí cumplen prettier y reformatear el archivo entero habría metido un diff ajeno a P2-13 |
 | Suite completa | `pnpm test` | **2738 passed / 2 failed** (284 archivos); los 2 fallos son preexistentes y ajenos (ver abajo) |
 
 **Los tests muerden (mutation check):** invertir el orden de `checkFallback`
