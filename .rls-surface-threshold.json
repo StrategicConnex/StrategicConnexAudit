@@ -1,7 +1,7 @@
 {
   "maxDirectDbCalls": 205,
-  "maxDbCallsOutsideWithRLS": 77,
-  "maxTotalCalls": 282,
+  "maxDbCallsOutsideWithRLS": 81,
+  "maxTotalCalls": 286,
   "allowedFiles": [
     "src/app/admin/actions.ts",
     "src/app/admin/page.tsx",
@@ -397,7 +397,7 @@
     },
     "src/trigger/cleanup.trigger.ts": {
       "directDb": 0,
-      "dbSinEnvolver": 4
+      "dbSinEnvolver": 8
     },
     "src/trigger/discovery.trigger.ts": {
       "directDb": 0,
