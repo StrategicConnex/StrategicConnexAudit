@@ -28,6 +28,8 @@
     "db:drift-check": "node scripts/db/drift-check.mjs",
     "db:fk-guard": "node scripts/db/fk-schema-drift-guard.mjs",
     "db:index-guard": "node scripts/db/index-guard.mjs",
+    "db:retention-check": "node scripts/db/retention-index-check.mjs",
+    "dispatcher:status": "npx tsx --env-file=.env.local src/scripts/dispatcher-status.ts",
     "db:rls-surface": "node scripts/db/rls-surface-report.mjs",
     "db:rls-surface-guard": "node scripts/db/rls-surface-guard.mjs",
     "db:grant-audit": "node scripts/db/grant-audit.mjs",
