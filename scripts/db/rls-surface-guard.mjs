@@ -73,7 +73,13 @@ function snapshotFull() {
     allowedFiles: archivos.map((a) => a.archivo),   // opcional, mantenido por compatibilidad
     baseline: map,
   };
-  fs.writeFileSync(path.join(root, ".rls-surface-threshold.json"), JSON.stringify(thr, null, 2));
+  // Un newline final evita que prettier reporte falta de línea final y que el
+  // siguiente snapshot lo vuelva a quitar; el resto del archivo es solo
+  // estados, no se serializa.
+  fs.writeFileSync(
+    path.join(root, ".rls-surface-threshold.json"),
+    JSON.stringify(thr, null, 2) + "\n",
+  );
   console.log(`Snapshot: ${archivos.length} archivos · maxDirectDb=${thr.maxDirectDbCalls} maxDb=${thr.maxDbCallsOutsideWithRLS} maxTotal=${thr.maxTotalCalls}`);
 }
 
