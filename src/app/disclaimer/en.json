@@ -1,0 +1,18 @@
+{
+  "disclaimer": {
+    "title": "Legal Notice",
+    "intro": "This product is currently in beta phase. Some features may be unstable and subject to change without notice.",
+    "bullets": [
+      "Features under active testing",
+      "Possible errors or unexpected behavior",
+      "Changes without prior notice",
+      "The service is provided 'as is' during this testing period"
+    ],
+    "reportTitle": "Report an issue",
+    "reportIntro": "If you encounter any errors, unexpected behaviors, or security issues while using the platform, please report them immediately to:",
+    "reportHint": "Include in your report: problem description, steps to reproduce, screenshots if applicable, and browser/version used.",
+    "acceptLabel": "I have read and accept the terms of the legal notice",
+    "accept": "Accept",
+    "updated": "Last updated: October 2026"
+  }
+}

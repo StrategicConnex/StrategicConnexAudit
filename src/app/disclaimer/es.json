@@ -1,0 +1,18 @@
+{
+  "disclaimer": {
+    "title": "Aviso Legal",
+    "intro": "Este producto está actualmente en fase beta. Algunas funcionalidades pueden estar siendo probadas activamente antes de su lanzamiento completo.",
+    "bullets": [
+      "Funcionalidades en prueba activa",
+      "Posibles errores o comportamientos inesperados",
+      "Cambios sin previo aviso",
+      "El servicio se proporciona \"tal cual\" durante este período de pruebas"
+    ],
+    "reportTitle": "Reportar un problema",
+    "reportIntro": "Si encuentras algún error o problema de seguridad, por favor repórtalo inmediatamente a:",
+    "reportHint": "Incluye en tu reporte: descripción del problema, pasos para reproducirlo, capturas de pantalla si aplica y navegador/version utilizada.",
+    "acceptLabel": "He leído y acepto los términos del aviso legal",
+    "accept": "Aceptar",
+    "updated": "Última actualización: Octubre 2026"
+  }
+}
