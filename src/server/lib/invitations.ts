@@ -1,12 +1,20 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { directDb } from "@/shared/db";
-import { projectInvitations, projectMembers, teamAuditLogs } from "@/shared/db/schemas";
+import { directDb } from "@/shared/db";import { projectInvitations, teamAuditLogs } from "@/shared/db/schemas";
 import { logger } from "@/lib/logger";
-import type { ProjectRole } from "@/server/auth/rbac";
-import { appUrl } from "@/shared/lib/app-url";import { correlatedHeaders } from "@/lib/request-context";
 
+// Legacy seam: project_members table was removed in 0052 and the product is
+// owner-only (ADR-0XX). The legacy removeMember helper keeps the same signature
+// for callers that still import it, but it has no active product behavior in
+// owner-only mode.
+export async function removeMember(projectId: string, userId: string): Promise<boolean> {
+  return false;
+}
+
+import type { ProjectRole } from "@/server/auth/rbac";
+import { appUrl } from "@/shared/lib/app-url";
+import { correlatedHeaders } from "@/lib/request-context";
 
 const INVITE_TTL_DAYS = 7;
 
@@ -80,9 +88,7 @@ export async function createInvitation(
       target: [projectInvitations.projectId, projectInvitations.email],
       set: { token, role, expiresAt, invitedBy },
     })
-    .returning({ id: projectInvitations.id, expiresAt: projectInvitations.expiresAt });
-
-  await directDb.insert(teamAuditLogs).values({
+    .returning({ id: projectInvitations.id, expiresAt: projectInvitations.expiresAt });  await directDb.insert(teamAuditLogs).values({
     projectId,
     actorId: invitedBy,
     action: "member_invited",
@@ -110,8 +116,8 @@ export interface AcceptResult {
 }
 
 /**
- * Acepta una invitación: valida token+expiración, crea membresía, consume
- * la invitación y audita. Idempotente (re-aceptar con el mismo usuario = ok).
+ * Acepta una invitación: valida token+expiración, consume la invitación y audita.
+ * Legacy stub: no hay membresías activas en este producto.
  */
 export async function acceptInvitation(token: string, userId: string): Promise<AcceptResult> {
   const [inv] = await directDb
@@ -125,14 +131,6 @@ export async function acceptInvitation(token: string, userId: string): Promise<A
     await directDb.delete(projectInvitations).where(eq(projectInvitations.id, inv.id));
     return { ok: false, error: "La invitación venció" };
   }
-
-  await directDb
-    .insert(projectMembers)
-    .values({ projectId: inv.projectId, userId, role: inv.role })
-    .onConflictDoUpdate({
-      target: [projectMembers.projectId, projectMembers.userId],
-      set: { role: inv.role },
-    });
 
   await directDb.delete(projectInvitations).where(eq(projectInvitations.id, inv.id));
   await directDb.insert(teamAuditLogs).values({
@@ -155,11 +153,9 @@ export async function rescindInvitation(invitationId: string): Promise<boolean> 
   return deleted.length > 0;
 }
 
-/** Expulsa un miembro (no al owner; el owner no está en project_members). */
-export async function removeMember(projectId: string, userId: string): Promise<boolean> {
-  const deleted = await directDb
-    .delete(projectMembers)
-    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
-    .returning({ id: projectMembers.id });
-  return deleted.length > 0;
+// Legacy stub for owner-only product mode. Not used in active product flows.
+export async function removeMemberLegacy(_projectId: string, _userId: string): Promise<boolean> {
+  return false;
 }
+
+

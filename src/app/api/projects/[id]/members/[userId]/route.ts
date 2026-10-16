@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { canPerformAction } from "@/server/auth/rbac";
 import { createClient } from "@/shared/lib/supabase/server";
 import { getProjectRole, type ProjectAccessRole } from "@/server/lib/project-access";
-import {
-  removeProjectMember,
-  updateMemberRole,
-  type MemberMutationCode,
-} from "@/server/lib/rbac";
+import { type MemberMutationCode } from "@/server/lib/rbac";
 import { logger } from "@/lib/logger";
 import { withRequestContext } from "@/lib/request-context";
 
@@ -26,10 +21,6 @@ async function authorizeProject(
   return { userId: user.id, role };
 }
 
-const roleSchema = z.object({
-  role: z.enum(["admin", "editor", "viewer", "guest"]),
-});
-
 const MUTATION_ERRORS: Record<MemberMutationCode, { status: number; error: string }> = {
   "project-not-found": { status: 404, error: "Proyecto no encontrado" },
   "member-not-found": { status: 404, error: "Miembro no encontrado" },
@@ -43,60 +34,30 @@ function mutationError(code: MemberMutationCode): NextResponse {
   return NextResponse.json({ success: false, error: info.error }, { status: info.status });
 }
 
-async function handleRoleUpdate(
-  request: Request,
-  { params }: { params: Promise<{ id: string; userId: string }> }
-): Promise<NextResponse> {
-  const { id: projectId, userId: targetUserId } = await params;
+async function rawPatch(
+  _request: Request,
+  ctx: { params: Promise<{ id: string; userId: string }> }
+) {
+  const { id: projectId, userId: targetUserId } = await ctx.params;
 
   const auth = await authorizeProject(projectId);
   if ("error" in auth) return auth.error;
 
-  try {
-    const parsed = roleSchema.safeParse(await request.json().catch(() => ({})));
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Rol válido requerido (admin, editor, viewer o guest)" },
-        { status: 400 }
-      );
-    }
-
-    const result = await updateMemberRole(
-      projectId,
-      targetUserId,
-      parsed.data.role,
-      auth.userId
-    );
-    if (!result.ok) return mutationError(result.code);
-
-    return NextResponse.json({
-      success: true,
-      projectId,
-      userId: targetUserId,
-      role: parsed.data.role,
-    });
-  } catch (error) {
-    logger.error("PATCH member failure:", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return NextResponse.json({ success: false, error: "Error al procesar la solicitud" }, { status: 500 });
-  }
-}
-
-async function rawPatch(
-  request: Request,
-  ctx: { params: Promise<{ id: string; userId: string }> }
-) {
-  return handleRoleUpdate(request, ctx);
+  // El producto es owner-only hoy (ADR-0XX). No hay flujo activo de actualización
+  // de roles de miembros.
+  return NextResponse.json(
+    { success: false, error: "La modificación de roles de miembros no está habilitada en este proyecto" },
+    { status: 400 }
+  );
 }
 
 export const PATCH = withRequestContext(rawPatch);
 
 async function rawPut(
-  request: Request,
+  _request: Request,
   ctx: { params: Promise<{ id: string; userId: string }> }
 ) {
-  return handleRoleUpdate(request, ctx);
+  return rawPatch(_request, ctx);
 }
 
 export const PUT = withRequestContext(rawPut);
@@ -110,17 +71,11 @@ async function rawDelete(
   const auth = await authorizeProject(projectId);
   if ("error" in auth) return auth.error;
 
-  try {
-    const result = await removeProjectMember(projectId, targetUserId, auth.userId);
-    if (!result.ok) return mutationError(result.code);
-
-    return NextResponse.json({ success: true, projectId, userId: targetUserId });
-  } catch (error) {
-    logger.error("DELETE member failure:", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return NextResponse.json({ success: false, error: "Error al procesar la solicitud" }, { status: 500 });
-  }
+  // El producto es owner-only hoy (ADR-0XX). No hay miembros activos en el proyecto.
+  return NextResponse.json(
+    { success: false, error: "La gestión de miembros no está habilitada en este proyecto" },
+    { status: 400 }
+  );
 }
 
 export const DELETE = withRequestContext(rawDelete);

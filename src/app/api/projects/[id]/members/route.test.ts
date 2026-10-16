@@ -29,7 +29,6 @@ vi.mock("@/server/lib/invitations", () => ({
 const mockTxQuery = {
   projects: { findFirst: mockTxProjectsFindFirst },
   users: { findFirst: mockTxUsersFindFirst },
-  projectInvitations: { findMany: mockTxInvitationsFindMany },
 };
 
 // directDb: conexiones de servicio usadas dentro del flujo para leer
@@ -38,7 +37,6 @@ const mockDirectDb = {
   query: {
     users: { findFirst: vi.fn() },
     projects: { findFirst: vi.fn() },
-    projectInvitations: { findMany: vi.fn(async () => []) },
   },
   select: () => ({
     from: () => ({
@@ -106,7 +104,7 @@ describe("members API — equipo real (A-2)", () => {
     expect(res.status).toBe(404);
   });
 
-  it("GET lista owner + miembros reales", async () => {
+  it("GET lista owner", async () => {
     mockTxProjectsFindFirst.mockResolvedValue({ id: "p1", ownerId: "u-owner", name: "Sitio" });
     mockDirectDb.query.users.findFirst.mockResolvedValue({
       id: "u-owner",
@@ -117,7 +115,16 @@ describe("members API — equipo real (A-2)", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.members[0]).toMatchObject({ email: "owner@x.com", role: "owner" });
+    expect(body.members).toEqual([
+      {
+        id: "owner-u-owner",
+        userId: "u-owner",
+        email: "owner@x.com",
+        fullName: "Owner",
+        role: "owner",
+        createdAt: null,
+      },
+    ]);
     expect(body.invitations).toEqual([]);
   });
 
@@ -128,24 +135,17 @@ describe("members API — equipo real (A-2)", () => {
     expect(res.status).toBe(400);
   });
 
-  it("POST crea invitación real", async () => {
+  it("POST devuelve 400 porque las invitaciones no están habilitadas", async () => {
     mockTxProjectsFindFirst.mockResolvedValue({ id: "p1", ownerId: "u-owner", name: "Sitio" });
-    mockCreateInvitation.mockResolvedValue({
-      id: "inv-1",
-      email: "nuevo@x.com",
-      role: "editor",
-      expiresAt: new Date().toISOString(),
-      inviteUrl: "http://x/invite/tok",
-      emailSent: false,
-    });
     const res = await POST(
       req("POST", "http://x/api", { email: "nuevo@x.com", role: "editor" }),
       { params: Promise.resolve({ id: "p1" }) }
     );
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(mockCreateInvitation).toHaveBeenCalledTimes(1);
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no están habilitadas");
+    expect(mockCreateInvitation).not.toHaveBeenCalled();
   });
 
   it("POST exige members:manage (viewer → 404)", async () => {
@@ -157,21 +157,26 @@ describe("members API — equipo real (A-2)", () => {
     expect(mockCreateInvitation).not.toHaveBeenCalled();
   });
 
-  it("DELETE expulsa miembro", async () => {
-    mockRemoveMember.mockResolvedValue(true);
+  it("DELETE rechaza gestión de miembros", async () => {
     const res = await DELETE({ url: "http://x/api?memberUserId=u-2" } as Request, {
       params: Promise.resolve({ id: "p1" }),
     });
-    expect(res.status).toBe(200);
-    expect((await res.json()).success).toBe(true);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no está habilitada");
+    expect(mockRemoveMember).not.toHaveBeenCalled();
   });
 
-  it("DELETE anula invitación", async () => {
-    mockRescindInvitation.mockResolvedValue(true);
+  it("DELETE rechaza anulación de invitaciones", async () => {
     const res = await DELETE({ url: "http://x/api?invitationId=inv-1" } as Request, {
       params: Promise.resolve({ id: "p1" }),
     });
-    expect((await res.json()).success).toBe(true);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no está habilitada");
+    expect(mockRescindInvitation).not.toHaveBeenCalled();
   });
 
   it("DELETE sin parámetros → 400", async () => {

@@ -38,7 +38,6 @@ vi.mock("@/lib/request-context", () => ({
 
 vi.mock("@/shared/db/schemas", () => ({
   users: { id: "id", role: "role" },
-  projectMembers: { id: "id" },
   securityAuditLogs: { eventType: "eventType", createdAt: "createdAt" },
   siemAlertLogs: { createdAt: "createdAt" },
   adversaryAssessments: { createdAt: "createdAt" },

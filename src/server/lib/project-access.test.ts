@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const state = vi.hoisted(() => ({
   projectRow: null as null | { id: string; ownerId: string },
-  memberRow: null as null | { role: string },
 }));
 
 vi.mock("@/shared/db", () => ({
@@ -11,19 +10,15 @@ vi.mock("@/shared/db", () => ({
       projects: {
         findFirst: async () => state.projectRow,
       },
-      projectMembers: {
-        findFirst: async () => state.memberRow,
-      },
     },
   },
 }));
 
 import { assertProjectAccess } from "./project-access";
 
-describe("project-access — multi-tenant (P1-6)", () => {
+describe("project-access — owner-only (ADR-0XX)", () => {
   beforeEach(() => {
     state.projectRow = null;
-    state.memberRow = null;
   });
 
   it("owner pasa con rol owner", async () => {
@@ -31,18 +26,12 @@ describe("project-access — multi-tenant (P1-6)", () => {
     expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: true, role: "owner" });
   });
 
-  it("miembro pasa con su rol real", async () => {
+  it("propietario de otro proyecto queda fuera", async () => {
     state.projectRow = { id: "p1", ownerId: "u9" };
-    state.memberRow = { role: "viewer" };
-    expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: true, role: "viewer" });
-  });
-
-  it("sin proyecto → 404", async () => {
     expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: false, role: null });
   });
 
-  it("proyecto ajeno sin membresía → 404", async () => {
-    state.projectRow = { id: "p1", ownerId: "u9" };
+  it("sin proyecto → 404", async () => {
     expect(await assertProjectAccess("u1", "p1")).toEqual({ ok: false, role: null });
   });
 });

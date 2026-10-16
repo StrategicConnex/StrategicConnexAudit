@@ -34,8 +34,8 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
 
   try {
     if (investigationId) {
-      // SECURITY: la investigación debe pertenecer a un proyecto con acceso
-      // (owner o miembro) del dueño de la API key — evita lectura cross-tenant.
+      // SECURITY: la investigación debe pertenecer a un proyecto cuyo dueño
+      // coincide con el owner de la API key — evita lectura cross-tenant.
       const investigation = await directDb.query.intelligenceInvestigations.findFirst({
         where: eq(intelligenceInvestigations.id, investigationId),
       });
@@ -71,7 +71,7 @@ export const GET = withPublicApi(async (req: AuthenticatedRequest) => {
       return apiError('projectId is required', 400);
     }
 
-    // SECURITY: owner o miembro del proyecto (P1-6) antes de listar.
+    // SECURITY: dueño del proyecto (P1-6) antes de listar.
     const access = await assertProjectAccess(userId, projectId);
     if (!access.ok) {
       return apiError('Project not found or access denied', 404);
@@ -117,7 +117,7 @@ export const POST = withPublicApi(async (req: AuthenticatedRequest) => {
 
     const { target, projectId } = parseResult.data;
 
-    // Lanzar scans escribe y cuesta cómputo: solo el owner (P1-6).
+    // Lanzar scans escribe y cuesta cómputo: solo el dueño (P1-6).
     const access = await assertProjectAccess(userId, projectId);
     if (!access.ok || access.role !== "owner") {
       return apiError('Project not found or access denied', 404);

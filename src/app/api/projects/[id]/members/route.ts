@@ -4,14 +4,9 @@ import { canPerformAction } from "@/server/auth/rbac";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRLS } from "@/shared/db/rls";
 import { directDb } from "@/shared/db";
-import { projects, users, projectMembers, projectInvitations } from "@/shared/db/schemas";
+import { projects, users } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { getProjectRole, type ProjectAccessRole } from "@/server/lib/project-access";
-import {
-  createInvitation,
-  rescindInvitation,
-  removeMember,
-} from "@/server/lib/invitations";
 import { logger } from "@/lib/logger";
 import { withRequestContext } from "@/lib/request-context";
 
@@ -47,39 +42,14 @@ async function rawGet(
     });
     if (!project) return null;
 
-    // Identidades del equipo fuera del contexto RLS: la policy users_select_self
-    // (0025) solo expone el propio perfil al rol authenticated, pero los emails
-    // de los miembros de un proyecto son datos de negocio del proyecto (el
-    // acceso ya fue autorizado por getProjectRole) y se resuelven con la
-    // conexión de servicio.
-    const [owner, members, invitations] = await Promise.all([
-      directDb.query.users.findFirst({
-        where: eq(users.id, project.ownerId),
-        columns: { id: true, email: true, fullName: true },
-      }),
-      directDb
-        .select({
-          id: projectMembers.id,
-          userId: projectMembers.userId,
-          role: projectMembers.role,
-          email: users.email,
-          fullName: users.fullName,
-          createdAt: projectMembers.createdAt,
-        })
-        .from(projectMembers)
-        .leftJoin(users, eq(users.id, projectMembers.userId))
-        .where(eq(projectMembers.projectId, projectId)),
-      directDb.query.projectInvitations.findMany({
-        where: eq(projectInvitations.projectId, projectId),
-        columns: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
-        limit: 100,
-      }),
-    ]);
+    const owner = await directDb.query.users.findFirst({
+      where: eq(users.id, project.ownerId),
+      columns: { id: true, email: true, fullName: true },
+    });
 
     return {
-      members: [
-        ...(owner
-          ? [{
+      members: owner
+        ? [{
             id: `owner-${owner.id}`,
             userId: owner.id,
             email: owner.email,
@@ -87,23 +57,8 @@ async function rawGet(
             role: "owner" as const,
             createdAt: null as string | null,
           }]
-          : []),
-        ...members.map((m) => ({
-          id: m.id,
-          userId: m.userId,
-          email: m.email ?? "—",
-          fullName: m.fullName ?? undefined,
-          role: m.role,
-          createdAt: m.createdAt?.toISOString() ?? null,
-        })),
-      ],
-      invitations: invitations.map((i) => ({
-        id: i.id,
-        email: i.email,
-        role: i.role,
-        expiresAt: i.expiresAt.toISOString(),
-        createdAt: i.createdAt?.toISOString() ?? null,
-      })),
+        : [],
+      invitations: [],
     };
   });
 
@@ -145,21 +100,13 @@ async function rawPost(
       return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
     }
 
-    const invitation = await createInvitation(
-      projectId,
-      project.name,
-      parsed.data.email,
-      parsed.data.role,
-      auth.userId
+    // El producto es owner-only hoy (ADR-0XX). No hay flujo activo de invitaciones
+    // de equipo; devolvemos un error claro en lugar de intentar crear una invitación
+    // residual.
+    return NextResponse.json(
+      { success: false, error: "Las invitaciones de equipo no están habilitadas en este proyecto" },
+      { status: 400 }
     );
-
-    return NextResponse.json({
-      success: true,
-      message: invitation.emailSent
-        ? `Invitación enviada a ${invitation.email}`
-        : `Invitación creada. Sin email configurado: comparte este link: ${invitation.inviteUrl}`,
-      invitation,
-    });
   } catch (error) {
     logger.error("POST members failure:", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ success: false, error: "Error al procesar la solicitud" }, { status: 500 });
@@ -181,13 +128,13 @@ async function rawDelete(
   const memberUserId = searchParams.get("memberUserId");
   const invitationId = searchParams.get("invitationId");
 
-  if (memberUserId) {
-    const ok = await removeMember(projectId, memberUserId);
-    return NextResponse.json({ success: ok });
-  }
-  if (invitationId) {
-    const ok = await rescindInvitation(invitationId);
-    return NextResponse.json({ success: ok });
+  if (memberUserId || invitationId) {
+    // El producto es owner-only hoy (ADR-0XX). No hay miembros ni invitaciones
+    // activas; cualquier intento de gestión se rechaza explícitamente.
+    return NextResponse.json(
+      { success: false, error: "La gestión de miembros no está habilitada en este proyecto" },
+      { status: 400 }
+    );
   }
   return NextResponse.json({ success: false, error: "Falta memberUserId o invitationId" }, { status: 400 });
 }

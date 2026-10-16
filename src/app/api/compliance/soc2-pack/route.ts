@@ -5,7 +5,6 @@ import { withRLS } from "@/shared/db/rls";
 import type { DbExecutor } from "@/shared/db/executor";
 import {
   users,
-  projectMembers,
   securityAuditLogs,
   siemAlertLogs,
   adversaryAssessments,
@@ -75,21 +74,18 @@ async function rawGet() {
       const [userCount] = await tx
         .select({ n: count() })
         .from(users);
-      const [memberCount] = await tx
-        .select({ n: count() })
-        .from(projectMembers);
       const adminCount = await tx
         .select({ n: count() })
         .from(users)
         .where(eq(users.role, "admin"));
       controlsInner.push({
         control: "CC6.1",
-        title: "Acceso lógico: usuarios, roles y membresías por proyecto",
+        title: "Acceso lógico: usuarios, roles y ownership de proyectos",
         evidence: {
           users: Number(userCount?.n ?? 0),
           platformAdmins: Number(adminCount[0]?.n ?? 0),
-          projectMemberships: Number(memberCount?.n ?? 0),
-          enforcement: "RLS member_or_owner + assertProjectAccess + RBAC por roles",
+          projectMemberships: "Sin membresías (owner-only, ADR-0XX; project_members eliminado en 0052)",
+          enforcement: "RLS ownership-only + assertProjectAccess + RBAC por roles",
         },
       });
 

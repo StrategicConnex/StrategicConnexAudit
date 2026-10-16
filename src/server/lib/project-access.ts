@@ -1,7 +1,7 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { directDb } from "@/shared/db";
-import { projects, projectMembers } from "@/shared/db/schemas";
+import { projects } from "@/shared/db/schemas";
 import type { ProjectRole } from "@/server/auth/rbac";
 import { canPerformAction, type PermissionAction } from "@/server/auth/rbac";
 
@@ -13,8 +13,8 @@ export interface ProjectAccess {
 }
 
 /**
- * Rol efectivo del usuario en el proyecto: owner, rol de miembro o null.
- * Usa directDb (service role) SOLO para leer membresía.
+ * Rol efectivo del usuario en el proyecto: owner o null.
+ * El proyecto es owner-only hoy (ADR-0XX); ya no hay membresías.
  */
 export async function getProjectRole(
   userId: string,
@@ -28,22 +28,13 @@ export async function getProjectRole(
   if (!project) return null;
   if (project.ownerId === userId) return "owner";
 
-  const member = await directDb.query.projectMembers.findFirst({
-    where: and(
-      eq(projectMembers.projectId, projectId),
-      eq(projectMembers.userId, userId)
-    ),
-  });
-
-  return member?.role ?? null;
+  return null;
 }
 
 /**
  * project-access.ts — Acceso multi-tenant consistente (P1-6, A-3).
  *
- * owner (projects.owner_id) O miembro (project_members con su rol real).
- * Usa directDb (service role) SOLO para leer membresía — nunca para leer
- * datos del proyecto (eso sigue vía withRLS o checks aquí).
+ * owner (projects.owner_id). El acceso de equipo no está activo en este producto.
  */
 export async function assertProjectAccess(
   userId: string,

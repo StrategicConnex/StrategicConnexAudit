@@ -568,3 +568,9 @@ export * from "./app-logs";
 // ─── 45. Idempotencia de endpoints (A6) y outbox de eventos (C6)
 export * from "./idempotency";
 export * from "./outbox";
+
+// ─── Team/invitation tables: reserved/legacy only ───────────────────────────
+// `project_invitations` and `team_audit_logs` remain in schema because legacy/reserved
+// code still references them; they are not active product features.
+// `projectMembers` was removed from the schema in migration 0052 and is not exported.
+export { projectInvitations, teamAuditLogs, projectRoleEnum } from "./teams";

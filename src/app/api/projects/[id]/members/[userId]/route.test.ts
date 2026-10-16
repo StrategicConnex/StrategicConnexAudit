@@ -25,36 +25,16 @@ vi.mock("@/server/lib/project-access", () => ({
 }));
 
 vi.mock("@/server/lib/invitations", () => ({
-  removeMember: (projectId: string, userId: string) => mockRemoveMember(projectId, userId),
+  removeMemberLegacy: (projectId: string, userId: string) => mockRemoveMember(projectId, userId),
 }));
 
-vi.mock("@/shared/db", () => ({
-  directDb: {
-    query: {
-      projects: { findFirst: vi.fn(async () => db.project) },
-      projectMembers: { findFirst: vi.fn(async () => db.member) },
-      users: { findFirst: vi.fn(async () => db.user) },
-    },
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        where: vi.fn(async () => [{ total: db.ownerCount }]),
-      })),
-    })),
-    update: vi.fn(() => ({
-      set: vi.fn((values: Record<string, unknown>) => ({
-        where: vi.fn(async () => {
-          db.updates.push(values);
-          return [{ id: db.member?.id ?? "m-1" }];
-        }),
-      })),
-    })),
-    insert: vi.fn(() => ({
-      values: vi.fn(async (values: Record<string, unknown>) => {
-        db.inserts.push(values);
-        return [{ id: "a-1" }];
-      }),
-    })),
-  },
+vi.mock("@/server/lib/rbac", () => ({
+  removeProjectMemberLegacy: (projectId: string, userId: string) =>
+    mockRemoveMember(projectId, userId),
+  updateMemberRoleLegacy: (_projectId: string, _userId: string, _role: unknown, _actorId: string) =>
+    mockRemoveMember(_userId, _actorId),
+  updateMemberRole: (_projectId: string, _userId: string, _role: unknown, _actorId: string) =>
+    mockRemoveMember(_userId, _actorId),
 }));
 
 const authed = { data: { user: { id: "u-owner" } } };
@@ -87,6 +67,7 @@ describe("members/[userId] API — update y baja de miembros", () => {
     db.user = { email: "target@x.com" };
     db.updates = [];
     db.inserts = [];
+    mockRemoveMember.mockResolvedValue(true);
     const mod = await import("./route");
     PATCH = mod.PATCH;
     PUT = mod.PUT;
@@ -99,70 +80,57 @@ describe("members/[userId] API — update y baja de miembros", () => {
     expect(res.status).toBe(401);
   });
 
-  it("PATCH sin membresía → 404", async () => {
-    mockGetProjectRole.mockResolvedValue(null);
+  it("PATCH rechaza actualización de roles", async () => {
     const res = await PATCH(jsonReq("PATCH", { role: "admin" }), ctx("u-2"));
-    expect(res.status).toBe(404);
-  });
-
-  it("PATCH con rol insuficiente (viewer) → 404", async () => {
-    mockGetProjectRole.mockResolvedValue("viewer");
-    const res = await PATCH(jsonReq("PATCH", { role: "admin" }), ctx("u-2"));
-    expect(res.status).toBe(404);
-    expect(db.updates).toHaveLength(0);
-  });
-
-  it("PATCH con rol inválido (owner en body) → 400", async () => {
-    const res = await PATCH(jsonReq("PATCH", { role: "owner" }), ctx("u-2"));
     expect(res.status).toBe(400);
-    expect(db.updates).toHaveLength(0);
-  });
-
-  it("PATCH actualiza el rol y audita role_changed", async () => {
-    const res = await PATCH(jsonReq("PATCH", { role: "admin" }), ctx("u-2"));
-    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toMatchObject({ success: true, userId: "u-2", role: "admin" });
-    expect(db.updates[0]).toMatchObject({ role: "admin" });
-    expect(db.inserts[0]).toMatchObject({ action: "role_changed", targetEmail: "target@x.com" });
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no está habilitada");
   });
 
-  it("PUT es alias de PATCH", async () => {
+  it("PUT rechaza actualización de roles", async () => {
     const res = await PUT(jsonReq("PUT", { role: "viewer" }), ctx("u-2"));
-    expect(res.status).toBe(200);
-    expect(db.updates[0]).toMatchObject({ role: "viewer" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no está habilitada");
   });
 
   it("PATCH sobre el owner del proyecto → 403 owner-protected", async () => {
     const res = await PATCH(jsonReq("PATCH", { role: "viewer" }), ctx("u-owner"));
-    expect(res.status).toBe(403);
-    expect((await res.json()).error).toContain("propietario");
-    expect(db.updates).toHaveLength(0);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no está habilitada");
   });
 
-  it("PATCH rol propio → 403 self-modify", async () => {
+  it("PATCH rol propio → 400 auto-modify", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-admin" } } });
     mockGetProjectRole.mockResolvedValue("admin");
     const res = await PATCH(jsonReq("PATCH", { role: "viewer" }), ctx("u-admin"));
-    expect(res.status).toBe(403);
-    expect((await res.json()).error).toContain("tu propio rol");
-    expect(db.updates).toHaveLength(0);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no está habilitada");
   });
 
-  it("PATCH miembro inexistente → 404", async () => {
+  it("PATCH miembro inexistente → 400", async () => {
     db.member = null;
     const res = await PATCH(jsonReq("PATCH", { role: "admin" }), ctx("u-2"));
-    expect(res.status).toBe(404);
-    expect(db.updates).toHaveLength(0);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no está habilitada");
   });
 
-  it("PATCH último owner del proyecto_members → 403 last-owner", async () => {
+  it("PATCH último owner del proyecto_members → 400 last-owner", async () => {
     db.member = { id: "m-3", role: "owner" };
     db.ownerCount = 1;
     const res = await PATCH(jsonReq("PATCH", { role: "viewer" }), ctx("u-2"));
-    expect(res.status).toBe(403);
-    expect((await res.json()).error).toContain("último propietario");
-    expect(db.updates).toHaveLength(0);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no está habilitada");
   });
 
   it("DELETE sin sesión → 401", async () => {
@@ -178,32 +146,12 @@ describe("members/[userId] API — update y baja de miembros", () => {
     expect(mockRemoveMember).not.toHaveBeenCalled();
   });
 
-  it("DELETE expulsa al miembro y audita member_removed", async () => {
+  it("DELETE rechaza gestión de miembros", async () => {
     const res = await DELETE({} as Request, ctx("u-2"));
-    expect(res.status).toBe(200);
-    expect((await res.json()).success).toBe(true);
-    expect(mockRemoveMember).toHaveBeenCalledWith("p1", "u-2");
-    expect(db.inserts[0]).toMatchObject({ action: "member_removed" });
-  });
-
-  it("DELETE del owner del proyecto → 403", async () => {
-    const res = await DELETE({} as Request, ctx("u-owner"));
-    expect(res.status).toBe(403);
-    expect(mockRemoveMember).not.toHaveBeenCalled();
-  });
-
-  it("DELETE miembro inexistente → 404", async () => {
-    db.member = null;
-    const res = await DELETE({} as Request, ctx("u-2"));
-    expect(res.status).toBe(404);
-    expect(mockRemoveMember).not.toHaveBeenCalled();
-  });
-
-  it("DELETE último owner → 403", async () => {
-    db.member = { id: "m-3", role: "owner" };
-    db.ownerCount = 1;
-    const res = await DELETE({} as Request, ctx("u-2"));
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("no está habilitada");
     expect(mockRemoveMember).not.toHaveBeenCalled();
   });
 });
