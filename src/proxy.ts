@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger, runWithRequestContext } from "@/lib/logger";
 import { updateSession } from "@/shared/lib/supabase/middleware";
+import {
+  DISCLAIMER_COOKIE,
+  isDisclaimerPublicPath,
+  sanitizeRedirect,
+} from "@/shared/lib/disclaimer";
 
 /* ═══════════════════════════════════════════════════════════════════
    SCAUDIT — Global Proxy (Next.js 16, replaces middleware.ts)
@@ -153,6 +158,10 @@ async function runProxy(
   requestId: string,
   csp: string
 ) {
+  // ── 1.5 Disclaimer gate — ANTES de la auth existente ───────────
+  const gate = disclaimerGate(request, csp, requestId);
+  if (gate) return gate;
+
   // ── 2. Clone request with nonce + CSP + requestId ──────────────
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-csp-nonce", nonce);
@@ -167,6 +176,44 @@ async function runProxy(
   const response = await updateSession(requestWithNonce);
 
   // ── 4. Apply security headers + request ID ─────────────────────
+  applySecurityHeaders(response, csp, requestId);
+
+  return response;
+}
+
+/**
+ * Barrera del aviso legal.
+ *
+ * Se ejecuta ANTES de updateSession: un visitante sin la cookie no llega a
+ * /login ni a ninguna ruta privada. La respuesta de redirect conserva el
+ * mismo set de cabeceras de seguridad que el resto del proxy.
+ */
+function disclaimerGate(
+  request: NextRequest,
+  csp: string,
+  requestId: string
+): NextResponse | null {
+  if (isDisclaimerPublicPath(request.nextUrl.pathname)) return null;
+  if (request.cookies.get(DISCLAIMER_COOKIE)?.value === "true") return null;
+
+  const target = new URL("/disclaimer", request.url);
+  // sanitizeRedirect bloquea //host, URLs absolutas y CR/LF.
+  const next = sanitizeRedirect(
+    `${request.nextUrl.pathname}${request.nextUrl.search}`
+  );
+  if (next) target.searchParams.set("redirect", next);
+
+  const response = NextResponse.redirect(target);
+  applySecurityHeaders(response, csp, requestId);
+  return response;
+}
+
+/** Aplica el set de cabeceras de seguridad del proxy sobre la respuesta. */
+function applySecurityHeaders(
+  response: NextResponse,
+  csp: string,
+  requestId: string
+): void {
   response.headers.set("Content-Security-Policy", csp);
   response.headers.set("X-Request-Id", requestId);
   response.headers.set(
@@ -175,17 +222,12 @@ async function runProxy(
   );
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set(
-    "Referrer-Policy",
-    "strict-origin-when-cross-origin"
-  );
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
     "Permissions-Policy",
     "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
   );
   response.headers.set("X-XSS-Protection", "1; mode=block");
-
-  return response;
 }
 
 /**

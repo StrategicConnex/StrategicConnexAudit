@@ -9,6 +9,10 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import {
+  isDisclaimerPublicPath,
+  sanitizeRedirect,
+} from "@/shared/lib/disclaimer";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -20,9 +24,19 @@ vi.mock("@/shared/lib/supabase/middleware", () => ({
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
-function createMockRequest(path: string = "/login"): NextRequest {
+function createMockRequest(
+  path: string = "/login",
+  options: { disclaimer?: boolean } = {}
+): NextRequest {
+  const headers: Record<string, string> = { "user-agent": "test-agent" };
+  // La mayoría de los tests verifican cabeceras: viajan con la cookie ya
+  // aceptada para llegar hasta updateSession. Los tests del gate pasan
+  // `{ disclaimer: false }`.
+  if (options.disclaimer !== false) {
+    headers.cookie = "disclaimer_accepted=true";
+  }
   return new NextRequest(new Request(`http://localhost:3000${path}`, {
-    headers: { "user-agent": "test-agent" },
+    headers,
   }));
 }
 
@@ -244,5 +258,115 @@ describe("Proxy — Security Headers", () => {
     // updateSession nunca completó → no hubo passthrough del request
     expect(response.headers.get("content-type")).toContain("application/json");
     vi.restoreAllMocks();
+  });
+});
+
+describe("Proxy — Disclaimer gate (antes de la auth)", () => {
+  let proxyFn: typeof import("./proxy").default;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockUpdateSession.mockResolvedValue(
+      new Response(null, { headers: { "content-type": "text/html" } })
+    );
+    proxyFn = (await import("./proxy")).default;
+  });
+
+  function locationOf(response: Response): URL {
+    return new URL(response.headers.get("location") ?? "http://invalid/");
+  }
+
+  it("sin cookie: / redirige a /disclaimer?redirect=%2F", async () => {
+    const response = await proxyFn(createMockRequest("/", { disclaimer: false }));
+    expect(response.status).toBe(307);
+    expect(locationOf(response).pathname).toBe("/disclaimer");
+    expect(locationOf(response).searchParams.get("redirect")).toBe("/");
+  });
+
+  it("sin cookie: /login redirige al disclaimer y NO consulta la sesión", async () => {
+    const response = await proxyFn(createMockRequest("/login", { disclaimer: false }));
+    expect(response.status).toBe(307);
+    expect(locationOf(response).searchParams.get("redirect")).toBe("/login");
+    expect(mockUpdateSession).not.toHaveBeenCalled();
+  });
+
+  it("sin cookie: conserva el query string en el redirect", async () => {
+    const response = await proxyFn(
+      createMockRequest("/dashboard?tab=x&y=1", { disclaimer: false })
+    );
+    expect(locationOf(response).searchParams.get("redirect")).toBe(
+      "/dashboard?tab=x&y=1"
+    );
+  });
+
+  it("el redirect conserva las cabeceras de seguridad del proxy", async () => {
+    const response = await proxyFn(createMockRequest("/login", { disclaimer: false }));
+    expect(response.headers.get("content-security-policy")).toContain(
+      "default-src 'self'"
+    );
+    expect(response.headers.get("x-frame-options")).toBe("DENY");
+    expect(response.headers.get("strict-transport-security")).toContain(
+      "max-age=31536000"
+    );
+  });
+
+  it("con cookie: /login renderiza y sí se ejecuta updateSession", async () => {
+    const response = await proxyFn(createMockRequest("/login"));
+    expect(response.headers.get("location")).toBeNull();
+    expect(mockUpdateSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("una cookie con otro valor no cuenta como aceptación", async () => {
+    const request = new NextRequest(
+      new Request("http://localhost:3000/login", {
+        headers: { cookie: "disclaimer_accepted=no", "user-agent": "test-agent" },
+      })
+    );
+    const response = await proxyFn(request);
+    expect(locationOf(response).pathname).toBe("/disclaimer");
+  });
+
+  it.each([
+    "/disclaimer",
+    "/api/auth/callback",
+    "/_next/static/chunk.js",
+    "/monitoring",
+    "/sw.js",
+  ])("sin cookie: %s pasa sin redirección", async (routePath) => {
+    const response = await proxyFn(createMockRequest(routePath, { disclaimer: false }));
+    expect(response.headers.get("location")).toBeNull();
+    expect(mockUpdateSession).toHaveBeenCalledTimes(1);
+  });
+
+  describe("sanitizeRedirect", () => {
+    it("acepta rutas internas", () => {
+      expect(sanitizeRedirect("/dashboard?tab=1")).toBe("/dashboard?tab=1");
+    });
+
+    it.each([
+      "//evil.com",
+      "https://evil.com",
+      "/\\evil.com",
+      "/dashboard\r\nSet-Cookie: x=1",
+      "",
+    ])("rechaza %p", (candidate) => {
+      expect(sanitizeRedirect(candidate)).toBeNull();
+    });
+  });
+
+  describe("isDisclaimerPublicPath", () => {
+    it("/login NO es pública", () => {
+      expect(isDisclaimerPublicPath("/login")).toBe(false);
+    });
+
+    it("/api y sus subrutas son públicas", () => {
+      expect(isDisclaimerPublicPath("/api")).toBe(true);
+      expect(isDisclaimerPublicPath("/api/auth/callback")).toBe(true);
+    });
+
+    it("no confunde prefijos parecidos", () => {
+      expect(isDisclaimerPublicPath("/apix")).toBe(false);
+      expect(isDisclaimerPublicPath("/_nextjs")).toBe(false);
+    });
   });
 });

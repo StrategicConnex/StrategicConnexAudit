@@ -1,73 +1,61 @@
-import { createClient } from '@/shared/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { Info, Shield } from 'lucide-react';
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { Info, Shield } from "lucide-react";
+import {
+  DISCLAIMER_COOKIE,
+  isDisclaimerPublicPath,
+  resolveRedirectTarget,
+  sanitizeRedirect,
+} from "@/shared/lib/disclaimer";
+import { DisclaimerForm } from "./DisclaimerForm";
+import esMessages from "./es.json";
+import enMessages from "./en.json";
 
 export const metadata = {
-  title: 'Aviso Legal - StrategicAudit Pro',
+  title: "Aviso Legal - StrategicAudit Pro",
   description:
-    'Aviso legal de StrategicAudit Pro. La plataforma se encuentra en fase beta; algunas funcionalidades están siendo probadas antes de su lanzamiento completo.',
+    "Aviso legal de StrategicAudit Pro. La plataforma se encuentra en fase beta; algunas funcionalidades están siendo probadas antes de su lanzamiento completo.",
 };
 
-const translations = {
-  es: {
-    title: 'Aviso Legal',
-    intro:
-      'Este producto está actualmente en fase beta. Algunas funcionalidades pueden estar siendo probadas activamente antes de su lanzamiento completo.',
-    bullets: [
-      'Funcionalidades en prueba activa',
-      'Posibles errores o comportamientos inesperados',
-      'Cambios sin previo aviso',
-      'El servicio se proporciona "tal cual" durante este período de pruebas',
-    ],
-    reportTitle: 'Reportar un problema',
-    reportIntro:
-      'Si encuentras algún error o problema de seguridad, por favor repórtalo inmediatamente a:',
-    reportHint:
-      'Incluye en tu reporte: descripción del problema, pasos para reproducirlo, capturas de pantalla si aplica y navegador/version utilizada.',
-    acceptLabel: 'He leído y acepto los términos del aviso legal',
-    accept: 'Aceptar',
-    updated: 'Última actualización: Octubre 2026',
-  },
-  en: {
-    title: 'Legal Notice',
-    intro:
-      'This product is currently in beta phase. Some features may be unstable and subject to change without notice.',
-    bullets: [
-      'Features under active testing',
-      'Possible errors or unexpected behavior',
-      'Changes without prior notice',
-      'The service is provided "as is" during this testing period',
-    ],
-    reportTitle: 'Report an issue',
-    reportIntro:
-      'If you encounter any errors, unexpected behaviors, or security issues while using the platform, please report them immediately to:',
-    reportHint:
-      'Include in your report: problem description, steps to reproduce, screenshots if applicable, and browser/version used.',
-    acceptLabel: 'I have read and accept the terms of the legal notice',
-    accept: 'Accept',
-    updated: 'Last updated: October 2026',
-  },
-};
+/**
+ * `?redirect=` lo escribe el proxy con la ruta que el visitante intentó abrir.
+ * Se re-sanitiza aquí porque es un parámetro de URL controlable por el usuario.
+ */
+function safeRedirect(candidate: string | null): string {
+  if (sanitizeRedirect(candidate) === null) return "/login";
+  const target = resolveRedirectTarget(candidate);
+  // Nunca rebotar a la propia página del aviso: sería un bucle.
+  if (isDisclaimerPublicPath(target) && target.startsWith("/disclaimer")) {
+    return "/login";
+  }
+  return target;
+}
 
 export default async function DisclaimerPage({
   searchParams,
 }: {
   searchParams: Promise<{ redirect?: string }>;
 }) {
-  const { getLocale } = await import('@/i18n/request');
-  const currentLocale = await getLocale();
-  const t = translations[currentLocale === 'en' ? 'en' : 'es'];
+  const { getLocale } = await import("@/i18n/request");
+  const locale = await getLocale();
+  const messages = (locale === "en" ? enMessages : esMessages).disclaimer;
 
-  const redirectTo = (await searchParams).redirect ?? '/dashboard';
+  const redirectTo = safeRedirect((await searchParams).redirect ?? null);
 
+  const cookieStore = await cookies();
+  const disclaimerAccepted =
+    cookieStore.get(DISCLAIMER_COOKIE)?.value === "true";
+
+  const { createClient } = await import("@/shared/lib/supabase/server");
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) {
+  // Un usuario con sesión que ya aceptó no necesita ver el aviso otra vez.
+  // Sin la comprobación de la cookie, el proxy lo devolvería aquí y se
+  // produciría un bucle redirect → /disclaimer → redirect.
+  if (user && disclaimerAccepted) {
     redirect(redirectTo);
   }
 
@@ -79,21 +67,21 @@ export default async function DisclaimerPage({
       >
         <Info className="inline h-4 w-4 align-middle mr-1.5 text-foreground/60" />
         <span className="align-middle">
-          Este producto está en{' '}
+          Este producto está en{" "}
           <a
             href="/disclaimer"
             className="underline underline-offset-2 hover:text-foreground"
           >
             fase beta
-          </a>
-          {' '}y puede contener cambios sin previo aviso. Consultá el{' '}
+          </a>{" "}
+          y puede contener cambios sin previo aviso. Consultá el{" "}
           <a
             href="/disclaimer"
             className="underline underline-offset-2 hover:text-foreground"
           >
             aviso legal
-          </a>
-          {' '}para más detalles.
+          </a>{" "}
+          para más detalles.
         </span>
       </div>
       <main className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-6">
@@ -101,14 +89,14 @@ export default async function DisclaimerPage({
           <div className="flex items-center gap-3 text-primary">
             <Shield className="h-8 w-8" aria-hidden />
             <h1 className="text-2xl font-bold text-foreground">
-              {t.title}
+              {messages.title}
             </h1>
           </div>
 
           <div className="rounded-lg border border-border p-6 text-balance">
-            <p className="text-muted-foreground">{t.intro}</p>
+            <p className="text-muted-foreground">{messages.intro}</p>
             <ul className="mt-4 space-y-2 text-muted-foreground">
-              {t.bullets.map((bullet) => (
+              {messages.bullets.map((bullet) => (
                 <li key={bullet} className="list-none pl-6 leading-relaxed">
                   <span className="text-primary/80">•</span> {bullet}
                 </li>
@@ -118,9 +106,9 @@ export default async function DisclaimerPage({
 
           <div className="rounded-lg border border-border bg-surface p-6 text-balance">
             <h2 className="font-semibold text-foreground">
-              {t.reportTitle}
+              {messages.reportTitle}
             </h2>
-            <p className="mt-2 text-muted-foreground">{t.reportIntro}</p>
+            <p className="mt-2 text-muted-foreground">{messages.reportIntro}</p>
             <a
               href="mailto:palacios_juan@hotmail.com"
               className="mt-3 inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground text-sm transition-colors hover:bg-card/80 focus:outline-none focus:ring-2 focus:ring-ring"
@@ -128,27 +116,19 @@ export default async function DisclaimerPage({
               <Info className="h-4 w-4" aria-hidden />
               palacios_juan@hotmail.com
             </a>
-            <p className="mt-3 text-xs text-muted-foreground">{t.reportHint}</p>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {messages.reportHint}
+            </p>
           </div>
 
-          <form
-            action={async () => {
-              // acceptDisclaimer removed - TBD
-            }}
-            className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 text-sm"
-          >
-            <Checkbox id="disclaimer-accept" />
-            <label
-              htmlFor="disclaimer-accept"
-              className="flex-1 cursor-pointer text-muted-foreground"
-            >
-              {t.acceptLabel}
-            </label>
-            <Button type="submit">{t.accept}</Button>
-          </form>
+          <DisclaimerForm
+            redirectTo={redirectTo}
+            acceptLabel={messages.acceptLabel}
+            submitLabel={messages.accept}
+          />
 
           <p className="text-xs text-muted-foreground text-center">
-            {t.updated}
+            {messages.updated}
           </p>
         </div>
       </main>

@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
     return [
       {
         // SEO / crawler directives — NOT security; security headers
-        // are applied dynamically by src/middleware.ts with a per-request
+        // are applied dynamically by src/proxy.ts with a per-request
         // CSP nonce, HSTS, XFO, XCTO, Referrer-Policy, and Permissions-Policy.
         source: "/(.*)",
         headers: [
