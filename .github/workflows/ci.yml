@@ -19,6 +19,15 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+
+      # Next.js 16 renombró middleware.ts → proxy.ts y exige UN solo
+      # entrypoint. Si ambos coexisten, `next build` falla con el mensaje
+      # "Both middleware file ... and proxy file ... are detected", que no
+      # tiene bandera de configuración: sólo se resuelve borrando el viejo.
+      # Este guard lo detecta antes de gastar minutos de build.
+      - name: Verificar entrypoint único (Next.js 16)
+        run: pnpm check:entrypoint
+
       - run: pnpm lint
 
       # RULE-001 (GOLDEN_RULES v3.1): FALLA si env-secrets se importa desde
