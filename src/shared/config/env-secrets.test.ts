@@ -10,9 +10,6 @@ describe("env-secrets — getters server-only (RULE-001)", () => {
     vi.stubEnv("DATABASE_URL", "postgres://db");
     vi.stubEnv("DIRECT_URL", "postgres://direct");
     vi.stubEnv("TRIGGER_SECRET_KEY", "tr_secret");
-    vi.stubEnv("GEMINI_API_KEY", "gemini-key");
-    vi.stubEnv("BEARER_API_KEY", "bearer-key");
-    vi.stubEnv("XIAOMI_BASE_URL", "https://ai.internal");
     vi.stubEnv("OPENROUTER_API_KEY", "or-key");
 
     const { envSecrets } = await import("./env-secrets");
@@ -20,9 +17,6 @@ describe("env-secrets — getters server-only (RULE-001)", () => {
     expect(envSecrets.databaseUrl).toBe("postgres://db");
     expect(envSecrets.directUrl).toBe("postgres://direct");
     expect(envSecrets.triggerSecretKey).toBe("tr_secret");
-    expect(envSecrets.geminiApiKey).toBe("gemini-key");
-    expect(envSecrets.bearerApiKey).toBe("bearer-key");
-    expect(envSecrets.aiBaseUrl).toBe("https://ai.internal");
     expect(envSecrets.openRouterApiKey).toBe("or-key");
   });
 
@@ -30,22 +24,19 @@ describe("env-secrets — getters server-only (RULE-001)", () => {
     const { envSecrets } = await import("./env-secrets");
     expect(envSecrets.supabaseServiceKey).toBe("");
     expect(envSecrets.databaseUrl).toBe("");
-    expect(envSecrets.geminiApiKey).toBe("");
   });
 
-  it("bearerApiKey: usa el alias legacy Bearer_API_KEY cuando falta el canónico", async () => {
+  it("los getters legados de IA ya no existen (Gemini/Bearer/Xiaomi, 2026-10-17)", async () => {
+    // Medición en vivo: ninguna de esas claves funcionaba y ningún módulo de
+    // runtime las consumía. Dejar getters sin consumidor sugiere failovers
+    // que el producto no tiene (ver AI-CONNECTIONS-REPORT.md).
     const { envSecrets } = await import("./env-secrets");
-    vi.stubEnv("Bearer_API_KEY", "legacy-key");
-    expect(envSecrets.bearerApiKey).toBe("legacy-key");
-  });
-
-  // NOTA: en Windows las env vars son case-insensitive, así que NO se pueden
-  // stubbear BEARER_API_KEY y Bearer_API_KEY a la vez (la segunda sobrescribe
-  // la primera). En Linux/Vercel son variables distintas y el canónico gana.
-  it("bearerApiKey: devuelve el canónico BEARER_API_KEY cuando está definido", async () => {
-    const { envSecrets } = await import("./env-secrets");
-    vi.stubEnv("BEARER_API_KEY", "canonical-key");
-    expect(envSecrets.bearerApiKey).toBe("canonical-key");
+    expect("geminiApiKey" in envSecrets).toBe(false);
+    expect("bearerApiKey" in envSecrets).toBe(false);
+    expect("aiBaseUrl" in envSecrets).toBe(false);
+    // Lo que SÍ existe: el par real primario + failover.
+    expect(envSecrets.openRouterApiKey).toBe("");
+    expect(envSecrets.anthropicApiKey).toBe("");
   });
 
   it("openRouterBaseUrl tiene default público sin variable", async () => {

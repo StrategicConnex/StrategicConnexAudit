@@ -15,10 +15,6 @@ export const envSecrets = {
   get databaseUrl() { return process.env.DATABASE_URL || ""; },
   get directUrl() { return process.env.DIRECT_URL || ""; },
   get triggerSecretKey() { return process.env.TRIGGER_SECRET_KEY || ""; },
-  get geminiApiKey() { return process.env.GEMINI_API_KEY || ""; },
-  // CS-302 fix: nombre canónico BEARER_API_KEY con alias legacy Bearer_API_KEY.
-  get bearerApiKey() { return process.env.BEARER_API_KEY || process.env.Bearer_API_KEY || ""; },
-  get aiBaseUrl() { return process.env.XIAOMI_BASE_URL || ""; },
   get openRouterApiKey() { return process.env.OPENROUTER_API_KEY || ""; },
   get openRouterBaseUrl() { return process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1"; },
   // P2-1: failover inter-proveedor (opcional; sin key todo sigue en OpenRouter).
@@ -26,3 +22,16 @@ export const envSecrets = {
   // P1-5: clave de cifrado de secretos en reposo (32 bytes hex).
   get dataEncryptionKey() { return process.env.DATA_ENCRYPTION_KEY || ""; },
 };
+
+/*
+ * PROVEEDORES DE IA: sólo OpenRouter (primario) y Anthropic (failover P2-1).
+ *
+ * Eliminados el 2026-10-17 tras medirlos en vivo con
+ * `tests/integration/ai-real-connections.test.ts`:
+ *   · GEMINI_API_KEY  → Google la rechaza: «Your API key was reported as leaked»
+ *   · BEARER_API_KEY / Bearer_API_KEY y XIAOMI_BASE_URL → apifreellm: «Incorrect API key»
+ * Los tres getters no tenían NINGÚN consumidor en runtime — sólo su propio
+ * test — y su existencia sugería failovers que el producto no tiene.
+ * `NVIDIA_API_KEY` nunca tuvo getter: se sigue probando en el test de conexiones.
+ * Ver tests/integration/AI-CONNECTIONS-REPORT.md.
+ */
