@@ -34,17 +34,67 @@ import { ROOT, splitStatements } from "../../scripts/db/rls-inventory.mjs";
 import type { DbExecutor } from "@/shared/db/executor";
 
 const MIGRATIONS_DIR = path.join(ROOT, "drizzle");
-const MIGRATION_CORE = path.join(MIGRATIONS_DIR, "0025_rls_core_defense_in_depth.sql");
 const MIGRATION_FASE2 = path.join(MIGRATIONS_DIR, "0027_rls_fase2.sql");
 
 /** Handle de drizzle sobre PGlite (el fixture solo lo usa para abrir sesión). */
 export type RlsOrm = ReturnType<typeof drizzle>;
 
-/** Funciones helper reales de la migración 0025, usadas por las policies. */
+/**
+ * Última definición de una función helper en `drizzle/` (la efectiva).
+ *
+ * Las migraciones se aplican en orden y `CREATE OR REPLACE FUNCTION` gana la
+ * última: 0025 definía `user_has_project_access` con una rama de membresía
+ * (`project_members`) y 0052 la reescribe a owner puro tras eliminar la tabla.
+ * Aplicar la de 0025 en un fixture sin esa tabla falla en el propio CREATE
+ * (Postgres valida el cuerpo de las funciones `sql`), así que el fixture usa la
+ * versión vigente —no una imitación— tal como queda en la base tras migrar.
+ */
+export function effectiveFunctionDdl(name: string): string {
+  const re = new RegExp(`^CREATE (OR REPLACE )?FUNCTION public\\.${name}\\b`);
+  const files = fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
+  let latest: string | undefined;
+  for (const file of files) {
+    for (const stmt of splitStatements(fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8")) as string[]) {
+      if (re.test(stmt)) latest = stmt;
+    }
+  }
+  if (!latest) throw new Error(`No se encontró la definición de public.${name} en drizzle/`);
+  return latest;
+}
+
+/** Funciones helper vigentes (0025, con las reescrituras posteriores ya aplicadas). */
 export function helperFunctions(): string[] {
-  return (splitStatements(fs.readFileSync(MIGRATION_CORE, "utf8")) as string[]).filter((s) =>
-    /FUNCTION public\.(current_auth_uid|user_has_project_access)\b/.test(s),
-  );
+  return ["current_auth_uid", "user_has_project_access"].map(effectiveFunctionDdl);
+}
+
+/**
+ * Última definición de cada policy de `tables`, en `drizzle/` (la efectiva).
+ *
+ * Mismo criterio que `effectiveFunctionDdl`: 0052 reescribe a owner-only las
+ * policies de 0016/0017/0022/0023/0024 que hacían subquery contra
+ * `project_members`. Aplicar la versión vieja en un fixture sin esa tabla no
+ * sólo falla: describiría un estado que la base ya no tiene.
+ */
+export function effectivePolicyDdl(tables: string[]): string[] {
+  const wanted = new Set(tables);
+  const byPolicy = new Map<string, string>();
+  const order: string[] = [];
+  const files = fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
+
+  for (const file of files) {
+    for (const stmt of splitStatements(
+      fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8"),
+    ) as string[]) {
+      // Sin ancla `^`: `splitStatements` separa por `--> statement-breakpoint`,
+      // así que un chunk puede empezar con el `DROP POLICY` de la misma policy.
+      const m = /CREATE POLICY\s+"?([^\s"]+)"?\s+ON\s+"?([^\s"(]+)"?/i.exec(stmt);
+      if (!m || !wanted.has(m[2]!) || m[1]!.includes("%")) continue;
+      const key = `${m[2]}.${m[1]}`.toLowerCase();
+      if (!byPolicy.has(key)) order.push(key);
+      byPolicy.set(key, stmt);
+    }
+  }
+  return order.map((k) => byPolicy.get(k)!);
 }
 
 /** Primera sentencia de las migraciones que casa con `re` (se leen en orden de archivo). */
@@ -128,12 +178,6 @@ const BASE_TABLES = `
     name text NOT NULL,
     domain text
   );
-  CREATE TABLE project_members (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id uuid NOT NULL,
-    user_id uuid NOT NULL,
-    role text DEFAULT 'viewer' NOT NULL
-  );
 `;
 
 export interface RlsFixture {
@@ -184,7 +228,7 @@ export async function createRlsBaseFixture(extraDdl = ""): Promise<RlsFixture> {
 export async function createRlsFixture(table: string, policyName: string): Promise<RlsFixture> {
   const fixture = await createRlsBaseFixture(realTableDdl(table));
   await fixture.pg.exec(
-    `GRANT SELECT, INSERT, UPDATE, DELETE ON projects, project_members, "${table}" TO authenticated;`,
+    `GRANT SELECT, INSERT, UPDATE, DELETE ON projects, "${table}" TO authenticated;`,
   );
   await fixture.pg.exec(`ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`);
   await fixture.pg.exec(instantiatePolicy(policyTemplate(), policyName, table));

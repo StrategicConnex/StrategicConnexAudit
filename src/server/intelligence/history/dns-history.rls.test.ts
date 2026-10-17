@@ -95,13 +95,18 @@ describe("P0.2-D — el historial DNS no cruza de tenant (Postgres real)", () =>
     expect(changes).toEqual([]);
   });
 
-  it("control positivo: al ser miembro, el mismo usuario SÍ ve el historial DNS", async () => {
+  it("control positivo: al pasar a ser propietario, el mismo usuario SÍ ve el historial DNS", async () => {
+    // project_members desapareció en 0052 (owner-only): el único modo de que el
+    // usuario B acceda es la propiedad. Se traspasa y se devuelve al final, para
+    // que los casos de escritura de más abajo sigan midiendo al dueño original.
     await fixture.pg.exec(
-      `INSERT INTO project_members (project_id, user_id, role) VALUES ('${PROJECT_A}', '${STRANGER_B}', 'viewer');`,
+      `UPDATE projects SET owner_id = '${STRANGER_B}' WHERE id = '${PROJECT_A}';`,
     );
 
     const result = await as(STRANGER_B, (tx) => queryDnsHistory(tx, { projectId: PROJECT_A }));
     expect(result.totalCount).toBe(2);
+
+    await fixture.pg.exec(`UPDATE projects SET owner_id = '${OWNER_A}' WHERE id = '${PROJECT_A}';`);
   });
 
   it("la policy ya cubre la escritura: un no-miembro no puede insertar en el proyecto ajeno", async () => {

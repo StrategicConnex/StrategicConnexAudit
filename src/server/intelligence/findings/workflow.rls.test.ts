@@ -26,6 +26,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import "@/shared/db/schemas";
 import {
   createRlsBaseFixture,
+  effectivePolicyDdl,
   realTableDdl,
   realTypeDdl,
   statementsMatching,
@@ -34,19 +35,24 @@ import {
 import type { DbExecutor } from "@/shared/db/executor";
 import { transitionFinding, suppressFinding, getFindingScope } from "./workflow";
 
-const UPDATE_MIGRATION = "0046_intelligence_update_policies.sql";
 const LIFECYCLE_MIGRATION = "2026-10-05_finding_lifecycle.sql";
-const FINDINGS_POLICY_RE = /^CREATE POLICY .* ON intelligence_findings\b/;
+/**
+ * Policies vigentes de `intelligence_findings`: SELECT (0022), INSERT (0023) y
+ * UPDATE (0046), con la reescritura owner-only de 0052 ya aplicada.
+ */
+const POLICIES = effectivePolicyDdl(["intelligence_findings"]);
 
 const OWNER_A = "11111111-1111-1111-1111-111111111111";
 const MEMBER_B = "22222222-2222-2222-2222-222222222222";
 const STRANGER_C = "33333333-3333-3333-3333-333333333333";
 const PROJECT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const PROJECT_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const PROJECT_C = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 
 /** Una fila por caso: los escenarios comparten fixture, así que no se pisan. */
 const F_OWNER = "f1000000-0000-4000-8000-0000000000b1";
 const F_MEMBER = "f1000000-0000-4000-8000-0000000000b2";
+const F_MEMBER_B = "f1000000-0000-4000-8000-0000000000b6";
 const F_STRANGER = "f1000000-0000-4000-8000-0000000000b3";
 const F_SUPPRESS = "f1000000-0000-4000-8000-0000000000b4";
 const F_NO_POLICY = "f1000000-0000-4000-8000-0000000000b5";
@@ -65,20 +71,16 @@ async function buildFixture(escenario: Escenario): Promise<RlsFixture> {
   );
 
   await fixture.pg.exec(
-    `GRANT SELECT, INSERT, UPDATE, DELETE ON projects, project_members, users, intelligence_findings TO authenticated;`,
+    `GRANT SELECT, INSERT, UPDATE, DELETE ON projects, users, intelligence_findings TO authenticated;`,
   );
   await fixture.pg.exec(`ALTER TABLE intelligence_findings ENABLE ROW LEVEL SECURITY;`);
 
-  // Policies reales: SELECT (0022) e INSERT (0023). El INSERT de 0023 sólo
-  // declara el grant en la tabla del historial, así que el de findings se
-  // concede aquí explícitamente (igual que en la base, por DEFAULT PRIVILEGES).
-  for (const file of ["0022_rls_intelligence_realtime.sql", "0023_rls_write_policies.sql"]) {
-    for (const stmt of statementsMatching(file, FINDINGS_POLICY_RE)) await fixture.pg.exec(stmt);
-  }
-  if (escenario === "full") {
-    for (const stmt of statementsMatching(UPDATE_MIGRATION, FINDINGS_POLICY_RE)) {
-      await fixture.pg.exec(stmt);
-    }
+  // Policies reales vigentes: SELECT, INSERT y —en `full`— UPDATE. El INSERT de
+  // 0023 sólo declara su grant en la tabla del historial, así que el de findings
+  // se concede aquí explícitamente (igual que en la base, por DEFAULT PRIVILEGES).
+  for (const stmt of POLICIES) {
+    if (escenario !== "full" && /FOR UPDATE/.test(stmt)) continue;
+    await fixture.pg.exec(stmt);
   }
 
   // Ciclo de vida COMPLETO, tal como lo escribió su migración: las columnas
@@ -96,12 +98,12 @@ async function buildFixture(escenario: Escenario): Promise<RlsFixture> {
       ('${STRANGER_C}', 'c@test.local', 'client');
     INSERT INTO projects (id, owner_id, name, domain) VALUES
       ('${PROJECT_A}', '${OWNER_A}', 'Proyecto de A', 'https://a.test.local'),
+      ('${PROJECT_B}', '${MEMBER_B}', 'Proyecto de B', 'https://b.test.local'),
       ('${PROJECT_C}', '${STRANGER_C}', 'Proyecto de C', 'https://c.test.local');
-    INSERT INTO project_members (project_id, user_id, role) VALUES
-      ('${PROJECT_A}', '${MEMBER_B}', 'viewer');
     INSERT INTO intelligence_findings (id, project_id, investigation_id, severity, title, description) VALUES
       ('${F_OWNER}', '${PROJECT_A}', gen_random_uuid(), 'critical', 'hallazgo del dueño', 'desc'),
-      ('${F_MEMBER}', '${PROJECT_A}', gen_random_uuid(), 'high', 'hallazgo del miembro', 'desc'),
+      ('${F_MEMBER}', '${PROJECT_A}', gen_random_uuid(), 'high', 'hallazgo ajeno para B', 'desc'),
+      ('${F_MEMBER_B}', '${PROJECT_B}', gen_random_uuid(), 'high', 'hallazgo de B', 'desc'),
       ('${F_STRANGER}', '${PROJECT_A}', gen_random_uuid(), 'high', 'hallazgo al que C no llega', 'desc'),
       ('${F_SUPPRESS}', '${PROJECT_A}', gen_random_uuid(), 'medium', 'hallazgo a silenciar', 'desc'),
       ('${F_NO_POLICY}', '${PROJECT_A}', gen_random_uuid(), 'medium', 'hallazgo sin policy de UPDATE', 'desc'),
@@ -167,19 +169,31 @@ describe("P0.2 Oleada 2 — ciclo de vida del hallazgo bajo RLS", { timeout: 60_
     expect(row.sla_hours).toBe(24);
   });
 
-  it("un miembro no propietario también transiciona (el criterio es la membresía)", async () => {
+  it("el dueño de OTRO proyecto no transiciona el hallazgo ajeno (owner-only, P2-16)", async () => {
     const fixture = await escenario("full");
 
-    const result = await as(fixture, MEMBER_B, (tx) =>
+    // Control positivo primero: B sí transiciona lo suyo (es dueño de PROJECT_B).
+    const propio = await as(fixture, MEMBER_B, (tx) =>
+      transitionFinding(tx, {
+        findingId: F_MEMBER_B,
+        toStatus: "acknowledged",
+        actorId: MEMBER_B,
+      }),
+    );
+    expect(propio.ok).toBe(true);
+    expect(await statusOf(fixture, F_MEMBER_B)).toBe("acknowledged");
+
+    // Y no lo ajeno: `project_members` desapareció en 0052, así que ser dueño de
+    // otro proyecto no da acceso — la fila ni se ve.
+    const ajeno = await as(fixture, MEMBER_B, (tx) =>
       transitionFinding(tx, {
         findingId: F_MEMBER,
         toStatus: "acknowledged",
         actorId: MEMBER_B,
       }),
     );
-
-    expect(result.ok).toBe(true);
-    expect(await statusOf(fixture, F_MEMBER)).toBe("acknowledged");
+    expect(ajeno.ok).toBe(false);
+    expect(await statusOf(fixture, F_MEMBER)).toBe("open");
   });
 
   it("un no-miembro ni siquiera ve el hallazgo: not_found y nada escrito", async () => {

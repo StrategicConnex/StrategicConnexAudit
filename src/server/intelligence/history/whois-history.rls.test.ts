@@ -97,13 +97,15 @@ describe("P0.2-D — el historial WHOIS no cruza de tenant (Postgres real)", () 
     expect(changes).toEqual([]);
   });
 
-  it("control positivo: al ser miembro, el mismo usuario SÍ ve el historial", async () => {
-    await fixture.pg.exec(
-      `INSERT INTO project_members (project_id, user_id, role) VALUES ('${PROJECT_A}', '${STRANGER_B}', 'viewer');`,
-    );
+  it("control positivo: al pasar a ser propietario, el mismo usuario SÍ ve su historial", async () => {
+    // Owner-only desde 0052: se traspasa el proyecto, se mide y se devuelve, para
+    // que los casos de escritura posteriores sigan midiendo al dueño original.
+    await fixture.pg.exec(`UPDATE projects SET owner_id = '${STRANGER_B}' WHERE id = '${PROJECT_A}';`);
 
     const result = await as(STRANGER_B, (tx) => queryWhoisHistory(tx, { projectId: PROJECT_A }));
     expect(result.totalCount).toBe(2);
+
+    await fixture.pg.exec(`UPDATE projects SET owner_id = '${OWNER_A}' WHERE id = '${PROJECT_A}';`);
   });
 
   it("un no-miembro no puede escribir historial en el proyecto ajeno (WITH CHECK)", async () => {

@@ -4,10 +4,11 @@
  * (PGlite: Postgres compilado a WASM, en proceso).
  *
  * El valor de este test está en que NO usa una imitación: extrae el DDL real
- * de `drizzle/0025_rls_core_defense_in_depth.sql` (las funciones helper y las
- * cuatro policies de `projects`) y lo aplica a un fixture con la misma forma
- * de tabla. Así, si alguien rompe la policy en la migración, este test lo
- * detecta sin necesidad de una base de datos.
+ * de `drizzle/0025_rls_core_defense_in_depth.sql` (las cuatro policies de
+ * `projects`) y la definición **vigente** de sus funciones helper (0025, con la
+ * reescritura owner-only de 0052 ya aplicada) y lo aplica a un fixture con la
+ * misma forma de tabla. Así, si alguien rompe la policy o la función en las
+ * migraciones, este test lo detecta sin necesidad de una base de datos.
  *
  * La sesión se abre igual que `withRLS()` en producción:
  *   `set_config('request.jwt.claims', {sub}, true)` + `SET LOCAL ROLE authenticated`.
@@ -18,6 +19,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { ROOT, splitStatements } from "../../scripts/db/rls-inventory.mjs";
+import { effectiveFunctionDdl } from "../helpers/pglite-rls";
 
 const MIGRATION = path.join(ROOT, "drizzle/0025_rls_core_defense_in_depth.sql");
 const RLS_TS = path.join(ROOT, "src/shared/db/rls.ts");
@@ -26,16 +28,26 @@ const USER_A = "11111111-1111-1111-1111-111111111111";
 const USER_B = "22222222-2222-2222-2222-222222222222";
 const USER_C = "44444444-4444-4444-4444-444444444444";
 const PROJECT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+// UUIDs propios para los proyectos de B: concatenar un sufijo a PROJECT_A
+// producía literales que Postgres rechaza (invalid input syntax for type uuid).
+const PROJECT_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+const PROJECT_B2 = "dddddddd-dddd-dddd-dddd-dddddddddddd";
+const PROJECT_B3 = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
 
 /** DDL real de la migración, en el orden en que aparece. */
 function realDdl() {
   const statements = splitStatements(fs.readFileSync(MIGRATION, "utf8"));
   const picked = statements.filter((s) =>
-    /FUNCTION public\.(current_auth_uid|user_has_project_access|current_user_is_platform_admin)\b/.test(s) ||
     /ALTER TABLE projects ENABLE ROW LEVEL SECURITY/.test(s) ||
     /CREATE POLICY "projects_/.test(s),
   );
-  return picked;
+  // Las funciones van primero: las policies las invocan al crearse.
+  return [
+    effectiveFunctionDdl("current_auth_uid"),
+    effectiveFunctionDdl("user_has_project_access"),
+    effectiveFunctionDdl("current_user_is_platform_admin"),
+    ...picked,
+  ];
 }
 
 const FIXTURE = `
@@ -51,13 +63,7 @@ const FIXTURE = `
     name text NOT NULL,
     domain text
   );
-  CREATE TABLE project_members (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id uuid NOT NULL,
-    user_id uuid NOT NULL,
-    role text DEFAULT 'viewer' NOT NULL
-  );
-  GRANT SELECT, INSERT, UPDATE, DELETE ON projects, project_members, users TO authenticated;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON projects, users TO authenticated;
 `;
 
 describe("D3 — aislamiento multi-tenant vía RLS (Postgres real)", () => {
@@ -122,12 +128,22 @@ describe("D3 — aislamiento multi-tenant vía RLS (Postgres real)", () => {
     expect(rows).toHaveLength(0);
   });
 
-  // CONTROL POSITIVO: sin esto, el test anterior pasaría aunque la consulta
+  // CONTROL POSITIVO: sin esto, el test anterior podría pasar aunque la consulta
   // fallara por cualquier otro motivo (grant ausente, tabla vacía…).
-  it("control positivo: B ve el proyecto en cuanto es miembro", async () => {
-    await db.exec(`INSERT INTO project_members (project_id, user_id, role) VALUES ('${PROJECT_A}', '${USER_B}', 'viewer');`);
-    const rows = await asUser(USER_B, (d) => d.query("SELECT name FROM projects").then((r) => r.rows));
+  it("control positivo: B ve el proyecto en cuanto es propietario", async () => {
+    await db.exec(`INSERT INTO projects (id, owner_id, name) VALUES ('${PROJECT_B}', '${USER_B}', 'Proyecto de B');`);
+    const rows = await asUser(USER_B, (d) => d.query(`SELECT name FROM projects WHERE id = '${PROJECT_B}'`).then((r) => r.rows));
     expect(rows).toHaveLength(1);
+  });
+
+  it("control positivo: un proyecto nuevo de B no es visible para A ni para C", async () => {
+    await db.exec(`INSERT INTO projects (id, owner_id, name) VALUES ('${PROJECT_B2}', '${USER_B}', 'Proyecto de B 2');`);
+    expect(
+      await asUser(USER_A, (d) => d.query(`SELECT count(*)::int AS n FROM projects WHERE id = '${PROJECT_B2}'`).then((r) => r.rows[0].n)),
+    ).toBe(0);
+    expect(
+      await asUser(USER_C, (d) => d.query(`SELECT count(*)::int AS n FROM projects WHERE id = '${PROJECT_B2}'`).then((r) => r.rows[0].n)),
+    ).toBe(0);
   });
 
   it("un usuario con acceso no puede borrar el proyecto del dueño", async () => {
@@ -160,6 +176,15 @@ describe("D3 — aislamiento multi-tenant vía RLS (Postgres real)", () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0].owner_id).toBe(USER_A);
+  });
+
+  it("el usuario B ve su propio proyecto que crea como owner", async () => {
+    await asUser(USER_B, async () => {
+      await db.exec(`INSERT INTO projects (id, owner_id, name) VALUES ('${PROJECT_B3}', '${USER_B}', 'Proyecto de B 3');`);
+      const rows = await db.query(`SELECT name, owner_id FROM projects WHERE id = '${PROJECT_B3}'`);
+      expect(rows.rows).toHaveLength(1);
+      expect(rows.rows[0].owner_id).toBe(USER_B);
+    });
   });
 
   it("la sesión se limpia tras el ROLLBACK (sin contaminar la conexión)", async () => {

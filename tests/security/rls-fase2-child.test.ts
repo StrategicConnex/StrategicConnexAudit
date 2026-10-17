@@ -18,8 +18,8 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { ROOT, splitStatements } from "../../scripts/db/rls-inventory.mjs";
+import { effectiveFunctionDdl } from "../helpers/pglite-rls";
 
-const MIG_0025 = path.join(ROOT, "drizzle/0025_rls_core_defense_in_depth.sql");
 const MIG_0027 = path.join(ROOT, "drizzle/0027_rls_fase2.sql");
 
 /** Tabla hija → columna FK hacia su padre. */
@@ -36,11 +36,9 @@ const USER_A = "11111111-1111-1111-1111-111111111111";
 const USER_C = "44444444-4444-4444-4444-444444444444";
 const PROJECT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
-/** DDL real de las funciones helper usadas por la policy (de 0025). */
+/** DDL real de las funciones helper usadas por la policy (0025, ya owner-only por 0052). */
 function helperDdl() {
-  return splitStatements(fs.readFileSync(MIG_0025, "utf8")).filter((s) =>
-    /FUNCTION public\.(current_auth_uid|user_has_project_access)\b/.test(s),
-  );
+  return [effectiveFunctionDdl("current_auth_uid"), effectiveFunctionDdl("user_has_project_access")];
 }
 
 /** DDL real de las cinco policies hijas (de 0027, ya corregido). */
@@ -59,7 +57,7 @@ const FIXTURE = `
   CREATE ROLE authenticated NOLOGIN;
   CREATE TABLE users (id uuid PRIMARY KEY, email text NOT NULL, role text DEFAULT 'user' NOT NULL);
   CREATE TABLE projects (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), owner_id uuid NOT NULL, name text NOT NULL);
-  CREATE TABLE project_members (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), project_id uuid NOT NULL, user_id uuid NOT NULL, role text DEFAULT 'viewer' NOT NULL);
+
   ${[...PARENTS, ...CHILDREN.map(([t]) => t)]
     .map((t) => `CREATE TABLE ${t} (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ${t === "ab_test_results" ? "test_id" : t === "report_exports" ? "report_id" : t === "competitor_keywords" ? "competitor_id" : t === "backlink_history" ? "backlink_id" : t === "integration_sync_logs" ? "integration_id" : "project_id"} uuid NOT NULL);`)
     .join("\n  ")}
@@ -151,14 +149,16 @@ describe("0027 fix — policies de las hijas sin project_id (Postgres real)", ()
 
   // CONTROL POSITIVO: sin esto, el test anterior pasaría aunque la consulta
   // fallara por otra razón (grant ausente, tabla vacía, policy mal escrita).
-  it("control positivo: C ve las filas en cuanto es miembro del proyecto", async () => {
-    await db.exec(`INSERT INTO project_members (project_id, user_id, role) VALUES ('${PROJECT_A}', '${USER_C}', 'viewer');`);
+  // project_members desapareció en 0052: el único criterio es la propiedad.
+  it("control positivo: C ve las filas en cuanto pasa a ser dueño del proyecto", async () => {
+    await db.exec(`UPDATE projects SET owner_id = '${USER_C}' WHERE id = '${PROJECT_A}'`);
     for (const [child] of CHILDREN) {
       const rows = await asUser(USER_C, (d) => d.query(`SELECT id FROM ${child}`).then((r) => r.rows));
       expect(rows, child).toHaveLength(1);
     }
   });
 });
+
 
 function parentOf(child) {
   return {

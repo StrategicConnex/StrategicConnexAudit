@@ -96,6 +96,18 @@ describe("inventario RLS (C7) — repo real", () => {
     }
     expect(soft.some((s) => s.includes("fail-closed"))).toBe(true);
   });
+
+  it("manifest no incluye project_members (eliminado en 0052)", () => {
+    const manifest = loadManifest();
+    expect(manifest.tenant).not.toContain("project_members");
+    expect(rows.find((r) => r.table === "project_members")).toBeUndefined();
+  });
+
+  it("el inventario sigue reportando la migración obsoleta de project_members como aviso definido", () => {
+    expect(
+      soft.some((s) => s.includes("project_members") && s.includes("ausente del schema")),
+    ).toBe(true);
+  });
 });
 
 describe("inventario RLS (C7) — detección de violaciones", () => {

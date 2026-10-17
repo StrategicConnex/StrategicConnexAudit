@@ -30,11 +30,11 @@ import { afterAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import {
   createRlsBaseFixture,
+  effectivePolicyDdl,
   migrationStatements,
   pgErrorReason,
   realTableDdl,
   realTypeDdl,
-  statementsMatching,
   type RlsFixture,
 } from "../helpers/pglite-rls";
 // OJO con el orden: se importa el barril de schemas (y no el módulo suelto
@@ -43,15 +43,20 @@ import {
 import { intelligenceAssets, intelligenceFindings } from "@/shared/db/schemas";
 
 const MIGRATION = "0046_intelligence_update_policies.sql";
-/** Migraciones que ya declaraban SELECT (0022) e INSERT (0023) en estas tablas. */
-const PREVIAS = ["0022_rls_intelligence_realtime.sql", "0023_rls_write_policies.sql"];
 const TABLAS = ["intelligence_assets", "intelligence_findings"];
-const POLICY_RE = new RegExp(`^CREATE POLICY .* ON (${TABLAS.join("|")})\\b`);
+/**
+ * Policies vigentes de las dos tablas: SELECT (0022), INSERT (0023) y UPDATE
+ * (0046), con la reescritura owner-only de 0052 ya aplicada. Se toma la última
+ * definición de cada nombre en `drizzle/` en vez de replicar 0022/0023, que
+ * hacían subquery contra `project_members` (tabla eliminada en 0052).
+ */
+const POLICIES = effectivePolicyDdl(TABLAS);
 
 const OWNER_A = "11111111-1111-1111-1111-111111111111";
 const MEMBER_B = "22222222-2222-2222-2222-222222222222";
 const STRANGER_C = "33333333-3333-3333-3333-333333333333";
 const PROJECT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const PROJECT_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const PROJECT_C = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 
 // Una fila por caso, para poder compartir fixture sin acoplar los tests.
@@ -90,24 +95,22 @@ async function buildFixture(escenario: Escenario): Promise<RlsFixture> {
 
   const grants = ["SELECT", "INSERT", "DELETE", ...(escenario === "policy-only" ? [] : ["UPDATE"])];
   await fixture.pg.exec(
-    `GRANT ${grants.join(", ")} ON projects, project_members, ${TABLAS.join(", ")} TO authenticated;`,
+    `GRANT ${grants.join(", ")} ON projects, ${TABLAS.join(", ")} TO authenticated;`,
   );
   for (const tabla of TABLAS) {
     await fixture.pg.exec(`ALTER TABLE ${tabla} ENABLE ROW LEVEL SECURITY;`);
   }
 
-  // Policies REALES ya existentes (SELECT de 0022, INSERT de 0023).
-  for (const file of PREVIAS) {
-    for (const stmt of statementsMatching(file, POLICY_RE)) await fixture.pg.exec(stmt);
-  }
-
+  // Policies REALES vigentes: SELECT, INSERT y UPDATE (owner-only desde 0052).
   if (escenario === "policy-only") {
-    for (const stmt of statementsMatching(MIGRATION, /^CREATE POLICY/)) await fixture.pg.exec(stmt);
+    // Sin la policy de UPDATE: el escenario que mide el GRANT ausente.
+    for (const stmt of POLICIES.filter((s) => !/FOR UPDATE/.test(s))) await fixture.pg.exec(stmt);
   } else if (escenario === "full") {
+    for (const stmt of POLICIES) await fixture.pg.exec(stmt);
     // La migración entera, sentencia a sentencia (grants incluidos).
     for (const stmt of migrationStatements(MIGRATION)) await fixture.pg.exec(stmt);
   }
-  // `none` no aplica nada de 0046: es el escenario que el hallazgo describe.
+  // `none` no aplica ninguna policy: es el escenario que el hallazgo describe.
 
   // Semilla como superusuario (en producción la hacen los workers con bypass).
   const assets: [string, string, string][] = [
@@ -120,7 +123,7 @@ async function buildFixture(escenario: Escenario): Promise<RlsFixture> {
   ];
   const findings: [string, string, string][] = [
     [FINDING_OWNER, PROJECT_A, "hallazgo del dueño"],
-    [FINDING_MEMBER, PROJECT_A, "hallazgo del miembro"],
+    [FINDING_MEMBER, PROJECT_B, "hallazgo de B"],
     [FINDING_SIN_GRANT, PROJECT_A, "hallazgo sin grant"],
     [FINDING_C, PROJECT_C, "hallazgo de C"],
   ];
@@ -128,9 +131,8 @@ async function buildFixture(escenario: Escenario): Promise<RlsFixture> {
   await fixture.pg.exec(`
     INSERT INTO projects (id, owner_id, name, domain) VALUES
       ('${PROJECT_A}', '${OWNER_A}', 'Proyecto de A', 'https://a.test.local'),
+      ('${PROJECT_B}', '${MEMBER_B}', 'Proyecto de B', 'https://b.test.local'),
       ('${PROJECT_C}', '${STRANGER_C}', 'Proyecto de C', 'https://c.test.local');
-    INSERT INTO project_members (project_id, user_id, role) VALUES
-      ('${PROJECT_A}', '${MEMBER_B}', 'viewer');
     INSERT INTO intelligence_assets (id, project_id, asset_type, value, last_seen_at) VALUES
       ${assets.map(([id, p, v]) => `('${id}', '${p}', 'domain', '${v}', '${SEED}'::timestamptz)`).join(",\n      ")};
     INSERT INTO intelligence_findings (id, project_id, investigation_id, severity, title, description) VALUES
@@ -242,22 +244,33 @@ describe("P0.2 — UPDATE de inteligencia bajo RLS (Postgres real)", { timeout: 
     expect(row.seen).toBe(true);
   });
 
-  it("un miembro no propietario también actualiza (el criterio es la membresía)", async () => {
+  it("el dueño de otro proyecto actualiza lo suyo y NO lo ajeno (owner-only, P2-16)", async () => {
     const fixture = await escenario("full");
 
-    const updated = await fixture.asUser(MEMBER_B, (tx) =>
+    // Control positivo: B es dueño de su proyecto, así que su propia fila sí se
+    // actualiza. Sin esto, el 0 filas de abajo podría deberse a cualquier cosa.
+    const own = await fixture.asUser(MEMBER_B, (tx) =>
       tx
         .update(intelligenceFindings)
-        .set({ title: "actualizado por un miembro" })
+        .set({ title: "actualizado por el dueño de B" })
         .where(eq(intelligenceFindings.id, FINDING_MEMBER))
         .returning({ id: intelligenceFindings.id }),
     );
+    expect(own).toHaveLength(1);
 
-    // El filtro «sólo propietario» que hoy tienen algunos sitios a mano dejaría
-    // aquí 0 filas: con RLS el criterio es la pertenencia al proyecto.
-    expect(updated).toHaveLength(1);
-    const row = await adminRow(fixture, `SELECT title FROM intelligence_findings WHERE id = '${FINDING_MEMBER}'`);
-    expect(row.title).toBe("actualizado por un miembro");
+    // El criterio ya no es la membresía (project_members desapareció en 0052):
+    // ser dueño de B no da acceso a las filas de A.
+    const ajeno = await fixture.asUser(MEMBER_B, (tx) =>
+      tx
+        .update(intelligenceFindings)
+        .set({ title: "intento cross-tenant" })
+        .where(eq(intelligenceFindings.id, FINDING_OWNER))
+        .returning({ id: intelligenceFindings.id }),
+    );
+    expect(ajeno).toHaveLength(0);
+
+    const row = await adminRow(fixture, `SELECT title FROM intelligence_findings WHERE id = '${FINDING_OWNER}'`);
+    expect(row.title).not.toBe("intento cross-tenant");
   });
 
   it("un no-miembro no actualiza: 0 filas, sin error y sin cambio", async () => {

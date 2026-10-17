@@ -25,18 +25,22 @@ import { afterAll, describe, expect, it } from "vitest";
 import "@/shared/db/schemas";
 import {
   createRlsBaseFixture,
+  effectivePolicyDdl,
   pgErrorReason,
   realTableDdl,
-  statementsMatching,
   type RlsFixture,
 } from "../../../../tests/helpers/pglite-rls";
 import type { DbExecutor } from "@/shared/db/executor";
 import type { DiscoveryModuleResult } from "./types";
 import { persistDiscovery } from "./orchestrator";
 
-const UPDATE_MIGRATION = "0046_intelligence_update_policies.sql";
-const PREVIAS = ["0022_rls_intelligence_realtime.sql", "0023_rls_write_policies.sql"];
-const POLICY_RE = /^CREATE POLICY .* ON intelligence_assets\b/;
+/**
+ * Policies vigentes de `intelligence_assets`: SELECT (0022), INSERT (0023) y
+ * UPDATE (0046), con la reescritura owner-only de 0052 ya aplicada. Se toma la
+ * última definición de cada nombre en `drizzle/` en vez de replicar las
+ * migraciones viejas, que hacían subquery contra `project_members`.
+ */
+const POLICIES = effectivePolicyDdl(["intelligence_assets"]);
 
 const OWNER_A = "11111111-1111-1111-1111-111111111111";
 const MEMBER_B = "22222222-2222-2222-2222-222222222222";
@@ -75,27 +79,20 @@ async function buildFixture(escenario: Escenario): Promise<RlsFixture> {
   const fixture = await createRlsBaseFixture(realTableDdl("intelligence_assets"));
 
   await fixture.pg.exec(
-    `GRANT SELECT, INSERT, DELETE, UPDATE ON projects, project_members, intelligence_assets TO authenticated;`,
+    `GRANT SELECT, INSERT, DELETE, UPDATE ON projects, intelligence_assets TO authenticated;`,
   );
   await fixture.pg.exec(`ALTER TABLE intelligence_assets ENABLE ROW LEVEL SECURITY;`);
 
-  for (const file of PREVIAS) {
-    for (const stmt of statementsMatching(file, POLICY_RE)) await fixture.pg.exec(stmt);
-  }
-  if (escenario === "full") {
-    // Solo la policy de `intelligence_assets`: la otra mitad de 0046 es de
-    // `intelligence_findings`, que no forma parte de este fixture.
-    for (const stmt of statementsMatching(UPDATE_MIGRATION, POLICY_RE)) {
-      await fixture.pg.exec(stmt);
-    }
+  for (const stmt of POLICIES) {
+    // `no-update` se queda sin la policy de UPDATE: el bloqueo de partida.
+    if (escenario !== "full" && /FOR UPDATE/.test(stmt)) continue;
+    await fixture.pg.exec(stmt);
   }
 
   await fixture.pg.exec(`
     INSERT INTO projects (id, owner_id, name, domain) VALUES
       ('${PROJECT_A}', '${OWNER_A}', 'Proyecto de A', 'https://a.test.local'),
       ('${PROJECT_C}', '${STRANGER_C}', 'Proyecto de C', 'https://c.test.local');
-    INSERT INTO project_members (project_id, user_id, role) VALUES
-      ('${PROJECT_A}', '${MEMBER_B}', 'viewer');
     INSERT INTO intelligence_assets (id, project_id, asset_type, value, last_seen_at) VALUES
       (gen_random_uuid(), '${PROJECT_A}', 'subdomain', 'conocido.example.com', '${SEED}'::timestamptz),
       (gen_random_uuid(), '${PROJECT_C}', 'subdomain', 'otro.example.com', '${SEED}'::timestamptz);
@@ -168,24 +165,29 @@ describe("P0.2 Oleada 2 — persistencia del descubrimiento bajo RLS", { timeout
     expect(row.refrescado).toBe(true);
   });
 
-  it("un miembro no propietario también persiste (el criterio es la membresía)", async () => {
+  it("un usuario no owner tampoco persiste si no es propietario del proyecto (WITH CHECK)", async () => {
     const fixture = await escenario("full");
 
-    const result = await as(fixture, MEMBER_B, (tx) =>
+    const err = await as(fixture, MEMBER_B, (tx) =>
       persistDiscovery(tx, {
         projectId: PROJECT_A,
         domain: DOMAIN,
         modules: modulesWith([{ assetType: "certificate", value: "SHA256:aa..." }]),
       }),
+    ).then(
+      () => null,
+      (e: unknown) => e,
     );
 
-    expect(result.totalNewAssets).toBe(1);
+    expect(err, "persistir en un proyecto que no es propio debía violar la policy").not.toBeNull();
+    expect(pgErrorReason(err)).toMatch(/row-level security|violates/i);
+
     const row = await adminRow(
       fixture,
       `SELECT count(*)::int AS n FROM intelligence_assets
         WHERE project_id = '${PROJECT_A}' AND asset_type = 'certificate'`,
     );
-    expect(row.n).toBe(1);
+    expect(row.n).toBe(0);
   });
 
   it("un no-miembro no puede escribir en el proyecto ajeno (WITH CHECK)", async () => {
