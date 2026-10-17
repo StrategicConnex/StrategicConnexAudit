@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { directDb } from "@/shared/db";
-import { users, subscriptionPlans, projects, projectMembers, keywordTargets } from "@/shared/db/schemas";
+import { users, subscriptionPlans, projects, keywordTargets } from "@/shared/db/schemas";
 
 export interface Entitlements {
   planName: string;
@@ -75,16 +75,8 @@ export async function getEntitlements(userId: string): Promise<Entitlements> {
     keywordsUsed = Number(row?.n ?? 0);
   }
 
-  // Asientos: owner + miembros únicos en sus proyectos.
-  const seatSet = new Set<string>([userId]);
-  if (ownedIds.length > 0) {
-    const memberRows = await directDb
-      .select({ userId: projectMembers.userId })
-      .from(projectMembers)
-      .where(inArray(projectMembers.projectId, ownedIds));
-    for (const r of memberRows) seatSet.add(r.userId);
-  }
-  const seatsUsed = seatSet.size;
+  // Asientos: hoy el producto es owner-only (ADR-0XX), así que solo cuenta al owner.
+  const seatsUsed = 1;
 
   return {
     planName: plan?.name ?? FREE_FALLBACK.planName,

@@ -18,7 +18,6 @@ import {
   issues,
   mitreEvaluations,
   mitreTechniqueResults,
-  projectMembers,
   projects,
   uptimeLogs,
 } from "@/shared/db/schemas";
@@ -90,14 +89,8 @@ async function visibleProjectIds(
       )
     );
 
-  const membership = await tx
-    .select({ id: projectMembers.projectId })
-    .from(projectMembers)
-    .where(eq(projectMembers.userId, userId));
-
   const ids = new Set<string>();
   for (const p of owned) ids.add(p.id);
-  for (const m of membership) ids.add(m.id);
   return Array.from(ids);
 }
 

@@ -1,9 +1,9 @@
 import "server-only";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { directDb } from "@/shared/db";
 import { withRLS } from "@/shared/db/rls";
 import { notifications } from "@/shared/db/schemas/notifications";
-import { projects, projectMembers } from "@/shared/db/schemas";
+import { projects } from "@/shared/db/schemas";
 import { logger } from "@/lib/logger";
 
 /**
@@ -56,24 +56,17 @@ export async function emitNotification(input: EmitNotificationInput): Promise<st
 }
 
 /**
- * Destinatarios "de gestión" de un proyecto: el owner y los miembros con rol
- * admin. Son quienes pueden actuar sobre un hallazgo vencido.
+ * Destinatarios "de gestión" de un proyecto: el owner.
+ * El proyecto es owner-only hoy (ADR-0XX); ya no hay miembros de equipo.
  */
 export async function listProjectAdmins(projectId: string): Promise<string[]> {
   const project = await directDb.query.projects.findFirst({
     where: eq(projects.id, projectId),
     columns: { ownerId: true },
   });
-  const members = await directDb
-    .select({ userId: projectMembers.userId })
-    .from(projectMembers)
-    .where(
-      and(eq(projectMembers.projectId, projectId), inArray(projectMembers.role, ["owner", "admin"])),
-    );
 
   const ids = new Set<string>();
   if (project?.ownerId) ids.add(project.ownerId);
-  for (const m of members) ids.add(m.userId);
   return [...ids];
 }
 
