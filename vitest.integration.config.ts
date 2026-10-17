@@ -27,6 +27,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // El paquete real 'server-only' lanza fuera de un runtime de React Server
+      // Components; los módulos de servidor que importan estos tests
+      // (env-secrets → providers → ai-router) lo traen en su cadena de imports.
+      'server-only': path.resolve(__dirname, './scripts/stubs/server-only.ts'),
     },
   },
 });
