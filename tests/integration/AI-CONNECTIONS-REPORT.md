@@ -114,3 +114,26 @@ superficie de ataque de la clave filtrada cerrada.
 
 **Commits de este ticket:** `a376657` (guards CASCADE) → `0744907` (test de IA reales) →
 `8e39c42` (purga de getters legados), ya en `origin/main` (verificado por `git ls-remote`).
+
+## Test del failover P2-1 (2026-10-17)
+
+Ejecutado tras el cierre: `vitest run` sobre `providers.test.ts`, `ai-router.chaos.test.ts`
+(suites D2), `ai-router.test.ts` y `env-secrets.test.ts` → **35/35 en verde**. Escenarios de
+failover verificados (HTTP simulado, sin claves ni red):
+
+1. **OpenRouter caído → Anthropic rescata:** D2 hace morir la cadena OpenRouter (HTTP 500) y
+   Anthropic responde 200 → `success: true`, `modelUsed: anthropic/claude-3-5-haiku-20241022`, y
+   el router emite el log `[AI Router] general-chat → anthropic/... [failover inter-proveedor]`.
+2. **Anthropic también caído (503):** degrada sin lanzar; el error acumula el prefijo
+   `[anthropic-failover]` y termina en `Todos los modelos de IA fallaron`.
+3. **Guardarraíl de dialecto:** con `tools` o `response_format` el failover NO se activa aunque
+   la key exista (el dialecto OpenAI no se traduce 1:1); `providers.test.ts` cubre además 429 y
+   respuesta vacía de Anthropic.
+4. **Sin `ANTHROPIC_API_KEY`:** `isAnthropicConfigured()` es false y el comportamiento es
+   idéntico al previo (sólo cadena OpenRouter interna); el test real opt-in lo declara en un
+   `console.warn` explícito.
+
+**Veredicto:** la lógica del failover P2-1 está probada y es correcta. Lo que sigue pendiente no
+es código sino provisión: un test end-to-end del failover real (OpenRouter caído + clave real)
+requiere `ANTHROPIC_API_KEY`. El dominio ya verificado como alcanzable — al configurar la key,
+este suite D2 garantiza que el camino está ejercitado.
