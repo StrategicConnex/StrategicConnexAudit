@@ -136,6 +136,29 @@ export const PROJECT_SCOPED_TABLES = new Set([
   "whois_history",
 ]);
 
+/**
+ * Hijas que NO tienen `project_id` y se cierran por CASCADA desde su padre.
+ *
+ * El cierre de alcance del auditor y de la purga (`scripts/db/fake-data-*.mjs`)
+ * las consulta: sin esta lista, una cascada legítima se leería como ampliación
+ * de alcance no declarada y el `--apply` quedaría bloqueado. Se perdió al
+ * recortar `project_members` en P2-16 (f1eecca) mientras los consumidores
+ * seguían importándola.
+ */
+export const PROJECT_SCOPED_CASCADE_TABLES = new Set([
+  "ab_test_results",
+  "backlink_history",
+  "crawl_results",
+  "competitor_keywords",
+  "developer_api_keys",
+  "integration_sync_logs",
+  "rank_history",
+  "report_exports",
+  // P0.5 (drizzle/0043): `intelligence_run_events` cuelga de una investigación
+  // por `investigation_id ON DELETE CASCADE`.
+  "intelligence_run_events",
+]);
+
 /** Tablas donde SÍ se permite borrar por patrón */
 export const PURGE_TABLES = new Set([
   "projects",

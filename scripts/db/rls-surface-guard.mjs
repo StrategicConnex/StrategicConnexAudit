@@ -70,7 +70,7 @@ function snapshotFull() {
     maxDirectDbCalls: totales.directDb,
     maxDbCallsOutsideWithRLS: totales.dbSinEnvolver,
     maxTotalCalls: totales.directDb + totales.dbSinEnvolver,
-    allowedFiles: archivos.map((a) => a.archivo),   // opcional, mantenido por compatibilidad
+    allowedFiles: archivos.map((a) => a.archivo), // opcional, mantenido por compatibilidad
     baseline: map,
   };
   // Un newline final evita que prettier reporte falta de línea final y que el
@@ -78,16 +78,21 @@ function snapshotFull() {
   // estados, no se serializa.
   fs.writeFileSync(
     path.join(root, ".rls-surface-threshold.json"),
-    JSON.stringify(thr, null, 2) + "\n",
+    JSON.stringify(thr, null, 2) + "\n"
   );
-  console.log(`Snapshot: ${archivos.length} archivos · maxDirectDb=${thr.maxDirectDbCalls} maxDb=${thr.maxDbCallsOutsideWithRLS} maxTotal=${thr.maxTotalCalls}`);
+  console.log(
+    `Snapshot: ${archivos.length} archivos · maxDirectDb=${thr.maxDirectDbCalls} maxDb=${thr.maxDbCallsOutsideWithRLS} maxTotal=${thr.maxTotalCalls}`
+  );
 }
 
 const SNAPSHOT = process.argv.includes("--snapshot") || process.argv.includes("-s");
 const PRINT_BASELINE = process.argv.includes("--print-baseline") || process.argv.includes("--pb");
 const ROOT = path.resolve(__dirname, "..", "..");
 
-if (SNAPSHOT) { snapshotFull(); process.exit(0); }
+if (SNAPSHOT) {
+  snapshotFull();
+  process.exit(0);
+}
 
 /* ── gate ──────────────────────────────────────────────────────────────── */
 let threshold;
@@ -103,23 +108,25 @@ const total = totales.directDb + totales.dbSinEnvolver;
 const baseline = threshold.baseline || {};
 
 if (PRINT_BASELINE) {
-  console.log(JSON.stringify(
-    {
-      baselineFiles: Object.keys(baseline).length,
-      actualFiles: archivosAhora.length,
-      discrepancies: diffBaseline(baseline, archivosAhora).map((d) => ({
-        archivo: d.archivo,
-        tipo: d.tipo,
-        baseline: d.antes,
-        now: d.ahora,
-        delta: d.delta,
-      })),
-      totals: { baselineExpected: threshold.maxTotalCalls ?? null, actualTotal: total },
-      allowedFilesCount: (threshold.allowedFiles ?? []).length,
-    },
-    null,
-    2,
-  ));
+  console.log(
+    JSON.stringify(
+      {
+        baselineFiles: Object.keys(baseline).length,
+        actualFiles: archivosAhora.length,
+        discrepancies: diffBaseline(baseline, archivosAhora).map((d) => ({
+          archivo: d.archivo,
+          tipo: d.tipo,
+          baseline: d.antes,
+          now: d.ahora,
+          delta: d.delta,
+        })),
+        totals: { baselineExpected: threshold.maxTotalCalls ?? null, actualTotal: total },
+        allowedFilesCount: (threshold.allowedFiles ?? []).length,
+      },
+      null,
+      2
+    )
+  );
   process.exit(0);
 }
 
@@ -132,7 +139,9 @@ if (totales.directDb > threshold.maxDirectDbCalls) {
 }
 if (totales.dbSinEnvolver > threshold.maxDbCallsOutsideWithRLS) {
   failed = true;
-  errors.push(`dbSinEnvolver supera umbral: ${totales.dbSinEnvolver} > ${threshold.maxDbCallsOutsideWithRLS}`);
+  errors.push(
+    `dbSinEnvolver supera umbral: ${totales.dbSinEnvolver} > ${threshold.maxDbCallsOutsideWithRLS}`
+  );
 }
 if (total > threshold.maxTotalCalls) {
   failed = true;
@@ -148,10 +157,16 @@ for (const d of diffBaseline(baseline, archivosAhora)) {
 if (failed) {
   console.error("❌ RLS surface guard: se detectó regresión\n");
   for (const e of errors) console.error(`   - ${e}`);
-  console.error("\n💡 Para añadir una llamada cruda, actualiza .rls-surface-threshold.json con justificación en el commit");
+  console.error(
+    "\n💡 Para añadir una llamada cruda, actualiza .rls-surface-threshold.json con justificación en el commit"
+  );
   process.exit(1);
 }
 
-console.log("✅ RLS surface guard: OK — superficie congelada (no se permiten aumentos ni archivos nuevos)");
-console.log(`   directDb: ${totales.directDb}/${threshold.maxDirectDbCalls} | dbSinEnvolver: ${totales.dbSinEnvolver}/${threshold.maxDbCallsOutsideWithRLS} | total: ${total}/${threshold.maxTotalCalls} | archivos: ${archivosAhora.length}`);
+console.log(
+  "✅ RLS surface guard: OK — superficie congelada (no se permiten aumentos ni archivos nuevos)"
+);
+console.log(
+  `   directDb: ${totales.directDb}/${threshold.maxDirectDbCalls} | dbSinEnvolver: ${totales.dbSinEnvolver}/${threshold.maxDbCallsOutsideWithRLS} | total: ${total}/${threshold.maxTotalCalls} | archivos: ${archivosAhora.length}`
+);
 process.exit(0);

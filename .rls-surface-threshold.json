@@ -1,7 +1,7 @@
 {
-  "maxDirectDbCalls": 205,
+  "maxDirectDbCalls": 191,
   "maxDbCallsOutsideWithRLS": 81,
-  "maxTotalCalls": 286,
+  "maxTotalCalls": 272,
   "allowedFiles": [
     "src/app/admin/actions.ts",
     "src/app/admin/page.tsx",
@@ -55,7 +55,6 @@
     "src/server/lib/error-handler.ts",
     "src/server/lib/invitations.ts",
     "src/server/lib/project-access.ts",
-    "src/server/lib/rbac.ts",
     "src/server/lib/remediation/service.ts",
     "src/server/notifications/emit.ts",
     "src/server/notifications/project-push.ts",
@@ -148,7 +147,7 @@
       "dbSinEnvolver": 0
     },
     "src/app/api/projects/[id]/members/route.ts": {
-      "directDb": 3,
+      "directDb": 1,
       "dbSinEnvolver": 0
     },
     "src/app/api/public/v1/adversary/route.ts": {
@@ -284,7 +283,7 @@
       "dbSinEnvolver": 0
     },
     "src/server/lib/entitlements.ts": {
-      "directDb": 6,
+      "directDb": 5,
       "dbSinEnvolver": 0
     },
     "src/server/lib/error-handler.ts": {
@@ -292,15 +291,11 @@
       "dbSinEnvolver": 1
     },
     "src/server/lib/invitations.ts": {
-      "directDb": 9,
+      "directDb": 7,
       "dbSinEnvolver": 0
     },
     "src/server/lib/project-access.ts": {
-      "directDb": 2,
-      "dbSinEnvolver": 0
-    },
-    "src/server/lib/rbac.ts": {
-      "directDb": 7,
+      "directDb": 1,
       "dbSinEnvolver": 0
     },
     "src/server/lib/remediation/service.ts": {
@@ -308,7 +303,7 @@
       "dbSinEnvolver": 0
     },
     "src/server/notifications/emit.ts": {
-      "directDb": 5,
+      "directDb": 4,
       "dbSinEnvolver": 0
     },
     "src/server/notifications/project-push.ts": {
