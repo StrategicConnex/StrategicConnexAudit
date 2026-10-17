@@ -21,7 +21,7 @@ configurados respondió**; 5 tests en rojo con causa raíz identificada, 6 de co
 |---|---|---|---|
 | **OpenRouter** | PRIMARIO: router, tools, JSON schema, caché semántica | `OPENROUTER_API_KEY` (`OPENROUTER_BASE_URL` opcional) | `src/server/ai/ai-router.ts` → copilot, briefs, reportes SEO, triage, adversary |
 | **Anthropic** | failover opcional de texto libre (P2-1) | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | `src/server/ai/providers.ts` |
-| **Google Gemini** | LEGADO: la clave existe en env, **sin consumidor runtime** | `GEMINI_API_KEY` | `env-secrets.ts` getter, ningún fetch |
+| **Google Gemini** | **ELIMINADO el 2026-10-17** (`env-secrets.ts` getter purgado) | ~~`GEMINI_API_KEY`~~ | ninguno |
 | **NVIDIA NIM** | LEGADO: clave en env, sin consumidor runtime | `NVIDIA_API_KEY` | ninguno |
 | **Xiaomi MiMo (apifreellm)** | LEGADO: clave y modelo en env, sin consumidor runtime | `XIAOMI_API_KEY`, `XIAOMI_BASE_URL`, `XIAOMI_MODEL` | `env-secrets.ts` (`aiBaseUrl`) |
 
@@ -34,7 +34,7 @@ runtime»; Anthropic «tipado pero sin implementación» → hoy sí está imple
 |---|---|---|---|
 | OpenRouter (`general-chat`) | ❌ FAIL | 177 ms | Cadena completa agotada. `DNS openrouter.ai → 127.9.9.9` |
 | OpenRouter (`finding-triage`, finding real) | ❌ FAIL | 7 ms | Mismo origen: ningún modelo del pool fue alcanzable |
-| Google Gemini | ❌ FAIL | 431 ms | `403 PERMISSION_DENIED: "Your API key was reported as leaked"` |
+| Google Gemini | ❌ ELIMINADO | 431 ms | `403 PERMISSION_DENIED: "Your API key was reported as leaked"` — clave eliminada del entorno el 2026-10-17, no se rota |
 | NVIDIA NIM | ❌ FAIL | ~190–490 ms/llamada | Clave válida (catálogo `/models` → 200, 81 modelos), pero **0 funciones NIM habilitadas** para la cuenta: `404 Function … Not found for account` en los 5 modelos probados |
 | Xiaomi MiMo (apifreellm) | ❌ FAIL | 787 ms | `401 Incorrect API key provided` |
 | Anthropic | ⚠️ N/A | — | `ANTHROPIC_API_KEY` no está configurada → el failover inter-proveedor está **desactivado en la práctica** |
@@ -48,16 +48,22 @@ runtime»; Anthropic «tipado pero sin implementación» → hoy sí está imple
    triage, alertas narradas). Acción: probar desde CI/Vercel (egress distinto), y en local usar un
    resolver alternativo (DoH/VPN) o cambiar de red. El test lo diagnostica solo: el mensaje de fallo
    incluye el resultado del `dns.lookup` en lugar de un stack opaco.
-2. **Gemini: clave reportada como filtrada.** Google la rechaza con «reported as leaked». Es
-   coherente con el hallazgo de la auditoría de que `.env.test` llegó a contener claves en claro.
-   Acción: **rotar/eliminar** la clave en el Google Cloud Console y borrar `GEMINI_API_KEY` del
-   entorno (no tiene consumidor en runtime).
+2. **Gemini: ELIMINADO por clave filtrada (reportada por Google).** GEMINI_API_KEY eliminada de
+   `.env.local` y `.env.test` el 2026-10-17 (el getter en `env-secrets.ts` ya se había purgado en
+   8e39c42). No se rota: no es proveedor real del proyecto tras la purga, y conservar una clave
+   filtrada «por si acaso» es mantener superficie de ataque. Ningún archivo trackeado contiene el
+   valor (la plantilla `.env.local.example` sólo tenía el placeholder `AIza...`, que se mantuvo
+   como referencia de formato).
 3. **NVIDIA: sin funciones NIM habilitadas.** El catálogo es público y no prueba permiso. Acción:
    habilitar los modelos en build.nvidia.com o eliminar la clave; hoy sólo consume ruido.
 4. **apifreellm/MiMo: clave inválida.** Acción: rotar o eliminar (`XIAOMI_*` es legado).
-5. **Anthropic sin configurar.** Sin ella no hay failover inter-proveedor: cuando OpenRouter se
-   agota, el producto degrada en silencio. Acción: configurar `ANTHROPIC_API_KEY` si se quiere la
-   resiliencia del P2-1.
+5. **Anthropic sin configurar — failover P2-1 DEGRADADO.** `ANTHROPIC_API_KEY` no está disponible
+   en el entorno (2026-10-17): el failover inter-proveedor es OpenRouter-only. Cuando OpenRouter
+   se agota, el producto degrada en silencio. Riesgo documentado: **caída total de IA si
+   OpenRouter falla** (y en esta red efectivamente falla por DNS). Dato accionable verificado:
+   `api.anthropic.com:443` **sí es alcanzable** desde esta red (TCP OK, 160.79.104.10), por lo que
+   configurar la clave bastaría para tener el failover real en local; sólo falta la provisión de
+   la clave.
 
 ## Seguridad verificada
 
@@ -87,3 +93,24 @@ rutinaria de CI gasta tokens ni depende de la egress.
   levanta el contenedor de CI. El archivo de IA es el único que pasa local.
 - El coste de tokens de esta corrida fue ~0: prompts de 16 tokens y modelos gratuitos; los dos
   prompts mayores fueron el triage de un finding real (220 tokens de salida máx.).
+
+## Cierre de pendientes (2026-10-17, aprobación post-entregable)
+
+Estado final real tras la aprobación, sin ambigüedad:
+
+| Proveedor / ítem | Estado | Causa raíz | Acción |
+|---|---|---|---|
+| OpenRouter | 🔴 CAÍDO en esta red | DNS de Telefónica enruta `openrouter.ai` → `127.9.9.9` (`walledgardenloopback.telefonica`) | Reintentar desde CI/Vercel (egress distinto); en local usar DoH/VPN u otra red. Requiere provisión de red, no de código |
+| Anthropic | 🟡 SIN CLAVE (no ejecutable) | `ANTHROPIC_API_KEY` no configurada en ningún env local | Provisionar la clave: el dominio **sí es alcanzable** desde esta red (TCP 443 verificado) |
+| Gemini | ✅ **ELIMINADO** | Clave marcada como filtrada por Google | Clave eliminada de `.env.local` y `.env.test` (2026-10-17); getter purgado en 8e39c42 |
+| NVIDIA NIM | 🔴 CAÍDO | Cuenta sin funciones NIM habilitadas | Habilitar modelos en build.nvidia.com o eliminar la clave |
+| Xiaomi / apifreellm | 🔴 CAÍDO | `401 Incorrect API key provided` | Rotar o eliminar (legado, sin consumidor runtime) |
+
+**Failover P2-1: DEGRADADO — OpenRouter-only.** Sin `ANTHROPIC_API_KEY` no hay failover
+inter-proveedor: si OpenRouter cae (en esta red, cae), la capa de IA muere en cadena. Riesgo
+documentado y aceptado hasta la provisión de la clave. La eliminación de Gemini reduce a 2 los
+proveedores con código vivo (OpenRouter primario + Anthropic failover pendiente de clave), con la
+superficie de ataque de la clave filtrada cerrada.
+
+**Commits de este ticket:** `a376657` (guards CASCADE) → `0744907` (test de IA reales) →
+`8e39c42` (purga de getters legados), ya en `origin/main` (verificado por `git ls-remote`).
