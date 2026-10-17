@@ -1,6 +1,6 @@
 {
   "_comment": "Manifest del inventario RLS (C7). Cada tabla del schema de Drizzle debe estar en tenant, publicCatalogs o failClosed. scripts/db/rls-inventory.mjs falla si hay una tabla sin clasificar, si una tabla tenant pierde RLS o alguna policy, si una tabla tiene GRANT a authenticated/anon sin RLS, o si el manifest referencia una tabla inexistente.",
-  "_updated": "2026-10-10",
+  "_updated": "2026-10-16",
   "tenant": [
     "ab_test_results",
     "ab_tests",
@@ -51,7 +51,6 @@
     "plugin_instances",
     "project_audit_rules",
     "project_invitations",
-    "project_members",
     "projects",
     "push_subscriptions",
     "rank_history",
