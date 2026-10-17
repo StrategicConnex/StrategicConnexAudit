@@ -69,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_plano ON public.tabla_a (col_a);
 CREATE UNIQUE INDEX IF NOT EXISTS "idx_citado" ON "tabla_b" ("col_b", "col_c");
 CREATE INDEX idx_sin_if ON tabla_c USING btree (col_d);
 `,
-      "0001_x.sql",
+      "0001_x.sql"
     );
 
     expect(decls.map((d) => d.name)).toEqual(["idx_plano", "idx_citado", "idx_sin_if"]);
@@ -89,7 +89,7 @@ CREATE INDEX idx_sin_if ON tabla_c USING btree (col_d);
 /* CREATE INDEX IF NOT EXISTS idx_bloque on public.nada (x); */
 CREATE INDEX IF NOT EXISTS idx_real ON public.tabla_real (col_real);
 `,
-      "0099_x.sql",
+      "0099_x.sql"
     );
 
     expect(decls.map((d) => d.name)).toEqual(["idx_real"]);
@@ -101,10 +101,59 @@ CREATE INDEX IF NOT EXISTS idx_real ON public.tabla_real (col_real);
 CREATE INDEX IF NOT EXISTS idx_multilinea
   ON public.tabla_m (col_1, col_2);
 `,
-      "0002_y.sql",
+      "0002_y.sql"
     );
     expect(decls).toHaveLength(1);
-    expect(decls[0]).toMatchObject({ name: "idx_multilinea", table: "tabla_m", columns: "col_1, col_2" });
+    expect(decls[0]).toMatchObject({
+      name: "idx_multilinea",
+      table: "tabla_m",
+      columns: "col_1, col_2",
+    });
+  });
+
+  it("descarta el índice de una tabla que una migración POSTERIOR elimina", () => {
+    // Caso real: `idx_project_members_user` (0016/0019) dejó de existir cuando la
+    // 0052 hizo `DROP TABLE project_members CASCADE`. Sin esto, todo DROP TABLE
+    // deja una regresión permanente que ninguna migración puede arreglar.
+    const declared = collectDeclaredIndexes([
+      {
+        file: "0019_supabase_best_practices_indexes.sql",
+        sql: "CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members USING btree (user_id);",
+      },
+      {
+        file: "0052_remove_project_members.sql",
+        sql: "DROP TABLE IF EXISTS public.project_members CASCADE;",
+      },
+    ]);
+
+    expect(declared).toEqual([]);
+  });
+
+  it("sí exige un índice declarado DESPUÉS de que su tabla desapareciera (DDL roto)", () => {
+    const declared = collectDeclaredIndexes([
+      {
+        file: "0052_remove_project_members.sql",
+        sql: "DROP TABLE IF EXISTS project_members CASCADE;",
+      },
+      {
+        file: "0053_imposible.sql",
+        sql: "CREATE INDEX IF NOT EXISTS idx_imposible ON project_members (user_id);",
+      },
+    ]);
+
+    expect(declared.map((d) => d.name)).toEqual(["idx_imposible"]);
+  });
+
+  it("el DROP de una tabla no descarta índices de otras tablas", () => {
+    const declared = collectDeclaredIndexes([
+      {
+        file: "0019.sql",
+        sql: "CREATE INDEX IF NOT EXISTS idx_members ON project_members (user_id);\nCREATE INDEX IF NOT EXISTS idx_audits_project ON audits (project_id);",
+      },
+      { file: "0052.sql", sql: "DROP TABLE IF EXISTS project_members CASCADE;" },
+    ]);
+
+    expect(declared.map((d) => d.name)).toEqual(["idx_audits_project"]);
   });
 
   it("deduplica por nombre dentro del archivo y entre archivos gana el primero (orden cronológico)", () => {
@@ -113,7 +162,7 @@ CREATE INDEX IF NOT EXISTS idx_multilinea
 CREATE INDEX IF NOT EXISTS idx_dup ON public.a (x);
 CREATE INDEX IF NOT EXISTS idx_dup ON public.a (x);
 `,
-      "0003_z.sql",
+      "0003_z.sql"
     );
     expect(enUnArchivo).toHaveLength(1);
 
@@ -135,8 +184,15 @@ describe("index-guard — decisión del gate", () => {
 
   it("declarado y AUSENTE → es regresión y el mensaje la nombra", () => {
     const { missing } = compareIndexes(
-      [{ name: "idx_ausente", file: "0015_core_fk_indexes.sql", table: "uptime_logs", columns: "project_id, checked_at" }],
-      new Set(["idx_otro"]),
+      [
+        {
+          name: "idx_ausente",
+          file: "0015_core_fk_indexes.sql",
+          table: "uptime_logs",
+          columns: "project_id, checked_at",
+        },
+      ],
+      new Set(["idx_otro"])
     );
     expect(missing).toHaveLength(1);
     expect(missing[0]).toMatchObject({ name: "idx_ausente", file: "0015_core_fk_indexes.sql" });
@@ -172,7 +228,9 @@ describe("index-guard — el guard es honesto y de solo lectura", () => {
     // Se inspeccionan las queries REALES que el guard manda al cliente, no el
     // archivo entero: los mensajes de ayuda mencionan «CREATE INDEX» en prosa y
     // un grep ingenuo sobre el texto los tomaría por DDL ejecutable.
-    const queries = [...guardSrc.matchAll(/client\.query\(\s*`([\s\S]*?)`/g)].map((m) => m[1].trim());
+    const queries = [...guardSrc.matchAll(/client\.query\(\s*`([\s\S]*?)`/g)].map((m) =>
+      m[1].trim()
+    );
     expect(queries.length).toBeGreaterThan(0);
     for (const q of queries) {
       expect(q).toMatch(/^select\b/i);
@@ -196,21 +254,24 @@ describe("index-guard — el guard es honesto y de solo lectura", () => {
     expect(run.status).toBe(0);
   });
 
-  it.runIf(dbReachable)("índice declarado en una migración pero ausente en BD → exit 1 nombrando el índice", () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "idx-guard-"));
-    try {
-      fs.writeFileSync(
-        path.join(tmp, "9999_regresion_simulada.sql"),
-        "CREATE INDEX IF NOT EXISTS zz_index_guard_regresion ON public.users (plan_id);\n",
-      );
-      const run = runGuard([`--migrations-dir=${tmp}`]);
-      expect(run.status).toBe(1);
-      expect(run.stderr).toContain("zz_index_guard_regresion");
-      expect(run.stderr).toContain("AUSENTE EN BD");
-    } finally {
-      fs.rmSync(tmp, { recursive: true, force: true });
+  it.runIf(dbReachable)(
+    "índice declarado en una migración pero ausente en BD → exit 1 nombrando el índice",
+    () => {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "idx-guard-"));
+      try {
+        fs.writeFileSync(
+          path.join(tmp, "9999_regresion_simulada.sql"),
+          "CREATE INDEX IF NOT EXISTS zz_index_guard_regresion ON public.users (plan_id);\n"
+        );
+        const run = runGuard([`--migrations-dir=${tmp}`]);
+        expect(run.status).toBe(1);
+        expect(run.stderr).toContain("zz_index_guard_regresion");
+        expect(run.stderr).toContain("AUSENTE EN BD");
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
     }
-  });
+  );
 });
 
 describe("index-guard — el DDL restituido en 0050 queda bajo vigilancia", () => {

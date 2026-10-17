@@ -19,6 +19,8 @@
     "guard:cdn": "node scripts/guard-client-cdns.mjs",
     "guard:i18n": "node scripts/i18n-parity.mjs",
     "check:entrypoint": "node scripts/check-single-entrypoint.mjs",
+    "check:cascade-drop": "node scripts/db/check-cascade-drop.mjs",
+    "check:cascade-drop:db": "node scripts/db/check-cascade-drop.mjs --db",
     "generate:collection": "node tests/api-contract/generate-collection.mjs",
     "setup-admin": "npx tsx --env-file=.env.local src/scripts/setup-admin.ts",
     "e2e:report": "npx tsx --env-file=.env.local src/scripts/e2e-ai-report.ts",

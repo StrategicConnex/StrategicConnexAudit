@@ -34,7 +34,34 @@ const CREATE_INDEX_RE =
   /create\s+(unique\s+)?index\s+(?:if\s+not\s+exists\s+)?(?:[a-z_][a-z0-9_]*\s*\.\s*)?"?([a-z_][a-z0-9_]*)"?/gi;
 
 /** `ON [schema.]"tabla" [USING btree] (columnas)` */
-const ON_TABLE_RE = /\bon\s+(?:[a-z_][a-z0-9_]*\s*\.\s*)?"?([a-z_][a-z0-9_]*)"?\s*(?:using\s+[a-z0-9_]+\s*)?\(([^)]*)\)/i;
+const ON_TABLE_RE =
+  /\bon\s+(?:[a-z_][a-z0-9_]*\s*\.\s*)?"?([a-z_][a-z0-9_]*)"?\s*(?:using\s+[a-z0-9_]+\s*)?\(([^)]*)\)/i;
+
+/** `DROP TABLE [IF EXISTS] a, b` — lista de tablas que una migración elimina. */
+const DROP_TABLE_RE = /drop\s+table\s+(?:if\s+exists\s+)?([^;]+)/gi;
+
+/** `public."project_members" [CASCADE]` → `project_members`. */
+function normalizeTable(raw) {
+  const m = String(raw)
+    .trim()
+    .match(/^(?:[a-z_][a-z0-9_]*\s*\.\s*)?"?([a-z_][a-z0-9_]*)"?/i);
+  return m ? m[1].toLowerCase() : null;
+}
+
+/** Tablas que un SQL de migración borra (en orden de aparición). */
+export function droppedTables(sql) {
+  const clean = stripSqlComments(String(sql ?? ""));
+  const out = [];
+  DROP_TABLE_RE.lastIndex = 0;
+  let match;
+  while ((match = DROP_TABLE_RE.exec(clean)) !== null) {
+    for (const raw of match[1].split(",")) {
+      const table = normalizeTable(raw);
+      if (table) out.push(table);
+    }
+  }
+  return out;
+}
 
 /**
  * Extrae los índices declarados en un SQL de migración.
@@ -63,7 +90,7 @@ export function extractIndexDeclarations(sql, file = "") {
       name,
       unique: Boolean(match[1]),
       file,
-      table: target ? target[1] : null,
+      table: target ? target[1].toLowerCase() : null,
       // Sin comillas de identificador y con espacios colapsados: el texto se usa
       // para mensajes de error, no para reconstruir DDL.
       columns: target ? target[2].replace(/["`]/g, "").replace(/\s+/g, " ").trim() : null,
@@ -77,13 +104,24 @@ export function extractIndexDeclarations(sql, file = "") {
  * primera aparición de cada nombre (el orden de `files` decide: el llamador pasa
  * los archivos en orden cronológico).
  *
- * @param {{ file: string, sql: string }[]} files
+ * Los índices de una tabla que una migración POSTERIOR elimina se descartan: no
+ * pueden existir en la base, así que exigirlos convertiría cualquier DROP TABLE
+ * en una regresión permanente. Caso real: `idx_project_members_user` (0016/0019)
+ * desapareció con `DROP TABLE project_members CASCADE` en 0052. Un índice
+ * declarado DESPUÉS de que su tabla ya no exista sí se exige: es DDL roto.
+ *
+ * @param {{ file: string, sql: string }[]} files orden cronológico
  */
 export function collectDeclaredIndexes(files) {
   const byName = new Map();
   for (const { file, sql } of files) {
     for (const decl of extractIndexDeclarations(sql, file)) {
       if (!byName.has(decl.name)) byName.set(decl.name, decl);
+    }
+    for (const table of droppedTables(sql)) {
+      for (const [name, decl] of byName) {
+        if (decl.table === table) byName.delete(name);
+      }
     }
   }
   return [...byName.values()].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
@@ -106,7 +144,13 @@ export function compareIndexes(declared, present) {
 
   const missing = declared
     .filter((d) => !presentSet.has(d.name))
-    .map((d) => ({ name: d.name, file: d.file, table: d.table, columns: d.columns, unique: d.unique }))
+    .map((d) => ({
+      name: d.name,
+      file: d.file,
+      table: d.table,
+      columns: d.columns,
+      unique: d.unique,
+    }))
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 
   const extra = [...presentSet]

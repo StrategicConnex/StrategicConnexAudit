@@ -219,6 +219,16 @@ jobs:
       - name: RLS inventory guard (static)
         run: pnpm rls:inventory
 
+      # P2-16 (2026-10-17): un `DROP TABLE … CASCADE` borra en SILENCIO las
+      # policies de OTRAS tablas que subconsultan esa tabla. Así quedó al
+      # descubrirse que 21 policies de 0016/0017/0022/0023/0024 leían
+      # `project_members`: la tabla habría quedado con RLS y sin policy
+      # (fail-closed, «0 filas», sin error). Guard estático: reaplica las
+      # migraciones en orden de journal y falla si un DROP CASCADE deja una
+      # policy o función viva apuntando a la tabla que desaparece.
+      - name: DROP CASCADE guard (policies/funciones huérfanas)
+        run: pnpm check:cascade-drop
+
       - name: Anti-drift (schema Drizzle vs BD)
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}

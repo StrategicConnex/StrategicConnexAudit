@@ -78,6 +78,12 @@ puro:
    - `SELECT user_has_project_access('<project-id>')` → funciona
    - `SELECT count(*) FROM pg_policies WHERE qual LIKE '%project_members%'` → 0
 
+   **Aplicada el 2026-10-17** en la BD de Supabase, en una transacción con verificación
+   previa al `COMMIT`: `pg_tables`/`pg_indexes`/`pg_policies` con `project_members` → 0,
+   ídem para índices, 99 → 98 policies (la única perdida es la de la propia tabla),
+   `projects` intacta y `user_has_project_access` → `true` para el dueño, `false` para un
+   tercero. El gate que impide repetir el patrón es `pnpm check:cascade-drop`.
+
 ## Relacionados
 
 - ADR-010 (SUPERSEDED): Criterio de autorización para datos de proyecto (membresía vs propiedad).
