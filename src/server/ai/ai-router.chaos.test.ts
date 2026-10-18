@@ -11,7 +11,6 @@
  *   · circuito abierto por outage sostenido (corta sin llamar a la red);
  *   · recuperación parcial (un modelo del final sí responde);
  *   · degradación sin API key (mensaje contextual, cero red);
- *   · failover inter-proveedor a Anthropic (y su propia caída);
  *   · bucle agéntico caótico.
  *
  * El router lee los secretos vía getters de `envSecrets` → process.env en
@@ -28,9 +27,7 @@ vi.mock("./ai-usage", () => ({
 
 type Handler = (url: string, init: RequestInit) => Promise<Response> | Response;
 let openRouterHandler: Handler = () => new Response("{}", { status: 200 });
-let anthropicHandler: Handler = () => new Response("{}", { status: 200 });
 let openRouterCalls = 0;
-let anthropicCalls = 0;
 
 vi.stubGlobal(
   "fetch",
@@ -40,15 +37,16 @@ vi.stubGlobal(
       openRouterCalls++;
       return openRouterHandler(urlStr, (init ?? {}) as RequestInit);
     }
-    if (urlStr.includes("anthropic.com")) {
-      anthropicCalls++;
-      return anthropicHandler(urlStr, (init ?? {}) as RequestInit);
-    }
     return new Response("[]", { status: 200 });
   })
 );
 
-import { callAIWithFallback, callAIAgentLoop, getNoApiKeyResponse, TASK_ROUTING } from "./ai-router";
+import {
+  callAIWithFallback,
+  callAIAgentLoop,
+  getNoApiKeyResponse,
+  TASK_ROUTING,
+} from "./ai-router";
 import { resetAllCircuits } from "@/shared/lib/circuit-breaker";
 
 const ALL_TASKS = Object.keys(TASK_ROUTING) as Array<keyof typeof TASK_ROUTING>;
@@ -64,17 +62,15 @@ function text(status: number, body: string): Response {
 }
 
 /** Mensaje único por test → evita colisiones de caché semántica. */
-const uniqueMsg = (tag: string) =>
-  [{ role: "user" as const, content: `${tag}-${Date.now()}-${Math.random()}` }];
+const uniqueMsg = (tag: string) => [
+  { role: "user" as const, content: `${tag}-${Date.now()}-${Math.random()}` },
+];
 
 beforeEach(() => {
   resetAllCircuits();
   openRouterCalls = 0;
-  anthropicCalls = 0;
   openRouterHandler = () => new Response("{}", { status: 200 });
-  anthropicHandler = () => text(500, "anthropic caído");
   vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
-  vi.stubEnv("ANTHROPIC_API_KEY", "");
 });
 
 afterEach(() => {
@@ -96,7 +92,7 @@ describe("D2 — caída total de modelos OpenRouter", () => {
     // Se intentó CADA modelo de la cadena, ni uno más ni uno menos.
     expect(openRouterCalls).toBe(chain.length);
     expect(res.modelUsed).toBe(chain[chain.length - 1]);
-    expect(res.error).toContain("Todos los modelos de IA fallaron");
+    expect(res.error).toContain("OpenRouter no disponible");
     for (const model of chain) expect(res.error, model).toContain(model);
   });
 
@@ -137,7 +133,7 @@ describe("D2 — caída total de modelos OpenRouter", () => {
 
     expect(res.success).toBe(false);
     expect(openRouterCalls).toBe(chain.length);
-    expect(res.error).toContain("Todos los modelos de IA fallaron");
+    expect(res.error).toContain("OpenRouter no disponible");
   });
 
   it("recupera la llamada si un modelo tardío de la cadena responde", async () => {
@@ -186,7 +182,7 @@ describe("D2 — circuit breaker bajo outage sostenido", () => {
     // El circuito abierto corta ANTES de la red: no se hacen más fetch.
     expect(openRouterCalls).toBe(callsWhileClosed);
     expect(res.success).toBe(false);
-    expect(res.error).toContain("Todos los modelos de IA fallaron");
+    expect(res.error).toContain("OpenRouter no disponible");
   });
 });
 
@@ -210,55 +206,6 @@ describe("D2 — degradación sin API key (fail-soft)", () => {
       expect(getNoApiKeyResponse(task, "en"), `${task} en`).toBeTruthy();
       expect(getNoApiKeyResponse(task, "es"), `${task} es`).toBeTruthy();
     }
-  });
-});
-
-describe("D2 — failover inter-proveedor (Anthropic)", () => {
-  it("cae a Anthropic y devuelve contenido cuando OpenRouter muere", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
-    openRouterHandler = () => text(500, "or down");
-    anthropicHandler = () =>
-      json(200, { content: [{ type: "text", text: "respuesta desde Anthropic" }], usage: { input_tokens: 10, output_tokens: 5 } });
-
-    const res = await callAIWithFallback({
-      taskType: "general-chat",
-      messages: uniqueMsg("anthropic-ok"),
-    });
-
-    expect(res.success).toBe(true);
-    expect(res.content).toBe("respuesta desde Anthropic");
-    expect(res.modelUsed).toMatch(/^anthropic\//);
-    expect(anthropicCalls).toBe(1);
-  });
-
-  it("si Anthropic también falla, sigue degradando sin lanzar", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
-    openRouterHandler = () => text(500, "or down");
-    anthropicHandler = () => text(503, "anthropic down");
-
-    const res = await callAIWithFallback({
-      taskType: "general-chat",
-      messages: uniqueMsg("anthropic-down"),
-    });
-
-    expect(res.success).toBe(false);
-    expect(res.error).toContain("anthropic-failover");
-    expect(res.error).toContain("Todos los modelos de IA fallaron");
-  });
-
-  it("NO usa Anthropic cuando hay tools o response_format (dialecto incompatible)", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
-    openRouterHandler = () => text(500, "or down");
-    anthropicHandler = () => json(200, { content: [{ type: "text", text: "no debería usarse" }] });
-
-    const res = await callAIWithFallback({
-      taskType: "adversary-analysis",
-      messages: uniqueMsg("no-anthropic-tools"),
-      responseFormat: { type: "json_object" },
-    });
-
-    expect(res.success).toBe(false);
-    expect(anthropicCalls).toBe(0);
   });
 });
 

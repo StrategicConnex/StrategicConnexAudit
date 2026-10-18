@@ -11,7 +11,10 @@ import { promptVersion } from "./prompt-version";
 
 describe("prompt-version (#18)", () => {
   it("misma llamada = misma versión (determinista)", () => {
-    const msgs = [{ role: "system" as const, content: "sys" }, { role: "user" as const, content: "hola" }];
+    const msgs = [
+      { role: "system" as const, content: "sys" },
+      { role: "user" as const, content: "hola" },
+    ];
     expect(promptVersion(msgs)).toBe(promptVersion([...msgs]));
   });
 
@@ -37,15 +40,15 @@ describe("ai-cost (#17)", () => {
     expect(estimateCostUsd("openrouter/free", 1000, 500)).toBe(0);
   });
 
-  it("modelo conocido de pago: tokens × precio (in y out)", () => {
-    // claude haiku: $0.8/1M in, $4/1M out
-    const cost = estimateCostUsd("anthropic/claude-3-5-haiku-20241022", 1_000_000, 1_000_000);
-    expect(cost).toBeCloseTo(4.8, 6);
+  it("OpenRouter-only: sin tabla de pago, cualquier otro modelo estima 0", () => {
+    // Anthropic directo se eliminó (2026-10-18) y con él su tabla de precios:
+    // un id que ya no está en COST_TABLE_USD devuelve 0 sin reventar.
+    expect(estimateCostUsd("anthropic/claude-3-5-haiku-20241022", 1_000_000, 1_000_000)).toBe(0);
+    expect(estimateCostUsd("desconocido/pago", 1000, 1000)).toBe(0);
   });
 
   it("sin usage → 0 (no se inventan tokens)", () => {
-    expect(estimateCostUsd("anthropic/claude-3-5-haiku-20241022", null, null)).toBe(0);
-    expect(estimateCostUsd("desconocido/pago", 1000, 1000)).toBe(0);
+    expect(estimateCostUsd("openrouter/free", null, null)).toBe(0);
   });
 });
 
@@ -64,7 +67,9 @@ describe("ai-cache — métricas e invalidación (#16)", () => {
   beforeEach(() => resetCacheMetrics());
 
   it("hit-rate se calcula sobre hits+misses", async () => {
-    const key = buildSemanticKey("general-chat", "m1", [{ role: "user", content: `x-${Date.now()}` }]);
+    const key = buildSemanticKey("general-chat", "m1", [
+      { role: "user", content: `x-${Date.now()}` },
+    ]);
     await getSemanticCache(key); // miss
     await setSemanticCache(key, "c", "m", "general-chat");
     await getSemanticCache(key); // hit
@@ -96,13 +101,16 @@ describe("ai-cache — métricas e invalidación (#16)", () => {
 type FetchHandler = (url: string, init: RequestInit) => Promise<Response> | Response;
 let fetchHandler: FetchHandler = () => new Response("{}", { status: 200 });
 
-vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
-  const urlStr = String(url);
-  if (!urlStr.includes("openrouter.ai")) {
-    return new Response("[]", { status: 200 }); // fuera de OpenRouter
-  }
-  return fetchHandler(urlStr, (init ?? {}) as RequestInit);
-}));
+vi.stubGlobal(
+  "fetch",
+  vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    const urlStr = String(url);
+    if (!urlStr.includes("openrouter.ai")) {
+      return new Response("[]", { status: 200 }); // fuera de OpenRouter
+    }
+    return fetchHandler(urlStr, (init ?? {}) as RequestInit);
+  })
+);
 
 import { callAIWithFallback } from "./ai-router";
 
@@ -141,7 +149,9 @@ describe("callAIWithFallback — self-healing JSON (#15)", () => {
     expect(res.content).toBe('{"sev":"high"}');
     expect(calls).toBe(2);
     // El reintento incluye el feedback de reparación
-    const repairMsg = bodies[1]!.messages.find((m) => m.role === "user" && m.content.includes("JSON válido"));
+    const repairMsg = bodies[1]!.messages.find(
+      (m) => m.role === "user" && m.content.includes("JSON válido")
+    );
     expect(repairMsg).toBeDefined();
   });
 

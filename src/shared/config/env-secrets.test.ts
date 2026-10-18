@@ -26,17 +26,17 @@ describe("env-secrets — getters server-only (RULE-001)", () => {
     expect(envSecrets.databaseUrl).toBe("");
   });
 
-  it("los getters legados de IA ya no existen (Gemini/Bearer/Xiaomi, 2026-10-17)", async () => {
-    // Medición en vivo: ninguna de esas claves funcionaba y ningún módulo de
-    // runtime las consumía. Dejar getters sin consumidor sugiere failovers
-    // que el producto no tiene (ver AI-CONNECTIONS-REPORT.md).
+  it("los getters de IA eliminados ya no existen (Gemini/Bearer/Xiaomi/Anthropic)", async () => {
+    // Medición en vivo + decisión 2026-10-18: Gemini/Bearer/Xiaomi sin conexión
+    // y sin consumidor; Anthropic eliminado con el failover P2-1
+    // (OpenRouter-only, ver AI-CONNECTIONS-REPORT.md).
     const { envSecrets } = await import("./env-secrets");
     expect("geminiApiKey" in envSecrets).toBe(false);
     expect("bearerApiKey" in envSecrets).toBe(false);
     expect("aiBaseUrl" in envSecrets).toBe(false);
-    // Lo que SÍ existe: el par real primario + failover.
+    expect("anthropicApiKey" in envSecrets).toBe(false);
+    // Lo que SÍ existe: el par del único proveedor activo.
     expect(envSecrets.openRouterApiKey).toBe("");
-    expect(envSecrets.anthropicApiKey).toBe("");
   });
 
   it("openRouterBaseUrl tiene default público sin variable", async () => {
