@@ -177,6 +177,26 @@ export function evaluateDispatcher(input: {
     }
   }
 
+  // ── Los hijos del dispatcher: que el dispatcher COMPLETA no significa que ─
+  // ── la retención se esté aplicando (gap real de 2026-10-12..18: 15 tasks ──
+  // ── FAILED durante 6 días bajo un dispatcher «sano») ─────────────────────
+  if (usingDispatcherRuns) {
+    if (retentionRuns.length > 0) {
+      const lastRetention = retentionRuns[0];
+      if (!isSuccess(lastRetention?.status)) {
+        problems.push(
+          `la última ejecución de ${RETENTION_TASK} terminó en ${lastRetention?.status} (aunque el dispatcher COMPLETA): ` +
+            `el DELETE de retención no se está aplicando`
+        );
+      }
+    } else {
+      notes.push(
+        `sin ejecuciones visibles de ${RETENTION_TASK}: el dispatcher da «sano» pero el hijo de retención ` +
+          `no puede confirmarse con esta credencial`
+      );
+    }
+  }
+
   // ── Alcance de la credencial: sin esto, todo lo anterior es de otro entorno ─
   if (keyKind === "desarrollo") {
     blocked.push(

@@ -125,12 +125,29 @@ describe("dispatcher-report — ejecuciones", () => {
     expect(r.blocked.join(" ")).toContain("ejecuciones registradas");
   });
 
-  it("prefiere las ejecuciones del dispatcher cuando existen", () => {
+  it("dispatcher COMPLETED pero la retención FAILED ⇒ problem (regresión 2026-10-12..18)", () => {
     const r = evaluate({
       dispatcherRuns: [run()],
       retentionRuns: [run({ taskIdentifier: RETENTION_TASK, status: "FAILED" })],
     });
+    expect(r.verdict).toBe("problem");
+    expect(r.exitCode).toBe(1);
+    expect(r.problems.join(" ")).toContain(RETENTION_TASK);
+    expect(r.problems.join(" ")).toContain("no se está aplicando");
+  });
+
+  it("dispatcher COMPLETED + retención COMPLETED ⇒ ok", () => {
+    const r = evaluate({
+      dispatcherRuns: [run()],
+      retentionRuns: [run({ taskIdentifier: RETENTION_TASK })],
+    });
     expect(r.verdict).toBe("ok");
+  });
+
+  it("dispatcher COMPLETED sin runs visibles de retención ⇒ nota, no veredicto rojo", () => {
+    const r = evaluate({ dispatcherRuns: [run()], retentionRuns: [] });
+    expect(r.verdict).toBe("ok");
+    expect(r.notes.join(" ")).toContain(RETENTION_TASK);
   });
 });
 

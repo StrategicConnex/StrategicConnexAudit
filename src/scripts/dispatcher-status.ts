@@ -128,6 +128,11 @@ async function main(): Promise<number> {
       )}`
     );
   }
+  if (dispatcherRuns.length > 0 && retentionRuns.length > 0) {
+    console.log(
+      `   última ejecución de ${RETENTION_TASK}: ${retentionRuns[0]?.status} · ${fmt(retentionRuns[0]?.createdAt)}`
+    );
+  }
 
   for (const note of report.notes) console.log(`\n   ℹ️  ${note}`);
 
