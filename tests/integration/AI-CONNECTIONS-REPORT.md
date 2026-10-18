@@ -202,3 +202,10 @@ Se simplificó el pool de IA a **OpenRouter-only**. Razones:
 Trade-off aceptado: si OpenRouter cae por completo, el sistema degrada sin failover externo.
 El error final del router dice el qué y el porqué: «OpenRouter no disponible. Verificar
 conectividad y API key.» + el detalle por modelo de la cadena agotada.
+
+## Limpieza final (2026-10-18): Ollama eliminado
+
+`Ollama_API_KEY` / `Ollama_BASE_URL` borrados de `.env.local` y `.env.test`. Ollama no tuvo
+getter en `env-secrets.ts`, ni consumidor en runtime, ni mención en `.env.example` — era la
+última clave muerta del inventario de IA. Con esto el pool queda cerrado a **OpenRouter-only
+en un archivo**: OPENROUTER_API_KEY + OPENROUTER_BASE_URL, nada más.
