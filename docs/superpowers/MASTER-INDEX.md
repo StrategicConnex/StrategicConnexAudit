@@ -21,10 +21,11 @@
 | B04 | Módulos y Contratos | **completado** (2026-08-02) | Module Contract template + ×9 módulos (gate 100/100 c/u) | `docs/modules/` |
 | B05 | Jobs y Trigger.dev | **completado** (2026-08-02) | Job Contract ×12 triggers (gate 100/100 c/u) | `docs/jobs/` |
 | B06 | Testing | **completado** (2026-08-02) | TEST-COVERAGE-MATRIX + tests P0 (5 route.test/trigger.test) + **6 trigger.test más → 9/12 triggers con test** · **359 tests / 40 files** | `docs/testing/`, `src/app/api/`, `src/trigger/` |
-| B07 | Performance | pendiente | Refresh PERFORMANCE_REPORT + CWV + bundle | `docs/improvements/` |
+| B07 | Performance | **en curso** (Sprint 4, serie tras el sweep de docs 2026-10-18) | Refresh PERFORMANCE_REPORT + CWV + bundle | `docs/improvements/` |
 | B08 | Observabilidad | ✅ completado (2026-09-25) | OBSERVABILITY-MATRIX + convención de IDs | `docs/observability/` |
 | B09 | i18n | ✅ completado (2026-09-25) | I18N-AUDIT + script de paridad de keys | `docs/i18n/` |
 | B10 | Final | **completado** (2026-08-02) | TRACEABILITY-MATRIX, RISK-REGISTER, TECH-DEBT-REGISTER, FINAL-REPORT §51, Quality Gate T10-04 27/27 | `docs/{traceability,risk,technical-debt,improvements}/` |
+| B11 | Cierre Octubre 2026 (IA + Trigger workers + cobertura) | **completado** (2026-10-18) | Pool IA OpenRouter-only; fix TLS+credenciales de workers (TD-14/15/16, deploy `20261018.1`); cobertura 58.8% lines; QUALITY-GATE-REPORT PASS; TECH-DEBT-REGISTER v1.3 | `docs/testing/QUALITY-GATE-REPORT.md`, `EXECUTIVO_TRIGGER_GAPS.md`, `FINAL-SUMMARY.md` |
 
 ## Estado de artefactos
 
@@ -118,15 +119,15 @@
 
 ## Baseline de verificación
 
-> Registrado por T00-03 el 2026-08-01; **actualizado 2026-09-27** con salida real de los comandos. Comandos: `pnpm lint` -> `pnpm build` -> `pnpm test` -> `pnpm test:coverage`. Fuente: salida real de los comandos [VERIFIED].
+> Registrado por T00-03 el 2026-08-01; **actualizado 2026-09-27** y **2026-10-18** con salida real de los comandos. Comandos: `pnpm lint` -> `pnpm build` -> `pnpm test` -> `pnpm test:coverage`. Fuente: salida real de los comandos [VERIFIED]. Detalle del gate de 2026-10-18: `docs/testing/QUALITY-GATE-REPORT.md`.
 
 | Comando | Resultado | Detalle |
 |---------|-----------|---------|
 | `pnpm lint` | **PASS** — 0 errores, 0 warnings | eslint flat config; sin bloqueantes de regresión |
 | `pnpm build` | **PASS** — Next.js 16 Turbopack, exit 0 | rutas dinámicas compiladas; proxy/middleware registrado |
-| `pnpm test` | **PASS** — 1897 tests / 1897 passed (207 files) | Vitest 4.1.11 |
-| `pnpm test:coverage` | **PASS (exit 0)** | Stmts 51.15% · Branch 39.83% · Funcs 43.6% · Lines 52.48% — umbrales duros **45/35/39/46** (`vitest.config.ts`, ratchet +5 por iteración) |
-| guards | **PASS (4/4)** | `contrast-guard.mjs` · `guard-client-cdns.mjs` · `guard-client-secrets.mjs` · `i18n-parity.mjs` (es=642 en=642, 0.00%) |
+| `pnpm test` | **PASS** - 2759 tests passed (285 files) | Vitest 4.x (medición 2026-10-18; baseline previo 2026-09-27: 1897/207) |
+| `pnpm test:coverage` | **PASS (exit 0)** | Stmts 57.41% · Branch 45.75% · Funcs 50.76% · Lines 58.82% - umbrales duros **45/35/39/46** en `vitest.config.ts` (medición 2026-10-18, 261 s) |
+| guards | **PASS** | inventario y resultado verificado 2026-10-18 en `docs/testing/QUALITY-GATE-REPORT.md` §guards |
 
 > **Nota histórica (baseline T00-03 2026-08-01):** 248 tests, Statements 12.51% bajo umbral 25% (exit 1). Aquel gap se cerró: ver TD-01 (cobertura) y TD-03 (route.test) en `docs/technical-debt/TECH-DEBT-REGISTER.md`.
 

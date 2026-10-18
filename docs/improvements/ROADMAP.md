@@ -15,7 +15,21 @@
 > | MITRE | **39 tools mapeados · 16 técnicas únicas · 5 tácticas** (Reconnaissance, Resource Development, Discovery, Collection, C2) |
 > | Cobertura | **Stmts 51.15% · Branch 39.83% · Funcs 43.6% · Lines 52.48%** (207 archivos · 1897 tests ✅) — umbrales duros 45/35/39/46 |
 > | Build | ✅ **PASS** (`pnpm build` exit 0, Next.js 16 Turbopack) |
-> | Observabilidad | ✅ **G1–G3 implementados** (ALS + `correlationId` + `x-request-id` saliente) — ver `docs/observability/OBSERVABILITY-MATRIX.md` |
+> | Observabilidad | ✅ **G1-G3 implementados** (ALS + `correlationId` + `x-request-id` saliente) - ver `docs/observability/OBSERVABILITY-MATRIX.md` |
+
+> **⚠️ ACTUALIZACIÓN 2026-10-18 (cierre de octubre + Sprint 4).** Re-verificación al día; los valores de 2026-09-27 quedaron obsoletos:
+>
+> | Dato | Valor real 2026-10-18 |
+> |------|------------------------|
+> | Cobertura | **Stmts 57.41% · Branch 45.75% · Funcs 50.76% · Lines 58.82%** (285 archivos · 2759 tests) - umbrales duros 45/35/39/46 (`vitest.config.ts`) |
+> | Triggers | **34 task ids declarados en 27 archivos `.trigger.ts`** · **10 schedules activos** · deploy producción `20261018.1` |
+> | Cron de fondo | **Incidente 12–18 oct RESUELTO**: workers fallaban por CA TLS inaccesible (TD-14) + credenciales desfasadas del proyecto (TD-15) → CA embebido + sync env vars vía API; 5 runs reales COMPLETED post-fix; verificador endurecido (TD-16) |
+> | Tablas / migraciones | **74 tablas `pgTable`** · **64 migraciones** en el journal |
+> | Pool IA | **OpenRouter-only** (decisión 2026-10-18; 25 registros reales en `ai_usage`, 4 modelos activos en 24h) |
+> | Autorización | **owner-only** (P1.3 Team Collaboration/RBAC revocado — proyecto gratuito) |
+> | Guards CI | **7 core** + extras; suite completa 2759/2759 en exit 0 |
+>
+> Ver `docs/testing/QUALITY-GATE-REPORT.md` (veredicto PASS) y `EXECUTIVO_TRIGGER_GAPS.md`.
 
 ---
 

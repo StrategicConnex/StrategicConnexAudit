@@ -3,8 +3,8 @@ layout: default
 title: Test Coverage Matrix
 nav_order: 4.1
 permalink: /docs/testing/test-coverage-matrix
-version: 1.11
-fecha: 2026-09-26
+version: 1.12
+fecha: 2026-10-18
 autor: StrategicConnex Engineering
 estado: Aprobado
 ---
@@ -121,6 +121,29 @@ Documentar la **matriz de cobertura de tests** de SCAUDIT Pro (batch B06 del mas
 | Lines | 27.41% | +14.95pp |
 
 > **Interpretación:** con el batch RSK-02 (2026-08-08, +22 test files · +220 tests) la cobertura **supera los 4 umbrales de CI** (25/20/20/25) por primera vez — statements 27.21%, branches 20.67%, functions 22.83%, lines 27.41%. Se cubrieron módulos puros (mitre-mapping, cache, circuit-breakers, audit-log, api-keys, env-secrets), seguridad (siem-exporter, change-alerts, health-checker, shadow-detector) y componentes React (HistoryPanel, MonitoringTab, useAiReport). Gaps residuales documentados: rutas API sin `route.test` (34/42), triggers sin test (3/12), y los componentes grandes restantes (IntelligenceTab, SettingsTab, audit page) — próximos batches.
+
+---
+
+### 4.3. Medición real 2026-10-18 (cierre de octubre · este reporte)
+
+| Métrica | Valor medido | Umbral CI (`vitest.config.ts`) | Margen | vs §4.2 (2026-08-08) |
+|---------|--------------|-------------------------------|--------|----------------------|
+| Test files | **285** | - | - | +220 |
+| Tests (`pnpm test:coverage`, exit 0) | **2759 passed** | - | - | +2148 |
+| Statements | **57.41%** (10568/18405) | 45% | +12.4 pts | +30.20pp |
+| Lines | **58.82%** (9809/16676) | 46% | +12.8 pts | +31.41pp |
+| Branches | **45.75%** (6280/13726) | 35% | +10.8 pts | +25.08pp |
+| Functions | **50.76%** (1847/3638) | 39% | +11.8 pts | +27.93pp |
+
+> **Notas de la medición (2026-10-18):** umbral de statements corregido a 45 en
+> `vitest.config.ts` (los umbrales duros activos son lines 46 · branches 35 ·
+> functions 39 · statements 45). Los módulos de este mes quedan incorporados:
+> `src/trigger` al **89.35%** statements (incluye el fix del CA embebido en
+> `src/shared/db`, verde en producción vía deploy `20261018.1`). Gaps abiertos
+> registrados como **TD-17** (`outbox`/`scan-queue` 0%, PDFs ~17–20%,
+> `idempotency` 34%, `supabase/server.ts` 17%) — decisión del owner: aplazar a
+> favor del producto (detalle en `FINAL-SUMMARY.md` §Áreas de Mejora Futura).
+> [VERIFIED — salida real de `pnpm test:coverage` 2026-10-18]
 
 ---
 
