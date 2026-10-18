@@ -137,3 +137,46 @@ failover verificados (HTTP simulado, sin claves ni red):
 es código sino provisión: un test end-to-end del failover real (OpenRouter caído + clave real)
 requiere `ANTHROPIC_API_KEY`. El dominio ya verificado como alcanzable — al configurar la key,
 este suite D2 garantiza que el camino está ejercitado.
+
+## Medición 2026-10-18: el pool RESPONDE — bloqueo de red eliminado
+
+Cambio de raíz respecto al 17: `openrouter.ai` ya no enruta por el walledgarden de Telefónica
+(hoy: `104.18.3.115/104.18.2.115`, Cloudflare; TCP 443 verificado). El bloqueo de DNS era de la
+red, y la red cambió. Medición fresca (`AI_REAL_TESTS=1`, dos corridas + `pnpm e2e:ai-router`),
+verificada contra la telemetría real de `ai_usage`:
+
+| Momento (UTC) | Éxito | Modelo que respondió | Tarea | Tokens |
+|---|---|---|---|---|
+| 05:37:27 | ✅ | `openrouter/free` (meta-modelo) | general-chat | 30 in / 35 out |
+| 05:37:29 | ✅ | `nvidia/nemotron-3-ultra-550b-a55b:free` | finding-triage (finding REAL de la BD) | 228 in / 220 out |
+| 05:40:25 | ✅ | `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | general-chat | 30 in / 35 out |
+| 05:40:29 | ✅ | `nvidia/nemotron-3-ultra-550b-a55b:free` | finding-triage (finding REAL) | 228 in / 220 out |
+
+**4 de 5 cadenas de la última hora terminaron en éxito real registrado en `ai_usage`.** El
+inventario de tokens in/out es evidencia de tráfico real — la Runs de las 12:00 no son mocks.
+
+### Resultados de las corridas de test (12 tests)
+
+- **7 pasan** — incluye general-chat y finding-triage contra OpenRouter real: el pool funciona.
+- **3 fallan por causas NUEVAS (ya no es red):**
+  1. `finding-triage` JSON: contenido generado (220 tokens = `max_tokens` de la corrida cortado el
+     JSON a mitad) — el router real tiene self-healing JSON (idea #15) que lo repara; el test
+     espera JSON sin truncar. Acción si se desea verde estricto: subir `max_tokens` en el test.
+  2. NVIDIA NIM directo: sin cambiar — `404 Function not found for account` (funciones NIM no
+     habilitadas en build.nvidia.com).
+  3. Xiaomi/apifreellm: sin cambiar — `401` clave inválida (legado).
+- **2 skip por diseño:** Gemini (clave ELIMINADA el 17 — el skip es el resultado correcto) y
+  Anthropic (sin `ANTHROPIC_API_KEY`).
+
+### Inestabilidad aguas arriba observada (management)
+
+- `openrouter/free` a veces devuelve vacío → la cadena absorbe vía fallback (así funcionó 05:40).
+- `cohere/north-mini-code:free` respondió vacío 2× hoy (0/8 en acumulado).
+- `nemotron-3-nano-omni` falló 1× con `ResourceExhausted: Worker local total request limit
+  reached (16/16)` y respondió OK 3 minutos después: cuota del tier free agotándose y liberándose.
+- El CircuitBreaker abrió correctamente durante la ráfaga de fallos del E2E y amortiguó las
+  llamadas siguientes (protección funcionando como fue diseñada).
+
+**Veredicto:** el pool de IA está operativo con datos reales a 2026-10-18 (OpenRouter + failover
+interno vivo; Anthropic directo sigue sin clave). El estado del 17 («0 de 5») quedó superado:
+la causa raíz era la red del sitio, no el código ni el pool.
