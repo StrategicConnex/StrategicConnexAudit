@@ -1068,7 +1068,10 @@ pnpm test              # Ejecutar todas las pruebas
 pnpm test:coverage     # Con reporte de cobertura
 ```
 
-**Cobertura actual:** 25%+ líneas, 20%+ branches (umbrales de CI)
+**Cobertura medida (2026-10-18, `pnpm test:coverage`):** 58.8% líneas, 45.8%
+branches, 57.4% statements, 50.8% funciones — todos los umbrales de CI
+(`vitest.config.ts`: lines 46 · branches 35 · functions 39 · statements 45)
+se cumplen con ~11-13 puntos de margen.
 
 | Archivo | Cobertura |
 |---------|-----------|
