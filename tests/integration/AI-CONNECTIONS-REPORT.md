@@ -190,6 +190,7 @@ la causa raíz era la red del sitio, no el código ni el pool.
 | Gemini | ❌ Eliminado | Clave filtrada (seguridad) |
 | NVIDIA NIM | ❌ Eliminado | Simplificación arquitectónica + 404 «Function not found for account» |
 | Xiaomi/apifreellm | ❌ Eliminado | Simplificación arquitectónica + 401 clave inválida |
+| Ollama | ❌ Eliminado | Sin getter, sin consumidor runtime; última clave muerta del inventario (2026-10-18) |
 
 ## Decisión arquitectónica (2026-10-18)
 
