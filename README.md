@@ -107,8 +107,10 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Copilot de Infraestructura**: asistente IA para planes de remediación técnica
 - **Incident Brief**: generación automática de resúmenes ejecutivos de seguridad
 - **Reportes SEO**: análisis generativo con datos de GSC/GA4
-- **Modelos gratuitos**: OpenRouter free pool (`openrouter/free` + Nemotron · Nex · Cohere, verificado en vivo)
-- **Fallback automático**: encadenamiento de 5 modelos con circuit breaker
+- **Pool OpenRouter-only** (decisión 2026-10-18): meta-modelo `openrouter/free` + cadena de modelos `:free` por tarea (`MODEL_CAPABILITIES` + `TASK_ROUTING`), verificado en vivo con datos reales (telemetría `ai_usage` con tokens reales)
+- **Failover interno**: cadenas por tipo de tarea — chat general arranca con el meta-modelo; tareas JSON-críticas (triage, SEO report, adversary) solo usan modelos con `json_schema`/tools **verificados en vivo**
+- **Sin proveedores legados**: Anthropic, Gemini, NVIDIA NIM, Xiaomi y Ollama eliminados del código y del entorno (detalles en [`tests/integration/AI-CONNECTIONS-REPORT.md`](tests/integration/AI-CONNECTIONS-REPORT.md)) — una sola clave de IA que gestionar
+- **Trade-off aceptado**: si OpenRouter cae por completo, degrada sin failover externo (la última caída medida fue bloqueo del ISP, no del código)
 - **Health Check**: monitoreo periódico de disponibilidad de modelos + dashboard
 
 ### 🛡️ Seguridad & SIEM
@@ -208,7 +210,7 @@ Documentación completa en formato **HTML** con diagramas Mermaid, skeletons de 
 
 ## 🏗️ Arquitectura
 
-Diagrama C4 de containers (nivel L2) del estado actual — verificado contra el código (sep-2026):
+Diagrama C4 de containers (nivel L2) del estado actual — verificado contra el código (oct-2026):
 
 ```mermaid
 flowchart TB
@@ -246,12 +248,12 @@ flowchart TB
         end
 
         subgraph DATA["Data"]
-            DB["??? Supabase Postgres<br/>67 tablas · 37 migraciones SQL · RLS"]
+            DB["??? Supabase Postgres<br/>74 tablas · 64 migraciones SQL · RLS"]
         end
     end
 
     subgraph EXT["Servicios externos"]
-        AI["🤖 OpenRouter AI (free pool)<br/>openrouter/free + Nemotron<br/>Nex · Cohere"]
+        AI["🤖 OpenRouter AI (free pool)<br/>meta-modelo + cadena :free por tarea<br/>Único proveedor de IA (2026-10-18)"]
         SIEM["📡 SIEM<br/>Slack · PagerDuty · Splunk · Email"]
         OSINT["🌐 APIs OSINT / DNS / CVE"]
     end
@@ -407,7 +409,7 @@ src/
 ├── shared/                       # Shared across app
 │   ├── config/                   #   Env validation
 │   ├── data/                     #   🆕 MITRE mapping data (shared)
-│   ├── db/                       #   Drizzle schemas (67 tablas)
+│   ├── db/                       #   Drizzle schemas (74 tablas)
 │   │   └── schemas/              #     health, intelligence, monitoring,
 │   │                             #     security-audit, api-keys, push-subscriptions
 │   ├── lib/                      #   Auth, ratelimit, audit-log, withPublicApi
@@ -679,15 +681,17 @@ Dashboard en `/ai/health` que monitorea los modelos de IA:
 - **Timeline de fallos** con eventos de error
 - **Uptime** por modelo en porcentaje
 
-**Backend:** `GET /api/ai/healthcheck` (manual y bajo demanda — lo consulta el hero del dashboard; sin cron dedicado). Pool verificado en vivo (sep-2026):
+**Backend:** `GET /api/ai/healthcheck` (manual y bajo demanda — lo consulta el hero del dashboard; sin cron dedicado). Pool actual (cadena por tarea, verificada en vivo · oct-2026):
 
 | Modelo | Rol |
 |--------|-----|
-| `openrouter/free` | Meta-router, primero en cadenas de chat |
-| `nvidia/nemotron-3-super-120b-a12b:free` | Calidad general |
-| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | General + tools/JSON |
-| `nex-agi/nex-n2.5-pro:free` | Fallback verificado |
-| `cohere/north-mini-code:free` | Fallback verificado |
+| `openrouter/free` | Meta-router, primero en cadenas de chat libre |
+| `nvidia/nemotron-3-super-120b-a12b:free` | Calidad general + tools |
+| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | General + tools + JSON |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | Tareas JSON-críticas (triage/exec-brief) |
+| `cohere/north-mini-code:free` | Fallback del router |
+
+> ⚠️ Las cadenas JSON-críticas (`seo-report`, `finding-triage`, `exec-brief`, `adversary-analysis`) **excluyen el meta-modelo** y solo usan modelos con capacidad estructurada verificada en vivo — el router aleatorio no es aceptable cuando la salida debe ser JSON parseable.
 
 ---
 
@@ -906,8 +910,9 @@ DIRECT_URL=postgresql://...         # Directa :5432 (workers/migraciones)
 # Next.js lo expande como variable vacía y rompe la auth (28P01).
 # Escápalo como `\$` o, mejor, rota el password a uno sin `$`.
 
-# ─── OpenRouter (opcional — AI Copilot, Reportes) ───────────────
+# ─── OpenRouter (ÚNICA clave de IA del proyecto) ─────────────────
 OPENROUTER_API_KEY=sk-or-v1-...    # https://openrouter.ai/keys
+OPENROUTER_BASE_URL=optional       # Default público: https://openrouter.ai/api/v1
 
 # ─── SIEM Webhooks (opcional) ───────────────────────────────────
 SIEM_WEBHOOK_SLACK=https://hooks.slack.com/services/...
@@ -944,7 +949,7 @@ pnpm db:generate   # Generar migración desde schemas
 pnpm db:push       # Aplicar migraciones a Supabase
 ```
 
-Las migraciones se almacenan en `drizzle/` (37 ficheros SQL: 33 en el journal de `drizzle-kit` + 4 manuales, incluyendo tablas `developer_api_keys`, `security_audit_logs`, `siem_alert_logs`, `ai_health_logs`, `push_subscriptions`).
+Las migraciones se almacenan en `drizzle/` — **64 ficheros SQL** en el journal de `drizzle-kit` (`drizzle/meta/_journal.json`), destacando: tablas `developer_api_keys`, `security_audit_logs`, `siem_alert_logs`, `ai_health_logs`, `push_subscriptions` y la migración `0052` (purga de `project_members` → modo **owner-only**). El drift del esquema se vigila con `pnpm db:drift-check`, `pnpm db:fk-guard`, `pnpm db:index-guard` y `pnpm check:cascade-drop` (guards en CI).
 
 ---
 
@@ -1092,11 +1097,47 @@ npx playwright test    # Con interfaz gráfica
 ### CI/CD Pipeline
 
 El pipeline de GitHub Actions ejecuta:
-1. Lint (ESLint)
-2. TypeScript type-check
-3. Tests unitarios con cobertura
-4. Tests de penetración con Playwright
-5. Upload de cobertura a Codecov
+
+1. **Guards estáticos**: RULE-001 (secretos server-only), CDN (bundle sin CDNs externos), entrypoint único (Next.js 16), contrast WCAG AA, i18n parity (es/en)
+2. **Lint** (ESLint) + **TypeScript type-check** (obligatorio, P1-7)
+3. **Tests unitarios** (Vitest) — con cobertura → Codecov
+4. **Tests de contrato** API (Newman)
+5. **Tests de penetración** con Playwright
+6. **Guards de BD** (con `DIRECT_URL`): FK drift, índices FK, inherited grants, RLS surface, DROP CASCADE
+
+Guards core que protegen la superficie de seguridad (falla CI si se rompe el freeze):
+
+| Guard | Propósito |
+|-------|-----------|
+| FK drift guard | Esquema declarado vs BD |
+| RLS surface guard | Superficie RLS congelada (llamadas fuera de `withRLS`) |
+| Inherited grants guard | Grants peligrosos heredados |
+| Index guard | Índices FK declarados vs BD |
+| CASCADE-DROP guard | Prevención de pérdida silenciosa de policies |
+| Entrypoint único | `proxy.ts` como único middleware (Next.js 16) |
+| i18n parity | Paridad es/en |
+| RULE-001 / CDN / contrast | Secretos server-only, sin CDNs externos, WCAG AA |
+
+---
+
+## 📋 Estado del proyecto (2026-10-18)
+
+Ver detalles completos en [`FINAL-SUMMARY.md`](./FINAL-SUMMARY.md). Resumen medido:
+
+| Métrica | Valor |
+|---------|-------|
+| Tests unitarios (Vitest) | **2759** (285 archivos, todos verdes) |
+| Migraciones registradas | **64** (`drizzle/meta/_journal.json`) |
+| Superficie RLS a auditar | **272** llamadas (congelada por guard en CI) |
+| Proveedores IA funcionales | **1/1** (OpenRouter, verificado con datos reales) |
+| Claves IA en `.env` | **1** (OpenRouter) |
+| Estados de fases | P0, P1, P2 completadas |
+
+Refactorizaciones estructurales congeladas por guard:
+
+- **Autorización owner-only** (ADR-0XX): modelo de acceso por ownership de proyecto, sin membresías de equipo. La tabla `project_members` fue eliminada en la migración `0052` (ADR-010 revocado — proyecto gratuito sin monetización).
+- **RLS con envoltorio `withRLS`**: ningún acceso a datos crudo en rutas con sesión; el guard de surface impide regresiones.
+- **Rate limiting fail-closed** con fallback acotado (ADR-002 §16): si el store cae, el sistema sigue limitando — nunca «permitir todo».
 
 ---
 
