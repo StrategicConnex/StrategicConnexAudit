@@ -149,6 +149,7 @@ Si se desea continuar, las áreas potenciales son:
 | a376657 | Guard CASCADE-DROP |
 | a3ef592 | refactor(ai): simplificar pool a OpenRouter-only |
 | 4db6589 | refactor(ai): eliminar Ollama (cierre de superficie IA) |
+| a25b42f | test(p2-16): alinear 2 tests stale con owner-only |
 
 *(9/9 hashes verificados con `git log --all` el 2026-10-18.)*
 
@@ -159,6 +160,7 @@ Si se desea continuar, las áreas potenciales son:
 
 ---
 
-*Documento generado el 2026-10-18 — métricas verificadas: suite completa 2759 tests,
-typecheck/build exit 0, lint 0 errors, guards verificados en `.github/workflows`.*
+*Documento generado el 2026-10-18 — métricas verificadas: suite completa 285 archivos /
+2759 tests en verde, typecheck/build exit 0, lint 0 errors, guards verificados en
+`.github/workflows`. Los fixes de tests stale quedaron en `a25b42f` (posterior a este doc).*
 *StrategicAudit Pro — Plataforma de auditoría de seguridad*

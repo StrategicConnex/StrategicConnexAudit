@@ -211,18 +211,16 @@ describe("Public API v1: Intelligence — GET", () => {
     expect(mockInvFindMany).not.toHaveBeenCalled();
   });
 
-  it("miembro viewer del proyecto → 200 (P1-6 multi-tenant)", async () => {
+  it("acceso por membresía ya no existe (owner-only, P2-16): viewer de otro proyecto → 404", async () => {
     mockAuthenticateApiKey.mockResolvedValue(authenticatedAuth);
     mockProjectFindFirst.mockResolvedValue({ id: "p1", ownerId: "otro-user" });
-    mockMemberFindFirst.mockResolvedValue({ role: "viewer" });
     mockInvFindMany.mockResolvedValue([{ id: "inv-1" }]);
 
     const res = await GET(
       createRequest("GET", "http://localhost:3000/api/public/v1/intelligence?projectId=p1")
     );
-    expect(res.status).toBe(200);
-    mockMemberFindFirst.mockReset();
-    mockMemberFindFirst.mockResolvedValue(null);
+    expect(res.status).toBe(404);
+    mockInvFindMany.mockClear();
   });
 });
 

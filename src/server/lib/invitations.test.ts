@@ -67,7 +67,7 @@ describe("invitations — aceptar y crear (A-2)", () => {
     state.audits = [];
   });
 
-  it("acepta token válido: crea miembro, consume invitación, audita", async () => {
+  it("acepta token válido: consume invitación y audita (owner-only: SIN member insert)", async () => {
     state.invitation = {
       id: "inv-1",
       projectId: "p1",
@@ -78,7 +78,8 @@ describe("invitations — aceptar y crear (A-2)", () => {
     };
     const res = await acceptInvitation("tok", "u-nuevo");
     expect(res).toEqual({ ok: true, projectId: "p1" });
-    expect(state.members).toHaveLength(1);
+    // ADR owner-only / migración 0052: aceptar NO crea ninguna membresía.
+    expect(state.members).toHaveLength(0);
     expect(state.invitation).toBeNull();
     expect(state.audits.length).toBeGreaterThan(0);
   });
