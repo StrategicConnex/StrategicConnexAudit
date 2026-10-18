@@ -17,7 +17,6 @@ import { CircuitBreaker } from "@/shared/lib/circuit-breaker";
 import { logger } from "@/lib/logger";
 import { recordAiUsage } from "./ai-usage";
 import { buildSemanticKey, getSemanticCache, setSemanticCache } from "./ai-cache";
-import { callAnthropicText, anthropicDefaultModel, isAnthropicConfigured } from "./providers";
 import { estimateCostUsd } from "./ai-cost";
 import { promptVersion } from "./prompt-version";
 import { correlatedHeaders } from "@/lib/request-context";
@@ -60,8 +59,7 @@ export interface AIToolCall {
 }
 
 export type AIResponseFormat =
-  | { type: "json_schema"; name: string; schema: Record<string, unknown> }
-  | { type: "json_object" };
+  { type: "json_schema"; name: string; schema: Record<string, unknown> } | { type: "json_object" };
 
 /** Mensaje tool (resultado de un handler) para el bucle agéntico. */
 export interface AIToolResultMessage {
@@ -189,10 +187,19 @@ const FREE_META_MODEL = "openrouter/free";
  *   openai/gpt-oss-20b:free      → 404 "unavailable for free"
  *   google/gemma-4-26b-a4b-it:free → 429 upstream persistente
  */
-export const MODEL_CAPABILITIES: Record<string, { supportsTools: boolean; supportsStructuredOutput: boolean }> = {
+export const MODEL_CAPABILITIES: Record<
+  string,
+  { supportsTools: boolean; supportsStructuredOutput: boolean }
+> = {
   "nvidia/nemotron-3-ultra-550b-a55b:free": { supportsTools: true, supportsStructuredOutput: true },
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": { supportsTools: true, supportsStructuredOutput: true },
-  "nvidia/nemotron-3-super-120b-a12b:free": { supportsTools: true, supportsStructuredOutput: false },
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": {
+    supportsTools: true,
+    supportsStructuredOutput: true,
+  },
+  "nvidia/nemotron-3-super-120b-a12b:free": {
+    supportsTools: true,
+    supportsStructuredOutput: false,
+  },
   "nvidia/nemotron-3.5-lightning:free": { supportsTools: true, supportsStructuredOutput: false },
   "dots-studio/dots-3-note-preview:free": { supportsTools: true, supportsStructuredOutput: false },
 };
@@ -394,7 +401,7 @@ async function callModel(
       };
       // Solo enrutar a providers que soporten json_schema nativo
       // (docs OpenRouter → Provider Routing / require_parameters).
-      body.provider = { ...(body.provider as object ?? {}), require_parameters: true };
+      body.provider = { ...((body.provider as object) ?? {}), require_parameters: true };
     } else {
       body.response_format = { type: "json_object" };
     }
@@ -429,9 +436,7 @@ async function callModel(
       );
     }
 
-    throw new Error(
-      `OpenRouter ${response.status} para ${modelId}: ${text.slice(0, 200)}`
-    );
+    throw new Error(`OpenRouter ${response.status} para ${modelId}: ${text.slice(0, 200)}`);
   }
 
   const data = await response.json();
@@ -440,7 +445,8 @@ async function callModel(
   const usage = data.usage
     ? {
         tokensIn: typeof data.usage.prompt_tokens === "number" ? data.usage.prompt_tokens : null,
-        tokensOut: typeof data.usage.completion_tokens === "number" ? data.usage.completion_tokens : null,
+        tokensOut:
+          typeof data.usage.completion_tokens === "number" ? data.usage.completion_tokens : null,
       }
     : null;
 
@@ -478,9 +484,7 @@ async function callModel(
  *   - 50 requests/day for accounts with < $10 lifetime purchases
  *   - 1,000 requests/day for accounts with >= $10 lifetime purchases
  */
-export async function callAIWithFallback(
-  options: AIRequestOptions
-): Promise<AIResponse> {
+export async function callAIWithFallback(options: AIRequestOptions): Promise<AIResponse> {
   const { taskType, messages, temperature = 0.3, maxTokens = 4096 } = options;
   const startTime = Date.now();
   const useTools = !!options.tools && options.tools.length > 0;
@@ -508,7 +512,11 @@ export async function callAIWithFallback(
         fromCache: partial.fromCache,
         tokensIn: partial.usage?.tokensIn ?? null,
         tokensOut: partial.usage?.tokensOut ?? null,
-        costUsd: estimateCostUsd(partial.modelUsed, partial.usage?.tokensIn, partial.usage?.tokensOut),
+        costUsd: estimateCostUsd(
+          partial.modelUsed,
+          partial.usage?.tokensIn,
+          partial.usage?.tokensOut
+        ),
         promptVersion: pVersion,
       });
     }
@@ -645,54 +653,15 @@ export async function callAIWithFallback(
     }
   }
 
-  // 5. Cadena OpenRouter agotada → failover inter-proveedor (P2-1).
-  // Solo texto libre: tools y response_format son dialecto OpenAI y no se
-  // traducen 1:1. Sin ANTHROPIC_API_KEY el comportamiento no cambia.
-  if (!useTools && !options.responseFormat && isAnthropicConfigured()) {
-    try {
-      const model = anthropicDefaultModel();
-      const alt = await callAnthropicText({
-        model,
-        messages,
-        temperature,
-        maxTokens,
-        timeoutMs: 30_000,
-      });
-      const latencyMs = Date.now() - startTime;
-      {
-        void recordAiUsage({
-          userId: options.userId ?? null,
-          taskType,
-          modelUsed: alt.modelUsed,
-          latencyMs,
-          success: true,
-          tokensIn: alt.usage?.tokensIn ?? null,
-          tokensOut: alt.usage?.tokensOut ?? null,
-          costUsd: estimateCostUsd(alt.modelUsed, alt.usage?.tokensIn, alt.usage?.tokensOut),
-          promptVersion: pVersion,
-        });
-      }
-      void setSemanticCache(cacheKey, alt.content ?? "", alt.modelUsed, taskType);
-      logger.info(
-        `[AI Router] ${taskType} → ${alt.modelUsed} (${latencyMs}ms) [failover inter-proveedor]`
-      );
-      return {
-        success: true,
-        content: alt.content ?? "",
-        modelUsed: alt.modelUsed,
-        latencyMs,
-      };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errors.push(`[anthropic-failover] ${msg}`);
-    }
-  }
+  // 5. Cadena OpenRouter agotada → fin. Decisión 2026-10-18: pool OpenRouter-only;
+  // el failover inter-proveedor (Anthropic, P2-1) se eliminó junto a `providers.ts`.
+  // La resiliencia vive DENTRO de OpenRouter: meta-modelo + cadena de :free por tarea.
 
   // 6. All models failed
   return track({
     modelUsed: modelChain[modelChain.length - 1]!,
     success: false,
-    error: `Todos los modelos de IA fallaron:\n${errors.join("\n")}`,
+    error: `OpenRouter no disponible. Verificar conectividad y API key.\n${errors.join("\n")}`,
   });
 }
 
@@ -838,14 +807,22 @@ export interface AgentLoopResult {
  */
 export async function callAIAgentLoop(options: AgentLoopOptions): Promise<AgentLoopResult> {
   const { toolHandlers, maxIterations = 6, ...aiOptions } = options;
-  const conversation: Array<AIMessage | RawAssistantMessage | AIToolResultMessage> = [...aiOptions.messages];
+  const conversation: Array<AIMessage | RawAssistantMessage | AIToolResultMessage> = [
+    ...aiOptions.messages,
+  ];
   const toolInvocations: AgentLoopResult["toolInvocations"] = [];
   let lastModel: string | undefined;
 
   for (let iteration = 0; iteration < maxIterations; iteration++) {
     const res = await callAIWithFallback({ ...aiOptions, messages: conversation as AIMessage[] });
     if (!res.success) {
-      return { success: false, content: "", toolInvocations, modelUsed: lastModel, error: res.error };
+      return {
+        success: false,
+        content: "",
+        toolInvocations,
+        modelUsed: lastModel,
+        error: res.error,
+      };
     }
     lastModel = res.modelUsed;
 
@@ -874,7 +851,11 @@ export async function callAIAgentLoop(options: AgentLoopOptions): Promise<AgentL
       } else {
         try {
           let args: unknown = {};
-          try { args = tc.arguments ? JSON.parse(tc.arguments) : {}; } catch { /* args vacíos */ }
+          try {
+            args = tc.arguments ? JSON.parse(tc.arguments) : {};
+          } catch {
+            /* args vacíos */
+          }
           const out = await handler(args);
           resultPayload = JSON.stringify(out ?? { ok: true }).slice(0, 30_000);
           toolInvocations.push({ name: tc.name, ok: true });
@@ -917,7 +898,7 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
       "1. Go to https://openrouter.ai/keys and create a free account\n" +
       "2. Generate an API Key (no balance needed)\n" +
       "3. Add it to your `.env.local` file:\n" +
-      '   ```\n   OPENROUTER_API_KEY=sk-or-v1-...\n   ```\n\n' +
+      "   ```\n   OPENROUTER_API_KEY=sk-or-v1-...\n   ```\n\n" +
       "**Free models included:** Gemini Flash, DeepSeek V3, Llama 4, " +
       "Mistral Small, Qwen 2.5\n" +
       "**Rate limit:** 50 requests/day (free) or 1,000/day ($10+ purchases).",
@@ -929,7 +910,7 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
       "1. Ve a https://openrouter.ai/keys y crea una cuenta gratuita\n" +
       "2. Genera una API Key (no necesitas agregar saldo)\n" +
       "3. Configúrala en tu archivo `.env.local`:\n" +
-      '   ```\n   OPENROUTER_API_KEY=sk-or-v1-...\n   ```\n\n' +
+      "   ```\n   OPENROUTER_API_KEY=sk-or-v1-...\n   ```\n\n" +
       "**Modelos gratuitos incluidos:** Gemini Flash, DeepSeek V3, Llama 4, " +
       "Mistral Small, Qwen 2.5\n" +
       "**Límite:** 50 solicitudes/día (sin pago) o 1,000/día (con $10+ compras).",
@@ -1058,9 +1039,6 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
  * @param taskType - The type of AI task
  * @param locale - Language locale ('es' | 'en'), defaults to 'es'
  */
-export function getNoApiKeyResponse(
-  taskType: AITaskType,
-  locale: "es" | "en" = "es"
-): string {
+export function getNoApiKeyResponse(taskType: AITaskType, locale: "es" | "en" = "es"): string {
   return NO_API_KEY_MESSAGES[taskType][locale];
 }

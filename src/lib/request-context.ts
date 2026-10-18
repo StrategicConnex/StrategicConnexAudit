@@ -7,7 +7,7 @@
  *   1. `withRequestContext(handler)` — HOF that enters the scope for a route
  *      handler using the `x-request-id` header injected by `src/proxy.ts`.
  *   2. `correlatedHeaders(base)` — headers for *outgoing* fetches so an
- *      external provider (OpenRouter, Anthropic, SIEM webhooks) receives the
+ *      external provider (OpenRouter, SIEM webhooks) receives the
  *      same correlation id we log (G3).
  *
  * Both are fail-safe: outside a request scope they degrade to a plain call.
