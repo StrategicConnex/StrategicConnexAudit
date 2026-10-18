@@ -1,11 +1,10 @@
-import 'server-only';
+import "server-only";
 
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import * as schema from './schemas';
-import * as fs from 'fs';
-import * as path from 'path';
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import * as schema from "./schemas";
 import { logger } from "@/lib/logger";
+import { SUPABASE_CA_PEM } from "./supabase-ca";
 
 // Mantener el tipo de Drizzle para la inicialización perezosa
 type DbInstance = ReturnType<typeof drizzle<typeof schema>>;
@@ -13,31 +12,52 @@ type DbInstance = ReturnType<typeof drizzle<typeof schema>>;
 let lazyDb: DbInstance | undefined;
 let lazyDirectDb: DbInstance | undefined;
 
-// Función para obtener el certificado Supabase CA de forma perezosa
-function getSupabaseCa(): string | undefined {
-  const caPath = path.join(process.cwd(), 'src/shared/db/supabase-ca.crt');
-  try {
-    return fs.readFileSync(caPath, 'utf8');
-  } catch {
-    logger.warn('[DB] Supabase CA certificate not found at', caPath);
-    return undefined;
+/**
+ * CA del pooler de Supabase. Orden de resolución (el primero que aplique):
+ *   1. `SUPABASE_CA_CRT` (env): el operador puede inyectar el PEM tal cual o en
+ *      base64 — útil para dashboards que no aceptan multiline.
+ *   2. CA embebido (`supabase-ca.ts`): viaja dentro del bundle, así que NO
+ *      depende del cwd ni del filesystem del runtime (el fallo real de
+ *      producción del 2026-10-12..18: en los workers de Trigger.dev
+ *      `fs.readFileSync(<cwd>/src/shared/db/supabase-ca.crt)` no encontraba el
+ *      archivo -> TLS handshake "self-signed certificate in certificate chain"
+ *      -> 15 tasks FAILED de forma sostenida).
+ * Un valor de env no reconocible NO desactiva la verificación: se ignora y se
+ * usa el embebido (fail-closed al CA válido, nunca a insecure).
+ */
+function getSupabaseCa(): string {
+  const envCa = process.env.SUPABASE_CA_CRT?.trim();
+  if (envCa) {
+    if (envCa.startsWith("-----BEGIN CERTIFICATE")) return envCa;
+    try {
+      const decoded = Buffer.from(envCa, "base64").toString("utf8");
+      if (decoded.startsWith("-----BEGIN CERTIFICATE")) return decoded;
+    } catch {
+      // no es base64 válido: ignorar, abajo va el CA embebido
+    }
+    logger.warn(
+      "[DB] SUPABASE_CA_CRT presente pero no reconocible (ni PEM ni base64 de PEM); usando CA embebido"
+    );
   }
+  return SUPABASE_CA_PEM;
 }
 
 // Inicialización perezosa de la base de datos principal (db)
 function initDb(): DbInstance {
   if (lazyDb) return lazyDb;
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === "production";
   const supabaseCa = getSupabaseCa();
 
   // SECURITY: Set DB_ALLOW_INSECURE_SSL=true ONLY in environments where Supabase
   // or a proxy uses self-signed certificates (e.g. local Supabase, Supabase pooler).
   // In production on Vercel + Supabase Cloud this should be left unset (defaults to false).
-  const allowInsecureSsl = process.env.DB_ALLOW_INSECURE_SSL === 'true';
+  const allowInsecureSsl = process.env.DB_ALLOW_INSECURE_SSL === "true";
 
   if (isProduction && allowInsecureSsl) {
-    logger.warn('[DB] WARNING: DB_ALLOW_INSECURE_SSL is enabled in production. Ensure this is intentional.');
+    logger.warn(
+      "[DB] WARNING: DB_ALLOW_INSECURE_SSL is enabled in production. Ensure this is intentional."
+    );
   }
 
   // En desarrollo, queremos preservar la conexión a la base de datos a través de recargas HMR
@@ -48,16 +68,19 @@ function initDb(): DbInstance {
   const dbUrl = process.env.DATABASE_URL;
   let cleanUrl = dbUrl;
 
-  logger.info("[DB Init] DATABASE_URL =", dbUrl ? dbUrl.replace(/:[^:@/]+@/, ":****@") : "undefined");
+  logger.info(
+    "[DB Init] DATABASE_URL =",
+    dbUrl ? dbUrl.replace(/:[^:@/]+@/, ":****@") : "undefined"
+  );
 
   if (dbUrl) {
     try {
       const parsedUrl = new URL(dbUrl);
-      parsedUrl.searchParams.delete('sslmode');
+      parsedUrl.searchParams.delete("sslmode");
       cleanUrl = parsedUrl.toString();
       logger.info("[DB Init] cleanUrl =", cleanUrl.replace(/:[^:@/]+@/, ":****@"));
     } catch (err) {
-      logger.error('Error parsing DATABASE_URL:', err);
+      logger.error("Error parsing DATABASE_URL:", err);
     }
   }
 
@@ -71,13 +94,15 @@ function initDb(): DbInstance {
     rejectUnauthorized: allowInsecureSsl ? false : true,
   };
 
-  const conn = globalForDb.conn ?? new Pool({
-    connectionString: cleanUrl,
-    max: isProduction ? 2 : 10,
-    idleTimeoutMillis: isProduction ? 15000 : 30000,
-    connectionTimeoutMillis: 5000,
-    ssl: cleanUrl?.includes('supabase') || cleanUrl?.includes('pooler') ? sslConfig : undefined,
-  });
+  const conn =
+    globalForDb.conn ??
+    new Pool({
+      connectionString: cleanUrl,
+      max: isProduction ? 2 : 10,
+      idleTimeoutMillis: isProduction ? 15000 : 30000,
+      connectionTimeoutMillis: 5000,
+      ssl: cleanUrl?.includes("supabase") || cleanUrl?.includes("pooler") ? sslConfig : undefined,
+    });
 
   if (!isProduction) globalForDb.conn = conn;
 
@@ -90,7 +115,7 @@ function initDirectDb(): DbInstance {
   if (lazyDirectDb) return lazyDirectDb;
 
   const supabaseCa = getSupabaseCa();
-  const allowInsecureSsl = process.env.DB_ALLOW_INSECURE_SSL === 'true';
+  const allowInsecureSsl = process.env.DB_ALLOW_INSECURE_SSL === "true";
 
   const dbUrl = process.env.DATABASE_URL;
   let cleanUrl = dbUrl;
@@ -98,10 +123,10 @@ function initDirectDb(): DbInstance {
   if (dbUrl) {
     try {
       const parsedUrl = new URL(dbUrl);
-      parsedUrl.searchParams.delete('sslmode');
+      parsedUrl.searchParams.delete("sslmode");
       cleanUrl = parsedUrl.toString();
     } catch (err) {
-      logger.error('Error parsing DATABASE_URL for Direct Init:', err);
+      logger.error("Error parsing DATABASE_URL for Direct Init:", err);
     }
   }
 
@@ -110,19 +135,19 @@ function initDirectDb(): DbInstance {
   const directUrl = process.env.DIRECT_URL || cleanUrl;
   const directUrlParsed = (() => {
     try {
-      const u = new URL(directUrl ?? '');
+      const u = new URL(directUrl ?? "");
       // Only delete if we are manually providing SSL config in the Pool object
-      u.searchParams.delete('sslmode');
+      u.searchParams.delete("sslmode");
       return u.toString();
     } catch {
       return directUrl;
     }
   })();
 
-  const directSslConfig = (directUrl ?? '').includes('supabase')
+  const directSslConfig = (directUrl ?? "").includes("supabase")
     ? {
         ca: supabaseCa,
-        rejectUnauthorized: allowInsecureSsl ? false : true
+        rejectUnauthorized: allowInsecureSsl ? false : true,
       }
     : undefined;
 
@@ -143,7 +168,7 @@ function createLazyProxy(initializer: () => DbInstance): DbInstance {
     get(_, prop, receiver) {
       const instance = initializer();
       const value = Reflect.get(instance, prop, receiver);
-      if (typeof value === 'function') {
+      if (typeof value === "function") {
         return value.bind(instance);
       }
       return value;
@@ -163,7 +188,7 @@ function createLazyProxy(initializer: () => DbInstance): DbInstance {
     getOwnPropertyDescriptor(_, prop) {
       const instance = initializer();
       return Reflect.getOwnPropertyDescriptor(instance, prop);
-    }
+    },
   });
 }
 
