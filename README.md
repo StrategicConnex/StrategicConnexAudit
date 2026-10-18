@@ -244,7 +244,7 @@ flowchart TB
 
         subgraph JOBS["Background Jobs"]
             VC["☑️ Vercel Cron (garantizado)<br/>2 crons diarios (plan Hobby)"]
-            TD["Trigger.dev (opcional)<br/>13 tasks + 1 template · deploy no verificado"]
+            TD["Trigger.dev (activo)<br/>34 tasks · 27 archivos .trigger.ts · 10 schedules<br/>✅ 2026-10-18: fix TLS+credenciales en workers (v20261018.1)"]
         end
 
         subgraph DATA["Data"]
