@@ -180,3 +180,25 @@ inventario de tokens in/out es evidencia de tráfico real — la Runs de las 12:
 **Veredicto:** el pool de IA está operativo con datos reales a 2026-10-18 (OpenRouter + failover
 interno vivo; Anthropic directo sigue sin clave). El estado del 17 («0 de 5») quedó superado:
 la causa raíz era la red del sitio, no el código ni el pool.
+
+## Estado actual (1 proveedor activo) — simplificación OpenRouter-only
+
+| Proveedor | Estado | Observaciones |
+|-----------|--------|---------------|
+| **OpenRouter** | ✅ Operativo | 4/5 cadenas exitosas con datos reales (2026-10-18) |
+| Anthropic | ❌ Eliminado | Simplificación arquitectónica (failover P2-1 nunca activo sin key) |
+| Gemini | ❌ Eliminado | Clave filtrada (seguridad) |
+| NVIDIA NIM | ❌ Eliminado | Simplificación arquitectónica + 404 «Function not found for account» |
+| Xiaomi/apifreellm | ❌ Eliminado | Simplificación arquitectónica + 401 clave inválida |
+
+## Decisión arquitectónica (2026-10-18)
+
+Se simplificó el pool de IA a **OpenRouter-only**. Razones:
+- OpenRouter es un meta-modelo con fallbacks internos (meta-modelo + cadena :free por tarea).
+- Reduce complejidad del código (adiós `providers.ts` y su suite), la superficie de
+  ataque (una sola clave) y los puntos de fallo de configuración.
+- OpenRouter funciona bien: la única causa de caída medida (DNS de la red del 17) ya no existe.
+
+Trade-off aceptado: si OpenRouter cae por completo, el sistema degrada sin failover externo.
+El error final del router dice el qué y el porqué: «OpenRouter no disponible. Verificar
+conectividad y API key.» + el detalle por modelo de la cadena agotada.
