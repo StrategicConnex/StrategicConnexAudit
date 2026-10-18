@@ -112,13 +112,38 @@ externo. El error del router lo dice con detalle por modelo de la cadena agotada
 
 ---
 
+## Áreas de Mejora Futura (Cobertura · medido 2026-10-18)
+
+La suite mide hoy **58.8% lines / 45.8% branches** sobre umbrales CI de 46/35
+(margen 11–13 pts). El sprint de cobertura se **aplaza a favor del producto**
+(decisión del owner 2026-10-18): los umbrales se cumplen de sobra y los puntos
+débiles son de riesgo bajo-medio.
+
+| Archivo | Lines | Prioridad | Razón |
+|---------|-------|-----------|-------|
+| `src/trigger/outbox.trigger.ts` | 0% | 🔴 Alta | Declarada en el deploy, sin tests dirigidos |
+| `src/trigger/scan-queue.trigger.ts` | 0% | 🔴 Alta | Declarada en el deploy, sin tests dirigidos |
+| `src/shared/utils/exportPdf.ts` | ~17% | 🟡 Media | Generación PDF (presentación, no lógica crítica) |
+| `src/shared/utils/intelligencePdf.ts` | ~20% | 🟡 Media | Generación PDF de inteligencia |
+| `src/shared/lib/idempotency.ts` | 34% | 🟢 Baja | Helper poco ejercitado |
+| `src/shared/lib/supabase/server.ts` | 17% | 🟢 Baja | Wrapper delgado y estable |
+
+Ruta barata alternativa (si se quiere blindar antes de que crezca el código):
+subir los umbrales de `vitest.config.ts` +5 pts (lines 51 / branches 40 /
+functions 44 / statements 50) — queda dentro del margen medido y convierte el
+nivel actual en el nuevo suelo. ◪ *línea abierta de una sesión previa: «umbrales
+de cobertura a subir (+5) en la verificación final» — from supermemory.*
+
+---
+
 ## Documentación Actualizada
 
 - ✅ EXECUTIVO_P2-16_CIERRE.md
 - ✅ tests/integration/AI-CONNECTIONS-REPORT.md (medición 17-18 oct + cierre Ollama)
 - ✅ docs/architecture/ADR/ADR-002-fail-open-rate-limit.md (enmienda §16)
 - ✅ docs/architecture/ADR/ADR-0XX-owner-only-authorization.md
-- ✅ .env.example (solo claves activas)
+- ✅ .env.example (solo claves activas + nota del CA embebido)
+- ✅ EXECUTIVO_TRIGGER_GAPS.md (reparación TLS + credenciales de workers, runs verificados)
 - ✅ FINAL-SUMMARY.md (este documento)
 
 ---
