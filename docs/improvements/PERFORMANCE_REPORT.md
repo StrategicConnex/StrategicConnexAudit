@@ -256,3 +256,79 @@ Además, `1usbhoulxz6_c.css` = 9.282 B de `@font-face` (Inter) también es eager
 ---
 
 *Reporte generado el 2026-09-26 con Lighthouse 13.5.0 (lab local) y análisis de artefactos de build de Turbopack (Next.js 16.3.3). Baseline histórico: reporte del 2026-07-31 (Lighthouse 13.4.1 contra producción).*
+
+---
+
+## 8. Refresh del release B07 (2026-10-18)
+
+Primera medición contra **producción real** (`https://scaudit.vercel.app`,
+Lighthouse 13.7.0, Chrome Headless 162, 1 run por ruta, `--only-categories=performance`)
++ bundle fresh de `pnpm build` (`.next/diagnostics/route-bundle-stats.json`,
+incluye el fix del CA embebido y los cambios de octubre).
+
+### 8.1. Core Web Vitals — lab contra PRODUCCIÓN (2026-10-18)
+
+| Ruta | Score | FCP | LCP | CLS | TBT | SI | TTI | Peso transferido |
+|------|-------|-----|-----|-----|-----|----|----|------------------|
+| `/login` | **76** (baseline 58) | 1.22 s | 2.33 s | 0.000 | 596 ms | 7.58 s | 3.70 s | 455 KB |
+| `/pricing` | **82** (baseline 75.5) | 1.23 s | 3.29 s | 0.000 | 386 ms | 3.29 s | 3.55 s | 455 KB |
+| `/` | **63** (baseline 56) | 1.43 s | **3.76 s** | 0.000 | **1.408 ms** | 2.82 s | 4.23 s | 455 KB |
+
+> **Mejora principal:** LCP de `/login` pasó de 4,67 s (lab local del 09-26) a
+> **2,33 s contra producción** — los hallazgos H-01..H-04 del 2026-10-01 (fondo
+> diferido `ssr:false`, supabase bajo `import()`, recharts/reactflow lazy)
+> SÍ pagaron. El punto rojo sigue siendo `/`: LCP 3,76 s (>2,5 s) y TBT 1,4 s —
+> coherente con su JS inicial más alto (§8.2).
+
+### 8.2. Bundle fresh por ruta (VS baseline §4.2 del 2026-09-26)
+
+| Ruta | raw hoy | gzip hoy | chunks hoy | baseline raw | Δ raw |
+|------|---------|----------|------------|--------------|-------|
+| `/` (y `/dashboard`) | **1.324 KB** | 399 KB | 22 | 1.025,6 KB | **+29% ⚠️** |
+| `/intelligence` | 1.074 KB | 323 KB | 20 | 1.044,5 KB | +3% |
+| `/projects/[id]/audits/[auditId]` | 952 KB | 302 KB | 21 | 783,5 KB | +22% ⚠️ |
+| `/projects/[id]` | 917 KB | 290 KB | 19 | ~783 KB * | +17% * |
+| `/login` | 803 KB | 250 KB | 17 | 977,6 KB ** | −18% ✅ |
+| `/ai/health` | 780 KB | 243 KB | 17 | 1.097,0 KB | −29% ✅ |
+
+\* aproximada desde la fila de `/projects/[id]` del §4.2 (783,5 KB en
+`/projects/[id]/audits/[auditId]`). \*\* baseline SIN sesión; la ruta ya no
+arrastra el cliente supabase global (H-02 resuelto).
+
+**Descomposición del `+` en `/` (top chunks hoy, fingerprints de contenido):**
+
+| Chunk | raw | gzip | Contenido (firma verificada) | Estado |
+|-------|-----|------|------------------------------|--------|
+| `1nafzq5-myj70.js` | 398,5 KB | 129,0 KB | `react-dom` (createElementNS del host DOM del reconciler) | EAGER (esperado) |
+| `3i0efu94lno4m.js` | 214,9 KB | 55,2 KB | cliente `supabase` (`createClient`, `GoTrueClient`, realtime) | EAGER (ver H-02) |
+| `113pg5k02_hsm.js` | 131,1 KB | 35,6 KB | *[INFERRED]* runtime compartido | EAGER |
+
+> **⚠️ Regresión del runtime:** el chunk de react-dom pasó de 229 KB (§5 fila 7)
+> a 398 KB raw y el JS inicial de `/` sube +298 KB raw respecto del 09-26
+> (+29% raw). Next sigue en 16.3.3, así que no es un salto de versión;
+> apunta a que Turbopack fusionó chunks compartidos en el bundle inicial
+> ([INFERRED], causa exacta sin cerrar). swagger/mermaid/jsPDF/leaflet siguen **fuera** del
+> first-load (la ruta raíz sería >2 MB si cayeran allí) — las
+> dependencias pesadas siguen lazy.
+
+### 8.3. Hallazgos nuevos del refresh
+
+| ID | Prioridad | Hallazgo | Evidencia | Recomendación |
+|----|-----------|----------|-----------|---------------|
+| H-09 | **P1** | **RUM vacío**: `web_vitals_logs` = **0 filas** (histórico completo, BD real vía DIRECT) | query SQL 2026-10-18 | El endpoint de vitals existe pero nothing no llega en producción (tráfico casi nulo: usuario owner; posible bloqueo); instrumentar o sustituir por Vercel Speed Insights antes del cierre de CWV de campo |
+| H-10 | **P1** | JS inicial de `/` +29% raw (+25% gzip) desde el 09-26 | §8.2, descomposición | Auditar el diff de imports compartidos (hoy conectados al layout) y re-segregar chunks compartidos; candidata: constituents/páginas nuevas sin `next/dynamic` |
+| H-11 | **P2** | `/ai/health` mejoró −29% raw (recharts ya no eager) | §8.2 | Confirmar en §6 estado del H-03 = **RESUELTO en la práctica** |
+| H-12 | **P3** | Lighthouse no es parte del pipeline (como ya anotaba H-08) — sigue abierto | ci.yml sin job LH | Añadir job Lighthouse periódico (no bloqueante) sobre las 3 rutas públicas |
+
+### 8.4. Estado REQ del refresh
+
+| REQ | Meta | Estado 2026-10-18 (producción) |
+|-----|------|-------------------------------|
+| REQ-001 | LCP < 2,5 s en `/login` | ✅ **2,33 s** (era ?? 4,67 s) |
+| REQ-002 | CLS = 0 | ✅ 0.000 en las 3 rutas |
+| REQ-003 | TBT < 200 ms | ❌ 596–1.408 ms (igual que el baseline local; el trabajo de hidratación sigue abierto) |
+| REQ-004 | Ahorro de bundle verificado | ✅ `/login` −18% y `/ai/health` −29%; ⚠️ `/` +29% |
+| REQ-005 | Carga bajo demanda | ✅ las libs pesadas (swagger/mermaid/jsPDF/leaflet) no aparecen en first-load de la ruta raíz [INFERRED] |
+| REQ-703 (gate B11) | Verificación de producción | ✅ este §8 usa la URL real (el §6 del 09-26 NO la medía) |
+
+*Refresh generado el 2026-10-18: Lighthouse 13.7.0 contra `scaudit.vercel.app` (1 run/ruta) + `route-bundle-stats.json` del build de Turbopack + query SQL real en `web_vitals_logs`. Limitaciones de muestreo (n=1 por ruta) apuntan en §7.*

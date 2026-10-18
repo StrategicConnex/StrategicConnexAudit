@@ -21,7 +21,7 @@
 | B04 | Módulos y Contratos | **completado** (2026-08-02) | Module Contract template + ×9 módulos (gate 100/100 c/u) | `docs/modules/` |
 | B05 | Jobs y Trigger.dev | **completado** (2026-08-02) | Job Contract ×12 triggers (gate 100/100 c/u) | `docs/jobs/` |
 | B06 | Testing | **completado** (2026-08-02) | TEST-COVERAGE-MATRIX + tests P0 (5 route.test/trigger.test) + **6 trigger.test más → 9/12 triggers con test** · **359 tests / 40 files** | `docs/testing/`, `src/app/api/`, `src/trigger/` |
-| B07 | Performance | **en curso** (Sprint 4, serie tras el sweep de docs 2026-10-18) | Refresh PERFORMANCE_REPORT + CWV + bundle | `docs/improvements/` |
+| B07 | Performance | **completado** (2026-10-18) | Refresh PERFORMANCE_REPORT §8: CWV reales contra producción (login 76, pricing 82, home 63) + bundle fresh + hallazgos H-09..H-12 (RUM vacío, `/` +29% raw) | `docs/improvements/PERFORMANCE_REPORT.md` |
 | B08 | Observabilidad | ✅ completado (2026-09-25) | OBSERVABILITY-MATRIX + convención de IDs | `docs/observability/` |
 | B09 | i18n | ✅ completado (2026-09-25) | I18N-AUDIT + script de paridad de keys | `docs/i18n/` |
 | B10 | Final | **completado** (2026-08-02) | TRACEABILITY-MATRIX, RISK-REGISTER, TECH-DEBT-REGISTER, FINAL-REPORT §51, Quality Gate T10-04 27/27 | `docs/{traceability,risk,technical-debt,improvements}/` |
