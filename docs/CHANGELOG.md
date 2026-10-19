@@ -60,10 +60,20 @@ propias nunca se mezclan con las de clientes. Env validada en `src/env.ts`
 
 **Estado H-09:** paso 1 (owner seteó `ALLOWED_TELEMETRY_ORIGINS` en Vercel) ✅ — el
 preflight a `/api/telemetry/vitals` ya devuelve el eco del origin propio; paso 2 (snippet)
-✅ implementado en código, **pendiente del owner** crear el proyecto self-RUM
-"scaudit.vercel.app" + setear la env; hallazgo nuevo: POST con projectId inexistente
-devuelve 500 (esperado 404) — diagnosticar con telemetría real
-(PERFORMANCE_REPORT §8.3).
+✅ implementado en código (commit `07e1f20`, env-driven); hallazgo 500-opaco **FIXED**
+(commit `931730e`): catch granular DB con 404/503 auto-diagnósticos · **VERIFICADO EN
+PROD 2026-10-19 19:26** — POST `projectId` inexistente + origin permitido → **404
+`{"error":"Project not found or inactive"}`** (era 500 opaco); OPTIONS preflight → 204 +
+ACAO eco ✅; `{}` → 400 Zod ✅; origin externo → 403 ✅; JSON malformado → 500
+estandarizado (el beacon emite JSON válido, no aplica en la práctica — pulido futuro no
+crítico). Matriz completa: el 500 de la mañana era transient cold-start de la capa DB —
+ahora cualquier repetición sale como 503 `telemetry_unavailable` con log `(stage,
+pgCode)` visible en Vercel → Functions → Logs, sin necesidad de Sentry · **Queda para el
+owner**: 1) ~~ALLOWED_TELEMETRY_ORIGINS~~ ✅; 2) ~~snippet~~ ✅ en código; 3) crear
+proyecto self-RUM "scaudit.vercel.app" en dashboard + copiar UUID real; 4) setear
+`NEXT_PUBLIC_RUM_PROJECT_ID` en Vercel → redeploy; 5) probar POST con el UUID real
+(esperado 204) y luego `SELECT count(*) FROM web_vitals_logs;` > 0 — ahí H-09 queda
+cerrado con beacon real; 6) revocar la antigua clave Gemini filtrada `AIzaSyA…` (sigue).
 
 ### 📄 2026-10-19 — Export PDF roto por html2canvas + Tailwind v4 OKLCH (fix renderizado)
 
