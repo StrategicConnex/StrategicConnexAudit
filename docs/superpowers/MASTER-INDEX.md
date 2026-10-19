@@ -26,7 +26,7 @@
 | B09 | i18n | ✅ completado (2026-09-25) | I18N-AUDIT + script de paridad de keys | `docs/i18n/` |
 | B10 | Final | **completado** (2026-08-02) | TRACEABILITY-MATRIX, RISK-REGISTER, TECH-DEBT-REGISTER, FINAL-REPORT §51, Quality Gate T10-04 27/27 | `docs/{traceability,risk,technical-debt,improvements}/` |
 | B11 | Cierre Octubre 2026 (IA + Trigger workers + cobertura) | **completado** (2026-10-18) | Pool IA OpenRouter-only; fix TLS+credenciales de workers (TD-14/15/16, deploy `20261018.1`); cobertura 58.8% lines; QUALITY-GATE-REPORT PASS; TECH-DEBT-REGISTER v1.3 | `docs/testing/QUALITY-GATE-REPORT.md`, `EXECUTIVO_TRIGGER_GAPS.md`, `FINAL-SUMMARY.md` |
-| B12 | Guards de operación (feedback producción 2026-10-18) | **completado** (2026-10-18) | H-09 clasificado (0 investigaciones = error veraz); PDF de ReportsTab guía a Inteligencia en 404; guard env-parity: `env_parity_drift` (Healthcheck IA, SIEM Critical + push) — SOLO booleans, sin valores | `docs/security.md`, `src/app/api/ai/healthcheck/`, `src/features/dashboard/DownloadPdfButton.tsx` |
+| B12 | Guards de operación + reparación de CI (feedback producción 2026-10-18) | **completado** (2026-10-18) | H-09 clasificado (0 investigaciones = error veraz); PDF de ReportsTab guía a Inteligencia en 404; guard env-parity: `env_parity_drift` (Healthcheck IA, SIEM Critical + push); CI reparado y verificado en run 39191101833: 7/9 jobs verdes (Lint&Build por WCAG accent/destructive, E2E por disclaimer gate, Docs estático sin Jekyll) — TD-19 (migraciones desde cero) y TD-20 (contract fail-closed, config owner) documentadas en TECH-DEBT v1.4 | `docs/security.md`, `src/app/api/ai/healthcheck/`, `docs/technical-debt/TECH-DEBT-REGISTER.md` |
 
 ## Estado de artefactos
 
