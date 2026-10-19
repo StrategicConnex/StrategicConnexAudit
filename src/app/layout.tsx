@@ -10,6 +10,7 @@ import { RegisterServiceWorker } from "@/features/dashboard/RegisterServiceWorke
 import { ThemeProvider, themeInitScript } from "@/shared/design-system";
 import { getLocale, getMessages } from "@/i18n/request";
 import Script from "next/script";
+import { z } from "zod";
 
 
 const inter = Inter({
@@ -93,7 +94,17 @@ export default async function RootLayout({
   // hidratación/interactividad. El beacon token (P0-3) es opcional: si el
   // proyecto self-RUM tiene secreto se usa NEXT_PUBLIC_RUM_BEACON_TOKEN (es
   // anti-DB-bloat, no una credencial de autenticación).
-  const rumProjectId = process.env.NEXT_PUBLIC_RUM_PROJECT_ID?.trim();
+  // Defense-in-depth extra (incidente 2026-10-19 23:00): la env OPIONAL puede
+  // venir corrupta de un copy-paste — el layout intenta validación zod antes
+  // de pintar, y con invalidez NO pinta el beacon (además validateEnvSoft
+  // degrada la env en el arranque; esto es la segunda cinturita).
+  let rumProjectId: string | undefined;
+  try {
+    const rum = z.string().uuid().optional().safeParse(process.env.NEXT_PUBLIC_RUM_PROJECT_ID?.trim());
+    rumProjectId = rum.success ? rum.data : undefined;
+  } catch {
+    rumProjectId = undefined;
+  }
   const rumBeaconToken = process.env.NEXT_PUBLIC_RUM_BEACON_TOKEN?.trim();
 
   return (

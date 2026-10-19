@@ -58,6 +58,23 @@ export const envSchema = z
 export type Env = z.infer<typeof envSchema>;
 
 /**
+ * Claves cuyo fallo de formato NO aborta el arranque del servidor (incidente
+ * 2026-10-19 23:00): son opcionales por diseño y sus consumidores ya son
+ * fail-closed (el router AI salta al siguiente proveedor; el layout de RUM
+ * no renderiza el beacon). Una env de RUM mal copy-pasteada no puede tumbar
+ * toda la producción.
+ */
+export const SOFT_ENV_KEYS = [
+  "GROQ_API_KEY",
+  "GEMINI_API_KEY",
+  "RESEND_API_KEY",
+  "SLACK_WEBHOOK_URL",
+  "TEAMS_WEBHOOK_URL",
+  "NEXT_PUBLIC_RUM_PROJECT_ID",
+  "NEXT_PUBLIC_RUM_BEACON_TOKEN",
+] as const;
+
+/**
  * Lectura directa (sin validación) de las variables de entorno.
  *
  * Existe para compatibilidad con el código que ya importa `env`; los valores
@@ -103,4 +120,40 @@ export const env = {
  */
 export function validateEnv(): Env {
   return envSchema.parse(process.env);
+}
+
+/**
+ * Validación con **degradación suave** de las variables de {@link SOFT_ENV_KEYS}.
+ *
+ * Comportamiento:
+ * 1. Parse completo exitoso → `{ env, soft: [] }`.
+ * 2. Falla SOLO en claves opcionales → se eliminan las claves ofensoras del
+ *    entorno parseado, se reparsea y se reportan como degradadas. El
+ *    arranque continúa (los consumidores de esas claves ya son fail-closed).
+ * 3. Falta algo REQUERIDO (o la refine del par de claves Supabase) → lanza
+ *    el ZodError original: fail-fast igual que antes.
+ *
+ * @throws {z.ZodError} Si falla algo no-listado en {@link SOFT_ENV_KEYS}.
+ */
+export function validateEnvSoft(): { env: Env; soft: string[] } {
+  const first = envSchema.safeParse(process.env);
+  if (first.success) return { env: first.data, soft: [] };
+
+  const softSet = new Set<string>(SOFT_ENV_KEYS);
+  const offending = new Set(
+    first.error.issues
+      .map((issue) => String(issue.path[0] ?? ""))
+      .filter((key) => key && softSet.has(key)),
+  );
+  // Todo lo ofensor es opcional → degradar; si hay ALGO fuera de la lista,
+  // es un fallo duro (requeridas ausentes/inválidas, refine Supabase, etc.).
+  if (offending.size === 0) throw first.error;
+
+  const cleaned: Record<string, string | undefined> = { ...process.env };
+  for (const key of offending) delete cleaned[key];
+
+  const retry = envSchema.safeParse(cleaned);
+  if (!retry.success) throw retry.error;
+
+  return { env: retry.data, soft: [...offending] };
 }

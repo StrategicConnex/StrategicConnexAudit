@@ -11,7 +11,7 @@
  * exporta el hook `onRequestError` para persistir los 500 no capturados.
  */
 
-import { validateEnv } from "@/env";
+import { validateEnvSoft } from "@/env";
 import { logger } from "@/lib/logger";
 import type { Instrumentation } from "next";
 
@@ -40,8 +40,19 @@ export async function register(): Promise<void> {
   // Solo runtime Node: el proxy corre en edge y no necesita estas variables.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // Incidente 2026-10-19 23:00 — un copy-paste inválido en una env OPIONAL
+  // (NEXT_PUBLIC_RUM_PROJECT_ID) tumbó toda la producción: validateEnv()
+  // re-lanzaba CUALQUIER ZodError. Ahora las claves de SOFT_ENV_KEYS se
+  // degradan a undefined con log auditable y el arranque continúa
+  // (fail-closed en el consumidor). Solo los fallos duros abortan.
   try {
-    validateEnv();
+    const { soft } = validateEnvSoft();
+    if (soft.length > 0) {
+      logger.error(
+        "Variables opcionales con formato inválido — degradadas a undefined (el arranque continúa):",
+        { module: "instrumentation", keys: soft },
+      );
+    }
   } catch (error) {
     logger.error("Validación de variables de entorno fallida — abortando arranque", {
       module: "instrumentation",

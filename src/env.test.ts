@@ -12,7 +12,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
-import { env, envSchema, validateEnv } from "./env";
+import { env, envSchema, validateEnv, validateEnvSoft } from "./env";
 
 // ─── Fixture ────────────────────────────────────────────────────────────────
 
@@ -167,6 +167,35 @@ describe("validateEnv", () => {
     for (const key of OPTIONAL_VARS) {
       expect(parsed[key]).toBe(VALID_VALUES[key]);
     }
+  });
+
+  it("validateEnvSoft: entorno completo válido → soft vacía", () => {
+    stubEnvFixture();
+
+    const { env: parsed, soft } = validateEnvSoft();
+
+    expect(soft).toEqual([]);
+    expect(parsed.NEXT_PUBLIC_RUM_PROJECT_ID).toBe(
+      VALID_VALUES.NEXT_PUBLIC_RUM_PROJECT_ID
+    );
+  });
+
+  it("validateEnvSoft: env opcional INVÁLIDA → se degrada a undefined y NO lanza (incidente 2026-10-19 23:00)", () => {
+    stubEnvFixture();
+    vi.stubEnv("NEXT_PUBLIC_RUM_PROJECT_ID", "el-nombre-del-proyecto");
+
+    const { env: parsed, soft } = validateEnvSoft();
+
+    expect(soft).toContain("NEXT_PUBLIC_RUM_PROJECT_ID");
+    expect(parsed.NEXT_PUBLIC_RUM_PROJECT_ID).toBeUndefined();
+    // Lo demás sigue intacto:
+    expect(parsed.DATABASE_URL).toBe(VALID_VALUES.DATABASE_URL);
+  });
+
+  it("validateEnvSoft: MODO fail-fast si falla algo requerido (no abraza la degradación para todo)", () => {
+    stubEnvFixture(["DATABASE_URL"]);
+
+    expect(() => validateEnvSoft()).toThrow();
   });
 });
 
