@@ -30,10 +30,19 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Build with Jekyll
+        if: false # desactivado: Liquid rompía con ejemplos de código (rojo desde 2026-10-14)
         uses: actions/jekyll-build-pages@v1
         with:
           source: ./docs
           destination: ./_site
+
+      - name: Copy docs statically (no Jekyll)
+        # Copia plana de ./docs → ./_site: sirve los markdown tal cual.
+        # Evita Liquid a perpetuidad (cualquier {{ }} en ejemplos tumba el build).
+        run: |
+          mkdir -p _site
+          cp -r docs/. _site/
+          touch _site/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
