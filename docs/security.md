@@ -216,6 +216,19 @@ Evento de seguridad → logSecurityEvent() → security_audit_logs (DB)
 | CSP Violation Spike | `csp_violation` | 10 | 10 min | 🟡 Warning |
 | Auth Failure Burst | `auth_failure` | 5 | 5 min | 🟡 Warning |
 | Invalid Input Spike | `invalid_input` | 10 | 5 min | 🔵 Info |
+| Env Parity Drift | `env_parity_drift` | 1 | 5 min | 🔴 Critical |
+
+> `env_parity_drift` (2026-10-18): guard de paridad de entorno. El healthcheck
+> IA (`GET /api/ai/healthcheck`, CRON c/6 h) reporta **solo booleanos** de
+> presencia (`OPENROUTER_API_KEY`, `RESEND_API_KEY`,
+> `ALLOWED_TELEMETRY_ORIGINS`) en la respuesta y metadata de `ai_health_logs`;
+> si falta alguna en producción emite `env_parity_drift` (Critical vía SIEM).
+> Origen: segundo incidente de desincronización — IA muerta en producción por
+> `OPENROUTER_API_KEY` ausente en Vercel, detectada por captura de usuario
+> días después en vez de por monitoreo.
+> **Implementación**: `src/app/api/ai/healthcheck/route.ts`
+> (`computeEnvParity` / `logEnvParityAlert`), evento en
+> `src/shared/lib/audit-log.ts`.
 
 ### Eventos de auditoría
 

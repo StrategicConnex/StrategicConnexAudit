@@ -33,14 +33,20 @@ vi.mock("@/server/auth/cron", () => ({
   isCronAuthorized: (...args: unknown[]) => mockIsCronAuthorized(...args),
 }));
 
-vi.mock("@/lib/logger", () => ({getRequestContext: vi.fn(() => undefined), runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(), 
+vi.mock("@/lib/logger", () => ({
+  getRequestContext: vi.fn(() => undefined),
+  runWithRequestContext: <T>(_ctx: unknown, fn: () => T): T => fn(),
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
 vi.mock("@/shared/config/env-secrets", () => ({
   envSecrets: {
-    get openRouterApiKey() { return process.env.OPENROUTER_API_KEY; },
-    get openRouterBaseUrl() { return process.env.OPENROUTER_BASE_URL; },
+    get openRouterApiKey() {
+      return process.env.OPENROUTER_API_KEY;
+    },
+    get openRouterBaseUrl() {
+      return process.env.OPENROUTER_BASE_URL;
+    },
   },
 }));
 
@@ -65,6 +71,8 @@ describe("GET /api/ai/healthcheck", () => {
     origEnv.CRON_SECRET = process.env.CRON_SECRET;
     origEnv.OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
     origEnv.NODE_ENV = process.env.NODE_ENV;
+    origEnv.RESEND_API_KEY = process.env.RESEND_API_KEY;
+    origEnv.ALLOWED_TELEMETRY_ORIGINS = process.env.ALLOWED_TELEMETRY_ORIGINS;
     process.env.CRON_SECRET = "";
     process.env.NODE_ENV = "test";
     const mod = await import("./route");
@@ -79,10 +87,16 @@ describe("GET /api/ai/healthcheck", () => {
   afterEach(() => {
     if (origEnv.CRON_SECRET !== undefined) process.env.CRON_SECRET = origEnv.CRON_SECRET;
     else delete process.env.CRON_SECRET;
-    if (origEnv.OPENROUTER_API_KEY !== undefined) process.env.OPENROUTER_API_KEY = origEnv.OPENROUTER_API_KEY;
+    if (origEnv.OPENROUTER_API_KEY !== undefined)
+      process.env.OPENROUTER_API_KEY = origEnv.OPENROUTER_API_KEY;
     else delete process.env.OPENROUTER_API_KEY;
     if (origEnv.NODE_ENV !== undefined) process.env.NODE_ENV = origEnv.NODE_ENV;
     else delete process.env.NODE_ENV;
+    if (origEnv.RESEND_API_KEY !== undefined) process.env.RESEND_API_KEY = origEnv.RESEND_API_KEY;
+    else delete process.env.RESEND_API_KEY;
+    if (origEnv.ALLOWED_TELEMETRY_ORIGINS !== undefined) {
+      process.env.ALLOWED_TELEMETRY_ORIGINS = origEnv.ALLOWED_TELEMETRY_ORIGINS;
+    } else delete process.env.ALLOWED_TELEMETRY_ORIGINS;
     vi.restoreAllMocks();
   });
 
@@ -342,5 +356,88 @@ describe("GET /api/ai/healthcheck", () => {
     expect(body.success).toBe(false);
 
     globalThis.URL = OriginalURL;
+  });
+
+  // ─── Guard de paridad de entorno (2026-10-18) ────────────────────────────
+
+  it("incluye envParity con booleanos (sin valores) en la respuesta", async () => {
+    process.env.OPENROUTER_API_KEY = "test-key";
+    process.env.RESEND_API_KEY = "re_x";
+    process.env.ALLOWED_TELEMETRY_ORIGINS = "https://scaudit.vercel.app";
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: "ok" } }], model: "model-a:free" }),
+    });
+
+    const res = await GET(createRequest());
+    const body = await res.json();
+    expect(body.envParity).toEqual({
+      openrouterConfigured: true,
+      resendConfigured: true,
+      telemetryOriginsConfigured: true,
+    });
+    // Nunca debe exponer el valor de la clave
+    expect(JSON.stringify(body)).not.toContain("test-key");
+    expect(JSON.stringify(body)).not.toContain("re_x");
+  });
+
+  it("alerta SIEM env_parity_drift cuando falta una clave crítica en producción", async () => {
+    delete process.env.OPENROUTER_API_KEY;
+    delete process.env.ALLOWED_TELEMETRY_ORIGINS;
+    origEnv.RESEND_API_KEY = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    process.env.NODE_ENV = "production";
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: "ok" } }], model: "model-a:free" }),
+    });
+
+    const res = await GET(createRequest());
+    expect(res.status).toBe(200);
+
+    const driftEvent = mockLogSecurityEvent.mock.calls
+      .map((call) => call[0])
+      .find((eventType: string) => eventType === "env_parity_drift");
+    expect(mockLogSecurityEvent).toHaveBeenCalledWith(
+      "env_parity_drift",
+      expect.objectContaining({
+        path: "/api/ai/healthcheck",
+        metadata: expect.objectContaining({
+          missingEnvKeys: ["OPENROUTER_API_KEY", "RESEND_API_KEY", "ALLOWED_TELEMETRY_ORIGINS"],
+          openrouterConfigured: false,
+          nodeEnv: "production",
+        }),
+      })
+    );
+    expect(driftEvent).toBe("env_parity_drift");
+
+    // La persistencia en metadata también lleva el envParity (sin valores).
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          envParity: {
+            openrouterConfigured: false,
+            resendConfigured: false,
+            telemetryOriginsConfigured: false,
+          },
+        }),
+      })
+    );
+  });
+
+  it("NO alerta SIEM por claves ausentes fuera de producción", async () => {
+    delete process.env.OPENROUTER_API_KEY;
+    process.env.NODE_ENV = "test";
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: "ok" } }], model: "model-a:free" }),
+    });
+
+    await GET(createRequest());
+    const driftEvents = mockLogSecurityEvent.mock.calls.filter(
+      (call) => call[0] === "env_parity_drift"
+    );
+    expect(driftEvents).toHaveLength(0);
   });
 });

@@ -67,6 +67,49 @@ interface HealthCheckResult {
   recordedAt: string | null;
 }
 
+/**
+ * Guard de paridad de entorno (2026-10-18): segundo incidente de
+ * desincronización — OPENROUTER_API_KEY ausente en Vercel producía
+ * "IA muerta en producción" sin señal de monitoreo. Reporta SOLO
+ * booleanos de presencia — jamás valores de secretos.
+ */
+interface EnvParity {
+  openrouterConfigured: boolean;
+  resendConfigured: boolean;
+  telemetryOriginsConfigured: boolean;
+}
+
+function computeEnvParity(): EnvParity {
+  return {
+    openrouterConfigured: !!envSecrets.openRouterApiKey,
+    resendConfigured: !!process.env.RESEND_API_KEY?.trim(),
+    telemetryOriginsConfigured: !!process.env.ALLOWED_TELEMETRY_ORIGINS?.trim(),
+  };
+}
+
+/** Alerta SIEM solo en producción, solo con nombres de claves (sin valores). */
+function logEnvParityAlert(envParity: EnvParity): void {
+  const isProduction = process.env.NODE_ENV === "production";
+  const missing: string[] = [];
+  if (!envParity.openrouterConfigured) missing.push("OPENROUTER_API_KEY");
+  if (!envParity.resendConfigured) missing.push("RESEND_API_KEY");
+  if (!envParity.telemetryOriginsConfigured) missing.push("ALLOWED_TELEMETRY_ORIGINS");
+
+  if (missing.length > 0 && isProduction) {
+    logger.error("AI Healthcheck: env-parity drift en producción", { missing });
+    logSecurityEvent("env_parity_drift", {
+      path: "/api/ai/healthcheck",
+      method: "GET",
+      metadata: {
+        missingEnvKeys: missing,
+        // La alerta dura es para la clave crítica de IA (síntoma en producción).
+        openrouterConfigured: envParity.openrouterConfigured,
+        nodeEnv: process.env.NODE_ENV || "development",
+      },
+    });
+  }
+}
+
 // ─── Test de un modelo individual ───────────────────────────────────────────
 
 async function testModel(modelId: string, timeoutMs = 15_000): Promise<ModelResult> {
@@ -181,7 +224,7 @@ async function testModel(modelId: string, timeoutMs = 15_000): Promise<ModelResu
 
 // ─── Persistencia en base de datos ─────────────────────────────────────────
 
-async function persistResult(result: HealthCheckResult, triggerSource: string): Promise<string | null> {
+async function persistResult(result: HealthCheckResult, triggerSource: string, envParity: EnvParity): Promise<string | null> {
   try {
     const [inserted] = await directDb.insert(aiHealthLogs).values({
       overallStatus: result.overallStatus,
@@ -195,6 +238,7 @@ async function persistResult(result: HealthCheckResult, triggerSource: string): 
       metadata: {
         nodeEnv: process.env.NODE_ENV || "development",
         checkedAt: new Date().toISOString(),
+        envParity,
       },
     }).returning({ id: aiHealthLogs.id });
 
@@ -232,6 +276,11 @@ async function rawGet(request: Request) {
     // 2. Extraer trigger source
     const { searchParams } = new URL(request.url);
     const triggerSource = searchParams.get("trigger") || "cron";
+
+    // 2.5. Guard de paridad de entorno: booleanos de presencia de claves
+    // críticas + alerta SIEM si falta alguna en producción (sin valores).
+    const envParity = computeEnvParity();
+    logEnvParityAlert(envParity);
 
     // 3. Testear todos los modelos en paralelo
     const results = await Promise.all(
@@ -273,7 +322,7 @@ async function rawGet(request: Request) {
     };
 
     // 5. Persistir en BD (graceful degradation: si la tabla no existe, continúa)
-    healthResult.recordedAt = await persistResult(healthResult, triggerSource);
+    healthResult.recordedAt = await persistResult(healthResult, triggerSource, envParity);
 
     const totalMs = Date.now() - startTime;
 
@@ -322,6 +371,7 @@ async function rawGet(request: Request) {
     return NextResponse.json({
       success: true,
       ...healthResult,
+      envParity,
       durationMs: totalMs,
       timestamp: new Date().toISOString(),
       nodeEnv: process.env.NODE_ENV || "development",

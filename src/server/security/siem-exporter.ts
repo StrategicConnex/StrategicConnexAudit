@@ -63,6 +63,7 @@ const RULES: Rule[] = [
   { eventType: "open_redirect_attempt", threshold: 3,  windowMinutes: 5,  severity: "critical", label: "\u{1F6A8} Open Redirect Attack" },
   { eventType: "rate_limit_bypass",     threshold: 1,  windowMinutes: 5,  severity: "critical", label: "\u{1F6A8} Rate Limit Bypass" },
   { eventType: "ai_model_health",       threshold: 1,  windowMinutes: 5,  severity: "critical", label: "\u{1F6A8} AI Model Failure" },
+  { eventType: "env_parity_drift",      threshold: 1,  windowMinutes: 5,  severity: "critical", label: "\u{1F6A8} Env Parity Drift" },
   { eventType: "rate_limit_hit",        threshold: 20, windowMinutes: 5,  severity: "warning",  label: "\u26A0\uFE0F Rate Limit Spike" },
   { eventType: "csp_violation",         threshold: 10, windowMinutes: 10, severity: "warning",  label: "\u26A0\uFE0F CSP Violation Spike" },
   { eventType: "auth_failure",          threshold: 5,  windowMinutes: 5,  severity: "warning",  label: "\u26A0\uFE0F Auth Failure Burst" },
@@ -310,9 +311,15 @@ async function sendPushAlerts(patterns: SiemPattern[]): Promise<void> {
   try {
     const { sendPushNotificationToAll } = await import("@/server/notifications/push");
     for (const p of patterns) {
-      if (p.eventType === "ai_model_health") {
+      // Push para eventos críticos operativos del sistema IA:
+      // modelos caídos y drift de variables de entorno (guard 2026-10-18).
+      if (p.eventType === "ai_model_health" || p.eventType === "env_parity_drift") {
         await sendPushNotificationToAll({
-          title: p.label, body: `Evento: ${p.eventType} \u2022 IP: ${p.ip} \u2022 ${p.count} ocurrencias en ${p.windowMinutes} min`,
+          title: p.label,
+          body:
+            p.eventType === "env_parity_drift"
+              ? "Faltan variables de entorno críticas en producción. Configúralas en Vercel y redeploy."
+              : `Evento: ${p.eventType} \u2022 IP: ${p.ip} \u2022 ${p.count} ocurrencias en ${p.windowMinutes} min`,
           tag: `siem-${p.eventType}-${p.ip}`, url: "/ai/health",
           data: { eventType: p.eventType, ip: p.ip, count: p.count, severity: p.severity },
         });

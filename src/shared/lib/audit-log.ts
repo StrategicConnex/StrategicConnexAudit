@@ -29,7 +29,11 @@ export type SecurityEventType =
   | "rate_limit_degraded"
   | "rate_limit_fallback_ceiling"
   | "invalid_input"
-  | "ai_model_health";
+  | "ai_model_health"
+  // Guard de paridad de entorno (2026-10-18): faltan variables de entorno
+  // críticas en un entorno desplegado (p.ej. OPENROUTER_API_KEY en Vercel).
+  // Nunca lleva valores, solo la lista de claves ausentes.
+  | "env_parity_drift";
 
 export interface SecurityEvent {
   audit: true;
