@@ -14,6 +14,8 @@ interface DownloadPdfButtonProps {
   label?: string;
   variant?: 'primary' | 'ghost';
   size?: 'sm' | 'md';
+  /** Si se pasa, el toast de "sin investigaciones" incluye acción para saltar a la tab de Inteligencia. */
+  onNavigateToIntelligence?: () => void;
 }
 
 /**
@@ -34,6 +36,7 @@ export function DownloadPdfButton({
   label = 'Descargar PDF',
   variant = 'primary',
   size = 'md',
+  onNavigateToIntelligence,
 }: DownloadPdfButtonProps) {
   const [loading, setLoading] = useState(false);
   const toastIdRef = useRef<string | number | null>(null);
@@ -116,6 +119,23 @@ export function DownloadPdfButton({
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+        // 404 con este mensaje = el proyecto aún no tiene investigaciones:
+        // guiar en vez de tirar un toast de error genérico (feedback 2026-10-18
+        // en Geopark: el error era veraz y el usuario no tenía camino de salida).
+        if (
+          res.status === 404 &&
+          typeof errData.error === 'string' &&
+          errData.error.includes('No se encontraron investigaciones')
+        ) {
+          toast.error(t('pdfNeedsInvestigations'), {
+            id: toastIdRef.current ?? undefined,
+            description: t('pdfNeedsInvestigationsDesc'),
+            ...(onNavigateToIntelligence
+              ? { action: { label: t('goToIntelligence'), onClick: onNavigateToIntelligence } }
+              : {}),
+          });
+          return;
+        }
         throw new Error(errData.error || `HTTP ${res.status}`);
       }
 
@@ -153,7 +173,7 @@ export function DownloadPdfButton({
       toastIdRef.current = null;
       genIdRef.current = null;
     }
-  }, [projectId, investigationId, t]);
+  }, [projectId, investigationId, t, onNavigateToIntelligence]);
 
   const sizeClasses = size === 'sm' ? 'text-2xs px-3 py-2 rounded-lg' : 'text-xs px-5 py-3 rounded-xl';
   const variantClasses = variant === 'ghost'

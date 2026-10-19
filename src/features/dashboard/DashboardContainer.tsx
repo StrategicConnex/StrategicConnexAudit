@@ -299,6 +299,7 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
                 viewMode={viewMode}
                 setViewMode={setViewMode}
                 setActiveTab={(tab) => openTab(tab as DashboardTab)}
+                onNavigateToIntelligence={() => openTab('intelligence')}
               />
             )}
 

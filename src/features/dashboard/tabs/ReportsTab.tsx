@@ -38,11 +38,13 @@ interface ReportsTabProps {
   viewMode: 'visual' | 'markdown';
   setViewMode: (mode: 'visual' | 'markdown') => void;
   setActiveTab: (tab: string) => void;
+  /** Permite al toast de "sin investigaciones" saltar a la tab de Inteligencia. */
+  onNavigateToIntelligence: () => void;
 }
 
 export function ReportsTab({ 
   initialProjects, selectedProjectId, setSelectedProjectId, 
-  aiReport, viewMode, setViewMode 
+  aiReport, viewMode, setViewMode, onNavigateToIntelligence 
 }: ReportsTabProps) {
   const t = useTranslations('reports');
   return (
@@ -69,6 +71,7 @@ export function ReportsTab({
             projectId={selectedProjectId}
             label={t('downloadPdf')}
             size="md"
+            onNavigateToIntelligence={onNavigateToIntelligence}
           />
         </div>
 

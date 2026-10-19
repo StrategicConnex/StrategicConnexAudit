@@ -125,6 +125,12 @@ export const POST = withRateLimit(
       }
 
       if (investigations.length === 0) {
+        // DECISIÓN DE PRODUCTO (2026-10-18, explícita): las investigaciones son
+        // requisito del PDF — el payload del reporte son sus findings/assets
+        // (un PDF "solo con auditorías" sería otro entregable distinto, aún
+        // no especificado). El error debe guiar: el cliente de ReportsTab
+        // intercepta este 404 y ofrece saltar a Inteligencia (ver
+        // DownloadPdfButton, feedback en Geopark).
         reportProgress(userId, genId, 0, 'Error', 'error');
         return NextResponse.json(
           { success: false, error: 'No se encontraron investigaciones para este proyecto' },

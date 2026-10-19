@@ -475,7 +475,10 @@
     "pdfExportError": "There was an error generating the PDF. Please try again.",
     "pdfExportShort": "Export error.",
     "historyEmptyTitle": "No reports yet",
-    "historyEmptyDesc": "Generate your first report above: it will appear here to download."
+    "historyEmptyDesc": "Generate your first report above: it will appear here to download.",
+    "pdfNeedsInvestigations": "No investigations for this project",
+    "pdfNeedsInvestigationsDesc": "Run an investigation in the Intelligence tab and come back here to generate the PDF.",
+    "goToIntelligence": "Go to Intelligence"
   },
   "settings": {
     "pageTitle": "System Settings",

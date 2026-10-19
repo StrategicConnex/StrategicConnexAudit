@@ -475,7 +475,10 @@
     "pdfExportError": "Hubo un error al generar el PDF. Por favor intenta de nuevo.",
     "pdfExportShort": "Error al exportar.",
     "historyEmptyTitle": "Aún no generaste reportes",
-    "historyEmptyDesc": "Genera tu primer informe arriba: aparecerá aquí para descargar."
+    "historyEmptyDesc": "Genera tu primer informe arriba: aparecerá aquí para descargar.",
+    "pdfNeedsInvestigations": "No hay investigaciones para este proyecto",
+    "pdfNeedsInvestigationsDesc": "Ejecuta una investigación en la pestaña de Inteligencia y vuelve aquí para generar el PDF.",
+    "goToIntelligence": "Ir a Inteligencia"
   },
   "settings": {
     "pageTitle": "Configuración del Sistema",
