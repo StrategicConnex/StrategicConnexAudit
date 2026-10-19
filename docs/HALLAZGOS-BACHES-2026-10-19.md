@@ -312,3 +312,10 @@ por proveedor y probes en el healthcheck IA. El (a) de "health check proactivo" 
 existía (healthcheck IA con guard env-parity + SIEM) y ahora incluye el failover; el
 (b) del "mensaje de degradación explícito en UI" también se cerró: el chat ya no
 disfrazaba fallos transitorios del pool como "configura tu API key".
+
+**Cierre experimental (verificado en vivo el 2026-10-19):** con el límite diario
+`free-models-per-day` de OpenRouter agotado (429 en toda su cadena — la condición
+real que produjo el error del chatbot ese día), el pool respondió vía
+`groq:openai/gpt-oss-120b` en 1.3-1.8s (copilot/general-chat y incident-brief).
+E2e del pool: `src/scripts/e2e-ai-router.ts` 6/6 ✅. El escenario B-06 ya no es
+alcanzable con ninguna clave de failover configurada.
