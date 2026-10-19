@@ -706,13 +706,19 @@ Este roadmap documenta la estrategia de mejora continua de SCAUDIT Pro en fases 
 
 ## Requisitos del roadmap
 
-| REQ | Requisito | Estado |
-|-----|-----------|--------|
-| REQ-001 | Fase 0 — Cimientos completados | ✅ 15/15 |
-| REQ-002 | Fase 1 — P0 Fundación completada | ✅ 3/3 |
-| REQ-003 | Fase 2 — P1 Core Features | 🟡 3/6 |
-| REQ-004 | Fase 3 — P2 UX/Dashboard | 🟢 1/6 |
-| REQ-005 | Total planificado vs completado | 22/30 (73%) |
+> ⚠️ **Actualizado 2026-10-19:** esta tabla es el snapshot original del roadmap
+> (estado al momento de escribirla). El estado VIGENTE es el de la cabecera del
+> documento y del README: **36/36 ítems completados (100%)** con el cierre de las
+> fases P1-P3 (ver `docs/testing/QUALITY-GATE-REPORT.md`, veredicto PASS). Se
+> conserva el histórico para trazabilidad.
+
+| REQ | Requisito | Estado histórico | Estado actual |
+|-----|-----------|------------------|---------------|
+| REQ-001 | Fase 0 — Cimientos completados | ✅ 15/15 | ✅ 15/15 |
+| REQ-002 | Fase 1 — P0 Fundación completada | ✅ 3/3 | ✅ 3/3 |
+| REQ-003 | Fase 2 — P1 Core Features | 🟡 3/6 | ✅ 6/6 |
+| REQ-004 | Fase 3 — P2 UX/Dashboard | 🟢 1/6 | ✅ 6/6 |
+| REQ-005 | Total planificado vs completado | 22/30 (73%) | ✅ 36/36 (100%) |
 
 ---
 

@@ -11,6 +11,12 @@ estado: Propuesto
 
 # REQ-002 — Landing Page (`/`)
 
+> **Nota de alcance (2026-10-19):** el prefijo `REQ-002` de ESTE documento pertenece
+> al espacio de nombres de **rendimiento** (`docs/performance/REQ-xxx`, feats de
+> optimización). Coincide numéricamente con el `REQ-002` del ROADMAP histórico
+> (`docs/improvements/ROADMAP.md`, "Fase 1 — P0 Fundación") pero no es el mismo
+> requisito. En auditorías, invalidar por árbol: Rendimiento aquí, Roadmap ahí.
+
 ## Requisito
 
 | Métrica | Objetivo | Medido hoy (producción, 2026-10-18) | Estado |

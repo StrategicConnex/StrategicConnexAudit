@@ -303,7 +303,7 @@ src/server/
 
 ### Background jobs
 
-**Mecanismo garantizado: Vercel Cron** (`vercel.json`, protegido con `CRON_SECRET`, 3 crons diarios: SIEM, uptime y healthcheck IA). **Alta frecuencia vía Trigger.dev (opcional)** (deploy no verificado según `docs/guides/deployment.md`) — 13 functional tasks + 1 template en `src/trigger/*.trigger.ts`.
+**Mecanismo garantizado: Vercel Cron** (`vercel.json`, protegido con `CRON_SECRET`, 3 crons diarios: SIEM, uptime y healthcheck IA). **Alta frecuencia vía Trigger.dev** — **34 task ids en 27 archivos `.trigger.ts` · 10 schedules · deploy de producción verificado 2026-10-18 (`20261018.1`)**; detalles en `docs/improvements/ROADMAP.md` y `EXECUTIVO_TRIGGER_GAPS.md`.
 
 | Fuente | Schedule | Descripción |
 |--------|----------|-------------|

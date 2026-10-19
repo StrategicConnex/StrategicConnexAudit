@@ -45,7 +45,9 @@ anti-monodependencia):
 responde vía `groq:openai/gpt-oss-120b` (1.3-1.8s) en general-chat e incident-brief
 (e2e `src/scripts/e2e-ai-router.ts` 6/6); Groq y Gemini responden PONG + `json_object`
 + tools directos (`tests/integration/ai-real-connections.test.ts`, 8/9 con las 4
-llamadas reales medidas OK).
+llamadas reales medidas OK — corrida final 9/9 ✅ tras el ajuste del prompt del test
+live de Groq; corrida intermedia con prompt antiguo fue 8/9 antes de aplicar el piso
+de 512 `max_tokens` en el failover).
 
 ---
 

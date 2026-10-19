@@ -1,5 +1,11 @@
 # Reporte de conexiones de IA — datos y conexiones reales
 
+> **VEREDICTO VIGENTE (2026-10-19):** este reporte conserva las mediciones
+> históricas (10-17 bloqueo DNS del sitio, 10-18 pool OpenRouter-only). El estado
+> ACTUAL está en la **ADDENDA 2026-10-19** al final del documento: failover
+> Groq/Gemini implementado y verificado en vivo, con rescate real de un 429 total
+> de OpenRouter. No te quedes con el estado viejo del encabezado.
+
 **Fecha:** 2026-10-17 · **Ejecución:** `AI_REAL_TESTS=1 pnpm test:integration` (sobre
 [ai-real-connections.test.ts](ai-real-connections.test.ts)) · **Resultado:** **0 de 5 proveedores
 configurados respondió**; 5 tests en rojo con causa raíz identificada, 6 de configuración en verde.
@@ -248,7 +254,8 @@ cadena, condición real del chatbot ese día):
 | Gemini directo (PONG + `json_object`) | ✅ | 3.388 ms |
 
 Cierre del hito B-06 del análisis de baches ([docs/HALLAZGOS-BACHES-2026-10-19.md](../../docs/HALLAZGOS-BACHES-2026-10-19.md)):
-el "un solo punto de fallo de IA" queda eliminado. Pendiente documentado: piso de
-512 max_tokens en el failover (los reasoning models consumen el budget con caps
-cortos) y ajuste del prompt del test live de Groq para exigir la palabra `json`
-(restricción estándar de cualquier endpoint OpenAI-compatible con `json_object`).
+el "un solo punto de fallo de IA" queda eliminado. Tanto el **piso de 512 max_tokens
+en el failover** (los reasoning models consumen el budget con caps cortos) como el
+**prompt del test live de Groq** (exige la palabra `json`, restricción estándar de
+cualquier endpoint OpenAI-compatible con `json_object`) quedaron implementados en
+el mismo cierre (`9972ab8`).
