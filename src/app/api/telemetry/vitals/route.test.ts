@@ -78,4 +78,55 @@ describe("POST /api/telemetry/vitals — beacon token (P0-3)", () => {
     const res = await POST(req(base));
     expect(res.status).toBe(404);
   });
+
+  it("503 fail-closed (no 500 opaco) si findFirst lanza en la capa DB", async () => {
+    // La forma exacta del 500 de prod (2026-10-19): la capa DB lanza.
+    findFirstMock.mockRejectedValue(Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(req(base));
+    expect(res.status).toBe(503);
+    const json = await res.json();
+    expect(json).toEqual({ error: "telemetry_unavailable", stage: "lookup" });
+    expect(insertValuesMock).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("404 (no 500) si el insert lanza FK violation 23503 (proyecto borrado entre lookup e insert)", async () => {
+    findFirstMock.mockResolvedValue({
+      id: base.projectId,
+      deletedAt: null,
+      isDeleted: false,
+      isHidden: false,
+      beaconSecret: null,
+    });
+    insertValuesMock.mockRejectedValueOnce(
+      Object.assign(new Error('insert or update on table "web_vitals_logs" violates foreign key constraint'), { code: "23503" })
+    );
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(req(base));
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.error).toBe("project_not_found");
+    spy.mockRestore();
+  });
+
+  it("503 fail-closed si el insert lanza un error de DB distinto de FK", async () => {
+    findFirstMock.mockResolvedValue({
+      id: base.projectId,
+      deletedAt: null,
+      isDeleted: false,
+      isHidden: false,
+      beaconSecret: null,
+    });
+    insertValuesMock.mockRejectedValueOnce(new Error("SSL connection was closed unexpectedly"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(req(base));
+    expect(res.status).toBe(503);
+    const json = await res.json();
+    expect(json).toEqual({ error: "telemetry_unavailable", stage: "insert" });
+    spy.mockRestore();
+  });
 });

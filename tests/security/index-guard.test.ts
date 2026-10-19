@@ -252,7 +252,11 @@ describe("index-guard — el guard es honesto y de solo lectura", () => {
     const run = runGuard();
     expect(run.stdout).toContain("index-guard: OK");
     expect(run.status).toBe(0);
-  });
+  }, 60_000); // La conexión real a Supabase desde workstations lejanas tarda >15s
+  // (TLS handshake + RTT; ídem en runners de CI fríos): el guard llegó a
+  // tardar 21s en el repro local del 2026-10-19, quedando por encima del
+  // timeout de 15s. En corridas calientes tarda <5s, así que el timeout
+  // holgado solo protege las corridas frías.
 
   it.runIf(dbReachable)(
     "índice declarado en una migración pero ausente en BD → exit 1 nombrando el índice",

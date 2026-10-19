@@ -90,6 +90,34 @@ function getCorsOrigin(requestOrigin: string | null): string {
   return requestOrigin;
 }
 
+/**
+ * Respuesta fail-closed cuando la capa DB de telemetría no responde
+ * (fix 500-opaco 2026-10-19). Log seguro sin PII del payload: solo etapa +
+ * projectId + código PG + mensaje. El status 503 es auto-diagnóstico para el
+ * beacon ("servidor caído") sin necesidad de leer el body cross-origin.
+ */
+function telemetryUnavailableResponse(
+  stage: 'lookup' | 'insert',
+  projectId: string,
+  corsOrigin: string,
+  error: unknown
+): NextResponse {
+  const pgCode = (error as { code?: string } | null)?.code;
+  logger.error('[telemetry/vitals] DB error:', {
+    stage,
+    projectId,
+    pgCode: pgCode ?? undefined,
+    message: error instanceof Error ? error.message : String(error),
+  });
+  return NextResponse.json(
+    { error: 'telemetry_unavailable', stage },
+    {
+      status: 503,
+      headers: { 'Access-Control-Allow-Origin': corsOrigin },
+    }
+  );
+}
+
 export const POST = withRateLimit(
   { limit: 60, window: 60, prefix: "telemetry" },
   async (request: NextRequest) => {
@@ -123,11 +151,23 @@ export const POST = withRateLimit(
 
     const data = parsed.data;
 
-// Verify project exists and is active (not deleted / not hidden)
-const project = await db.query.projects.findFirst({
-  where: eq(projects.id, data.projectId),
-  columns: { id: true, deletedAt: true, isDeleted: true, isHidden: true, beaconSecret: true },
-});
+    // ── Catch granular DB (fix 500-opaco 2026-10-19) ────────────────────────
+    // Repro: POST con projectId inexistente devolvía 500 en prod en lugar de
+    // 404 — el throw venía de la capa DB (findFirst/insert) y el catch global
+    // lo colapsaba en 500 sin sonido diagnóstico. Ahora: fallo de conexión →
+    // 503 fail-closed con log seguro; FK violation (proyecto borrado entre el
+    // lookup y el insert, pg `23503`) → 404 honesto.
+
+    // Verify project exists and is active (not deleted / not hidden)
+    let project: { id: string; deletedAt: Date | null; isDeleted: boolean; isHidden: boolean; beaconSecret: string | null } | undefined;
+    try {
+      project = await db.query.projects.findFirst({
+        where: eq(projects.id, data.projectId),
+        columns: { id: true, deletedAt: true, isDeleted: true, isHidden: true, beaconSecret: true },
+      });
+    } catch (lookupError) {
+      return telemetryUnavailableResponse('lookup', data.projectId, corsOrigin, lookupError);
+    }
 
 if (!project || project.deletedAt !== null || project.isDeleted || project.isHidden) {
   return NextResponse.json({ error: 'Project not found or inactive' }, { status: 404 });
@@ -156,7 +196,8 @@ if (project.beaconSecret && data.beaconToken !== project.beaconSecret) {
     const country = request.headers.get('x-vercel-ip-country') || request.headers.get('x-vercel-country') || null;
 
     // Insert enriched telemetry log
-    await db.insert(webVitalsLogs).values({
+    try {
+      await db.insert(webVitalsLogs).values({
       projectId: data.projectId,
       url: data.url,
       deviceType: finalDeviceType as 'desktop' | 'mobile',
@@ -182,7 +223,22 @@ if (project.beaconSecret && data.beaconToken !== project.beaconSecret) {
       // M-1: persistir el payload PARSEADO (claves desconocidas descartadas
       // y acotado), nunca el body crudo controlado por el cliente.
       rawPayload: data,
-    });
+      });
+    } catch (insertError) {
+      // FK violation (pg 23503): el proyecto fue borrado entre el lookup y
+      // el insert → el beacon apunta a algo que ya no existe → 404.
+      if ((insertError as { code?: string }).code === '23503') {
+        logger.error('[telemetry/vitals] FK violation tras lookup:', { projectId: data.projectId });
+        return NextResponse.json(
+          { error: 'project_not_found', projectId: data.projectId },
+          {
+            status: 404,
+            headers: { 'Access-Control-Allow-Origin': corsOrigin },
+          }
+        );
+      }
+      return telemetryUnavailableResponse('insert', data.projectId, corsOrigin, insertError);
+    }
 
     return new NextResponse(null, {
       status: 204,
