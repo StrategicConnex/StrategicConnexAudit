@@ -49,6 +49,22 @@ llamadas reales medidas OK — corrida final 9/9 ✅ tras el ajuste del prompt d
 live de Groq; corrida intermedia con prompt antiguo fue 8/9 antes de aplicar el piso
 de 512 `max_tokens` en el failover).
 
+### 📊 2026-10-19 — Self-RUM: auto-instrumentación CWV del propio sitio (H-09, paso 2)
+
+**Snippet instalado** (faltaba el middleware de instrumentación): `src/app/layout.tsx`
+renderiza `public/scripts/vitals.js` vía `next/script` con `strategy="lazyOnload"` cuando
+`NEXT_PUBLIC_RUM_PROJECT_ID` está definida (+ `NEXT_PUBLIC_RUM_BEACON_TOKEN` opcional del
+P0-3 anti-DB-bloat). Sin la env el beacon **no se renderiza** (fail-closed): las métricas
+propias nunca se mezclan con las de clientes. Env validada en `src/env.ts`
+(`env.test.ts` 14/14 ✅) y documentada en `.env.example`.
+
+**Estado H-09:** paso 1 (owner seteó `ALLOWED_TELEMETRY_ORIGINS` en Vercel) ✅ — el
+preflight a `/api/telemetry/vitals` ya devuelve el eco del origin propio; paso 2 (snippet)
+✅ implementado en código, **pendiente del owner** crear el proyecto self-RUM
+"scaudit.vercel.app" + setear la env; hallazgo nuevo: POST con projectId inexistente
+devuelve 500 (esperado 404) — diagnosticar con telemetría real
+(PERFORMANCE_REPORT §8.3).
+
 ---
 
 ## Julio 2026 — Sprint 3: History + Alerting + API

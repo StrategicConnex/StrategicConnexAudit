@@ -2,7 +2,7 @@
    Env Validation — Tests del esquema Zod de src/env.ts
 
    Verifica que:
-   - validateEnv() acepta un entorno completo y devuelve las 9 variables.
+   - validateEnv() acepta un entorno completo (13 vars: 6 requeridas + 7 opcionales).
    - La clave Supabase es obligatoria: PUBLISHABLE (canónica) o ANON (alias).
    - Una requerida faltante produce un ZodError que nombra el campo.
    - Las opcionales pueden ausentarse sin romper la validación.
@@ -36,6 +36,9 @@ const OPTIONAL_VARS = [
   "RESEND_API_KEY",
   "SLACK_WEBHOOK_URL",
   "TEAMS_WEBHOOK_URL",
+  // Self-RUM CWV (H-09, 2026-10-19): sin ellas el beacon no se renderiza.
+  "NEXT_PUBLIC_RUM_PROJECT_ID",
+  "NEXT_PUBLIC_RUM_BEACON_TOKEN",
 ] as const;
 
 const ALL_VARS = [...REQUIRED_VARS, ...SUPABASE_KEY_VARS, ...OPTIONAL_VARS] as const;
@@ -54,6 +57,8 @@ const VALID_VALUES: Record<VarKey, string> = {
   RESEND_API_KEY: "re_test_key",
   SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/T000/B000/XXX",
   TEAMS_WEBHOOK_URL: "https://outlook.office.com/webhook/xxx",
+  NEXT_PUBLIC_RUM_PROJECT_ID: "c1000000-1000-4000-8000-000000000000",
+  NEXT_PUBLIC_RUM_BEACON_TOKEN: "rum_tok_self_rum",
 };
 
 /** Fija todas las variables; las listadas en `unset` se borran de process.env. */
@@ -80,7 +85,7 @@ afterEach(() => {
 // ─── validateEnv() ──────────────────────────────────────────────────────────
 
 describe("validateEnv", () => {
-  it("acepta un entorno completamente válido y devuelve las 9 variables", () => {
+  it("acepta un entorno completamente válido y devuelve las 13 variables", () => {
     stubEnvFixture();
 
     expect(validateEnv()).toEqual(VALID_VALUES);
@@ -175,7 +180,7 @@ describe("src/env.ts", () => {
     await expect(import("./env")).resolves.toBeDefined();
   });
 
-  it("exporta `env` con las 11 claves esperadas", () => {
+  it("exporta `env` con las 13 claves esperadas", () => {
     expect(Object.keys(env).sort()).toEqual([...ALL_VARS].sort());
   });
 

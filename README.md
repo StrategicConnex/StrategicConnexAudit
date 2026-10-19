@@ -949,6 +949,12 @@ AUTH_EMAIL_ALLOWLIST=admin@empresa.com,dev@empresa.com
 # ─── Desarrollo (opcional) ──────────────────────────────────────
 NEXT_PUBLIC_DEV_BYPASS_AUTH=true   # Saltea auth en dev
 CRON_SECRET=xxx                    # Para endpoints de cron
+
+# ─── Self-RUM (H-09, opcional) ──────────────────────────────────
+# Id del proyecto DEDICADO a las CWV propias (crea "scaudit.vercel.app"
+# self-RUM en el dashboard y copia su id). Sin la var el beacon no se
+# carga. Ver más en .env.example.
+NEXT_PUBLIC_RUM_PROJECT_ID=c1000000-1000-4000-8000-000000000000
 ```
 
 ### Base de datos

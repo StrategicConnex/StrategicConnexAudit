@@ -39,6 +39,10 @@ export const envSchema = z
     RESEND_API_KEY: z.string().min(1).optional(),
     SLACK_WEBHOOK_URL: z.string().url().optional(),
     TEAMS_WEBHOOK_URL: z.string().url().optional(),
+    // Self-RUM (H-09): id del proyecto dedicado a las métricas CWV propias.
+    // Sin valor el beacon NO se renderiza (layout.tsx), fail-closed.
+    NEXT_PUBLIC_RUM_PROJECT_ID: z.string().uuid().optional(),
+    NEXT_PUBLIC_RUM_BEACON_TOKEN: z.string().max(128).optional(),
   })
   .refine(
     (parsed) =>
@@ -72,6 +76,8 @@ export const env = {
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
   TEAMS_WEBHOOK_URL: process.env.TEAMS_WEBHOOK_URL,
+  NEXT_PUBLIC_RUM_PROJECT_ID: process.env.NEXT_PUBLIC_RUM_PROJECT_ID,
+  NEXT_PUBLIC_RUM_BEACON_TOKEN: process.env.NEXT_PUBLIC_RUM_BEACON_TOKEN,
 } as const;
 
 /**

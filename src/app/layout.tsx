@@ -9,6 +9,7 @@ import { QueryProvider } from "@/shared/lib/query-provider";
 import { RegisterServiceWorker } from "@/features/dashboard/RegisterServiceWorker";
 import { ThemeProvider, themeInitScript } from "@/shared/design-system";
 import { getLocale, getMessages } from "@/i18n/request";
+import Script from "next/script";
 
 
 const inter = Inter({
@@ -83,6 +84,18 @@ export default async function RootLayout({
   const locale = await getLocale();
   const messages = await getMessages(locale);
 
+  // ── H-09: auto-instrumentación CWV (self-RUM) ────────────────────────────
+  // El beacon de RUM (public/scripts/vitals.js) queda pegado al proyecto
+  // dedicado "scaudit.vercel.app" vía NEXT_PUBLIC_RUM_PROJECT_ID (creado por
+  // el owner desde el dashboard). Sin la env el snippet NO se renderiza
+  // (fail-closed): las métricas propias nunca se mezclan con las de clientes.
+  // lazyOnload = última prioridad del RUM: los beacons de CWV no compiten con
+  // hidratación/interactividad. El beacon token (P0-3) es opcional: si el
+  // proyecto self-RUM tiene secreto se usa NEXT_PUBLIC_RUM_BEACON_TOKEN (es
+  // anti-DB-bloat, no una credencial de autenticación).
+  const rumProjectId = process.env.NEXT_PUBLIC_RUM_PROJECT_ID?.trim();
+  const rumBeaconToken = process.env.NEXT_PUBLIC_RUM_BEACON_TOKEN?.trim();
+
   return (
     <html
       lang={locale}
@@ -138,6 +151,14 @@ export default async function RootLayout({
           </QueryProvider>
         </ThemeProvider>
         <ToasterProvider />
+        {rumProjectId ? (
+          <Script
+            src="/scripts/vitals.js"
+            data-project-id={rumProjectId}
+            {...(rumBeaconToken ? { "data-beacon-token": rumBeaconToken } : {})}
+            strategy="lazyOnload"
+          />
+        ) : null}
       </body>
     </html>
   );
