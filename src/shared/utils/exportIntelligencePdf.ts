@@ -39,28 +39,20 @@ export function buildIntelligenceHeaderHtml(
     `;
 }
 
-const applyIntelligenceExportTheme = (clonedDoc: Document, _branding?: IntelligenceBranding) => {
-  const colorSpaceRegex = /oklch|oklab|lab/gi;
+/**
+ * applyIntelligenceExportTheme — inyecta en el documento REAL el tema claro
+ * del PDF de inteligencia; `removeIntelligenceExportTheme` lo retira tras la
+ * captura. (Ver exportPdf.ts: mismo patrón post-migración modern-screenshot —
+ * el hook onclone de html2canvas ya no existe.)
+ */
+const THEME_STYLE_ID = 'pdf-export-theme';
+
+export function applyIntelligenceExportTheme(): void {
+  document.getElementById(THEME_STYLE_ID)?.remove();
 
   try {
-    let combinedCss = '';
-    const sheets = Array.from(document.styleSheets);
-    for (const sheet of sheets) {
-      try {
-        const rules = Array.from(sheet.cssRules);
-        for (const rule of rules) {
-          combinedCss += rule.cssText + '\n';
-        }
-      } catch {
-        // Ignore cross-origin stylesheets or other inaccessible rule sets.
-      }
-    }
-
-    clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
-
-    const sanitizedCss = combinedCss.replace(colorSpaceRegex, 'rgb');
-
-    const themeStyle = clonedDoc.createElement('style');
+    const themeStyle = document.createElement('style');
+    themeStyle.id = THEME_STYLE_ID;
     themeStyle.textContent = `
       /* Fuentes del SISTEMA — sin @import de font CDNs de terceros: evitar
          fuga de IP + Referer en cada export de PDF. */
@@ -157,18 +149,26 @@ const applyIntelligenceExportTheme = (clonedDoc: Document, _branding?: Intellige
         color: #1d4ed8 !important;
       }
 
-      ${sanitizedCss}
+      /* El CSS de la página ya NO se re-sanea: los estilos viven intactos en
+         el DOM y el navegador los pinta (paint nativo); solo overrides. */
+
+      .no-print, button, form, aside { display: none !important; }
     `;
 
-    clonedDoc.head.appendChild(themeStyle);
+    document.head.appendChild(themeStyle);
   } catch (error) {
-    console.error('Intelligence PDF theme sanitization failed', error);
+    console.error('Intelligence PDF theme injection failed', error);
   }
+}
 
-  clonedDoc.querySelectorAll('.no-print, button, form, aside').forEach(el => {
-    (el as HTMLElement).style.display = 'none';
-  });
-};
+/**
+ * removeIntelligenceExportTheme — retira el <style id="pdf-export-theme"> que
+ * fija applyIntelligenceExportTheme. Debe correr SIEMPRE (éxito o fallo):
+ * exportElementToPdf invoca onAfterExport desde el finally.
+ */
+function removeIntelligenceExportTheme(): void {
+  document.getElementById(THEME_STYLE_ID)?.remove();
+}
 
 export const exportIntelligenceToPdf = async (
   elementId: string,
@@ -177,6 +177,8 @@ export const exportIntelligenceToPdf = async (
   branding?: IntelligenceBranding
 ) => {
   const onBeforeExport = (element: HTMLElement) => {
+    applyIntelligenceExportTheme();
+
     const headerDiv = document.createElement('div');
     headerDiv.className = 'pdf-branding-header';
     headerDiv.style.display = 'flex';
@@ -198,11 +200,8 @@ export const exportIntelligenceToPdf = async (
     element.insertBefore(headerDiv, element.firstChild);
   };
 
-  const onClone = (clonedDoc: Document) => {
-    applyIntelligenceExportTheme(clonedDoc, branding);
-  };
-
   const onAfterExport = (element: HTMLElement) => {
+    removeIntelligenceExportTheme();
     const insertedHeader = element.querySelector('.pdf-branding-header');
     if (insertedHeader?.parentNode) {
       insertedHeader.parentNode.removeChild(insertedHeader);
@@ -211,7 +210,6 @@ export const exportIntelligenceToPdf = async (
 
   return exportElementToPdf(elementId, filename, {
     onBeforeExport,
-    onClone,
     onAfterExport,
   });
 };

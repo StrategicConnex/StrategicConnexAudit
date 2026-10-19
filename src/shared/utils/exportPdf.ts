@@ -40,28 +40,28 @@ export function buildAuditHeaderHtml(
     `;
 }
 
-const applyAuditExportTheme = (clonedDoc: Document, branding?: AgencyBranding) => {
-  const colorSpaceRegex = /oklch|oklab|lab/gi;
+/**
+ * applyAuditExportTheme — inyecta en el documento REAL (`document.head`) el
+ * tema claro del PDF (white-label "papel blanco") y `removeAuditExportTheme`
+ * lo retira al terminar la captura.
+ *
+ * Historia 2026-10-19: el tema vivía en el hook `onclone` de html2canvas
+ * (mutando un clonedDoc). Al migrar el renderer a modern-screenshot (paint
+ * nativo vía foreignObject) el subtree ya no se re-estila en un clone: los
+ * overrides `!important` tienen que vivir en el head durante la captura.
+ * El hack `oklch→rgb` era exclusivo del parser JS de html2canvas (que lanzaba
+ * "unsupported color function oklch") y se elimina: el navegador soporta oklch
+ * nativamente. La eliminación del <style> corre en `onAfterExport`, que
+ * exportElementToPdf ejecuta en `finally` (éxito o fallo).
+ */
+const THEME_STYLE_ID = 'pdf-export-theme';
+
+export function applyAuditExportTheme(branding?: AgencyBranding): void {
+  document.getElementById(THEME_STYLE_ID)?.remove();
 
   try {
-    let combinedCss = '';
-    const sheets = Array.from(document.styleSheets);
-    for (const sheet of sheets) {
-      try {
-        const rules = Array.from(sheet.cssRules);
-        for (const rule of rules) {
-          combinedCss += rule.cssText + '\n';
-        }
-      } catch {
-        // Ignore cross-origin stylesheets or other inaccessible rule sets.
-      }
-    }
-
-    clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
-
-    const sanitizedCss = combinedCss.replace(colorSpaceRegex, 'rgb');
-
-    const themeStyle = clonedDoc.createElement('style');
+    const themeStyle = document.createElement('style');
+    themeStyle.id = THEME_STYLE_ID;
     themeStyle.textContent = `
       /* High-impact PDF export theme.
          Fuentes del SISTEMA (sin @import de font CDNs de terceros): el export
@@ -163,18 +163,24 @@ const applyAuditExportTheme = (clonedDoc: Document, branding?: AgencyBranding) =
         border-color: #e5e7eb !important;
       }
 
-      ${sanitizedCss}
+      /* El CSS de la página ya NO se re-sanea aquí: los estilos viven intactos
+      .no-print { display: none !important; }
     `;
 
-    clonedDoc.head.appendChild(themeStyle);
+    document.head.appendChild(themeStyle);
   } catch (error) {
-    console.error('Audit PDF theme sanitization failed', error);
+    console.error('Audit PDF theme injection failed', error);
   }
+}
 
-  clonedDoc.querySelectorAll('.no-print').forEach(el => {
-    (el as HTMLElement).style.display = 'none';
-  });
-};
+/**
+ * removeAuditExportTheme — retira el <style id="pdf-export-theme"> que fija
+ * applyAuditExportTheme. Debe correr SIEMPRE (éxito o fallo): exportElementToPdf
+ * invoca onAfterExport desde el finally.
+ */
+export function removeAuditExportTheme(): void {
+  document.getElementById(THEME_STYLE_ID)?.remove();
+}
 
 export const exportAuditToPdf = async (
   elementId: string,
@@ -182,6 +188,11 @@ export const exportAuditToPdf = async (
   branding?: AgencyBranding
 ) => {
   const onBeforeExport = (element: HTMLElement) => {
+    // El tema claro del PDF se inyecta en el head REAL antes de la captura:
+    // sin branding también (el PDF siempre va a "papel blanco"), a diferencia
+    // del header de branding que solo aplica cuando hay datos.
+    applyAuditExportTheme(branding);
+
     if (!branding || (!branding.name && !branding.logoUrl)) return;
 
     const headerDiv = document.createElement('div');
@@ -204,11 +215,11 @@ export const exportAuditToPdf = async (
     element.insertBefore(headerDiv, element.firstChild);
   };
 
-  const onClone = (clonedDoc: Document) => {
-    applyAuditExportTheme(clonedDoc, branding);
-  };
+  // El tema claro del PDF se retira en onAfterExport (que pdf-utils ejecuta
+  // en finally).
 
   const onAfterExport = (element: HTMLElement) => {
+    removeAuditExportTheme();
     const insertedHeader = element.querySelector('.pdf-branding-header');
     if (insertedHeader?.parentNode) {
       insertedHeader.parentNode.removeChild(insertedHeader);
@@ -217,7 +228,6 @@ export const exportAuditToPdf = async (
 
   return exportElementToPdf(elementId, filename, {
     onBeforeExport,
-    onClone,
     onAfterExport,
   });
 };

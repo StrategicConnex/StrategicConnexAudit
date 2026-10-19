@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const html2canvasMock = vi.hoisted(() => vi.fn());
+const domToJpegMock = vi.hoisted(() => vi.fn());
 const pdfInstances = vi.hoisted(() => [] as Array<{
   addImage: ReturnType<typeof vi.fn>;
   addPage: ReturnType<typeof vi.fn>;
@@ -19,7 +19,7 @@ vi.hoisted(() => {
   return { JsPdfMock };
 });
 
-vi.mock("html2canvas", () => ({ default: html2canvasMock }));
+vi.mock("modern-screenshot", () => ({ domToJpeg: domToJpegMock }));
 vi.mock("jspdf", () => ({
   default: class JsPdfMock {
     addImage = vi.fn();
@@ -33,22 +33,20 @@ vi.mock("jspdf", () => ({
 
 import { exportElementToPdf } from "./pdf-utils";
 
-const makeCanvas = (width: number, height: number) => ({
-  width,
-  height,
-  toDataURL: vi.fn(() => "data:image/jpeg;base64,AAA"),
-});
-
-const addEl = (id: string) => {
+const addEl = (id: string, rect: { width: number; height: number } = { width: 800, height: 800 }) => {
   const el = document.createElement("div");
   el.id = id;
+  vi.spyOn(el, "getBoundingClientRect").mockReturnValue(
+    rect as DOMRect
+  );
   document.body.appendChild(el);
   return el;
 };
 
 describe("pdf-utils — exportElementToPdf", () => {
   beforeEach(() => {
-    html2canvasMock.mockReset();
+    domToJpegMock.mockReset();
+    domToJpegMock.mockResolvedValue("data:image/jpeg;base64,AAA");
     pdfInstances.length = 0;
   });
 
@@ -61,28 +59,35 @@ describe("pdf-utils — exportElementToPdf", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const ok = await exportElementToPdf("no-existe", "out.pdf");
     expect(ok).toBe(false);
-    expect(html2canvasMock).not.toHaveBeenCalled();
+    expect(domToJpegMock).not.toHaveBeenCalled();
     spy.mockRestore();
   });
 
-  it("genera el PDF y llama a save con el filename", async () => {
+  it("devuelve false si el elemento tiene dimensiones cero", async () => {
+    addEl("pdf-zero", { width: 0, height: 200 });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const ok = await exportElementToPdf("pdf-zero", "out.pdf");
+    expect(ok).toBe(false);
+    expect(domToJpegMock).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("genera el PDF con modern-screenshot y llama a save con el filename", async () => {
     addEl("pdf-target");
-    html2canvasMock.mockResolvedValue(makeCanvas(800, 800));
 
     const ok = await exportElementToPdf("pdf-target", "reporte.pdf");
     expect(ok).toBe(true);
-    expect(html2canvasMock).toHaveBeenCalledWith(
+    expect(domToJpegMock).toHaveBeenCalledWith(
       expect.any(HTMLElement),
-      expect.objectContaining({ scale: 2, useCORS: true })
+      expect.objectContaining({ scale: 2, backgroundColor: "#ffffff", quality: 0.95 })
     );
     expect(pdfInstances[0]!.save).toHaveBeenCalledWith("reporte.pdf");
     expect(document.body.classList.contains("pdf-export-active")).toBe(false);
   });
 
   it("añade páginas extra cuando la imagen supera la altura de página", async () => {
-    addEl("pdf-tall");
-    // Alto 2970px → imgHeight >> 297mm → múltiples páginas
-    html2canvasMock.mockResolvedValue(makeCanvas(210, 2970));
+    // 210×2970 px ⇒ ratio 14.1 ⇒ ~4.1 páginas A4
+    addEl("pdf-tall", { width: 210, height: 2970 });
 
     const ok = await exportElementToPdf("pdf-tall", "multi.pdf");
     expect(ok).toBe(true);
@@ -92,7 +97,6 @@ describe("pdf-utils — exportElementToPdf", () => {
 
   it("invoca onBeforeExport y onAfterExport en el orden correcto", async () => {
     addEl("pdf-hooks");
-    html2canvasMock.mockResolvedValue(makeCanvas(100, 100));
 
     const order: string[] = [];
     const ok = await exportElementToPdf("pdf-hooks", "h.pdf", {
@@ -103,29 +107,16 @@ describe("pdf-utils — exportElementToPdf", () => {
     expect(order).toEqual(["before", "after"]);
   });
 
-  it("devuelve false si html2canvas lanza y limpia la clase", async () => {
+  it("invoca onAfterExport en finally incluso si domToJpeg lanza", async () => {
     addEl("pdf-fail");
-    html2canvasMock.mockRejectedValue(new Error("canvas error"));
+    domToJpegMock.mockRejectedValue(new Error("capture error"));
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const ok = await exportElementToPdf("pdf-fail", "fail.pdf");
+    const after = vi.fn();
+    const ok = await exportElementToPdf("pdf-fail", "fail.pdf", { onAfterExport: after });
     expect(ok).toBe(false);
+    expect(after).toHaveBeenCalledOnce();
     expect(document.body.classList.contains("pdf-export-active")).toBe(false);
-    spy.mockRestore();
-  });
-
-  it("onClone que lanza no rompe la exportación (catch interno)", async () => {
-    addEl("pdf-clone");
-    html2canvasMock.mockImplementation(async (_el: unknown, opts: { onclone: (d: Document) => void | Promise<void> }) => {
-      await opts.onclone(document);
-      return makeCanvas(100, 100);
-    });
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    const ok = await exportElementToPdf("pdf-clone", "clone.pdf", {
-      onClone: () => { throw new Error("hook fail"); },
-    });
-    expect(ok).toBe(true);
     spy.mockRestore();
   });
 });

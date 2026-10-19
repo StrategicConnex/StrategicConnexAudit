@@ -65,6 +65,29 @@ preflight a `/api/telemetry/vitals` ya devuelve el eco del origin propio; paso 2
 devuelve 500 (esperado 404) — diagnosticar con telemetría real
 (PERFORMANCE_REPORT §8.3).
 
+### 📄 2026-10-19 — Export PDF roto por html2canvas + Tailwind v4 OKLCH (fix renderizado)
+
+**Problema:** «Hubo un error al generar el PDF» en la página de auditoría
+(`/projects/[id]/audits/[auditId]`): `exportElementToPdf` capturaba el DOM con
+`html2canvas@1.4.1`, cuya librería abandonada (2022) parsea los colores en JS y lanza
+`Error: Attempting to parse an unsupported color function "oklch"` con los tokens del
+design-system de Tailwind v4 (`--bg: oklch(23.5% 0.016 264)`). El hook `onclone` con el
+regex `oklch→rgb` no alcanzaba: el throw ocurre al parsear estilos del documento
+original antes del clone. **Reproducido en vivo** (playwright headless + las libs reales
++ los tokens reales de `globals.css`).
+
+**Solución:** renderer migrado a `modern-screenshot@4.7.0` (`domToJpeg`, paint nativo
+vía foreignObject — el motor CSS del navegador soporta oklch por definición; libería
+mantenida, 2026-04). `pdf-utils.ts` mantiene el slicing multi-página A4 de jsPDF
+(dataURL directo, mediando `getBoundingClientRect`); el tema claro white-label pasa a
+inyectarse en `document.head` durante la captura y retirarse en `onAfterExport`
+(finally), sustituyendo al ya inexistente `clonedDoc`. `+modern-screenshot −html2canvas`
+(sin otros consumidores). Validado: reproducción playwright captura ok (JPEG válido
+132 KB con oklch), pdf-utils tests 6/6 réescritos (mock de `domToJpeg`), typecheck +
+eslint limpios.  ⚠️ Nota operacional: pruebas de captura reales requieren desplegar y
+correr el export desde la UI de producción; el smoke local exacto está en
+`TEMP/opencode/repro-oklch` (no versionado).
+
 ---
 
 ## Julio 2026 — Sprint 3: History + Alerting + API

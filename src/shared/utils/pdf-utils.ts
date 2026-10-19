@@ -1,9 +1,8 @@
-import html2canvas from 'html2canvas';
+import { domToJpeg } from 'modern-screenshot';
 import jsPDF from 'jspdf';
 
 export interface PdfExportOptions {
   onBeforeExport?: (element: HTMLElement) => void;
-  onClone?: (clonedDoc: Document) => void | Promise<void>;
   onAfterExport?: (element: HTMLElement) => void;
 }
 
@@ -22,35 +21,39 @@ export async function exportElementToPdf(
   options.onBeforeExport?.(element);
 
   try {
-    const canvas = await html2canvas(element, {
+    // ── Renderer: modern-screenshot (domToJpeg) ─────────────────────────────
+    // El paint lo hace el motor CSS del navegador vía SVG foreignObject, así
+    // que los tokens del design-system (Tailwind v4 + OKLCH) renderizan
+    // nativamente. html2canvas@1.4.1 (abandonada, parser de colores en JS)
+    // reventaba con `Error: Attempting to parse an unsupported color function
+    // "oklch"` — reproducido 2026-10-19 contra los tokens reales de
+    // globals.css (repro playwright en vivo).
+    const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+      console.error(`cannot export element with zero dimensions: ${elementId}`);
+      return false;
+    }
+
+    const dataUrl = await domToJpeg(element, {
       scale: 2,
-      useCORS: true,
-      logging: false,
       backgroundColor: '#ffffff',
-      windowWidth: 1200,
-      onclone: async (clonedDoc) => {
-        try {
-          options.onClone?.(clonedDoc);
-        } catch (error) {
-          console.error('PDF clone hook failed', error);
-        }
-      },
+      quality: 0.95,
     });
 
     const imgWidth = 210;
     const pageHeight = 297;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const imgHeight = (rect.height * imgWidth) / rect.width;
     let heightLeft = imgHeight;
     let position = 0;
 
     const pdf = new jsPDF('p', 'mm', 'a4');
-    pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, position, imgWidth, imgHeight);
+    pdf.addImage(dataUrl, 'JPEG', 0, position, imgWidth, imgHeight);
     heightLeft -= pageHeight;
 
     while (heightLeft > 0) {
       position = heightLeft - imgHeight;
       pdf.addPage();
-      pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(dataUrl, 'JPEG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
     }
 

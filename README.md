@@ -549,6 +549,13 @@ Reportes PDF profesionales con:
 
 **Archivos:** `src/app/api/reports/pdf/route.ts` · `src/features/dashboard/DownloadPdfButton.tsx`
 
+**Export client-side (página de auditoría e inteligencia):** el snapshot del reporte
+se captura con `modern-screenshot` (`domToJpeg`, paint nativo del navegador vía
+foreignObject) + jsPDF multi-página (`src/shared/utils/pdf-utils.ts`). Migrado desde
+html2canvas 1.4.1 el 2026-10-19: su parser de colores en JS lanzaba
+`unsupported color function "oklch"` con los tokens de Tailwind v4 (design-system OKLCH)
+— error reproducido en vivo y verificado el fix contra los tokens reales.
+
 ---
 
 ### 🗺️ Mapa Geo Interactivo (P2.1)

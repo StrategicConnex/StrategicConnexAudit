@@ -96,8 +96,8 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
     if (isExportingPdf) return;
     setIsExportingPdf(true);
     try {
-      // Dynamic import: html2canvas + jsPDF (~412KB) only loads when the user
-      // actually exports — keeps them out of the /intelligence route bundle.
+      // Dynamic imports: modern-screenshot + jsPDF only load when the user
+      // actually exports - keeps them out of the /intelligence route bundle.
       const { exportIntelligenceToPdf } = await import("@/shared/utils/exportIntelligencePdf");
       const targetName = investigation?.target || "Onboarding-Demo";
       const filename = `Reporte-Seguridad-${targetName}-${new Date().toISOString().split("T")[0]}.pdf`;

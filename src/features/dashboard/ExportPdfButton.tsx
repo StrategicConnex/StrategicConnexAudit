@@ -14,7 +14,7 @@ export function ExportPdfButton({ targetElementId }: { targetElementId: string }
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      // Dynamic import: html2canvas + jsPDF (~412KB) only loads on demand —
+      // Dynamic imports: modern-screenshot + jsPDF solo cargan on demand —
       // keeps them out of the audit page's initial bundle.
       const { exportAuditToPdf } = await import('@/shared/utils/exportPdf');
       const brandingStr = localStorage.getItem('agencyBranding');

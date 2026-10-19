@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// El módulo pdf-utils importa html2canvas + jspdf (pesados); lo mockeamos para
-// testear SOLO los builders puros de header (XSS defense) sin entorno de PDF.
+// El módulo pdf-utils importa modern-screenshot + jspdf (pesados); lo mockeamos
+// para testear SOLO los builders puros de header (XSS defense) sin entorno PDF.
 vi.mock("./pdf-utils", () => ({
   exportElementToPdf: vi.fn(async () => true),
 }));
