@@ -1,22 +1,41 @@
 import { test, expect } from "@playwright/test";
 
+// El proxy exige la cookie de disclaimer ANTES de servir /login (commit
+// 1269d7b). Sin ella, / redirige a /disclaimer y estos tests de guards
+// fallan con la URL equivocada. Se marca la aceptación por cookie igual
+// que hace el server action de /disclaimer (src/shared/lib/disclaimer.ts).
+test.beforeEach(async ({ page }) => {
+  await page.context().addCookies([
+    {
+      name: "disclaimer_accepted",
+      value: "true",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+});
+
 // ─── Authentication Guard ────────────────────────────────────────────────────
 
 test.describe("Authentication Guards", () => {
+  // Timeout ampliado: en CI con `.next` frío el redirect del proxy landing en
+  // /login puede tardar mientras el dev server compila la página (cold-start
+  // verificado 2026-10-19: el goto resuelve networkidle antes de que la
+  // navegación del redirect finalice y el default de 5 s quedaba corto).
   test("Dashboard / redirects to /login when unauthenticated", async ({ page }) => {
     await page.goto("/", { waitUntil: "networkidle" });
-    await expect(page).toHaveURL(/\/login/);
-    await expect(page.locator("h1")).toContainText(/StrategicAudit/i);
+    await expect(page).toHaveURL(/\/login/, { timeout: 30000 });
+    await expect(page.locator("h1")).toContainText(/StrategicAudit/i, { timeout: 30000 });
   });
 
   test("/intelligence redirects to /login when unauthenticated", async ({ page }) => {
     await page.goto("/intelligence", { waitUntil: "networkidle" });
-    await expect(page).toHaveURL(/\/login/);
+    await expect(page).toHaveURL(/\/login/, { timeout: 30000 });
   });
 
   test("/projects/some-id redirects to /login when unauthenticated", async ({ page }) => {
     await page.goto("/projects/test-project-123", { waitUntil: "networkidle" });
-    await expect(page).toHaveURL(/\/login/);
+    await expect(page).toHaveURL(/\/login/, { timeout: 30000 });
   });
 });
 
@@ -94,9 +113,18 @@ test.describe("API Health", () => {
 
 // ─── Responsive Layout ──────────────────────────────────────────────────────
 
+// Aceptación del disclaimer también para los contexts manuales (viewport
+// custom): el gate del proxy opera sobre cualquier request navegable.
+async function acceptDisclaimer(ctx: import("@playwright/test").BrowserContext) {
+  await ctx.addCookies([
+    { name: "disclaimer_accepted", value: "true", domain: "localhost", path: "/" },
+  ]);
+}
+
 test.describe("Responsive Layout", () => {
   test("mobile 375x812 no horizontal scroll", async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    await acceptDisclaimer(ctx);
     const page = await ctx.newPage();
     await page.goto("/login", { waitUntil: "networkidle" });
     const sw = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -107,6 +135,7 @@ test.describe("Responsive Layout", () => {
 
   test("tablet 768x1024 heading visible", async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 768, height: 1024 } });
+    await acceptDisclaimer(ctx);
     const page = await ctx.newPage();
     await page.goto("/login", { waitUntil: "networkidle" });
     await expect(page.locator("h1")).toContainText(/StrategicAudit Pro/i);
