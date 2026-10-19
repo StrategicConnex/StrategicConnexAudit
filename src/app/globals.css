@@ -141,9 +141,9 @@
   --muted: oklch(31% 0.018 264);
   /* text-muted-fg/text-muted-foreground — AA sobre --bg (≥5:1). */
   --muted-fg: oklch(70% 0.015 260);
-  --accent: oklch(58% 0.10 185);
+  --accent: oklch(61% 0.10 185);      /* subido de 58% para pasar WCAG AA 4:62 (CI 2026-10-18) */
   --accent-fg: oklch(95% 0.005 260);
-  --destructive: oklch(60% 0.22 25);
+  --destructive: oklch(65% 0.22 25);  /* subido de 60% para pasar WCAG AA 4:64 (CI 2026-10-18) */
   --destructive-fg: oklch(98% 0.005 265);
   --border: oklch(34.5% 0.030 264);
   --input: oklch(27% 0.020 264);
