@@ -27,6 +27,10 @@ vi.mock("@/server/ai/ai-router", () => ({
     "general-chat": ["model-a:free", "model-b:free"],
     "copilot-remediation": ["model-a:free", "model-c:free"],
   },
+  // Failover anti-monodependencia (2026-10-19): sin proveedores en esta
+  // suite — las probes del healthcheck no disparan fetches extra de Groq/
+  // Gemini y los mockResolvedValueOnce de testModel quedan deterministas.
+  FALLBACK_PROVIDERS: [],
 }));
 
 vi.mock("@/server/auth/cron", () => ({
@@ -46,6 +50,12 @@ vi.mock("@/shared/config/env-secrets", () => ({
     },
     get openRouterBaseUrl() {
       return process.env.OPENROUTER_BASE_URL;
+    },
+    get groqApiKey() {
+      return process.env.GROQ_API_KEY;
+    },
+    get geminiApiKey() {
+      return process.env.GEMINI_API_KEY;
     },
   },
 }));
@@ -364,6 +374,8 @@ describe("GET /api/ai/healthcheck", () => {
     process.env.OPENROUTER_API_KEY = "test-key";
     process.env.RESEND_API_KEY = "re_x";
     process.env.ALLOWED_TELEMETRY_ORIGINS = "https://scaudit.vercel.app";
+    delete process.env.GROQ_API_KEY; // determinismo CI: sin keys reales en env
+    delete process.env.GEMINI_API_KEY;
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ choices: [{ message: { content: "ok" } }], model: "model-a:free" }),
@@ -373,6 +385,8 @@ describe("GET /api/ai/healthcheck", () => {
     const body = await res.json();
     expect(body.envParity).toEqual({
       openrouterConfigured: true,
+      groqConfigured: false,
+      geminiConfigured: false,
       resendConfigured: true,
       telemetryOriginsConfigured: true,
     });
@@ -384,6 +398,8 @@ describe("GET /api/ai/healthcheck", () => {
   it("alerta SIEM env_parity_drift cuando falta una clave crítica en producción", async () => {
     delete process.env.OPENROUTER_API_KEY;
     delete process.env.ALLOWED_TELEMETRY_ORIGINS;
+    delete process.env.GROQ_API_KEY; // determinismo CI: sin keys reales en env
+    delete process.env.GEMINI_API_KEY;
     origEnv.RESEND_API_KEY = process.env.RESEND_API_KEY;
     delete process.env.RESEND_API_KEY;
     process.env.NODE_ENV = "production";
@@ -418,6 +434,8 @@ describe("GET /api/ai/healthcheck", () => {
         metadata: expect.objectContaining({
           envParity: {
             openrouterConfigured: false,
+            groqConfigured: false,
+            geminiConfigured: false,
             resendConfigured: false,
             telemetryOriginsConfigured: false,
           },

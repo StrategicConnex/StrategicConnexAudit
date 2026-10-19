@@ -1,16 +1,18 @@
 /**
  * ai-cost.ts — Coste estimado por llamada IA (Sprint 1, idea #17 del roadmap).
  *
- * Pool OpenRouter-only (decisión 2026-10-18): el failover Anthropic directo se
- * eliminó junto a `providers.ts`. Para tener una métrica de coste única:
+ * Pool actual (apertura anti-monodependencia, 2026-10-19): primario OpenRouter
+ * (meta-modelo + cadena :free) y failover inter-proveedor Groq/Gemini. Los
+ * tres canales sirven con claves FREE:
  *
- *   - Modelos `:free` y `openrouter/free` → coste 0 (el coste real es el
- *     rate limit diario, no dinero)
+ *   - Modelos `:free` y `openrouter/free` (OpenRouter) → coste 0
+ *   - Groq `openai/gpt-oss-120b` y Gemini `gemini-3.8-flash` (free tier) → 0
  *   - Modelos de pago futuros → añadir entrada a COST_TABLE_USD
  *
- * El estimado se registra por llamada en `ai_usage.cost_usd` y el dashboard
- * /ai/health lo agrega por task type. Es una ESTIMACIÓN: los precios pueden
- * cambiar; nunca usar para facturación real.
+ * El estimado se registra por llamada en `ai_usage.cost_usd` (modelUsed con
+ * prefijo de proveedor: `groq:…` / `gemini:…`) y el dashboard /ai/health lo
+ * agrega por task type. Es una ESTIMACIÓN: los precios pueden cambiar; nunca
+ * usar para facturación real.
  */
 
 /** Precio USD por millón de tokens (in / out). */

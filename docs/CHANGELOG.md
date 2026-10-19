@@ -22,6 +22,33 @@ estado: Aprobado
 
 ---
 
+## Octubre 2026 — Sprint 5: Anti-monodependencia del pool IA
+
+### 🤖 2026-10-19 — Failover inter-proveedor Groq/Gemini + fix del chatbot
+
+**Problema:** el chatbot (Strategic Copilot, `/api/ai/copilot`) mostraba "⚠️ Motor de IA
+temporalmente no disponible" cuando la cadena OpenRouter se agotaba (429
+`free-models-per-day` del free tier, 50 req/día — verificado en vivo hoy).
+
+**Solución:** `FALLBACK_PROVIDERS` en `src/server/ai/ai-router.ts` (enmienda owner
+anti-monodependencia):
+
+| Capa | Cambio |
+|------|--------|
+| Failover | Tras agotarse la cadena OpenRouter de la tarea, el router prueba **Groq `openai/gpt-oss-120b`** y **Gemini `gemini-3.8-flash`** (endpoints OpenAI-compatibles, circuit breaker propio, claves opcionales `GROQ_API_KEY`/`GEMINI_API_KEY`) |
+| Env | `src/env.ts` + `src/shared/config/env-secrets.ts`: claves opcionales; sin clave el proveedor se salta |
+| Robustez | Piso de **512 `max_tokens`** en el failover (los modelos reasoning consumen el budget y un cap corto devolvía "respuesta vacía" falsa) |
+| Observabilidad | Healthcheck con probes del failover + guard env-parity (`groqConfigured`/`geminiConfigured` como recomendadas, no críticas) |
+| Compatibles | Sin clave OpenRouter la llamada va directa al failover; los evals (`modelOverride`) no entran al failover; presupuesto Vercel respetado en routes (`maxDuration` 120s) |
+
+**Verificación en vivo (2026-10-19):** con OpenRouter 429 en toda su cadena, el pool
+responde vía `groq:openai/gpt-oss-120b` (1.3-1.8s) en general-chat e incident-brief
+(e2e `src/scripts/e2e-ai-router.ts` 6/6); Groq y Gemini responden PONG + `json_object`
++ tools directos (`tests/integration/ai-real-connections.test.ts`, 8/9 con las 4
+llamadas reales medidas OK).
+
+---
+
 ## Julio 2026 — Sprint 3: History + Alerting + API
 
 ### P0.2 ✅ Historical DNS/WHOIS Tracking

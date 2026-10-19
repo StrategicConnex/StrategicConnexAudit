@@ -12,7 +12,7 @@
  *   5. Si hay fallos, registra evento de seguridad para que el SIEM
  *      exporter pueda detectar degradación recurrente
  *
- * Se ejecuta via Vercel CRON cada 6 horas (ver vercel.json).
+ * Se ejecuta via Vercel CRON diariamente a las 04:00 UTC (ver vercel.json).
  * También se puede invocar manualmente con GET /api/ai/healthcheck.
  *
  * Protección: en producción requiere header "Authorization: Bearer ${CRON_SECRET}".
@@ -25,7 +25,7 @@ import { envSecrets } from "@/shared/config/env-secrets";
 import { directDb } from "@/shared/db";
 import { aiHealthLogs } from "@/shared/db/schemas/health";
 import { logSecurityEvent } from "@/shared/lib/audit-log";
-import { TASK_ROUTING } from "@/server/ai/ai-router";
+import { TASK_ROUTING, FALLBACK_PROVIDERS } from "@/server/ai/ai-router";
 import { isCronAuthorized } from "@/server/auth/cron";
 import { withRequestContext } from "@/lib/request-context";
 
@@ -72,9 +72,16 @@ interface HealthCheckResult {
  * desincronización — OPENROUTER_API_KEY ausente en Vercel producía
  * "IA muerta en producción" sin señal de monitoreo. Reporta SOLO
  * booleanos de presencia — jamás valores de secretos.
+ *
+ * 2026-10-19: + groqConfigured/geminiConfigured (failover inter-proveedor).
+ * Son RECOMENDADOS, no críticos: su ausencia no dispara env_parity_drift
+ * (si OpenRouter vive, la app sirve), pero viaja en metadata de ai_health_logs
+ * y en la respuesta para que el owner detecte el drift del failover.
  */
 interface EnvParity {
   openrouterConfigured: boolean;
+  groqConfigured: boolean;
+  geminiConfigured: boolean;
   resendConfigured: boolean;
   telemetryOriginsConfigured: boolean;
 }
@@ -82,6 +89,8 @@ interface EnvParity {
 function computeEnvParity(): EnvParity {
   return {
     openrouterConfigured: !!envSecrets.openRouterApiKey,
+    groqConfigured: !!envSecrets.groqApiKey,
+    geminiConfigured: !!envSecrets.geminiApiKey,
     resendConfigured: !!process.env.RESEND_API_KEY?.trim(),
     telemetryOriginsConfigured: !!process.env.ALLOWED_TELEMETRY_ORIGINS?.trim(),
   };
@@ -90,10 +99,15 @@ function computeEnvParity(): EnvParity {
 /** Alerta SIEM solo en producción, solo con nombres de claves (sin valores). */
 function logEnvParityAlert(envParity: EnvParity): void {
   const isProduction = process.env.NODE_ENV === "production";
+  // CRÍTICAS: la app es inutilizable en producción si faltan.
   const missing: string[] = [];
   if (!envParity.openrouterConfigured) missing.push("OPENROUTER_API_KEY");
   if (!envParity.resendConfigured) missing.push("RESEND_API_KEY");
   if (!envParity.telemetryOriginsConfigured) missing.push("ALLOWED_TELEMETRY_ORIGINS");
+  // RECOMENDADAS (failover): visibles, pero no critical.
+  const recommended: string[] = [];
+  if (!envParity.groqConfigured) recommended.push("GROQ_API_KEY");
+  if (!envParity.geminiConfigured) recommended.push("GEMINI_API_KEY");
 
   if (missing.length > 0 && isProduction) {
     logger.error("AI Healthcheck: env-parity drift en producción", { missing });
@@ -104,8 +118,19 @@ function logEnvParityAlert(envParity: EnvParity): void {
         missingEnvKeys: missing,
         // La alerta dura es para la clave crítica de IA (síntoma en producción).
         openrouterConfigured: envParity.openrouterConfigured,
+        // Estado del failover (recomendado, no crítico) — sin valores.
+        failoverConfigured: {
+          groq: envParity.groqConfigured,
+          gemini: envParity.geminiConfigured,
+        },
+        recommendedMissing: recommended,
         nodeEnv: process.env.NODE_ENV || "development",
       },
+    });
+  } else if (recommended.length > 0 && isProduction) {
+    // Drift silencioso (warn) del failover: sin SIEM Critical — solo log.
+    logger.warn("AI Healthcheck: failover IA sin claves recomendadas en producción", {
+      recommended,
     });
   }
 }
@@ -222,8 +247,63 @@ async function testModel(modelId: string, timeoutMs = 15_000): Promise<ModelResu
   }
 }
 
-// ─── Persistencia en base de datos ─────────────────────────────────────────
+// ─── Probes del FAILOVER (2026-10-19) ─────────────────────────────────────
 
+/**
+ * Probe de un proveedor de failover (Groq/Gemini) contra el mismo TEST_PROMPT.
+ * Solo corre si la clave está configurada (failover sin key = registro nulo).
+ * max_tokens 100 + reasoning_effort "low" para Groq (gpt-oss consume el cap
+ * con reasoning interno: con 10 tokens la probe devolvía 200 vacío ANTES de
+ * que el escalado llegara a redactar — verificado 2026-10-19).
+ */
+async function testFailoverProvider(
+  provider: (typeof FALLBACK_PROVIDERS)[number],
+  timeoutMs = 15_000
+): Promise<ModelResult | null> {
+  const modelId = `${provider.id}:${provider.model}`;
+  if (!provider.getApiKey()) return null;
+  const start = Date.now();
+  try {
+    const response = await fetch(`${provider.getBaseUrl().replace(/\/+$/, "")}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${provider.getApiKey()}`,
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        messages: [TEST_PROMPT],
+        temperature: 0.1,
+        max_tokens: 100,
+        ...provider.extraBody,
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const latencyMs = Date.now() - start;
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      if (response.status === 429) {
+        return { modelId, status: "degraded", latencyMs, error: `Rate limited (429): ${text.slice(0, 100)}` };
+      }
+      return { modelId, status: "failed", latencyMs, error: `HTTP ${response.status}: ${text.slice(0, 150)}` };
+    }
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    if (!content || content.trim() === "") {
+      return { modelId, status: "degraded", latencyMs, error: "Respuesta vacía del proveedor de failover" };
+    }
+    return { modelId, status: "healthy", latencyMs, responseSample: content.slice(0, 50) };
+  } catch (err) {
+    const latencyMs = Date.now() - start;
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("timeout") || message.includes("abort")) {
+      return { modelId, status: "degraded", latencyMs, error: `Timeout (${timeoutMs}ms): ${message.slice(0, 100)}` };
+    }
+    return { modelId, status: "failed", latencyMs, error: message.slice(0, 200) };
+  }
+}
+
+// ─── Persistencia en base de datos ─────────────────────────────────────────
 async function persistResult(result: HealthCheckResult, triggerSource: string, envParity: EnvParity): Promise<string | null> {
   try {
     const [inserted] = await directDb.insert(aiHealthLogs).values({
@@ -286,6 +366,13 @@ async function rawGet(request: Request) {
     const results = await Promise.all(
       MODELS_TO_TEST.map(modelId => testModel(modelId))
     );
+
+    // 3.5 Probes del failover anti-monodependencia (decisión 2026-10-19):
+    // solo proveedores con clave; máximo 2 llamadas más por ciclo de 6h.
+    const failoverResults = (
+      await Promise.all(FALLBACK_PROVIDERS.map((p) => testFailoverProvider(p)))
+    ).filter((r): r is ModelResult => r !== null);
+    results.push(...failoverResults);
 
     const modelsHealthy = results.filter(r => r.status === "healthy").length;
     const modelsDegraded = results.filter(r => r.status === "degraded").length;

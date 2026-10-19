@@ -28,6 +28,10 @@ vi.mock("./ai-usage", () => ({
 type Handler = (url: string, init: RequestInit) => Promise<Response> | Response;
 let openRouterHandler: Handler = () => new Response("{}", { status: 200 });
 let openRouterCalls = 0;
+// Handlers del failover (Groq/Gemini): el escenario "solo OpenRouter" es el
+// default; el test de failover directo los reconfigura.
+let failoverHandler: Handler = () => new Response("[]", { status: 200 });
+let failoverCalls = 0;
 
 vi.stubGlobal(
   "fetch",
@@ -36,6 +40,10 @@ vi.stubGlobal(
     if (urlStr.includes("openrouter.ai")) {
       openRouterCalls++;
       return openRouterHandler(urlStr, (init ?? {}) as RequestInit);
+    }
+    if (urlStr.includes("groq.com") || urlStr.includes("generativelanguage.googleapis.com")) {
+      failoverCalls++;
+      return failoverHandler(urlStr, (init ?? {}) as RequestInit);
     }
     return new Response("[]", { status: 200 });
   })
@@ -69,8 +77,16 @@ const uniqueMsg = (tag: string) => [
 beforeEach(() => {
   resetAllCircuits();
   openRouterCalls = 0;
+  failoverCalls = 0;
   openRouterHandler = () => new Response("{}", { status: 200 });
+  failoverHandler = () => new Response("[]", { status: 200 });
   vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+  // Determinismo local: .env.local inyecta claves reales de failover en esta
+  // máquina y sin este stub los escenarios "solo OpenRouter" entrarían al
+  // failover inter-proveedor. CI no tiene claves, pero el test no debe
+  // depender del entorno.
+  vi.stubEnv("GROQ_API_KEY", "");
+  vi.stubEnv("GEMINI_API_KEY", "");
 });
 
 afterEach(() => {
@@ -198,6 +214,28 @@ describe("D2 — degradación sin API key (fail-soft)", () => {
     expect(res.modelUsed).toBe("none");
     expect(res.error).toContain("OPENROUTER_API_KEY");
     expect(openRouterCalls).toBe(0);
+  });
+
+  it("sin OPENROUTER_API_KEY pero con failover key → failover directo, cero red OpenRouter", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "");
+    vi.stubEnv("GROQ_API_KEY", "test-groq-key");
+    failoverHandler = () =>
+      json(200, {
+        choices: [{ message: { content: "PONG desde groq" } }],
+        model: "openai/gpt-oss-120b",
+        usage: { prompt_tokens: 81, completion_tokens: 65 },
+      });
+
+    const res = await callAIWithFallback({
+      taskType: "copilot-remediation",
+      messages: uniqueMsg("no-or-key-failover"),
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.modelUsed).toBe("groq:openai/gpt-oss-120b");
+    expect(res.content).toBe("PONG desde groq");
+    expect(openRouterCalls).toBe(0); // sin key: la cadena OpenRouter ni se recorre
+    expect(failoverCalls).toBe(1);
   });
 
   it("getNoApiKeyResponse cubre las 9 tareas en es y en, sin vacíos", () => {

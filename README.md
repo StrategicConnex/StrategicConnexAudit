@@ -107,11 +107,14 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 - **Copilot de Infraestructura**: asistente IA para planes de remediación técnica
 - **Incident Brief**: generación automática de resúmenes ejecutivos de seguridad
 - **Reportes SEO**: análisis generativo con datos de GSC/GA4
-- **Pool OpenRouter-only** (decisión 2026-10-18): meta-modelo `openrouter/free` + cadena de modelos `:free` por tarea (`MODEL_CAPABILITIES` + `TASK_ROUTING`), verificado en vivo con datos reales (telemetría `ai_usage` con tokens reales)
-- **Failover interno**: cadenas por tipo de tarea — chat general arranca con el meta-modelo; tareas JSON-críticas (triage, SEO report, adversary) solo usan modelos con `json_schema`/tools **verificados en vivo**
-- **Sin proveedores legados**: Anthropic, Gemini, NVIDIA NIM, Xiaomi y Ollama eliminados del código y del entorno (detalles en [`tests/integration/AI-CONNECTIONS-REPORT.md`](tests/integration/AI-CONNECTIONS-REPORT.md)) — una sola clave de IA que gestionar
-- **Trade-off aceptado**: si OpenRouter cae por completo, degrada sin failover externo (la última caída medida fue bloqueo del ISP, no del código)
-- **Health Check**: monitoreo periódico de disponibilidad de modelos + dashboard
+- **Pool IA multi-proveedor** (anti-monodependencia, enmienda 2026-10-19): OpenRouter primario (meta-modelo `openrouter/free` + cadena de modelos `:free` por tarea, `MODEL_CAPABILITIES` + `TASK_ROUTING`) + **failover Groq → Gemini** si la cadena OpenRouter se agota, ambos con endpoints OpenAI-compatibles y verificados en vivo
+- **Failover interno**: cadenas por tipo de tarea — chat general arranca con el meta-modelo; tareas JSON-críticas (triage, SEO report, adversary) solo usan modelos con `json_schema`/tools **verificados en vivo**; el failover respeta el mismo contrato (tools + `json_object` + self-heal de JSON)
+- **Modelos failover** (verificados EN VIVO el 2026-10-19): Groq `openai/gpt-oss-120b` (0.65-1.1s, `reasoning_effort: low`) y Gemini `gemini-3.8-flash` vía `/v1beta/openai` (~2.9-4s) — sus `modelUsed` viajan con prefijo (`groq:…`, `gemini:…`) en `ai_usage`
+- **Resiliencia total del pool**: sin clave de OpenRouter la cadena primaria se omite y la llamada va directo al failover; el mensaje de onboarding solo aparece si NO hay ninguna clave de IA; fallos transitorios del pool ya no se disfrazan de "configura tu API key" en el chat
+- **Evidencia en vivo (2026-10-19)**: con el límite diario `free-models-per-day` de OpenRouter agotado (429 en toda la cadena), el chat corrigió su respuesta vía Groq en 1.3-1.8s (`groq:openai/gpt-oss-120b`); el e2e del pool (`src/scripts/e2e-ai-router.ts`) pasa 6/6 en ese escenario. El failover aplica un **piso de 512 `max_tokens`** (los modelos de reasoning consumen del mismo budget y un cap corto producía "respuesta vacía" falsa)
+- **Presupuesto Vercel protegido**: el failover solo consume el restante de `maxDuration=120s` en las tasks que corren en routes (se omite si quedan <8s); las tasks de Trigger.dev no tienen cap
+- **Health Check**: cron diario 04:00 (`vercel.json`) con guard de env-parity + probes del failover; dashboard
+- **Trade-off conocido**: el free tier de Gemini usa el contenido para mejorar productos de Google (política de datos) — tenlo en cuenta para datos de tenants sensibles
 
 ### 🛡️ Seguridad & SIEM
 - **CSP dinámico**: Content-Security-Policy con nonce por request (Next.js 16 proxy)
@@ -228,7 +231,7 @@ flowchart TB
             ACT["⚡ Server Actions<br/>audits.ts · projects.ts · reports.ts"]
         end
 
-        subgraph API["API Route Handlers (46)"]
+        subgraph API["API Route Handlers (75)"]
             API_IT["intelligence/* · ai/* · benchmarking<br/>monitoring · plugins · reports/pdf"]
             API_PUB["public/v1/* (Bearer API key)"]
             API_WEB["webhooks/* · cicd (HMAC)"]
@@ -243,17 +246,17 @@ flowchart TB
         end
 
         subgraph JOBS["Background Jobs"]
-            VC["☑️ Vercel Cron (garantizado)<br/>2 crons diarios (plan Hobby)"]
+            VC["☑️ Vercel Cron (garantizado)<br/>3 crons diarios (siem, uptime, ai-healthcheck)"]
             TD["Trigger.dev (activo)<br/>34 tasks · 27 archivos .trigger.ts · 10 schedules<br/>✅ 2026-10-18: fix TLS+credenciales en workers (v20261018.1)"]
         end
 
         subgraph DATA["Data"]
-            DB["??? Supabase Postgres<br/>74 tablas · 64 migraciones SQL · RLS"]
+            DB["🗃️ Supabase Postgres<br/>78 tablas · 64 migraciones SQL · RLS"]
         end
     end
 
     subgraph EXT["Servicios externos"]
-        AI["🤖 OpenRouter AI (free pool)<br/>meta-modelo + cadena :free por tarea<br/>Único proveedor de IA (2026-10-18)"]
+        AI["🤖 Pool IA multi-proveedor<br/>OpenRouter primario (free pool)<br/>+ failover Groq → Gemini<br/>(OpenAI-compatibles, 2026-10-19)"]
         SIEM["📡 SIEM<br/>Slack · PagerDuty · Splunk · Email"]
         OSINT["🌐 APIs OSINT / DNS / CVE"]
     end
@@ -284,7 +287,8 @@ flowchart TB
 ```
 src/server/
 ├── ai/                           # AI Router (model pool + fallback)
-│   └── ai-router.ts              #   callAIWithFallback: openrouter/free + 4 modelos :free por cadena
+│   └── ai-router.ts              #   callAIWithFallback: OpenRouter (primario)
+│                                 #   + failover inter-proveedor Groq → Gemini
 ├── api/
 │   └── public-router.ts          #   withPublicApi middleware (API Key auth)
 ├── intelligence/
@@ -299,7 +303,7 @@ src/server/
 
 ### Background jobs
 
-**Mecanismo garantizado: Vercel Cron** (`vercel.json`, protegido con `CRON_SECRET`, 2 crons diarios en plan Hobby). **Alta frecuencia vía Trigger.dev (opcional)** (deploy no verificado según `docs/guides/deployment.md`) — 13 functional tasks + 1 template en `src/trigger/*.trigger.ts`.
+**Mecanismo garantizado: Vercel Cron** (`vercel.json`, protegido con `CRON_SECRET`, 3 crons diarios: SIEM, uptime y healthcheck IA). **Alta frecuencia vía Trigger.dev (opcional)** (deploy no verificado según `docs/guides/deployment.md`) — 13 functional tasks + 1 template en `src/trigger/*.trigger.ts`.
 
 | Fuente | Schedule | Descripción |
 |--------|----------|-------------|
@@ -316,7 +320,7 @@ src/server/
 | Trigger.dev `audit.trigger.ts` | Bajo demanda | Auditorías programadas |
 | Trigger.dev `monitoring.trigger.ts` | Bajo demanda + diario | Monitoreo de infraestructura |
 | Trigger.dev `mitre/adversary-assessment/webhook` | Bajo demanda / asíncrono | Evaluaciones MITRE/adversario y dispatch de webhooks |
-| `/api/ai/healthcheck` | Manual / bajo demanda | Health check de modelos AI (sin cron dedicado) |
+| `/api/ai/healthcheck` | Diario `0 4 * * *` (Vercel Cron) | Health check de modelos AI + guard env-parity + probes failover |
 
 ---
 
@@ -339,7 +343,7 @@ src/server/
 - **Database**: PostgreSQL (Supabase)
 - **Auth**: Supabase Auth (Magic Link)
 - **Background Jobs**: Trigger.dev 4.4
-- **AI**: OpenRouter API (free models)
+- **AI**: OpenRouter (primario, free models) + Groq/Gemini (failover, enmienda anti-monodependencia 2026-10-19)
 
 ### Infraestructura
 - **Hosting**: Vercel (builder nativo Next.js)
@@ -360,7 +364,7 @@ src/
 │   │   └── reports.ts            #   Generar reportes
 │   ├── ai/                       # AI Health Dashboard 🆕
 │   │   └── health/               #   Dashboard de salud de modelos
-│   ├── api/                      # API Routes (55 endpoints)
+│   ├── api/                      # API Routes (75 endpoints)
 │   │   ├── ai/                   #   Copilot, reportes, healthcheck
 │   │   ├── api-keys/             #   🆕 CRUD + usage tracking + expiry
 │   │   ├── auth/                 #   Validate email, callback
@@ -409,7 +413,7 @@ src/
 ├── shared/                       # Shared across app
 │   ├── config/                   #   Env validation
 │   ├── data/                     #   🆕 MITRE mapping data (shared)
-│   ├── db/                       #   Drizzle schemas (74 tablas)
+│   ├── db/                       #   Drizzle schemas (78 tablas)
 │   │   └── schemas/              #     health, intelligence, monitoring,
 │   │                             #     security-audit, api-keys, push-subscriptions
 │   ├── lib/                      #   Auth, ratelimit, audit-log, withPublicApi
@@ -681,17 +685,19 @@ Dashboard en `/ai/health` que monitorea los modelos de IA:
 - **Timeline de fallos** con eventos de error
 - **Uptime** por modelo en porcentaje
 
-**Backend:** `GET /api/ai/healthcheck` (manual y bajo demanda — lo consulta el hero del dashboard; sin cron dedicado). Pool actual (cadena por tarea, verificada en vivo · oct-2026):
+**Backend:** `GET /api/ai/healthcheck` (cron diario 04:00 en `vercel.json`, protegido con `CRON_SECRET`; también manual/on-demand desde el hero del dashboard). El guard de **env-parity** reporta 5 booleanos (OpenRouter, Groq, Gemini, Resend, telemetría — nunca valores) y registra evento SIEM `env_parity_drift` ante drift de las claves críticas; las probes del failover (Groq/Gemini, solo con clave) viajan igualadas como `modelResults` con prefijo. Pool actual (cadena por tarea, verificada en vivo · oct-2026):
 
-| Modelo | Rol |
-|--------|-----|
-| `openrouter/free` | Meta-router, primero en cadenas de chat libre |
-| `nvidia/nemotron-3-super-120b-a12b:free` | Calidad general + tools |
-| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | General + tools + JSON |
-| `nvidia/nemotron-3-ultra-550b-a55b:free` | Tareas JSON-críticas (triage/exec-brief) |
-| `cohere/north-mini-code:free` | Fallback del router |
+| Modelo | Proveedor | Rol |
+|--------|-----------|-----|
+| `openrouter/free` | OpenRouter | Meta-router, primero en cadenas de chat libre |
+| `nvidia/nemotron-3-super-120b-a12b:free` | OpenRouter | Calidad general + tools |
+| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | OpenRouter | General + tools + JSON |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | OpenRouter | Tareas JSON-críticas (triage/exec-brief) |
+| `cohere/north-mini-code:free` | OpenRouter | Fallback del router |
+| `openai/gpt-oss-120b` | **Groq (failover 1)** | Toda la tarea si OpenRouter se agota (0.65-1.1s) |
+| `gemini-3.8-flash` | **Gemini (failover 2)** | Último recurso (~2.9-4s, `json_object` + tools) |
 
-> ⚠️ Las cadenas JSON-críticas (`seo-report`, `finding-triage`, `exec-brief`, `adversary-analysis`) **excluyen el meta-modelo** y solo usan modelos con capacidad estructurada verificada en vivo — el router aleatorio no es aceptable cuando la salida debe ser JSON parseable.
+> ⚠️ Las cadenas JSON-críticas (`seo-report`, `finding-triage`, `exec-brief`, `adversary-analysis`) **excluyen el meta-modelo** y solo usan modelos con capacidad estructurada verificada en vivo — el router aleatorio no es aceptable cuando la salida debe ser JSON parseable. El failover mantiene el mismo contrato (tools + `json_object` + self-heal); los evals con `modelOverride` miden al modelo real y **no** entran al failover.
 
 ---
 
@@ -868,7 +874,7 @@ Refactorizaciones de la fase de consolidación (C-series + best practices):
 - Node.js >= 20
 - pnpm >= 9
 - Una cuenta de [Supabase](https://supabase.com) (gratuita)
-- Una cuenta de [OpenRouter](https://openrouter.ai/keys) (gratuita, sin tarjeta)
+- Una cuenta de [OpenRouter](https://openrouter.ai/keys) (gratuita, sin tarjeta) — *opcional pero recomendado: claves de [Groq](https://console.groq.com/keys) y [Gemini](https://aistudio.google.com/app/apikey) como failover del pool (también gratis)*
 
 ### Pasos
 
@@ -910,9 +916,14 @@ DIRECT_URL=postgresql://...         # Directa :5432 (workers/migraciones)
 # Next.js lo expande como variable vacía y rompe la auth (28P01).
 # Escápalo como `\$` o, mejor, rota el password a uno sin `$`.
 
-# ─── OpenRouter (ÚNICA clave de IA del proyecto) ─────────────────
-OPENROUTER_API_KEY=sk-or-v1-...    # https://openrouter.ai/keys
+# ─── IA: OpenRouter (primario) + Groq/Gemini (failover, opcional) ───
+OPENROUTER_API_KEY=sk-or-v1-...    # https://openrouter.ai/keys (requerida)
 OPENROUTER_BASE_URL=optional       # Default público: https://openrouter.ai/api/v1
+GROQ_API_KEY=gsk_...               # opcional: failover 1 (gpt-oss-120b)
+GEMINI_API_KEY=AQ....              # opcional: failover 2 (gemini-3.8-flash)
+# Sin ninguna de las tres el chat muestra onboarding; con OpenRouter sola
+# funciona el pool completo; Groq/Gemini solo reciben tráfico si OpenRouter
+# se agota o no está configurada.
 
 # ─── SIEM Webhooks (opcional) ───────────────────────────────────
 SIEM_WEBHOOK_SLACK=https://hooks.slack.com/services/...
@@ -1123,18 +1134,28 @@ Guards core que protegen la superficie de seguridad (falla CI si se rompe el fre
 
 ---
 
-## 📋 Estado del proyecto (2026-10-18)
+## 📋 Estado del proyecto (2026-10-19)
 
 Ver detalles completos en [`FINAL-SUMMARY.md`](./FINAL-SUMMARY.md). Resumen medido:
 
 | Métrica | Valor |
 |---------|-------|
-| Tests unitarios (Vitest) | **2759** (285 archivos, todos verdes) |
+| Tests unitarios (Vitest) | **2771** (285 archivos, verdes — run completo verificado 2026-10-19) |
 | Migraciones registradas | **64** (`drizzle/meta/_journal.json`) |
 | Superficie RLS a auditar | **272** llamadas (congelada por guard en CI) |
-| Proveedores IA funcionales | **1/1** (OpenRouter, verificado con datos reales) |
-| Claves IA en `.env` | **1** (OpenRouter) |
+| Proveedores IA funcionales | **3/3** (OpenRouter primario + Groq/Gemini failover, verificados con datos reales) |
+| Claves IA en `.env` | **3** (OPENROUTER + GROQ + GEMINI — las 2 últimas son failover opcional) |
 | Estados de fases | P0, P1, P2 completadas |
+
+### Failover anti-monodependencia (2026-10-19)
+
+- OpenRouter sigue siendo el primario (única clave requerida). Si su cadena de
+  tarea se agota (o su clave no está configurada), `FALLBACK_PROVIDERS` enruta
+  por Groq `openai/gpt-oss-120b` y luego Gemini `gemini-3.8-flash`
+  (endpoints OpenAI-compatibles, circuit breakers propios, `modelUsed` con prefijo).
+- **Probado en vivo el mismo día**: con OpenRouter en 429 (`free-models-per-day`
+  agotado), `general-chat` y `finding-triage` se sirvieron por Groq en
+  despliegue real (`tests/integration/ai-real-connections.test.ts`, 9/9 verdes).
 
 Refactorizaciones estructurales congeladas por guard:
 
@@ -1247,7 +1268,7 @@ Refactorizaciones estructurales congeladas por guard:
 |------|----------|-------------|
 | `api/cron/uptime` | Diario `0 3 * * *` (Vercel, plan Hobby) | Verificación de uptime |
 | `api/cron/siem` | Diario `30 3 * * *` (Vercel, plan Hobby) | SIEM exporter |
-| `api/ai/healthcheck` | Manual / bajo demanda | Health check de modelos AI |
+| `api/ai/healthcheck` | Diario `0 4 * * *` (Vercel Cron) | Health check de modelos AI + env-parity |
 | `trigger/discovery.trigger` | 🆕 Cada 6h | Descubrimiento continuo de activos |
 | `trigger/api-key-expiry.trigger` | 🆕 Diario 09:00 UTC | Alertas de expiración API Keys |
 
@@ -1272,7 +1293,7 @@ vercel --prod
 
 El archivo `vercel.json` ya incluye:
 - Framework `nextjs` (sin standalone output)
-- 2 cron jobs diarios (uptime 03:00, SIEM 03:30 — la alta frecuencia vive en Trigger.dev)
+- 3 cron jobs: uptime y SIEM diarios (03:00/03:30, la alta frecuencia vive en Trigger.dev) + healthcheck IA a las 04:00
 - Configuración de imágenes y headers de seguridad
 
 **Importante:** NO configurar `NEXT_PUBLIC_DEV_BYPASS_AUTH=true` en producción — el guard `NODE_ENV === 'development'` lo desactiva automáticamente.

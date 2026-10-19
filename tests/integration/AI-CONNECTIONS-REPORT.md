@@ -210,3 +210,45 @@ conectividad y API key.» + el detalle por modelo de la cadena agotada.
 getter en `env-secrets.ts`, ni consumidor en runtime, ni mención en `.env.example` — era la
 última clave muerta del inventario de IA. Con esto el pool queda cerrado a **OpenRouter-only
 en un archivo**: OPENROUTER_API_KEY + OPENROUTER_BASE_URL, nada más.
+
+---
+
+## ADDENDA 2026-10-19 - Failover anti-monodependencia (enmienda owner)
+
+El trade-off aceptado el 2026-10-18 queda REEMPLAZADO por decisión expresa del owner
+(«quiero integrarlas al pool failover anti-monodependencia»). Se restituye el failover
+inter-proveedor SIN resucitar `providers.ts`, con dos proveedores OpenAI-compatibles:
+
+| Proveedor | Modelo failover | Endpoint | Verificación en vivo (2026-10-19) |
+|-----------|-----------------|----------|------------------------------------|
+| **Groq** | `openai/gpt-oss-120b` | `api.groq.com/openai/v1/chat/completions` | chat 0.65-1.09s PONG · `json_object` ✅ · tools ✅ (`finish: tool_calls`, args OK). `reasoning_effort: "none"` → 400 (solo low/medium/high). Límites free org: 30 RPM / 1.000 RPD / 8K TPM / 200K TPD; catálogo real: 11 modelos (sin `llama-3.1-8b`) |
+| **Gemini** | `gemini-3.8-flash` | `generativelanguage.googleapis.com/v1beta/openai` (Bearer, clave formato AQ.* nueva) | chat ~2.9-4s PONG · `json_object` ✅ · tools ✅. Catálogo free org: familia 3.x flash + TTS/transcribe/live/gemma; Pro/Argon/Nano Banana/Veo/Lyria pagados |
+
+Diseño: `FALLBACK_PROVIDERS` en `ai-router.ts` (Groq → Gemini), con circuit breaker
+propio por proveedor, saltándose el proveedor sin clave. `modelUsed` viaja con prefijo
+(`groq:…` / `gemini:…`) en `ai_usage`. Los evals con `modelOverride` NO entran al
+failover. El caso "OpenRouter sin clave" ahora también cae al failover (antes quedaba
+en onboarding de "IA no configurada"). El healthcheck IA añade probes del failover y
+dos booleanos de env-parity (`groqConfigured`, `geminiConfigured`, recomendados -
+no críticos).
+
+AVISO LEGAL Gemini free tier: el contenido se usa para mejorar productos Google
+(data policy). Para tenants con datos sensibles, Groq es el failover preferente.
+
+### Corrida de verificación 2026-10-19 (post-implementación)
+
+Con el límite diario de OpenRouter agotado (429 `free-models-per-day` en toda la
+cadena, condición real del chatbot ese día):
+
+| Llamada | Resultado | Latencia |
+|---------|-----------|----------|
+| `general-chat` vía `callAIWithFallback` | ✅ rescate por el failover Groq (`groq:openai/gpt-oss-120b`) | 1.351 ms |
+| `finding-triage` (JSON) vía router | ✅ rescate por el failover Groq | 1.259 ms |
+| Groq directo (PONG + `json_object`) | ✅ | 125 ms |
+| Gemini directo (PONG + `json_object`) | ✅ | 3.388 ms |
+
+Cierre del hito B-06 del análisis de baches ([docs/HALLAZGOS-BACHES-2026-10-19.md](../../docs/HALLAZGOS-BACHES-2026-10-19.md)):
+el "un solo punto de fallo de IA" queda eliminado. Pendiente documentado: piso de
+512 max_tokens en el failover (los reasoning models consumen el budget con caps
+cortos) y ajuste del prompt del test live de Groq para exigir la palabra `json`
+(restricción estándar de cualquier endpoint OpenAI-compatible con `json_object`).

@@ -239,7 +239,7 @@ SIEM_WEBHOOK_SPLUNK=https://http-inputs-mysplunk.splunkcloud.com:8088/services/c
       <tr><td><code>DB_ALLOW_INSECURE_SSL=true</code></td><td>Permite SSL inseguro en conexiones directas</td></tr>
     </table>
     <h3>Legado (compatibilidad)</h3>
-    <p><code>Bearer_API_KEY</code>, <code>GEMINI_API_KEY</code>, <code>XIAOMI_BASE_URL</code> — mantenidas pero reemplazadas por OpenRouter.</p>
+    <p><code>Bearer_API_KEY</code>, <code>XIAOMI_BASE_URL</code> - reemplazadas por OpenRouter. Enmienda 2026-10-19 (anti-monodependencia): el pool admite <code>GROQ_API_KEY</code> (gpt-oss-120b) y <code>GEMINI_API_KEY</code> (gemini-3.8-flash, clave nueva formato AQ.*) como <strong>failover opcional</strong>, verificadas en vivo; son opcionales y solo reciben trafico si OpenRouter se agota. <em>Nota free tier Gemini: el contenido se usa para mejorar productos Google.</em></p>
 
     <h2 id="dev-bypass">11. Dev Bypass Auth</h2>
     <p>Para desarrollo local: <code>NEXT_PUBLIC_DEV_BYPASS_AUTH=true</code> permite navegar el dashboard sin login, crear proyectos con usuario sintético y probar todo sin Magic Links.</p>

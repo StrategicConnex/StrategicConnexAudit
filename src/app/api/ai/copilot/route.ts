@@ -61,9 +61,22 @@ export const POST = withRateLimit(
       });
 
       if (!aiResult.success) {
+        // Solo el error de "sin claves" merece el onboarding; cualquier otro
+        // fallo (timeout, 429, circuito abierto, 5xx encadenado) NO es un
+        // problema de configuración — presentarlo como "configura tu API key"
+        // inducía a re-configurar claves que ya estaban bien (Modo Analista,
+        // 2026-10-19).
+        const missingKey =
+          /not configured|no configurada|ninguna clave/i.test(aiResult.error ?? "");
         return NextResponse.json({
           success: true,
-          message: getNoApiKeyResponse('general-chat'),
+          message: missingKey
+            ? getNoApiKeyResponse('general-chat')
+            : "## ⚠️ Motor de IA temporalmente no disponible\n\n" +
+              "El pool de IA (OpenRouter + failover Groq/Gemini) no devolvió " +
+              "respuesta para esta consulta. No es un problema de tu configuración: " +
+              "reintenta en unos momentos.\n\n" +
+              `**Detalle técnico:** ${aiResult.error ?? "desconocido"}`,
           error: aiResult.error,
         });
       }
@@ -78,9 +91,18 @@ export const POST = withRateLimit(
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       logger.error('Error in Copilot endpoint:', error);
+      // Catch de infraestructura (auth, quota, rate limit, DB): NO es lo mismo
+      // que "IA sin configurar". Solo mapea al onboarding si el error real lo
+      // indica; el resto es una incidencia transitoria del servicio.
+      const missingKey = /not configured|no configurada|ninguna clave/i.test(errMsg);
       return NextResponse.json({
         success: true,
-        message: getNoApiKeyResponse('general-chat'),
+        message: missingKey
+          ? getNoApiKeyResponse('general-chat')
+          : "## ⚠️ Servicio temporalmente no disponible\n\n" +
+            "No se pudo procesar la consulta con el motor de IA. Reintenta en " +
+            "unos momentos; si persiste, revisa el estado del pool en /ai/health.\n\n" +
+            `**Detalle técnico:** ${errMsg || "desconocido"}`,
         error: errMsg || 'Servicio no disponible',
       });
     }

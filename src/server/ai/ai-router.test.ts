@@ -10,14 +10,28 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 type FetchHandler = (url: string, init: RequestInit) => Promise<Response> | Response;
 let fetchHandler: FetchHandler = () => new Response("{}", { status: 200 });
+// Handlers del failover (Groq/Gemini) + contadores por proveedor.
+let groqHandler: FetchHandler = () => new Response("failover groq no esperado", { status: 500 });
+let geminiHandler: FetchHandler = () =>
+  new Response("failover gemini no esperado", { status: 500 });
+let groqCalls = 0;
+let geminiCalls = 0;
 
 vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
   const urlStr = String(url);
-  if (!urlStr.includes("openrouter.ai")) {
-    // Otra URL que no sea OpenRouter: respuesta vacía, no nos importa en estos tests
-    return new Response("[]", { status: 200 });
+  if (urlStr.includes("openrouter.ai")) {
+    return fetchHandler(urlStr, (init ?? {}) as RequestInit);
   }
-  return fetchHandler(urlStr, (init ?? {}) as RequestInit);
+  if (urlStr.includes("groq.com")) {
+    groqCalls++;
+    return groqHandler(urlStr, (init ?? {}) as RequestInit);
+  }
+  if (urlStr.includes("generativelanguage.googleapis.com")) {
+    geminiCalls++;
+    return geminiHandler(urlStr, (init ?? {}) as RequestInit);
+  }
+  // Otra URL que no sea proveedor IA: respuesta vacía, no nos importa en estos tests
+  return new Response("[]", { status: 200 });
 }));
 
 import { callAIWithFallback, callAIAgentLoop, modelCapabilities, getNoApiKeyResponse, TASK_ROUTING, MODEL_TIMEOUTS } from "./ai-router";
@@ -273,6 +287,147 @@ describe("getNoApiKeyResponse", () => {
       expect(getNoApiKeyResponse(tt)).toBeTruthy();
       expect(getNoApiKeyResponse(tt, "en")).toBeTruthy();
     }
+  });
+});
+
+// ─── Failover anti-monodependencia (decisión owner 2026-10-19) ─────────────
+
+describe("callAIWithFallback — failover inter-proveedor (Groq → Gemini)", () => {
+  beforeEach(() => {
+    groqCalls = 0;
+    geminiCalls = 0;
+    groqHandler = () => new Response("failover groq no esperado", { status: 500 });
+    geminiHandler = () => new Response("failover gemini no esperado", { status: 500 });
+  });
+
+  const GROQ_BODY = () => ({
+    choices: [{ message: { content: "PONG desde groq" } }],
+    model: "openai/gpt-oss-120b",
+    usage: { prompt_tokens: 81, completion_tokens: 65 },
+  });
+  const GEMINI_BODY = () => ({
+    choices: [{ message: { content: "PONG desde gemini" } }],
+    model: "gemini-3.8-flash",
+    usage: { prompt_tokens: 14, completion_tokens: 5 },
+  });
+
+  it("OpenRouter cae completo → Groq sirve el failover (sin tocar Gemini)", async () => {
+    vi.stubEnv("GROQ_API_KEY", "test-groq-key"); // determinismo CI:sin keys reales
+    fetchHandler = () => new Response("upstream boom", { status: 500 });
+    groqHandler = () =>
+      new Response(JSON.stringify(GROQ_BODY()), { status: 200, headers: { "Content-Type": "application/json" } });
+
+    const res = await callAIWithFallback({
+      taskType: "adversary-analysis", // Trigger.dev: sin cap Vercel
+      messages: [{ role: "user", content: `failover-groq-${Date.now()}` }],
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.content).toBe("PONG desde groq");
+    expect(res.modelUsed).toBe("groq:openai/gpt-oss-120b");
+    expect(groqCalls).toBe(1);
+    expect(geminiCalls).toBe(0);
+  });
+
+  it("sin GROQ_API_KEY el proveedor se salta y cae a Gemini", async () => {
+    vi.stubEnv("GROQ_API_KEY", undefined);
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+    fetchHandler = () => new Response("upstream boom", { status: 500 });
+    geminiHandler = () =>
+      new Response(JSON.stringify(GEMINI_BODY()), { status: 200, headers: { "Content-Type": "application/json" } });
+
+    const res = await callAIWithFallback({
+      taskType: "adversary-analysis",
+      messages: [{ role: "user", content: `failover-gemini-${Date.now()}` }],
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.modelUsed).toBe("gemini:gemini-3.8-flash");
+    expect(groqCalls).toBe(0); // sin key: ni un byte a la red de Groq
+    expect(geminiCalls).toBe(1);
+  });
+
+  it("todos los proveedores fallan → success:false con errores de los tres", async () => {
+    vi.stubEnv("GROQ_API_KEY", "test-groq-key");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+    fetchHandler = () => new Response("upstream boom", { status: 500 });
+    groqHandler = () => new Response("upstream boom", { status: 500 });
+    geminiHandler = () => new Response("upstream boom", { status: 500 });
+
+    const res = await callAIWithFallback({
+      taskType: "adversary-analysis",
+      messages: [{ role: "user", content: `failover-all-fail-${Date.now()}` }],
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.modelUsed).toBe(TASK_ROUTING["adversary-analysis"].at(-1));
+    expect(res.error).toContain("OpenRouter no disponible");
+    expect(res.error).toContain("groq 500");
+    expect(res.error).toContain("gemini 500");
+    expect(groqCalls).toBe(1);
+    expect(geminiCalls).toBe(1);
+  });
+
+  it("modelOverride (evals) NO activa failover: mide al modelo real o falla", async () => {
+    vi.stubEnv("GROQ_API_KEY", "test-groq-key");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+    fetchHandler = () => new Response("upstream boom", { status: 500 });
+
+    const res = await callAIWithFallback({
+      taskType: "adversary-analysis",
+      messages: [{ role: "user", content: `eval-override-${Date.now()}` }],
+      modelOverride: "nvidia/nemotron-3.5-lightning:free",
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.modelUsed).toBe("nvidia/nemotron-3.5-lightning:free");
+    // Failover jamás tocado: los evals no pueden servir respuestas de
+    // otro proveedor a producción ni atribuir al modelo evaluado otro id.
+    expect(res.error).not.toContain("groq");
+    expect(groqCalls).toBe(0);
+    expect(geminiCalls).toBe(0);
+  });
+
+  it("sin ninguna key de failover el error histórico queda intacto", async () => {
+    vi.stubEnv("GROQ_API_KEY", undefined); // CI: sin keys reales
+    vi.stubEnv("GEMINI_API_KEY", undefined);
+    fetchHandler = () => new Response("upstream boom", { status: 500 });
+
+    const res = await callAIWithFallback({
+      taskType: "adversary-analysis",
+      messages: [{ role: "user", content: `failover-off-${Date.now()}` }],
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.error).toContain("OpenRouter no disponible");
+    expect(res.error).toContain("sin API key configurada (failover omitido)");
+    expect(groqCalls).toBe(0);
+    expect(geminiCalls).toBe(0);
+  });
+
+  it("JSON roto en el proveedor → self-heal repite AL PROVEEDOR y recupera", async () => {
+    vi.stubEnv("GROQ_API_KEY", "test-groq-key");
+    fetchHandler = () => new Response("upstream boom", { status: 500 });
+    let groqAttempt = 0;
+    groqHandler = () => {
+      groqAttempt++;
+      const content = groqAttempt === 1 ? "no es json {broken" : '{"ok":true}';
+      return new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+
+    const res = await callAIWithFallback({
+      taskType: "seo-report", // JSON-crítico → entra el self-heal
+      messages: [{ role: "user", content: `selfheal-failover-${Date.now()}` }],
+      responseFormat: { type: "json_object" },
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.content).toBe('{"ok":true}');
+    expect(res.modelUsed).toBe("groq:openai/gpt-oss-120b");
+    expect(groqCalls).toBe(2); // 1ra llamada + 1 reintento de self-heal
   });
 });
 

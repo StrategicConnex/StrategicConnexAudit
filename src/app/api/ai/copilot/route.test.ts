@@ -112,8 +112,13 @@ describe("AI: Copilot — POST", () => {
     );
   });
 
-  it("fallo IA → 200 con mensaje fallback y error", async () => {
-    mockCallAI.mockResolvedValue({ success: false, error: "all models down" });
+  it("fallo IA no-config → 200 con onboarding; fallo no-config → mensaje de servicio (2026-10-19)", async () => {
+    // El error "not configured" (proveniente del router cuando NO hay niguna
+    // clave) mapea al onboarding clásico.
+    mockCallAI.mockResolvedValue({
+      success: false,
+      error: "No hay ninguna clave de IA configurada. Configura OPENROUTER_API_KEY",
+    });
 
     const res = await POST(
       createRequest({ messages: [{ role: "user", content: "hola" }] }) as never,
@@ -123,17 +128,31 @@ describe("AI: Copilot — POST", () => {
 
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.message).toBe("Fallback (general-chat)");
-    expect(body.error).toBe("all models down");
+    expect(body.message).toBe("Fallback (general-chat)"); // onboarding
+    expect(body.error).toContain("ninguna clave");
+
+    // Un fallo del pool NO es un problema de configuración: el onboarding
+    // inducía a re-configurar claves que ya estaban bien (Modo Analista).
+    mockCallAI.mockResolvedValue({ success: false, error: "all models down" });
+    const res2 = await POST(
+      createRequest({ messages: [{ role: "user", content: "hola" }] }) as never,
+      "u-1",
+    );
+    const body2 = await res2.json();
+    expect(body2.success).toBe(true);
+    expect(body2.message).toContain("Motor de IA temporalmente no disponible");
+    expect(body2.error).toBe("all models down");
   });
 
-  it("excepción interna → catch devuelve fallback con success true", async () => {
+  it("excepción interna → catch devuelve mensaje de servicio con success true", async () => {
     const res = await POST(createRequest("no-es-json") as never, "u-1");
     expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.message).toBe("Fallback (general-chat)");
+    // Un throw de infra (auth/quota/DB) ya NO se disfraza de "IA sin
+    // configurar": mensaje de servicio transitorio + detalle técnico.
+    expect(body.message).toContain("Servicio temporalmente no disponible");
     expect(body.error).toBeTruthy();
   });
 

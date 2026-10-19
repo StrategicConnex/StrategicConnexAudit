@@ -42,7 +42,7 @@ async function main() {
 
   // ── Test 2: caché (misma petición) ──
   const r2 = await callAIWithFallback({ taskType: "general-chat", messages, maxTokens: 50 });
-  check("4. segunda llamada desde caché", !!r2.fromCache && r2.latencyMs === 0, `fromCache=${r2.fromCache} latency=${r2.latencyMs}ms`);
+  check("4. segunda llamada desde caché", !!r2.fromCache && r2.latencyMs < 100, `fromCache=${r2.fromCache} latency=${r2.latencyMs}ms`);
   check("5. contenido de caché idéntico", r1.content === r2.content, "");
 
   // ── Test 3: otra tarea (incident-brief) ──

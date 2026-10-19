@@ -29,7 +29,14 @@ const SUPABASE_KEY_VARS = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
 ] as const;
 
-const OPTIONAL_VARS = ["RESEND_API_KEY", "SLACK_WEBHOOK_URL", "TEAMS_WEBHOOK_URL"] as const;
+const OPTIONAL_VARS = [
+  // Failover anti-monodependencia (2026-10-19): opcionales por diseño.
+  "GROQ_API_KEY",
+  "GEMINI_API_KEY",
+  "RESEND_API_KEY",
+  "SLACK_WEBHOOK_URL",
+  "TEAMS_WEBHOOK_URL",
+] as const;
 
 const ALL_VARS = [...REQUIRED_VARS, ...SUPABASE_KEY_VARS, ...OPTIONAL_VARS] as const;
 
@@ -42,6 +49,8 @@ const VALID_VALUES: Record<VarKey, string> = {
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_key",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiJ9.test-anon-key",
   OPENROUTER_API_KEY: "sk-or-v1-test-key",
+  GROQ_API_KEY: "gsk_test_key",
+  GEMINI_API_KEY: "AQ.test_key",
   RESEND_API_KEY: "re_test_key",
   SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/T000/B000/XXX",
   TEAMS_WEBHOOK_URL: "https://outlook.office.com/webhook/xxx",
@@ -166,7 +175,7 @@ describe("src/env.ts", () => {
     await expect(import("./env")).resolves.toBeDefined();
   });
 
-  it("exporta `env` con las 9 claves esperadas", () => {
+  it("exporta `env` con las 11 claves esperadas", () => {
     expect(Object.keys(env).sort()).toEqual([...ALL_VARS].sort());
   });
 

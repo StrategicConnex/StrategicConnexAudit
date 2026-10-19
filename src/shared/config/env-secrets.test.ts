@@ -26,16 +26,25 @@ describe("env-secrets — getters server-only (RULE-001)", () => {
     expect(envSecrets.databaseUrl).toBe("");
   });
 
-  it("los getters de IA eliminados ya no existen (Gemini/Bearer/Xiaomi/Anthropic)", async () => {
-    // Medición en vivo + decisión 2026-10-18: Gemini/Bearer/Xiaomi sin conexión
-    // y sin consumidor; Anthropic eliminado con el failover P2-1
-    // (OpenRouter-only, ver AI-CONNECTIONS-REPORT.md).
+  it("getters failover existen (opcional); los legados eliminados ya no (Bearer/Xiaomi/Anthropic)", async () => {
+    // Enmienda anti-monodependencia 2026-10-19: Groq/Gemini VUELVEN como
+    // failover opcional con claves nuevas verificadas en vivo (la GEMINI de
+    // 2026-10-17, filtrada, fue eliminada — la actual es otra credential).
+    // Los legados muertos siguen fuera (AI-CONNECTIONS-REPORT.md).
     const { envSecrets } = await import("./env-secrets");
-    expect("geminiApiKey" in envSecrets).toBe(false);
+    expect("groqApiKey" in envSecrets).toBe(true);
+    expect("geminiApiKey" in envSecrets).toBe(true);
     expect("bearerApiKey" in envSecrets).toBe(false);
     expect("aiBaseUrl" in envSecrets).toBe(false);
     expect("anthropicApiKey" in envSecrets).toBe(false);
-    // Lo que SÍ existe: el par del único proveedor activo.
+    // Defaults de failover activos sin variable: usable out-of-the-box.
+    expect(envSecrets.groqBaseUrl).toBe("https://api.groq.com/openai/v1");
+    expect(envSecrets.geminiBaseUrl).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/openai"
+    );
+    // Sin variable: cadenas vacías, el router salta al proveedor siguiente.
+    expect(envSecrets.groqApiKey).toBe("");
+    expect(envSecrets.geminiApiKey).toBe("");
     expect(envSecrets.openRouterApiKey).toBe("");
   });
 

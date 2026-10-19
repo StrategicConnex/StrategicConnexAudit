@@ -9,7 +9,7 @@
 
 Todas las fases P0, P1 y P2 completadas. 7 guards preventivos core en CI (más 4
 complementarios: RULE-001 secretos, CDN, contrast WCAG, RLS-inventory estático).
-Pool de IA funcional con OpenRouter (único proveedor, verificado con datos reales).
+Pool de IA multi-proveedor: OpenRouter primario + failover Groq/Gemini (anti-monodependencia, verificado en vivo 2026-10-19).
 Working tree limpio, `HEAD == origin/main`.
 
 ---
@@ -22,8 +22,8 @@ Working tree limpio, `HEAD == origin/main`.
 | Guards en CI | 0 | **7 core activos** (+4 complementarios) | +7 |
 | Migraciones registradas (`drizzle/meta/_journal.json`) | ~55 | **64** | +9 |
 | Superficie RLS a auditar (estática, hoy) | 330 | **272** | -18% |
-| Proveedores IA funcionales | 0/5 | **1/1 (OpenRouter)** | — |
-| Claves IA en .env | 5+ | **1** (OPENROUTER_API_KEY) | -4 o más |
+| Proveedores IA funcionales | 0/5 | **3 (OpenRouter + Groq/Gemini failover)** | - |
+| Claves IA en .env | 5+ | **3** (OPENROUTER + GROQ + GEMINI, 2 opcional failover) | - |
 | Rate limit fail-open | Sí (SA-04) | **No** | Fix |
 | Retención estancada | ≥8 días | **Cerrado** | Fix |
 | Tablas huérfanas | 1 (project_members) | **0** | -1 |
@@ -82,22 +82,27 @@ vivo contra producción.
 
 ## Integraciones de IA
 
-### Activa
-| Proveedor | Estado | Observaciones |
-|-----------|--------|---------------|
-| **OpenRouter** | ✅ Operativo | Meta-modelo con fallbacks internos, 4/5 cadenas exitosas con datos reales (telemetría `ai_usage` con tokens in/out reales) |
+### Activa (2026-10-19)
+| Proveedor | Rol | Estado | Observaciones |
+|-----------|-----|--------|---------------|
+| **OpenRouter** | PRIMARIO | ✅ Operativo | Meta-modelo con fallbacks internos, 4/5 cadenas exitosas con datos reales (telemetría `ai_usage` con tokens in/out reales). Hoy ya no es requisito único: sin su clave el router cae directo al failover |
+| **Groq** | FAILOVER 1 | ✅ Verificado en vivo | `openai/gpt-oss-120b` vía `/openai/v1` (0.65-1.1s; `json_object` + tools; `reasoning_effort: low`). Ver [AI-CONNECTIONS-REPORT](tests/integration/AI-CONNECTIONS-REPORT.md) |
+| **Gemini** | FAILOVER 2 | ✅ Verificado en vivo | `gemini-3.8-flash` vía `/v1beta/openai` (~2.9-4s; `json_object` + tools; Bearer, clave nueva AQ.*). Free tier usa contenido para entrenar Google |
 
 ### Eliminadas (2026-10-17 → 2026-10-18)
 | Proveedor | Razón |
 |-----------|-------|
 | Anthropic | Simplificación arquitectónica (failover P2-1 nunca activo sin key) |
-| Gemini | Clave filtrada por Google (seguridad) — **eliminada, no rotada** |
+| Gemini (clave antigua) | Clave filtrada por Google (seguridad) — **eliminada, no rotada**; sustituida 2026-10-19 por clave nueva |
 | NVIDIA NIM | Simplificación arquitectónica + 404 «Function not found for account» |
 | Xiaomi/apifreellm | Simplificación arquitectónica + 401 clave inválida |
 | Ollama | Sin getter, sin consumidor runtime — última clave muerta del inventario |
 
-**Trade-off aceptado**: Single-provider. Si OpenRouter cae, degrada sin failover
-externo. El error del router lo dice con detalle por modelo de la cadena agotada.
+**Enmienda anti-monodependencia (2026-10-19)**: el single-provider queda reemplazado
+por la cadena de failover `OpenRouter → Groq → Gemini` en `FALLBACK_PROVIDERS`
+(`ai-router.ts`). Verificado en vivo el mismo día: con OpenRouter en 429
+(free-models-per-day agotado), `general-chat` y `finding-triage` sirvieron por Groq.
+Los evals con `modelOverride` no entran al failover.
 
 ---
 
@@ -108,7 +113,8 @@ externo. El error del router lo dice con detalle por modelo de la cadena agotada
 | ADR-002 §16 | Rate limit fail-closed con fallback acotado | ✅ Aceptado |
 | ADR-010 | Membresía vs ownership | ✅ Revocado (proyecto gratuito) |
 | ADR-0XX | Autorización owner-only | ✅ Aceptado |
-| — | Pool IA OpenRouter-only (2026-10-18) | ✅ Aceptado |
+| — | Pool IA OpenRouter-only (2026-10-18) | Reemplazado |
+| — | Failover anti-monodependencia Groq→Gemini (enmienda owner, 2026-10-19) | ✅ Aceptado e implementado |
 
 ---
 

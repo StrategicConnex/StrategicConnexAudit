@@ -18,17 +18,23 @@
  * los mensajes de fallo nombran la variable, nunca su valor.
  *
  * INVENTARIO VERIFICADO EN CÓDIGO (src/shared/config/env-secrets.ts,
- * src/server/ai/ai-router.ts) — POOL OPENROUTER-ONLY (2026-10-18):
+ * src/server/ai/ai-router.ts) — actualizado 2026-10-19:
  *
- * | Proveedor  | Estado en runtime         | Variable            |
- * |------------|---------------------------|---------------------|
- * | OpenRouter | ÚNICO proveedor (meta-modelo + cadena :free) | OPENROUTER_API_KEY |
+ * | Proveedor  | Estado en runtime              | Variable            |
+ * |------------|--------------------------------|---------------------|
+ * | OpenRouter | PRIMARIO (meta-modelo + cadena :free) | OPENROUTER_API_KEY |
+ * | Groq       | FAILOVER 1 (endpoint OpenAI-compat)   | GROQ_API_KEY (opcional) |
+ * | Gemini     | FAILOVER 2 (endpoint OpenAI-compat)   | GEMINI_API_KEY (opcional) |
  *
- * Eliminados con la simplificación OpenRouter-only (2026-10-18): Anthropic
- * directo (failover P2-1, nunca activo sin key) junto a `providers.ts`. Los
- * legados ya se eliminaron el 2026-10-17: Gemini (clave filtrada), NVIDIA NIM
- * (404 «Function not found for account») y Xiaomi/apifreellm («Incorrect API
- * key»). Detalle: tests/integration/AI-CONNECTIONS-REPORT.md.
+ * FAILOVER ANTI-MONODEPENDENCIA (enmienda owner 2026-10-19): tras agotarse la
+ * cadena OpenRouter de la tarea, ai-router.ts entra en FALLBACK_PROVIDERS
+ * (Groq openai/gpt-oss-120b → Gemini gemini-3.8-flash), ambos verificados en
+ * vivo (chat/json_object/tools). prohibición de Anthropic se mantiene: sin
+ * ANTHROPIC_API_KEY. Los legados违约 eliminados el 2026-10-17 siguen fuera:
+ * NVIDIA NIM (404) y Xiaomi/apifreellm («Incorrect API key») — NOTA: la
+ * GEMINI_API_KEY de aquel día fue reportada como filtrada por Google y se
+ * eliminó; la presente es una clave NUEVA (formato AQ.*) verificada en vivo
+ * el 2026-10-19. Detalle: tests/integration/AI-CONNECTIONS-REPORT.md.
  */
 import { describe, expect, it } from "vitest";
 import { promises as dns } from "node:dns";
@@ -147,15 +153,21 @@ describe("AI — inventario de configuración (sin red)", () => {
   });
 
   it("el reporte conoce las claves presentes (sólo presencia, nunca el valor)", () => {
-    const present = ["OPENROUTER_API_KEY"].filter(hasKey);
+    const present = ["OPENROUTER_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY"].filter(hasKey);
     // Se imprime únicamente el nombre: el valor jamás llega a un log ni a un test.
     console.log(`[ai-real] claves presentes: ${present.join(", ") || "(ninguna)"}`);
     expect(present.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("los proveedores eliminados ya no aparecen ni como opcionales en el esquema", async () => {
+  it("legados eliminados siguen fuera; failover anti-monod. aparece opcional", async () => {
     const { envSchema } = await import("../../src/env");
-    expect(envSchema.shape.GEMINI_API_KEY).toBeUndefined();
+    // La GEMINI del incidente de la clave filtrada cambió el 2026-10-19: vuelve
+    // como OPCIONAL (failover) con una clave nueva verificada en vivo. Los
+    // proveedores verdaderamente muertos siguen prohibidos en el esquema.
+    // safeParse(undefined) es la forma version-safe de asertar opcionalidad.
+    expect(envSchema.shape.OPENROUTER_API_KEY.safeParse(undefined).success).toBe(false); // requerida
+    expect(envSchema.shape.GROQ_API_KEY.safeParse(undefined).success).toBe(true); // opcional
+    expect(envSchema.shape.GEMINI_API_KEY.safeParse(undefined).success).toBe(true); // opcional
     expect(envSchema.shape.NVIDIA_API_KEY).toBeUndefined();
     expect(envSchema.shape.XIAOMI_API_KEY).toBeUndefined();
     expect(envSchema.shape.BEARER_API_KEY).toBeUndefined();
@@ -252,6 +264,88 @@ describe("AI Real — OpenRouter (proveedor PRIMARIO del runtime)", () => {
       expect(parsed.triage?.[0]?.findingId).toBe(finding.id);
       expect(["info", "low", "medium", "high", "critical"]).toContain(parsed.triage?.[0]?.severity);
       expect(parsed.triage?.[0]?.businessImpact?.length ?? 0).toBeGreaterThan(10);
+    },
+    NET_TIMEOUT_MS
+  );
+});
+
+describe("AI Real — Failover anti-monodependencia: Groq (decisión 2026-10-19)", () => {
+  /** PONG mínimo DIRECTO al endpoint OpenAI-compatible (sin router): el
+   * failover solo se camina a sí mismo si OpenRouter cae, así que la verificación
+   * viva del proveedor se hace ROAD-level, no por callAIWithFallback. */
+  const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+  it.skipIf(!AI_REAL)(
+    "chat mínimo en vivo: openai/gpt-oss-120b PONG + json_object a la vez",
+    async () => {
+      if (!hasKey("GROQ_API_KEY")) {
+        console.warn("[ai-real] GROQ_API_KEY no configurada: failover Groq se omite (como en runtime)");
+        return;
+      }
+
+      const t0 = Date.now();
+      const response = await timed("groq:gpt-oss-120b", () =>
+        fetch(GROQ_CHAT_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-oss-120b",
+            messages: [{ role: "user", content: 'Devuelve SOLO este JSON en texto plano sin markdown: {"pong":true}' }],
+            max_tokens: 200,
+            reasoning_effort: "low",
+            response_format: { type: "json_object" },
+          }),
+          signal: AbortSignal.timeout(NET_TIMEOUT_MS),
+        })
+      );
+
+      expect(response.ok).toBe(true);
+      const data = await response.json();
+      expect(data.model).toContain("gpt-oss-120b");
+      expect(String(data.choices?.[0]?.message?.content ?? "")).toContain('"pong"');
+      expect(data.usage?.completion_tokens).toBeGreaterThan(0);
+      console.log(`[ai-real] groq: PONG via ${data.model}, in=${data.usage?.prompt_tokens} out=${data.usage?.completion_tokens}, ${Date.now() - t0}ms`);
+    },
+    NET_TIMEOUT_MS
+  );
+});
+
+describe("AI Real — Failover anti-monodependencia: Gemini (decisión 2026-10-19)", () => {
+  const GEMINI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+  it.skipIf(!AI_REAL)(
+    "chat mínimo en vivo: gemini-3.8-flash PONG + json_object a la vez",
+    async () => {
+      if (!hasKey("GEMINI_API_KEY")) {
+        console.warn("[ai-real] GEMINI_API_KEY no configurada: failover Gemini se omite (como en runtime)");
+        return;
+      }
+
+      const t0 = Date.now();
+      const response = await timed("gemini:gemini-3.8-flash", () =>
+        fetch(GEMINI_CHAT_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gemini-3.8-flash",
+            messages: [{ role: "user", content: "Devuelve SOLO este JSON: {\"ok\":true}" }],
+            response_format: { type: "json_object" },
+          }),
+          signal: AbortSignal.timeout(NET_TIMEOUT_MS),
+        })
+      );
+
+      expect(response.ok).toBe(true);
+      const data = await response.json();
+      expect(data.model).toContain("gemini-3.8-flash");
+      expect(String(data.choices?.[0]?.message?.content ?? "")).toContain('"ok"');
+      console.log(`[ai-real] gemini: ok=${data.choices[0].message.content}, in=${data.usage?.prompt_tokens} out=${data.usage?.completion_tokens}, ${Date.now() - t0}ms`);
     },
     NET_TIMEOUT_MS
   );

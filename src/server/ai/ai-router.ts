@@ -10,6 +10,13 @@
  * ✅ 1,000 requests/day after $10 lifetime purchases
  * ✅ 20 free models available as of September 2026 (catálogo /models en vivo)
  * ✅ Graceful degradation: returns contextual messages even without API key
+ *
+ * FAILOVER ANTI-MONODEPENDENCIA (decisión owner 2026-10-19): si la cadena
+ * OpenRouter de la tarea se agota POR COMPLETO, se entra en la cadena de
+ * proveedores FALLBACK_PROVIDERS (Groq → Gemini), ambos con endpoints
+ * compatibles OpenAI (chat/completions). Cada proveedor tiene su propio
+ * circuit breaker y se omite si su clave no está configurada. Los evals con
+ * `modelOverride` NO entran en el failover (miden al modelo real, punto).
  */
 
 import { envSecrets } from "@/shared/config/env-secrets";
@@ -191,6 +198,13 @@ export const MODEL_CAPABILITIES: Record<
   string,
   { supportsTools: boolean; supportsStructuredOutput: boolean }
 > = {
+  // ── Failover inter-proveedor (verificados EN VIVO 2026-10-19) ─────────
+  // Ambos: tools ✅ (tool_calls bien formados) + json_object ✅.
+  // json_schema estricto NO verificado de props externas ho-mana → false
+  // (los callers con responseFormat json_schema caerán al self-heal de
+  // JSON, mismo criterio que los :free sin schema nativo).
+  "groq:openai/gpt-oss-120b": { supportsTools: true, supportsStructuredOutput: true },
+  "gemini:gemini-3.8-flash": { supportsTools: true, supportsStructuredOutput: true },
   "nvidia/nemotron-3-ultra-550b-a55b:free": { supportsTools: true, supportsStructuredOutput: true },
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": {
     supportsTools: true,
@@ -332,6 +346,88 @@ const openRouterCircuitBreaker = new CircuitBreaker("openrouter_api", {
   successThreshold: 2,
 });
 
+// ─── Failover inter-proveedor (decisión owner 2026-10-19) ──────────────────
+/**
+ * Cadena de proveedores de respaldo tras agotar la cadena OpenRouter de la
+ * tarea. Cada entrada es un ENDPOINT COMPATIBLE OpenAI (POST {base}/chat/
+ * completions) con Bearer auth. Los modelos y capacidades fueron verificados
+ * EN VIVO el 2026-10-19 (chat PONG, json_object, tool calling):
+ *
+ *   groq:openai/gpt-oss-120b   → 0.65s PONG; json_object ✅ (req 21 in/21 out
+ *                                 con reasoning_effort "low"; "none" → 400);
+ *                                 tools ✅ (finish: tool_calls, args OK).
+ *                                 CATÁLOGO REAL de la org: solo 11 modelos —
+ *                                 los :free de la doc vieja (llama-3.1-8b,
+ *                                 14.400 RPD) YA NO EXISTEN en la cuenta.
+ *                                 Límites free de los chats: RPM 30/RPD 1.000/
+ *                                 TPM 8K/TPD 200K.
+ *   gemini:gemini-3.8-flash    → ~2.9-4s PONG; json_object ✅; tools ✅
+ *                                 (Bearer en /v1beta/openai, formato de clave
+ *                                 nuevo AQ.*). Props del free tier: família
+ *                                 Flash 3.x/TTS/transcribe; Pro, Argon,
+ *                                 Nano Banana y familia imagen/video → pagado.
+ *                                 OJO FREE TIER: el contenido se usa para
+ *                                 mejorar productos Google (política Free).
+ *
+ * Sin clave configurada el proveedor se SALTA (degrada silencioso; el guard
+ * env-parity del healthcheck lo reporta como booleano). modelUsed viaja con
+ * prefijo de proveedor ("groq:...") para desagregar en ai_usage/ai/health.
+ */
+interface AIFallbackProvider {
+  /** Prefijo telemétrico y discriminador de pruebas (groq:xxx, gemini:xxx). */
+  id: "groq" | "gemini";
+  /** Modelo del proveedor que sirve el failover. */
+  model: string;
+  getApiKey: () => string;
+  /** Base URL compatible OpenAI (OpenRouter-like): se anexa /chat/completions. */
+  getBaseUrl: () => string;
+  /** Campos extra del body (restricciones del proveedor). */
+  extraBody: Record<string, unknown>;
+}
+
+export const FALLBACK_PROVIDERS: AIFallbackProvider[] = [
+  {
+    id: "groq",
+    model: "openai/gpt-oss-120b",
+    getApiKey: () => envSecrets.groqApiKey,
+    getBaseUrl: () => envSecrets.groqBaseUrl,
+    // "none" → 400 "must be one of low, medium, high" (verificado live
+    // 2026-10-19). "low" mantiene el JSON a cabalidad y ahorra reasoning.
+    extraBody: { reasoning_effort: "low" },
+  },
+  {
+    id: "gemini",
+    model: "gemini-3.8-flash",
+    getApiKey: () => envSecrets.geminiApiKey,
+    getBaseUrl: () => envSecrets.geminiBaseUrl,
+    extraBody: {},
+  },
+];
+
+const providerBreakers: Record<"groq" | "gemini", CircuitBreaker> = {
+  groq: new CircuitBreaker("groq_api", { failureThreshold: 5, recoveryTimeout: 30_000, successThreshold: 2 }),
+  gemini: new CircuitBreaker("gemini_api", { failureThreshold: 5, recoveryTimeout: 30_000, successThreshold: 2 }),
+};
+
+/**
+ * Presupuesto de wall-clock Vercel: las tasks que corren en routes (≠
+ * Trigger.dev) tienen maxDuration=120s (copilot/brief/chat/narrativa/
+ * seo-report). El failover solo entra cuando la cadena ya duró los
+ * peor-caso: sin este cap, chat (5×20s) + groq + gemini = 140s > 120s y
+ * la route aborta A FIL DE TODO. Con el cap, los proveedores se reparten
+ * el restante (y se omiten si quedan <8s de "verdadero" presupuesto).
+ * Tareas Trigger.dev (adversary-analysis, finding-triage, exec-brief,
+ * narrated-alert): sin cap — timeout de task completo por proveedor.
+ */
+const VERCEL_DEADLINE_MS = 115_000;
+const TASKS_WITH_VERCEL_BUDGET: ReadonlySet<AITaskType> = new Set([
+  "copilot-remediation",
+  "incident-brief",
+  "general-chat",
+  "anomaly-narrative",
+  "seo-report",
+]);
+
 // ─── Core AI Call Function ──────────────────────────────────────────────────
 
 /**
@@ -465,6 +561,112 @@ async function callModel(
   return { ...(message as RawAssistantMessage), usage };
 }
 
+/**
+ * Llamada a un proveedor de FAILOVER (Groq/Gemini) vía su endpoint
+ * compatible OpenAI. Espeja a callModel (mismo contrato de body: tools,
+ * tool_choice, response_format) con tres diferencias:
+ *   1. Auth Bearer de la key del proveedor (Groq ahora emite formato AQ.*).
+ *   2. extraBody del proveedor (p. ej. reasoning_effort en Groq).
+ *   3. Sin headers HTTP-Referer/X-Title (esas cabeceras son específicas de
+ *      OpenRouter; el resto de endpoints OpenAI-compatibles las ignoran).
+ * Un json_schema NATIVO se envía igual y si el proveedor lo rechaza (400)
+ * la cadena cae al siguiente proveedor: el self-heal de JSON es el plan B.
+ */
+async function callProviderModel(
+  provider: AIFallbackProvider,
+  apiKey: string,
+  messages: Array<AIMessage | RawAssistantMessage | AIToolResultMessage>,
+  temperature: number,
+  maxTokens: number,
+  timeoutMs: number,
+  opts?: {
+    tools?: OpenRouterToolDef[];
+    toolChoice?: "auto" | "none";
+    responseFormat?: AIResponseFormat;
+  }
+): Promise<RawAssistantMessage> {
+  const baseUrl = provider.getBaseUrl().replace(/\/+$/, "");
+  // Piso de max_tokens para el failover: Groq (gpt-oss) y Gemini (thinking)
+  // consumen tokens de razonamiento del MISMO budget max_tokens. Con el cap
+  // pequeño de un caller (p. ej. sondas con 16 tokens) el 200 vuelve con
+  // content vacío y el guard de abajo lo trataría como fallo del proveedor,
+  // encadenando un "chatbot caído" aunque ambos proveedores estén sanos.
+  // 512 cubre reasoning "low" + una respuesta breve; los callers de
+  // producción (copilot 4096, brief 4096) ya lo superan con holgura.
+  const effectiveMaxTokens = Math.max(maxTokens, 512);
+  const body: Record<string, unknown> = {
+    model: provider.model,
+    messages,
+    temperature,
+    max_tokens: effectiveMaxTokens,
+    ...provider.extraBody,
+  };
+
+  if (opts?.tools && opts.tools.length > 0) {
+    body.tools = opts.tools;
+    body.tool_choice = opts.toolChoice ?? "auto";
+  }
+  if (opts?.responseFormat) {
+    if (opts.responseFormat.type === "json_schema") {
+      body.response_format = {
+        type: "json_schema",
+        json_schema: {
+          name: opts.responseFormat.name,
+          schema: opts.responseFormat.schema,
+        },
+      };
+    } else {
+      body.response_format = { type: "json_object" };
+    }
+  }
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: correlatedHeaders({
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    }),
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+
+    if (response.status === 429) {
+      throw new Error(
+        `${provider.id} 429 — límite free excedido para ${provider.model}: ${text.slice(0, 150)}.`
+      );
+    }
+
+    throw new Error(`${provider.id} ${response.status} para ${provider.model}: ${text.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const message = data.choices?.[0]?.message;
+  const usage = data.usage
+    ? {
+        tokensIn: typeof data.usage.prompt_tokens === "number" ? data.usage.prompt_tokens : null,
+        tokensOut:
+          typeof data.usage.completion_tokens === "number" ? data.usage.completion_tokens : null,
+      }
+    : null;
+
+  // gpt-oss tiener reasoning tokens del MISMO budget max_tokens: un cap
+  // corto devuelve 200 con content vacío → tratarlo como fallo del proveedor
+  // para caer al siguiente (mismo criterio que el upstream 502 de Nvidia).
+  if (!message || (!message.content && !Array.isArray(message.tool_calls))) {
+    const embedded = data.error?.message ?? data.error?.code;
+    throw new Error(
+      embedded
+        ? `Error del proveedor (${provider.id}): ${String(embedded).slice(0, 120)}`
+        : `Respuesta vacía de ${provider.id}:${provider.model}`
+    );
+  }
+
+  return { ...(message as RawAssistantMessage), usage };
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
@@ -543,26 +745,40 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
     }
   }
 
-  // 2. Check if API key is configured
+  // 2. Claves de proveedores. OpenRouter es primario: sin su clave SU cadena
+  // se omite y la llamada pasa directo al failover Groq/Gemini (2026-10-19,
+  // enmienda anti-monodependencia: el caso OpenRouter-sin-key dejaba el
+  // chatbot en "IA no configurada" con Groq/Gemini viviendo al lado). El
+  // mensaje de onboarding SOLO si no hay NINGÚN proveedor con clave.
+  const errors: string[] = [];
+  const hasFailoverKey = !!(envSecrets.groqApiKey || envSecrets.geminiApiKey);
   if (!envSecrets.openRouterApiKey) {
-    return track({
-      modelUsed: "none",
-      success: false,
-      error:
-        "OPENROUTER_API_KEY is not configured. " +
-        "Get a FREE key at https://openrouter.ai/keys — no credit card needed.",
-    });
+    if (!hasFailoverKey) {
+      return track({
+        modelUsed: "none",
+        success: false,
+        error:
+          "No hay ninguna clave de IA configurada. Configura OPENROUTER_API_KEY " +
+          "(primario) o GROQ_API_KEY / GEMINI_API_KEY (failover). " +
+          "Get a FREE key at https://openrouter.ai/keys - no credit card needed.",
+      });
+    }
+    errors.push("[openrouter] sin API key en el entorno: cadena de OpenRouter omitida");
+    logger.warn("[AI Router] OPENROUTER_API_KEY ausente → failover directo (Groq/Gemini)");
   }
 
   // 3. Get model chain for this task type. Con modelOverride (evals del
   // pool, Sprint 4 #8) la cadena es de UN modelo y se salta el cache: cada
   // fila de ai_usage queda atribuida al modelo real que se evalúa.
-  const modelChain: string[] = options.modelOverride
-    ? [options.modelOverride]
-    : TASK_ROUTING[taskType] || TASK_ROUTING["general-chat"];
+  // Sin clave OpenRouter la cadena es vacía: el for no corre y el flujo cae
+  // al bloque de failover inter-proveedor (paso 5).
+  const modelChain: string[] = !envSecrets.openRouterApiKey
+    ? []
+    : options.modelOverride
+      ? [options.modelOverride]
+      : TASK_ROUTING[taskType] || TASK_ROUTING["general-chat"];
 
   // 4. Try each model in chain (with circuit breaker protection)
-  const errors: string[] = [];
   // Fallback defensivo por si se agrega un AITaskType nuevo sin actualizar
   // MODEL_TIMEOUTS (Record cubre las 4 actuales, pero no cuesta nada).
   const timeoutMs = MODEL_TIMEOUTS[taskType] ?? 20_000;
@@ -594,18 +810,16 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
         const parseError = tryParseJson(message.content ?? "");
         if (parseError) {
           const retried = await tryJsonSelfHeal(
-            modelId!,
+            (repairMessages) =>
+              callModel(modelId!, repairMessages, temperature, maxTokens, timeoutMs, {
+                responseFormat: options.responseFormat,
+              }),
             messages,
             message.content ?? "",
-            parseError,
-            temperature,
-            maxTokens,
-            timeoutMs,
-            options
+            parseError
           );
           if (retried) {
-            return finalizeSuccess(retried.content, retried.usage, modelId!, latencyMs);
-          }
+            return finalizeSuccess(retried.content, retried.usage, modelId!, latencyMs);}
           // Sin éxito en el reintento: caer al siguiente modelo de la cadena.
           errors.push(`[${modelId}] JSON inválido tras self-heal: ${parseError.slice(0, 120)}`);
           continue;
@@ -653,15 +867,128 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
     }
   }
 
-  // 5. Cadena OpenRouter agotada → fin. Decisión 2026-10-18: pool OpenRouter-only;
-  // el failover inter-proveedor (Anthropic, P2-1) se eliminó junto a `providers.ts`.
-  // La resiliencia vive DENTRO de OpenRouter: meta-modelo + cadena de :free por tarea.
+  // 5. Cadena OpenRouter agotada → FAILOVER ANTI-MONODEPENDENCIA (2026-10-19,
+  // decisión owner que reemplaza la decisión del 10-18). FALLBACK_PROVIDERS
+  // (Groq → Gemini): mismo contrato de body (tools/json), circuit breaker
+  // propio, saltándose el proveedor sin clave. Los evals (modelOverride)
+  // NO entran aquí: miden al modelo real o fallan (cache/enmascaramiento).
+  let failoverAttempts = 0;
+  if (!options.modelOverride) {
+    const elapsedMs = Date.now() - startTime;
+    const hasVercelBudget = TASKS_WITH_VERCEL_BUDGET.has(taskType);
+    const remainingVercelMs = VERCEL_DEADLINE_MS - elapsedMs - 2_000; // 2s margen de retorno
 
-  // 6. All models failed
+    for (const provider of FALLBACK_PROVIDERS) {
+      const apiKey = provider.getApiKey();
+      if (!apiKey) {
+        errors.push(`[${provider.id}] sin API key configurada (failover omitido)`);
+        continue;
+      }
+      let timeoutMs = MODEL_TIMEOUTS[taskType] ?? 20_000;
+      if (hasVercelBudget) {
+        const remaining = Math.min(timeoutMs, remainingVercelMs);
+        if (remaining < 8_000) {
+          errors.push(`[${provider.id}] presupuesto Vercel agotado (failover omitido)`);
+          continue;
+        }
+        timeoutMs = remaining;
+      }
+
+      failoverAttempts++;
+      try {
+        const message = await providerBreakers[provider.id].execute(async () =>
+          callProviderModel(provider, apiKey, messages, temperature, maxTokens, timeoutMs, {
+            tools: options.tools,
+            toolChoice: options.toolChoice,
+            responseFormat: options.responseFormat,
+          })
+        );
+
+        const latencyMs = Date.now() - startTime;
+        const providerModelId = `${provider.id}:${provider.model}`;
+        const toolCalls: AIToolCall[] | undefined = message.tool_calls?.map((tc) => ({
+          id: tc.id,
+          name: tc.function.name,
+          arguments: tc.function.arguments,
+        }));
+
+        // ── Self-healing JSON (mismo criterio que la cadena OpenRouter) ──
+        const wantsJson = !!options.responseFormat;
+        if (wantsJson && !toolCalls?.length) {
+          const parseError = tryParseJson(message.content ?? "");
+          if (parseError) {
+            const retried = await tryJsonSelfHeal(
+              (repairMessages) =>
+                callProviderModel(provider, apiKey, repairMessages, temperature, maxTokens, timeoutMs, {
+                  responseFormat: options.responseFormat,
+                }),
+              messages,
+              message.content ?? "",
+              parseError
+            );
+            if (retried) {
+              return finalizeSuccess(retried.content, retried.usage, providerModelId, latencyMs);
+            }
+            errors.push(`[${providerModelId}] JSON inválido tras self-heal: ${parseError.slice(0, 120)}`);
+            continue;
+          }
+        }
+
+        // Cache igual que la cadena primaria (idéntico contrato).
+        if (!useTools && !toolCalls?.length) {
+          void setSemanticCache(cacheKey, message.content ?? "", providerModelId, taskType);
+        }
+
+        logger.info(
+          `[AI Router] failover ${taskType} → ${providerModelId} (${latencyMs}ms, timeout ${timeoutMs}ms)`
+        );
+
+        {
+          void recordAiUsage({
+            userId: options.userId ?? null,
+            taskType,
+            modelUsed: providerModelId,
+            latencyMs,
+            success: true,
+            tokensIn: message.usage?.tokensIn ?? null,
+            tokensOut: message.usage?.tokensOut ?? null,
+            costUsd: estimateCostUsd(
+              providerModelId,
+              message.usage?.tokensIn,
+              message.usage?.tokensOut
+            ),
+            promptVersion: pVersion,
+          });
+        }
+
+        return {
+          success: true,
+          content: message.content ?? "",
+          modelUsed: providerModelId,
+          latencyMs,
+          ...(toolCalls?.length ? { toolCalls } : {}),
+          ...(message.usage ? { usage: message.usage } : {}),
+        };
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        errors.push(`[${provider.id}:${provider.model}] ${errorMsg}`);
+        logger.warn(`[AI Router] Failover provider ${provider.id} failed: ${errorMsg}`);
+      }
+    }
+  }
+
+  // 6. All models failed. La cadena OpenRouter ya venía agotada; si hubo
+  // failover lo cuentan los errores provider que ya se anexaron a `errors`.
+  // Mensaje plano cuando NO hay proveedores de failover configurados:
+  // compatibilidad con los tests/dashboards que asertan el texto histórico.
+  const failoverNote =
+    failoverAttempts > 0
+      ? `Failover inter-proveedor también agotado (${failoverAttempts} intento(s)).\n`
+      : "";
   return track({
-    modelUsed: modelChain[modelChain.length - 1]!,
+    modelUsed: modelChain[modelChain.length - 1] || "none",
     success: false,
-    error: `OpenRouter no disponible. Verificar conectividad y API key.\n${errors.join("\n")}`,
+    error: `OpenRouter no disponible. Verificar conectividad y API key.\n${failoverNote}${errors.join("\n")}`,
   });
 }
 
@@ -720,16 +1047,14 @@ function tryParseJson(content: string): string | null {
 /**
  * Reintento de autocorrección: re-pide al MISMO modelo con el JSON roto y
  * el error de parseo como feedback. Máx 1 intento. null = reintento falló.
+ * El `call` es un closure del CANAL real (OpenRouter o proveedor failover):
+ * el self-heal re-vuelca los errores al canal donde ya funcionó la llamada.
  */
 async function tryJsonSelfHeal(
-  modelId: string,
+  call: (repairMessages: AIMessage[]) => Promise<RawAssistantMessage>,
   originalMessages: AIMessage[],
   brokenContent: string,
-  parseError: string,
-  temperature: number,
-  maxTokens: number,
-  timeoutMs: number,
-  options: AIRequestOptions
+  parseError: string
 ): Promise<{ content: string; usage: AIUsageInfo | null } | null> {
   try {
     const repairMessages: AIMessage[] = [
@@ -746,14 +1071,10 @@ async function tryJsonSelfHeal(
           `sin markdown ni texto adicional.`,
       },
     ];
-    const message = await callModel(modelId, repairMessages, temperature, maxTokens, timeoutMs, {
-      responseFormat: options.responseFormat,
-    });
+    const message = await call(repairMessages);
     const retryError = tryParseJson(message.content ?? "");
     if (!retryError) {
-      logger.info(
-        `[AI Router] JSON self-heal OK en ${modelId} (error original: ${parseError.slice(0, 80)})`
-      );
+      logger.info(`[AI Router] JSON self-heal OK (error original: ${parseError.slice(0, 80)})`);
       return { content: message.content ?? "", usage: message.usage ?? null };
     }
     return null;
@@ -899,9 +1220,9 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
       "2. Generate an API Key (no balance needed)\n" +
       "3. Add it to your `.env.local` file:\n" +
       "   ```\n   OPENROUTER_API_KEY=sk-or-v1-...\n   ```\n\n" +
-      "**Free models included:** Gemini Flash, DeepSeek V3, Llama 4, " +
-      "Mistral Small, Qwen 2.5\n" +
-      "**Rate limit:** 50 requests/day (free) or 1,000/day ($10+ purchases).",
+      "**Rate limit:** 50 requests/day (free) or 1,000/day ($10+ purchases).\n" +
+      "**Failover built-in:** if OpenRouter is unreachable, the pool routes\n" +
+      "through `GROQ_API_KEY` (gpt-oss-120b) or `GEMINI_API_KEY` (gemini-3.8-flash).",
     es:
       "### ⚠️ Copilot de Infraestructura — No Configurado\n\n" +
       "El motor de IA no está activo porque falta la clave de API de OpenRouter " +
@@ -911,9 +1232,11 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
       "2. Genera una API Key (no necesitas agregar saldo)\n" +
       "3. Configúrala en tu archivo `.env.local`:\n" +
       "   ```\n   OPENROUTER_API_KEY=sk-or-v1-...\n   ```\n\n" +
-      "**Modelos gratuitos incluidos:** Gemini Flash, DeepSeek V3, Llama 4, " +
-      "Mistral Small, Qwen 2.5\n" +
-      "**Límite:** 50 solicitudes/día (sin pago) o 1,000/día (con $10+ compras).",
+      "**Modelos gratuitos incluidos:** 20+ modelos `:free` del catálogo\n" +
+      "vigente de OpenRouter (verificado 2026).\n" +
+      "**Límite:** 50 solicitudes/día (sin pago) o 1.000/día (con $10+ compras).\n" +
+      "**Failover integrado:** si OpenRouter no responde, el pool enruta por\n" +
+      "`GROQ_API_KEY` (gpt-oss-120b) o `GEMINI_API_KEY` (gemini-3.8-flash).",
   },
   "incident-brief": {
     en:
@@ -936,26 +1259,28 @@ const NO_API_KEY_MESSAGES: Record<AITaskType, { en: string; es: string }> = {
   "general-chat": {
     en:
       "Hi there! 👋\n\n" +
-      "It looks like the AI API Key is not configured in the server's " +
-      "environment variables (`OPENROUTER_API_KEY`).\n\n" +
-      "**Setting it up is free and takes 2 minutes:**\n\n" +
-      "1. Sign up for free at https://openrouter.ai/keys\n" +
+      "It looks like no AI provider is configured on the server: neither\n" +
+      "`OPENROUTER_API_KEY` (primary), nor `GROQ_API_KEY` or `GEMINI_API_KEY`\n" +
+      "(built-in failover).\n\n" +
+      "**Setting one up is free and takes 2 minutes:**\n\n" +
+      "1. Sign up for free at https://openrouter.ai/keys (recommended)\n" +
       "2. Generate your API Key (no credit card needed)\n" +
       "3. Add it to your `.env.local` file:\n\n" +
       "```\nOPENROUTER_API_KEY=sk-or-v1-...\n```\n\n" +
-      "Available free models include Gemini Flash, DeepSeek V3, " +
-      "Llama 4, Mistral Small and Qwen 2.5.",
+      "The pool includes 20+ free models from OpenRouter's current catalog,\n" +
+      "plus Groq and Gemini as automatic failover.",
     es:
       "¡Hola! 👋\n\n" +
-      "Parece que la API Key de IA no está configurada en las variables de entorno " +
-      "del servidor (`OPENROUTER_API_KEY`).\n\n" +
-      "**Configurarla es gratis y toma 2 minutos:**\n\n" +
-      "1. Regístrate gratis en https://openrouter.ai/keys\n" +
+      "Parece que ningún proveedor de IA está configurado en el servidor: falta\n" +
+      "`OPENROUTER_API_KEY` (primario), `GROQ_API_KEY` o `GEMINI_API_KEY`\n" +
+      "(failover integrado).\n\n" +
+      "**Configurar uno es gratis y toma 2 minutos:**\n\n" +
+      "1. Regístrate gratis en https://openrouter.ai/keys (recomendado)\n" +
       "2. Genera tu API Key (sin tarjeta de crédito)\n" +
       "3. Agrega al archivo `.env.local`:\n\n" +
       "```\nOPENROUTER_API_KEY=sk-or-v1-...\n```\n\n" +
-      "Los modelos gratuitos disponibles incluyen Gemini Flash, DeepSeek V3, " +
-      "Llama 4, Mistral Small y Qwen 2.5.",
+      "El pool incluye 20+ modelos `:free` del catálogo vigente de OpenRouter,\n" +
+      "más Groq y Gemini como failover automático.",
   },
   "seo-report": {
     en:

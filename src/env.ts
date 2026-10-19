@@ -32,6 +32,10 @@ export const envSchema = z
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
     OPENROUTER_API_KEY: z.string().min(1),
+    // Failover anti-monodependencia (2026-10-19): opcionales — el router
+    // salta al proveedor siguiente si la clave no está configurada.
+    GROQ_API_KEY: z.string().min(1).optional(),
+    GEMINI_API_KEY: z.string().min(1).optional(),
     RESEND_API_KEY: z.string().min(1).optional(),
     SLACK_WEBHOOK_URL: z.string().url().optional(),
     TEAMS_WEBHOOK_URL: z.string().url().optional(),
@@ -63,6 +67,8 @@ export const env = {
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+  GROQ_API_KEY: process.env.GROQ_API_KEY,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
   TEAMS_WEBHOOK_URL: process.env.TEAMS_WEBHOOK_URL,

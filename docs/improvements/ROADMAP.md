@@ -25,11 +25,12 @@
 > | Triggers | **34 task ids declarados en 27 archivos `.trigger.ts`** · **10 schedules activos** · deploy producción `20261018.1` |
 > | Cron de fondo | **Incidente 12–18 oct RESUELTO**: workers fallaban por CA TLS inaccesible (TD-14) + credenciales desfasadas del proyecto (TD-15) → CA embebido + sync env vars vía API; 5 runs reales COMPLETED post-fix; verificador endurecido (TD-16) |
 > | Tablas / migraciones | **74 tablas `pgTable`** · **64 migraciones** en el journal |
-> | Pool IA | **OpenRouter-only** (decisión 2026-10-18; 25 registros reales en `ai_usage`, 4 modelos activos en 24h) |
+> | Pool IA | **Multi-proveedor con failover** (enmienda anti-monodependencia 2026-10-19: OpenRouter primario + failover Groq `gpt-oss-120b` / Gemini `gemini-3.8-flash`, verificados en vivo; ver `FALLBACK_PROVIDERS` en `ai-router.ts`) |
 > | Autorización | **owner-only** (P1.3 Team Collaboration/RBAC revocado — proyecto gratuito) |
 > | Guards CI | **7 core** + extras; suite completa 2759/2759 en exit 0 |
 >
 > Ver `docs/testing/QUALITY-GATE-REPORT.md` (veredicto PASS) y `EXECUTIVO_TRIGGER_GAPS.md`.
+> **Actualización 2026-10-19:** failover Groq/Gemini implementado y probado en vivo — el chatbot responde aunque el límite diario `free-models-per-day` de OpenRouter esté agotado (escenario B-06 del análisis de baches, resuelto).
 
 ---
 
