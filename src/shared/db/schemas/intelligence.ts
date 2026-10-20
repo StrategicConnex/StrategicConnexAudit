@@ -133,6 +133,12 @@ export const intelligenceFindings = pgTable("intelligence_findings", {
     .on(t.dueAt)
     .where(sql`due_at IS NOT NULL AND status NOT IN ('resolved', 'false_positive', 'accepted_risk')`),
   index("idx_intel_findings_assignee").on(t.assigneeId),
+  // Sprint 6 (Q4 6.3): panel de uso — findings por proyecto/severidad ordenados por fecha.
+  index("idx_findings_project_severity_created").on(
+    t.projectId,
+    t.severity,
+    desc(t.createdAt),
+  ),
 ]);
 
 // 4. Activos Descubiertos (Subdominios, IPs, etc.)

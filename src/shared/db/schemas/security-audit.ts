@@ -2,7 +2,7 @@ import {
   pgTable, uuid, text, timestamp, integer,
   jsonb, index
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { sql, desc } from "drizzle-orm";
 
 // ─── Security Audit Logs ──────────────────────────────────────────────────────
 // Eventos de seguridad estructurados: rate limit hits, open redirect attempts,
@@ -26,6 +26,10 @@ export const securityAuditLogs = pgTable("security_audit_logs", {
   index("idx_sec_audit_ip_trgm").using("gin", t.ip.op("gin_trgm_ops")),
   // REC-03 (TSK-008): filtro metadata->>'action' en audit-logs.
   index("idx_sec_audit_meta_action").on(sql`(metadata->>'action')`),
+  // Sprint 6 (Q4 6.3): panel de uso — actividad por usuario + sweeps por fecha.
+  // Tabla global (sin project_id): el compuesto del plan Q4 era erróneo.
+  index("idx_sec_audit_user_created").on(t.userId, desc(t.createdAt)),
+  index("idx_sec_audit_created").on(t.createdAt),
 ]);
 
 // ─── SIEM Alert Logs ──────────────────────────────────────────────────────────
