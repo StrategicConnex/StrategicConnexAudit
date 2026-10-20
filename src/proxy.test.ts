@@ -368,5 +368,17 @@ describe("Proxy — Disclaimer gate (antes de la auth)", () => {
       expect(isDisclaimerPublicPath("/apix")).toBe(false);
       expect(isDisclaimerPublicPath("/_nextjs")).toBe(false);
     });
+
+    it("/scripts y /vendor (beacon RUM) son públicos — fix 2026-10-20", () => {
+      // Assets del beacon se cargan cross-origin desde los sitios de clientes:
+      // SameSite=Lax nunca envía la cookie del disclaimer en ese GET, así que
+      // el gate las deriva a HTML (307) y el RUM muere para 100% de visitas.
+      expect(isDisclaimerPublicPath("/scripts/vitals.js")).toBe(true);
+      expect(isDisclaimerPublicPath("/vendor/web-vitals.iife.js")).toBe(true);
+      expect(isDisclaimerPublicPath("/vendor/leaflet/x.js")).toBe(true);
+      // Prefijos parecidos siguen cerrados:
+      expect(isDisclaimerPublicPath("/scriptsx")).toBe(false);
+      expect(isDisclaimerPublicPath("/vendorx/y.js")).toBe(false);
+    });
   });
 });

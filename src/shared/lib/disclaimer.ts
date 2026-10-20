@@ -28,6 +28,11 @@ export const DISCLAIMER_DEFAULT_REDIRECT = "/login";
  *   Redirigirlo convertiría cada envelope en un HTML y perdería errores.
  * - `/sw.js`, `/manifest.json`: service worker y manifiesto PWA; un redirect
  *   a HTML rompería el registro del worker.
+ * - `/scripts`, `/vendor`: assets estáticos del BEACON RUM (`vitals.js`,
+ *   `web-vitals.iife.js`). Los carga el sitio del CLIENTE como subresource
+ *   cross-origin: una cookie SameSite=Lax del interstitial jamás viaja en ese
+ *   GET, así que el redirect a HTML rompería el RUM para 100% de visitantes
+ *   (incluido el self-RUM de scaudit.vercel.app sin cookie). Fix 2026-10-20.
  */
 const PUBLIC_PATHS = [
   "/disclaimer",
@@ -40,6 +45,8 @@ const PUBLIC_PATHS = [
   "/favicon.ico",
   "/health",
   "/status",
+  "/scripts",
+  "/vendor",
 ] as const;
 
 /** `true` si `pathname` (o cualquier subruta) está exento del gate. */
