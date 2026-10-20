@@ -584,6 +584,30 @@ Warning: WHOIS lookup returned empty result
 
 ## 10. Errores de React y Next.js
 
+### Server Action falla con «Error de conexión al servidor.» tras un deploy (página rancia)
+
+**Síntoma** (confirmado en prod 2026-10-20): al lanzar una auditoría u otra
+server action la UI muestra el `catch` genérico del cliente («Error de
+conexión al servidor.»), sin texto de negocio del backend.
+
+**Causa:** cada deploy invalida los IDs de Server Actions. Si la pestaña quedó
+abierta desde un deploy anterior, el click envía el action ID del bundle viejo
+y el runtime nuevo no lo reconoce → error opaco a nivel HTTP (se ve idéntico a
+un 500 real).
+
+**Descarte rápido (orden):**
+1. **Recarga dura (Ctrl+Shift+R) y reintentar** — si funciona, era esto
+   (regla: tras N deploys, recargar antes de culpar al backend).
+2. Ver en Sentry (ADR-007, `onRequestError`) si existe evento con stack — si
+   hay evento, es un 500 real del servidor, no página rancia.
+3. Verificar auditoría de dominio con evidencia BD: en `authenticatedAction`
+   todo throw de negocio llega al cliente como `res.error` con su texto
+   (`src/shared/lib/actions.ts`); si el cliente muestra el `catch` genérico,
+   el fallo es de transporte, no de dominio.
+
+**Lección registrada** (incidente del 2026-10-20, proyecto self-RUM): la
+recarga dura resolvió; no era bug de `startAuditAction`.
+
 ### Error: `Objects are not valid as a React child`
 
 ```
