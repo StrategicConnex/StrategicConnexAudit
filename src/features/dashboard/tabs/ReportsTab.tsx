@@ -127,10 +127,11 @@ export function ReportsTab({
           </button>
         </div>
 
-        {/* Card 3: AI Intelligence Card */}
-        <div className="glass-card p-10 relative overflow-hidden  md:col-span-1">
+        {/* Card 3: AI Intelligence Card — mismo layout flex de Cards 1/2 para alinear
+            el CTA al fondo (justify-between + flex-1 en el contenido). */}
+        <div className="glass-card p-10 relative overflow-hidden  md:col-span-1 flex flex-col justify-between gap-10">
           <div className="absolute -top-12 -left-12 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="flex flex-col justify-between gap-6">
+          <div className="flex flex-col justify-between gap-6 flex-1">
             <div className="flex flex-col gap-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-2xs uppercase font-bold text-primary tracking-widest w-fit">
                 <Sparkles className="w-3 h-3 text-primary" /> {t('aiBadge')}
@@ -142,13 +143,18 @@ export function ReportsTab({
                 </JargonTerm>
               </p>
             </div>
-            {/* CTA de la card: lleva al generador (AI Section) y foca el selector de
-                proyecto. Misma key generateAi — no duplica lógica de generación. */}
+            {/* CTA de la card: scrollea al generador (AI Section) y lo lanza con
+                el proyecto seleccionado (reusa aiReport.generate — única fuente
+                de lógica). Sin proyecto, foca el selector para elegirlo. */}
             <button
               onClick={() => {
                 const section = document.getElementById('ai-report-section');
                 section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                aiSelectRef.current?.focus();
+                if (selectedProjectId && !aiReport.state.isGenerating) {
+                  aiReport.generate();
+                } else {
+                  aiSelectRef.current?.focus();
+                }
               }}
               className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-primary/10 border border-primary/20 hover:border-primary/40 text-primary rounded-xl hover:bg-primary/20 transition-[color,background-color,border-color,box-shadow] text-2xs font-bold uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.1)] hover:shadow-[0_0_20px_rgba(99,102,241,0.2)]"
             >
