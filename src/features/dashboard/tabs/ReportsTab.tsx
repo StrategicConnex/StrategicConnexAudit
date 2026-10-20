@@ -47,6 +47,8 @@ export function ReportsTab({
   aiReport, viewMode, setViewMode, onNavigateToIntelligence 
 }: ReportsTabProps) {
   const t = useTranslations('reports');
+  // CTA de la Card 3 (IA): foca el selector de proyecto de la AI Section.
+  const aiSelectRef = React.useRef<HTMLSelectElement>(null);
   return (
     <div className="space-y-12 relative z-10 font-sans text-foreground">
       {/* Reports overview text */}
@@ -128,22 +130,36 @@ export function ReportsTab({
         {/* Card 3: AI Intelligence Card */}
         <div className="glass-card p-10 relative overflow-hidden  md:col-span-1">
           <div className="absolute -top-12 -left-12 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="flex flex-col gap-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-2xs uppercase font-bold text-primary tracking-widest w-fit">
-              <Sparkles className="w-3 h-3 text-primary" /> {t('aiBadge')}
+          <div className="flex flex-col justify-between gap-6">
+            <div className="flex flex-col gap-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-2xs uppercase font-bold text-primary tracking-widest w-fit">
+                <Sparkles className="w-3 h-3 text-primary" /> {t('aiBadge')}
+              </div>
+              <h4 className="font-extrabold text-white text-lg tracking-tight">{t('aiCardTitle')}</h4>
+              <p className="text-sm leading-relaxed text-muted-fg">
+                <JargonTerm term="Gemini LLM = la inteligencia artificial de Google que redacta el análisis por ti.">
+                  {t('aiCardDesc')}
+                </JargonTerm>
+              </p>
             </div>
-            <h4 className="font-extrabold text-white text-lg tracking-tight">{t('aiCardTitle')}</h4>
-            <p className="text-sm leading-relaxed text-muted-fg">
-              <JargonTerm term="Gemini LLM = la inteligencia artificial de Google que redacta el análisis por ti.">
-                {t('aiCardDesc')}
-              </JargonTerm>
-            </p>
+            {/* CTA de la card: lleva al generador (AI Section) y foca el selector de
+                proyecto. Misma key generateAi — no duplica lógica de generación. */}
+            <button
+              onClick={() => {
+                const section = document.getElementById('ai-report-section');
+                section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                aiSelectRef.current?.focus();
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-primary/10 border border-primary/20 hover:border-primary/40 text-primary rounded-xl hover:bg-primary/20 transition-[color,background-color,border-color,box-shadow] text-2xs font-bold uppercase tracking-widest cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.1)] hover:shadow-[0_0_20px_rgba(99,102,241,0.2)]"
+            >
+              <Sparkles className="w-4 h-4" /> {t('generateAi')}
+            </button>
           </div>
         </div>
       </div>
 
       {/* AI Section */}
-      <div className="glass-card p-10 relative overflow-hidden ">
+      <div id="ai-report-section" className="glass-card p-10 relative overflow-hidden scroll-mt-24 ">
         <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-10 border-b border-border pb-10 mb-10 relative z-10">
           <div className="space-y-3">
@@ -160,6 +176,7 @@ export function ReportsTab({
               <label className="text-2xs text-muted-fg font-bold uppercase tracking-widest">{t('selectProject')}</label>
               <div className="relative">
                 <select 
+                  ref={aiSelectRef}
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
                   disabled={aiReport.state.isGenerating}
