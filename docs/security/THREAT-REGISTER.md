@@ -242,12 +242,12 @@ Ver §3 — 1 bloque mermaid, 11 nodos, válido.
 
 **15 amenazas registradas (STRIDE completo).** Los IDOR cross-tenant **THR-001/THR-002/THR-013 (VULN-004/005) fueron remediados en B02** (auth + owner-check + `withRLS`; verificado con tests/lint/build). **Todos los VULN priorizados quedaron remediados**: VULN-001 (escapeHtml en AiCopilot), VULN-002 (secret token enmascarado), VULN-006/007 (looker-studio fail-closed + SSE de PDF con sesión y clave namespaced) — v2.2/v2.4 del SECURITY-AUDIT-REPORT, y VULN-008/009 cerrados el 2026-09-24 (TSK-011/012). El resto de la superficie está cubierta por controles existentes (RLS transaccional, egress-guard, sandbox sin shell, hashing de API keys, HMAC, gitleaks).
 
-**Acción de owner PENDIENTE (2026-10-19) — revocación de la clave Gemini filtrada:**
-la `GEMINI_API_KEY` original (`AIzaSyA…`, evento del 2026-10-17) se eliminó del entorno
-(`.env.test`/`.env.local`, nunca trackeada), PERO con la re-incorporación de Gemini al
-pool como failover (ADDENDA del AI-CONNECTIONS-REPORT, clave nueva formato `AQ.*`) la
-clave vieja sigue potencialmente VIVA en Google Cloud/Studio. Queda en el owner:
-**verificar en Google AI Studio / Cloud Console que la clave filtrada está REVOCADA o
-eliminada** — si no, es superficie de ataque abierta ligada al proyecto. El pool actual
-solo usa la clave nueva `AQ.*` (verificado en el código: `envSecrets.geminiApiKey` lee
-`process.env.GEMINI_API_KEY`, que ya apunta a la clave nueva).
+**Clave Gemini filtrada (`AIzaSyA…`, evento del 2026-10-17) — ✅ CERRADO (2026-10-20):**
+
+**Atestación owner**: la clave revocada en Google Cloud Console (confirmado por el
+owner el 2026-10-20) — la superficie de ataque queda cerrada. Acción previa:
+eliminada del entorno `.env.local` y `.env.test` el 2026-10-17 (nunca trackeada
+en git). Con la re-incorporación de Gemini al pool como failover (ADDENDA del
+AI-CONNECTIONS-REPORT) solo se usa la clave nueva formato `AQ.*` (verificado en
+el código: `envSecrets.geminiApiKey` lee `process.env.GEMINI_API_KEY`, que ya
+apunta a la clave nueva).
