@@ -141,6 +141,9 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 
 ### 📊 Monitoreo & Telemetría
 - **Real User Monitoring (RUM)**: Web Vitals desde el navegador del usuario
+- **Self-RUM activo** 🆕: el propio `scaudit.vercel.app` reporta sus CWV a su
+  proyecto dedicado (`NEXT_PUBLIC_RUM_PROJECT_ID` + token P0-3) — los datos de
+  campo (p75 LCP/TBT) alimentan los gates del roadmap de performance
 - **Uptime monitoring**: checks periódicos con Vercel Cron + Trigger.dev
 - **Alertas de drift**: detección de cambios en infraestructura
 - **AI Health Dashboard**: gráficos de salud por modelo, latencia promedio diaria, eventos de fallo
@@ -1147,18 +1150,37 @@ Guards core que protegen la superficie de seguridad (falla CI si se rompe el fre
 
 ---
 
-## 📋 Estado del proyecto (2026-10-19)
+## 📋 Estado del proyecto (2026-10-20)
 
 Ver detalles completos en [`FINAL-SUMMARY.md`](./FINAL-SUMMARY.md). Resumen medido:
 
 | Métrica | Valor |
 |---------|-------|
-| Tests unitarios (Vitest) | **2771** (285 archivos, verdes — run completo verificado 2026-10-19) |
+| Tests unitarios (Vitest) | **2.785** (286 archivos, verdes — run completo verificado 2026-10-20) |
 | Migraciones registradas | **64** (`drizzle/meta/_journal.json`) |
 | Superficie RLS a auditar | **272** llamadas (congelada por guard en CI) |
 | Proveedores IA funcionales | **3/3** (OpenRouter primario + Groq/Gemini failover, verificados con datos reales) |
 | Claves IA en `.env` | **3** (OPENROUTER + GROQ + GEMINI — las 2 últimas son failover opcional) |
 | Estados de fases | P0, P1, P2 completadas |
+| Self-RUM (telemetría propia) | **LIVE en prod** — beacon `vitals.js` + proyecto dedicado; POSTs 204 verificados y filas en `web_vitals_logs` |
+| First-load JS `/` | **1.095,5 KB raw / 330,3 KB gzip** (−17,3% tras H-10; supabase queda fuera del first-load) |
+| Clave IA filtrada | **0** (la `AIzaSyA…` fue revocada por el owner el 2026-10-20 — THREAT-REGISTER) |
+
+### Sprint 5 (2026-10-19 → 2026-10-20)
+
+- **Failover anti-monodependencia**: OpenRouter primario; Groq y Gemini como
+  failover (ver H-02 arriba).
+- **H-09 self-RUM cerrado**: beacon de Core Web Vitals propio, token P0-3,
+  pipeline verificado en prod (3 × 204 reales del beacon + smoke POST).
+  Fixes de la racha: `/scripts` + `/vendor` exentos del disclaimer gate (el
+  interstitial 307 rompía el beacon incluso cross-origin para clientes);
+  `validateEnvSoft()` — una env opcional malformada ya no tumba prod
+  (incidente 2026-10-19 23:00); card RUM con Ver/Ocultar/Copiar token.
+- **H-10 (parcial)**: chunk supabase fuera del first-load de `/`
+  (`await import` en los 3 puntos realtime con degradación a polling).
+  El resto (+69,9 KB del chunk react-dom) está ticketado en
+  [`docs/performance/H-10b-react-dom-investigation.md`](./docs/performance/H-10b-react-dom-investigation.md),
+  gateado por p75 de campo con 48h de RUM (revisión 2026-10-22).
 
 ### Failover anti-monodependencia (2026-10-19)
 

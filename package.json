@@ -24,6 +24,7 @@
     "generate:collection": "node tests/api-contract/generate-collection.mjs",
     "setup-admin": "npx tsx --env-file=.env.local src/scripts/setup-admin.ts",
     "e2e:report": "npx tsx --env-file=.env.local src/scripts/e2e-ai-report.ts",
+    "e2e:adversary": "npx tsx --env-file=.env.local src/scripts/e2e-adversary-flow.ts",
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",
     "db:migrate": "drizzle-kit migrate",
