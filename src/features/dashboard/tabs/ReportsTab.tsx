@@ -277,11 +277,21 @@ export function ReportsTab({
         )}
 
         {!aiReport.state.isGenerating && !aiReport.state.text && (
-          <div className="p-20 flex flex-col items-center justify-center text-center gap-6 border border-dashed border-border rounded-2xl bg-muted/1">
-            <Sparkles className="w-10 h-10 text-muted-fg/80 animate-pulse" />
-            <h4 className="font-extrabold text-base text-muted-fg tracking-tight">{t('aiReadyTitle')}</h4>
-            <p className="text-xs text-muted-fg max-w-sm">{t('aiReadyDesc')}</p>
-          </div>
+          aiReport.state.status ? (
+            /* El fallo era silencioso (el usuario veía "Listo" otra vez y
+               pensaba que la generación "no funcionaba"). Se muestra el motivo. */
+            <div className="p-12 flex flex-col items-center justify-center text-center gap-5 border border-dashed border-[oklch(75%_0.13_80)]/30 rounded-2xl bg-[oklch(75%_0.13_80)]/5">
+              <AlertCircle className="w-10 h-10 text-[oklch(75%_0.13_80)]" />
+              <h4 className="font-extrabold text-base text-[oklch(75%_0.13_80)] tracking-tight max-w-xl">{aiReport.state.status}</h4>
+              <p className="text-xs text-muted-fg max-w-sm">{t('aiReadyDesc')}</p>
+            </div>
+          ) : (
+            <div className="p-20 flex flex-col items-center justify-center text-center gap-6 border border-dashed border-border rounded-2xl bg-muted/1">
+              <Sparkles className="w-10 h-10 text-muted-fg/80 animate-pulse" />
+              <h4 className="font-extrabold text-base text-muted-fg tracking-tight">{t('aiReadyTitle')}</h4>
+              <p className="text-xs text-muted-fg max-w-sm">{t('aiReadyDesc')}</p>
+            </div>
+          )
         )}
       </div>
 

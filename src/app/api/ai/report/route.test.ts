@@ -154,7 +154,14 @@ describe("POST /api/ai/report", () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     mockAssertAiQuota.mockResolvedValue(null);
     mockAssertProjectAccess.mockResolvedValue({ ok: true });
-    mockWithRLS.mockResolvedValue([{ id: "job-1" }]);
+    const updateSets: unknown[] = [];
+    const tx = {
+      insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn(async () => [{ id: "job-1" }]) })) })),
+      update: vi.fn(() => ({
+        set: vi.fn((vals: unknown) => ({ where: vi.fn(async () => { updateSets.push(vals); }) })),
+      })),
+    };
+    mockWithRLS.mockImplementation(async (_uid: string, cb: (t: unknown) => Promise<unknown>) => cb(tx));
     mockTasksTrigger.mockRejectedValue(new Error("Trigger.dev offline"));
     mockGenerateSeoReport.mockResolvedValue({
       ok: true,
@@ -170,13 +177,28 @@ describe("POST /api/ai/report", () => {
     expect(body.success).toBe(true);
     expect(body.report).toBe("# SEO Report");
     expect(body.isFallback).toBe(true);
+    // El fallback cierra el job en BD: si no, queda 'pending' eternamente.
+    expect(updateSets).toHaveLength(1);
+    expect(updateSets[0]).toMatchObject({
+      status: "completed",
+      report: "# SEO Report",
+      isFallback: true,
+      modelUsed: "fallback-model",
+    });
   });
 
-  it("returns error from fallback when generateSeoReport fails", async () => {
+  it("returns error from fallback when generateSeoReport fails AND marks the job failed in DB", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     mockAssertAiQuota.mockResolvedValue(null);
     mockAssertProjectAccess.mockResolvedValue({ ok: true });
-    mockWithRLS.mockResolvedValue([{ id: "job-1" }]);
+    const updateSets: unknown[] = [];
+    const tx = {
+      insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn(async () => [{ id: "job-1" }]) })) })),
+      update: vi.fn(() => ({
+        set: vi.fn((vals: unknown) => ({ where: vi.fn(async () => { updateSets.push(vals); }) })),
+      })),
+    };
+    mockWithRLS.mockImplementation(async (_uid: string, cb: (t: unknown) => Promise<unknown>) => cb(tx));
     mockTasksTrigger.mockRejectedValue(new Error("Trigger.dev offline"));
     mockGenerateSeoReport.mockResolvedValue({
       ok: false,
@@ -186,6 +208,9 @@ describe("POST /api/ai/report", () => {
 
     const res = await POST(createRequest("POST", "", { projectId: "p1" }));
     expect(res.status).toBe(500);
+    // Sin esto, el row queda 'pending' para siempre (bug visto en prod: 10 jobs).
+    expect(updateSets).toHaveLength(1);
+    expect(updateSets[0]).toMatchObject({ status: "failed", error: "Generation failed" });
   });
 
   it("returns 500 on unexpected error", async () => {

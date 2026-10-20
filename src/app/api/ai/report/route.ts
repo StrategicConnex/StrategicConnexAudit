@@ -78,8 +78,36 @@ export const POST = withRateLimit(
         });
         const result = await generateSeoReport(projectId, userId);
         if (!result.ok) {
+          // El fallback también cierra el job: si no, el row queda 'pending'
+          // eternamente (bug visto en prod: 10 jobs pending, 0 runs).
+          await withRLS(userId, async (tx) => {
+            await tx
+              .update(aiReportJobs)
+              .set({ status: "failed", error: result.error.slice(0, 500), updatedAt: new Date() })
+              .where(eq(aiReportJobs.id, job.id));
+          }).catch((dbErr) => {
+            logger.error("ai-report: no se pudo marcar el job como failed", {
+              error: dbErr instanceof Error ? dbErr.message : String(dbErr),
+            });
+          });
           return NextResponse.json({ success: false, error: result.error }, { status: result.status });
         }
+        await withRLS(userId, async (tx) => {
+          await tx
+            .update(aiReportJobs)
+            .set({
+              status: "completed",
+              report: result.report,
+              isFallback: result.isFallback,
+              modelUsed: result.modelUsed ?? null,
+              updatedAt: new Date(),
+            })
+            .where(eq(aiReportJobs.id, job.id));
+        }).catch((dbErr) => {
+          logger.error("ai-report: no se pudo cerrar el job completado (fallback)", {
+            error: dbErr instanceof Error ? dbErr.message : String(dbErr),
+          });
+        });
         return NextResponse.json({
           success: true,
           report: result.report,

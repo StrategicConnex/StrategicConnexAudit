@@ -91,3 +91,19 @@ describe("ReportsTab — alineación de CTAs entre cards", () => {
     expect(wrapperClass).toMatch(/justify-between/);
   });
 });
+
+describe("ReportsTab — estado de fallo visible en la AI Section", () => {
+  it("estado inicial limpio muestra el empty state 'Listo' sin banner de error", () => {
+    render(<ReportsTab {...baseProps} aiReport={aiReport()} />);
+    expect(screen.getByText("aiReadyTitle")).toBeTruthy();
+  });
+
+  it("tras un fallo (failWith) muestra el mensaje de error en lugar del empty state", () => {
+    const failed = aiReport();
+    failed.state.status = "La generación falló. Reintentá en unos segundos.";
+    render(<ReportsTab {...baseProps} aiReport={failed} />);
+    // El error de fondo era invisible — el usuario creía que "no funcionaba".
+    expect(screen.queryByText("aiReadyTitle")).toBeNull();
+    expect(screen.getByText(/La generación falló/)).toBeTruthy();
+  });
+});
