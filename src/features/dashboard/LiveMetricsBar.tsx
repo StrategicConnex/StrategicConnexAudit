@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Activity, Wifi, WifiOff, Clock, AlertTriangle, TrendingUp, Radio } from "lucide-react";
 import { formatTime } from '@/shared/utils/datetime';
-import { createClient } from '@/shared/lib/supabase/client';
 import { isFlagEnabled } from '@/shared/lib/flags';
 
 /**
@@ -128,8 +127,6 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
       };
     }
 
-    const supabase = createClient();
-
     /** Convierte el fallo o el silencio del canal en el sondeo de respaldo. */
     const degrade = () => {
       if (!mountedRef.current) return;
@@ -138,60 +135,81 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
       if (!intervalRef.current) intervalRef.current = setInterval(poll, FALLBACK_MS);
     };
 
-    const channel = supabase
-      // Nombre único por investigación: dos montajes con distinta id no deben
-      // compartir topic ni filtro.
-      .channel(`live-metrics:${investigationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "intelligence_run_events",
-          // La columna de filtrado es investigation_id; ver la nota 1 de cabecera.
-          filter: `investigation_id=eq.${investigationId}`,
-        },
-        (payload) => {
-          const row = payload.new as { investigation_id?: string; created_at?: string };
-          // Última línea de defensa multi-tenant (CHANGE-003). Sin `investigation_id`
-          // en la fila no se toca el estado: una fila sin ese campo no viene de esta
-          // investigación y no se puede demostrar que sí.
-          if (row.investigation_id !== investigationId) return;
-          if (!mountedRef.current) return;
-          setMetrics(p => ({
-            ...p,
-            connected: true,
-            eventsCount: p.eventsCount + 1,
-            lastEventTimestamp: masReciente(p.lastEventTimestamp, row.created_at ?? null),
-          }));
-        }
-      )
-      .subscribe((status) => {
-        if (!mountedRef.current) return;
-        if (status === "SUBSCRIBED") {
-          transportRef.current = "realtime";
-          setMetrics(p => ({ ...p, transport: "realtime", connected: true }));
-          return;
-        }
-        // CHANNEL_ERROR, TIMED_OUT y CLOSED son los tres finales de un canal que no
-        // entrega. Los tres degradan: no hay un estado "a medio recibir" en el que
-        // suponer que los datos llegan.
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          degrade();
-        }
-      });
+    /**
+     * H-10 (2026-10-20): el cliente Supabase entra vía `await import` — el
+     * import estático arrastraba @supabase/ssr + supabase-js (~215 KB raw) al
+     * first-load de las rutas que montan la barra (mismo defecto que
+     * OverviewTab). Un fallo de carga del chunk degrada a sondeo.
+     */
+    let removeChannel: (() => void) | null = null;
+    let grace: ReturnType<typeof setTimeout> | null = null;
 
-    // Red de seguridad del silencio: el canal puede quedarse conectando sin emitir
-    // ningún estado final, y entonces ni hay datos ni hay sondeo.
-    const grace = setTimeout(() => {
-      if (transportRef.current !== "realtime") degrade();
-    }, SUBSCRIBE_GRACE_MS);
+    void (async () => {
+      try {
+        const { createClient } = await import('@/shared/lib/supabase/client');
+        const supabase = createClient();
+        if (!mountedRef.current) return;
+
+        const channel = supabase
+          // Nombre único por investigación: dos montajes con distinta id no deben
+          // compartir topic ni filtro.
+          .channel(`live-metrics:${investigationId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "intelligence_run_events",
+              // La columna de filtrado es investigation_id; ver la nota 1 de cabecera.
+              filter: `investigation_id=eq.${investigationId}`,
+            },
+            (payload) => {
+              const row = payload.new as { investigation_id?: string; created_at?: string };
+              // Última línea de defensa multi-tenant (CHANGE-003). Sin `investigation_id`
+              // en la fila no se toca el estado: una fila sin ese campo no viene de esta
+              // investigación y no se puede demostrar que sí.
+              if (row.investigation_id !== investigationId) return;
+              if (!mountedRef.current) return;
+              setMetrics(p => ({
+                ...p,
+                connected: true,
+                eventsCount: p.eventsCount + 1,
+                lastEventTimestamp: masReciente(p.lastEventTimestamp, row.created_at ?? null),
+              }));
+            }
+          )
+          .subscribe((status) => {
+            if (!mountedRef.current) return;
+            if (status === "SUBSCRIBED") {
+              transportRef.current = "realtime";
+              setMetrics(p => ({ ...p, transport: "realtime", connected: true }));
+              return;
+            }
+            // CHANNEL_ERROR, TIMED_OUT y CLOSED son los tres finales de un canal que no
+            // entrega. Los tres degradan: no hay un estado "a medio recibir" en el que
+            // suponer que los datos llegan.
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+              degrade();
+            }
+          });
+
+        // Red de seguridad del silencio: el canal puede quedarse conectando sin emitir
+        // ningún estado final, y entonces ni hay datos ni hay sondeo.
+        grace = setTimeout(() => {
+          if (transportRef.current !== "realtime") degrade();
+        }, SUBSCRIBE_GRACE_MS);
+
+        removeChannel = () => { void supabase.removeChannel(channel); };
+      } catch {
+        degrade();
+      }
+    })();
 
     return () => {
       mountedRef.current = false;
-      clearTimeout(grace);
+      if (grace) clearTimeout(grace);
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
-      void supabase.removeChannel(channel);
+      void removeChannel?.();
     };
   }, [poll, investigationId]);
 

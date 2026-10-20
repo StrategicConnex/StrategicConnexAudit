@@ -5,6 +5,11 @@ import { useRealtimeMetrics } from "../hooks/useRealtimeMetrics";
 // ─── Mock del cliente Supabase ──────────────────────────────────────────────
 // Captura las suscripciones postgres_changes (config con filtros) y expone los
 // callbacks para simular eventos del servidor (incl. cross-tenant).
+//
+// H-10 (2026-10-20): el hook ahora crea el cliente vía `await import` — el
+// registro de canales es ASÍNCRONO. Todos los tests esperan el registro con
+// `vi.waitFor` antes de disparar eventos o hacer aserciones; `renderHook`
+// puro ya no basta porque las suscripciones aún no existen en el tick 1.
 interface Subscription {
   channelName: string;
   event: string;
@@ -47,11 +52,24 @@ vi.mock("@supabase/ssr", () => ({
   },
 }));
 
-function fireInsert(table: string, row: Record<string, unknown>) {
+/** Espera a que el setup asíncrono (import dinámico → createClient) termine. */
+async function until(cond: () => boolean, description: string) {
+  await vi.waitFor(() => {
+    if (!cond()) throw new Error(description);
+  });
+}
+
+async function fireInsert(table: string, row: Record<string, unknown>) {
+  await until(
+    () =>
+      mockState.subscriptions.some(
+        (s) => s.config.table === table && s.config.event === "INSERT"
+      ),
+    `No subscription (async setup) for INSERT on ${table}`
+  );
   const sub = mockState.subscriptions.find(
     (s) => s.config.table === table && s.config.event === "INSERT"
-  );
-  if (!sub) throw new Error(`No subscription for INSERT on ${table}`);
+  )!;
   act(() => {
     sub.callback({ new: row });
   });
@@ -69,10 +87,10 @@ describe("useRealtimeMetrics — aislamiento multi-tenant", () => {
     cleanup();
   });
 
-  it("suscripciones con filtro tenant-scoped (project_id=eq.<proyecto>)", () => {
+  it("suscripciones con filtro tenant-scoped (project_id=eq.<proyecto>)", async () => {
     renderHook(() => useRealtimeMetrics("proj-A"));
+    await until(() => mockState.subscriptions.length === 2, "2 canales esperados");
 
-    expect(mockState.subscriptions).toHaveLength(2);
     const tables = mockState.subscriptions.map((s) => s.config.table).sort();
     expect(tables).toEqual(["intelligence_assets", "intelligence_findings"]);
 
@@ -83,15 +101,21 @@ describe("useRealtimeMetrics — aislamiento multi-tenant", () => {
     }
   });
 
-  it("sin projectId no suscribe (no hay filtro que exponer)", () => {
+  it("sin projectId no suscribe (no hay filtro que exponer)", async () => {
     renderHook(() => useRealtimeMetrics(undefined));
+    // Flush de microtasks del efecto: si este montaje creara suscripciones
+    // (no debe), ya habrían aparecido tras resolver el import dinámico.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     expect(mockState.subscriptions).toHaveLength(0);
   });
 
-  it("evento INSERT del propio tenant actualiza latestFinding", () => {
+  it("evento INSERT del propio tenant actualiza latestFinding", async () => {
     const { result } = renderHook(() => useRealtimeMetrics("proj-A"));
 
-    fireInsert("intelligence_findings", {
+    await fireInsert("intelligence_findings", {
       project_id: "proj-A",
       severity: "high",
       title: "Subdominio expuesto",
@@ -105,10 +129,10 @@ describe("useRealtimeMetrics — aislamiento multi-tenant", () => {
     });
   });
 
-  it("evento INSERT de OTRO tenant (proj-B) NO actualiza latestFinding", () => {
+  it("evento INSERT de OTRO tenant (proj-B) NO actualiza latestFinding", async () => {
     const { result } = renderHook(() => useRealtimeMetrics("proj-A"));
 
-    fireInsert("intelligence_findings", {
+    await fireInsert("intelligence_findings", {
       project_id: "proj-B",
       severity: "critical",
       title: "Datos de otro cliente",
@@ -118,56 +142,66 @@ describe("useRealtimeMetrics — aislamiento multi-tenant", () => {
     expect(result.current.latestFinding).toBeNull();
   });
 
-  it("evento INSERT del propio tenant incrementa assetsDiscovered", () => {
+  it("evento INSERT del propio tenant incrementa assetsDiscovered", async () => {
     const { result } = renderHook(() => useRealtimeMetrics("proj-A"));
 
-    fireInsert("intelligence_assets", { project_id: "proj-A", asset_type: "subdomain" });
-    fireInsert("intelligence_assets", { project_id: "proj-A", asset_type: "ip" });
+    await fireInsert("intelligence_assets", { project_id: "proj-A", asset_type: "subdomain" });
+    await fireInsert("intelligence_assets", { project_id: "proj-A", asset_type: "ip" });
 
     expect(result.current.assetsDiscovered).toBe(2);
   });
 
-  it("evento INSERT de OTRO tenant NO incrementa assetsDiscovered", () => {
+  it("evento INSERT de OTRO tenant NO incrementa assetsDiscovered", async () => {
     const { result } = renderHook(() => useRealtimeMetrics("proj-A"));
 
-    fireInsert("intelligence_assets", { project_id: "proj-B", asset_type: "subdomain" });
-    fireInsert("intelligence_assets", { project_id: "proj-B", asset_type: "ip" });
+    await fireInsert("intelligence_assets", { project_id: "proj-B", asset_type: "subdomain" });
+    await fireInsert("intelligence_assets", { project_id: "proj-B", asset_type: "ip" });
 
     expect(result.current.assetsDiscovered).toBe(0);
   });
 
-  it("cambio de projectId re-suscribe con el nuevo filtro", () => {
+  it("cambio de projectId re-suscribe con el nuevo filtro", async () => {
     const { rerender } = renderHook(({ pid }) => useRealtimeMetrics(pid), {
       initialProps: { pid: "proj-A" },
     });
+    await until(() => mockState.subscriptions.length === 2, "canales de proj-A");
 
     expect(mockState.subscriptions.every((s) => s.config.filter === "project_id=eq.proj-A")).toBe(true);
 
     rerender({ pid: "proj-B" });
 
+    await until(
+      () => mockState.subscriptions.some((s) => s.config.filter === "project_id=eq.proj-B"),
+      "canales re-suscritos con proj-B"
+    );
     const filters = mockState.subscriptions.map((s) => s.config.filter);
     expect(filters).toContain("project_id=eq.proj-B");
   });
 
-  it("cleanup remueve los canales al desmontar", () => {
+  it("cleanup remueve los canales al desmontar", async () => {
     const { unmount } = renderHook(() => useRealtimeMetrics("proj-A"));
-    expect(mockState.subscriptions.length).toBeGreaterThan(0);
+    await until(() => mockState.subscriptions.length === 2, "canales esperados");
 
     unmount();
 
+    // El closure de limpieza se instala al final del setup asíncrono; esperar
+    // a que las removiones efectivamente ocurran tras el unmount.
+    await until(() => mockState.removedChannels.length === 2, "cleanup async remueve 2");
     expect(mockState.removedChannels.sort()).toEqual(
       ["metrics-assets-proj-A", "metrics-findings-proj-A"].sort()
     );
   });
 
-  it("los canales se nombran por proyecto para evitar colisiones multi-tenant", () => {
+  it("los canales se nombran por proyecto para evitar colisiones multi-tenant", async () => {
     renderHook(() => useRealtimeMetrics("proj-A"));
+    await until(() => mockState.subscriptions.length === 2, "canales esperados");
+
     const names = mockState.subscriptions.map((s) => s.channelName);
     expect(names).toContain("metrics-findings-proj-A");
     expect(names).toContain("metrics-assets-proj-A");
   });
 
-  it("usa la env key canónica (CS-301): PUBLISHABLE_KEY con fallback ANON_KEY", () => {
+  it("usa la env key canónica (CS-301): PUBLISHABLE_KEY con fallback ANON_KEY", async () => {
     const prevUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const prevPub = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     const prevAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -175,13 +209,16 @@ describe("useRealtimeMetrics — aislamiento multi-tenant", () => {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "pub-key";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
 
-    renderHook(() => useRealtimeMetrics("proj-A"));
+    try {
+      renderHook(() => useRealtimeMetrics("proj-A"));
+      await until(() => mockState.clientUrl !== "", "cliente creado de forma asíncrona");
 
-    expect(mockState.clientUrl).toBe("https://db.supabase.co");
-    expect(mockState.clientKey).toBe("pub-key");
-
-    process.env.NEXT_PUBLIC_SUPABASE_URL = prevUrl;
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = prevPub;
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = prevAnon;
+      expect(mockState.clientUrl).toBe("https://db.supabase.co");
+      expect(mockState.clientKey).toBe("pub-key");
+    } finally {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = prevUrl;
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = prevPub;
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = prevAnon;
+    }
   });
 });

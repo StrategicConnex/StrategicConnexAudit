@@ -28,7 +28,6 @@ import { Card } from "@/components/ui/Card";
 import type { ProjectWithNested } from "@/shared/db/types";
 import type { TimelineEvent } from "@/components/ActivityTimeline";
 import { formatTime, formatTimeWithSeconds } from "@/shared/utils/datetime";
-import { createClient } from "@/shared/lib/supabase/client";
 import { isFlagEnabled } from "@/shared/lib/flags";
 
 /**
@@ -308,6 +307,10 @@ export function OverviewTab({
     let cancelled = false;
     let intervalId: ReturnType<typeof setInterval> | null = null;
     let coalesceId: ReturnType<typeof setTimeout> | null = null;
+    let graceId: ReturnType<typeof setTimeout> | null = null;
+    // H-10 (2026-10-20): el closure de limpieza lo instala el setup asíncrono
+    // cuando el canal ya existe (ver infra de abajo).
+    let removeChannel: (() => void) | null = null;
 
     const refrescar = () => {
       if (!cancelled) setLoadAttempt((n) => n + 1);
@@ -325,17 +328,6 @@ export function OverviewTab({
       if (!intervalId) intervalId = setInterval(refrescar, FALLBACK_MS);
     };
 
-    // Flag apagado (fail-closed): sin suscripción, el hero se refresca por tiempo.
-    if (!isFlagEnabled("realtimeLive")) {
-      intervalId = setInterval(refrescar, FALLBACK_MS);
-      return () => {
-        cancelled = true;
-        if (intervalId) clearInterval(intervalId);
-      };
-    }
-
-    const supabase = createClient();
-
     /** Ráfaga de eventos → un solo refresco (20 eventos no son 20 snapshots). */
     const refrescarPronto = () => {
       if (coalesceId) return;
@@ -345,41 +337,74 @@ export function OverviewTab({
       }, REFRESH_COALESCE_MS);
     };
 
-    const channel = supabase
-      // Nombre único por proyecto: dos montajes con distinto `projectId` no deben
-      // compartir topic.
-      .channel(`overview-hero:${projectId ?? "sin-proyecto"}`)
-      .on(
-        "postgres_changes",
-        // Sin `filter`: ver la nota 2 de arriba.
-        { event: "INSERT", schema: "public", table: "intelligence_run_events" },
-        () => refrescarPronto()
-      )
-      .subscribe((status) => {
-        if (cancelled) return;
-        if (status === "SUBSCRIBED") {
-          marcar("realtime");
-          return;
-        }
-        // CHANNEL_ERROR, TIMED_OUT y CLOSED son los tres finales de un canal que
-        // no entrega: los tres degradan.
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          aSondeo();
-        }
-      });
+    // Flag apagado (fail-closed): sin suscripción, el hero se refresca por tiempo.
+    if (!isFlagEnabled("realtimeLive")) {
+      intervalId = setInterval(refrescar, FALLBACK_MS);
+      return () => {
+        cancelled = true;
+        if (intervalId) clearInterval(intervalId);
+      };
+    }
 
-    // Red de seguridad del silencio: sin esto un canal que nunca responde dejaría
-    // el hero sin datos y sin refresco.
-    const graceId = setTimeout(() => {
-      if (transportRef.current !== "realtime") aSondeo();
-    }, SUBSCRIBE_GRACE_MS);
+    /**
+     * H-10: `import { createClient } from "@/shared/lib/supabase/client"` en
+     * estático metía `@supabase/ssr` + `@supabase/supabase-js` (createClient,
+     * GoTrueClient, GoRealtime ≈ 215 KB raw / 55 KB gzip) en el FIRST-LOAD de
+     * `/`: este cliente solo se usa DESPUÉS del mount y el hero ya degrada a
+     * sondeo ante cualquier fallo, así que el chunk entra vía `await import`
+     * (mismo patrón que `src/app/login/page.tsx`). La red de seguridad convierte
+     * un fallo de carga del chunk en sondeo, no en hero muerto.
+     */
+    void (async () => {
+      try {
+        const { createClient } = await import("@/shared/lib/supabase/client");
+        const supabase = createClient();
+        if (cancelled) return;
+
+        const channel = supabase
+          // Nombre único por proyecto: dos montajes con distinto `projectId` no deben
+          // compartir topic.
+          .channel(`overview-hero:${projectId ?? "sin-proyecto"}`)
+          .on(
+            "postgres_changes",
+            // Sin `filter`: ver la nota 2 de arriba.
+            { event: "INSERT", schema: "public", table: "intelligence_run_events" },
+            () => refrescarPronto()
+          )
+          .subscribe((status) => {
+            if (cancelled) return;
+            if (status === "SUBSCRIBED") {
+              marcar("realtime");
+              return;
+            }
+            // CHANNEL_ERROR, TIMED_OUT y CLOSED son los tres finales de un canal que
+            // no entrega: los tres degradan.
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+              aSondeo();
+            }
+          });
+
+        // Red de seguridad del silencio: sin esto un canal que nunca responde dejaría
+        // el hero sin datos y sin refresco.
+        graceId = setTimeout(() => {
+          if (transportRef.current !== "realtime") aSondeo();
+        }, SUBSCRIBE_GRACE_MS);
+
+        removeChannel = () => {
+          void supabase.removeChannel(channel);
+        };
+      } catch {
+        // Import del chunk o createClient falló → degradar a sondeo.
+        aSondeo();
+      }
+    })();
 
     return () => {
       cancelled = true;
-      clearTimeout(graceId);
+      if (graceId) clearTimeout(graceId);
       if (coalesceId) clearTimeout(coalesceId);
       if (intervalId) clearInterval(intervalId);
-      void supabase.removeChannel(channel);
+      void removeChannel?.();
     };
   }, [projectId]);
 
