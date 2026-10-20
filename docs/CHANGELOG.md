@@ -24,6 +24,39 @@ estado: Aprobado
 
 ## Octubre 2026 — Sprint 5: Anti-monodependencia del pool IA
 
+### ⚡ 2026-10-20 — H-09 cerrada en producción (self-RUM live) + fix beacon 307 + H-10 supabase fuera del first-load
+
+**H-09 (self-RUM) — pipeline completo verificado en prod:**
+- El beacon `vitals.js` vive en el layout de la app con el proyecto dedicado
+  (`NEXT_PUBLIC_RUM_PROJECT_ID`) y el token real (`NEXT_PUBLIC_RUM_BEACON_TOKEN`, P0-3).
+- Cadena verificada con navegador real (headless, sesión viva): `vitals.js` →
+  `web-vitals.iife.js` → **3 × POST 204**; smoke POST manual → 204 con
+  `session_id='smoke-ciclo-h09'`; filas confirmadas en `web_vitals_logs`.
+- **Bug crítico del interstitial (commit `3143adc`):** el disclaimer gate
+  redirigía `GET /scripts/vitals.js` → 307 HTML **también para los clientes**
+  (cross-origin + SameSite=Lax => la cookie del disclaimer nunca viaja; el RUM
+  comercial estaba roto por diseño). `/scripts` y `/vendor` ahora son
+  rutas públicas del gate.
+- **Incidente 2026-10-19 23:00** (commit `b125550`): una env opcional con valor
+  inválido (`NEXT_PUBLIC_RUM_PROJECT_ID` no-UUID) tumbo toda la app (500) por
+  re-lanzar el ZodError de validación en `instrumentation.register()`. Ahora
+  `validateEnvSoft()` degrada las opcionales (log auditable) y solo los fallos
+  duros abortan; el layout además valida el UUID antes de pintar el beacon.
+- Card RUM: botones **Ver/Ocultar token** (A-3: owner/admin, re-enmascara tras
+  rotar) y **Copiar token** directo; el snippet en pantalla muestra el token
+  enmascarado — el real solo viaja por copiado (evita repetir el incidente del
+  copy manual) (commit `ff3bad2`).
+
+**H-10 (parcial) — supabase fuera del first-load de `/` (commit `ede6e94`):**
+- El chunk EAGER de 214,9 KB (createClient + GoTrueClient + GoRealtime) venía
+  de un import estático en `OverviewTab` usado solo tras mount; ahora entra vía
+  `await import` con degradación a polling en fallo. Mismo shuffle en
+  `LiveMetricsBar` y `useRealtimeMetrics`.
+- **Medido en build**: first-load `/` 1.324 → **1.095,5 KB raw (−17,3%)** /
+  399 → **330,3 KB gzip (−17,2%)**; 0 fingerprints de supabase en first-load.
+- Queda pendiente: chunk `react-dom` en 388 KB [INFERRED] vs 229 KB del
+  baseline 09-26 — investigación separada.
+
 ### 🤖 2026-10-19 — Failover inter-proveedor Groq/Gemini + fix del chatbot
 
 **Problema:** el chatbot (Strategic Copilot, `/api/ai/copilot`) mostraba "⚠️ Motor de IA
