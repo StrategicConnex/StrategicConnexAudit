@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Copy, Server, Activity, CircleAlert, CircleCheck, KeyRound, RefreshCw } from 'lucide-react';
+import { Check, Copy, Server, Activity, CircleAlert, CircleCheck, Eye, EyeOff, KeyRound, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { rotateBeaconSecret } from '@/app/actions/projects';
 
@@ -47,7 +47,9 @@ export function RumIntegrationCard({
   canRotate?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
   const [secret, setSecret] = useState<string | null>(beaconSecret);
+  const [showSecret, setShowSecret] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [rotated, setRotated] = useState(false);
 
@@ -61,6 +63,18 @@ export function RumIntegrationCard({
 
   const masked = secret ? `${secret.slice(0, 6)}…${secret.slice(-4)}` : null;
 
+  /**
+   * Lo que se MUESTRA en pantalla (attack-surface anti copy-manual, incidente
+   * 2026-10-19: el owner copió a mano el texto visible y puso el valor mal en
+   * la env). El SNIPPET real (con el token íntegro) viaja único y exclusivo
+   * por los botones «Copiar snippet» / «Copiar token» — nunca quedando a la
+   * vista del shoulder-surfing salvo «Ver» explícito.
+   */
+  const displaySnippet =
+    secret && !showSecret
+      ? snippet.replace(`data-beacon-token="${secret}"`, `data-beacon-token="${masked}"`)
+      : snippet;
+
   const rotate = async () => {
     setRotating(true);
     try {
@@ -68,6 +82,8 @@ export function RumIntegrationCard({
       if (result.data?.beaconSecret) {
         setSecret(result.data.beaconSecret);
         setRotated(true);
+        // Seguridad: el token NUEVO nunca queda expuesto sin acción explícita
+        setShowSecret(false);
         setTimeout(() => setRotated(false), 4000);
       }
     } finally {
@@ -90,6 +106,30 @@ export function RumIntegrationCard({
       document.body.removeChild(ta);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  /**
+   * Copia SOLO el token (no el snippet) para pegarlo directo en las env vars
+   * (p. ej. NEXT_PUBLIC_RUM_BEACON_TOKEN del self-RUM). Evita el error del
+   * 2026-10-19: copiar el texto enmascarado de la UI ("79ed10…b49c") y que el
+   * beacon devolviera 401. Mismo fallback execCommand sin clipboard API.
+   */
+  const copyToken = async () => {
+    if (!secret) return;
+    try {
+      await navigator.clipboard.writeText(secret);
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 2000);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = secret;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 2000);
     }
   };
 
@@ -162,12 +202,18 @@ export function RumIntegrationCard({
               : 'bg-background/80 backdrop-blur border-border text-muted-foreground hover:text-foreground hover:border-primary/30'
           }`}
         >
-          {copied ? <><Check className="w-3 h-3" /> Copiado</> : <><Copy className="w-3 h-3" /> Copiar</>}
+          {copied ? <><Check className="w-3 h-3" /> Snippet copiado</> : <><Copy className="w-3 h-3" /> Copiar snippet</>}
         </button>
         <code className="block text-xs font-mono bg-background text-foreground p-6 overflow-x-auto whitespace-pre leading-relaxed">
-{snippet}
+{displaySnippet}
         </code>
       </div>
+      {secret && !showSecret && (
+        <p className="mt-2 text-2xs text-muted-foreground relative z-10">
+          El token aparece enmascarado — use <strong className="text-foreground">«Copiar snippet»</strong> o{' '}
+          <strong className="text-foreground">«Copiar token»</strong> para obtener el valor real (nunca copie este texto a mano).
+        </p>
+      )}
 
       {/* Nota de atributos */}
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-2xs text-muted-foreground relative z-10">
@@ -175,16 +221,50 @@ export function RumIntegrationCard({
         <p><code className="font-mono text-accent-cyan">data-sampling</code> — fracción de visitantes que envía métricas (0.1 = 10%).</p>
       </div>
 
-      {/* Secreto del beacon (P0-3): solo quien tenga este token puede enviar datos */}
+      {/* Secreto del beacon (P0-3): solo quien tenga este token puede enviar datos.
+          Ver/Ocultar A-3: igual que rotar, solo owner/admin (reveal = mismo
+          privilegio que recibir el snippet completo, que ya trae el token). */}
       <div className="mt-4 p-4 rounded-xl border border-border bg-background/60 flex flex-col sm:flex-row sm:items-center gap-3 relative z-10">
         <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-widest text-muted-foreground">
           <KeyRound className="w-3.5 h-3.5 text-accent-cyan" />
           {secret ? (
-            <span>Token del beacon: <code className="font-mono text-foreground">{masked}</code></span>
+            <span>
+              Token del beacon:{' '}
+              <code className="font-mono text-foreground">
+                {showSecret ? secret : masked}
+              </code>
+            </span>
           ) : (
             <span>Sin token: cualquiera con el ID puede enviar datos. Genéralo.</span>
           )}
         </div>
+        {secret && (
+          <>
+            <button
+              onClick={() => setShowSecret((s) => !s)}
+              aria-label={showSecret ? 'Ocultar token' : 'Ver token'}
+              disabled={!canRotate}
+              title={canRotate ? undefined : 'Solo administradores pueden ver el token'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-2xs font-bold uppercase tracking-widest text-muted-fg hover:text-foreground hover:border-primary/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {showSecret ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              {showSecret ? 'Ocultar' : 'Ver'}
+            </button>
+            <button
+              onClick={copyToken}
+              aria-label="Copiar token"
+              disabled={!canRotate}
+              title={canRotate ? undefined : 'Solo administradores pueden copiar el token'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-2xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                copiedToken
+                  ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-400'
+                  : 'border-border text-muted-fg hover:text-foreground hover:border-primary/30'
+              }`}
+            >
+              {copiedToken ? <><Check className="w-3 h-3" /> Token copiado</> : <><Copy className="w-3 h-3" /> Copiar token</>}
+            </button>
+          </>
+        )}
         <button
           onClick={rotate}
           disabled={rotating || !canRotate}
