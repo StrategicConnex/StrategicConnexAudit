@@ -37,12 +37,12 @@ interface ExecSummary {
 ```
 
 **Heurística de esfuerzo (determinística, sin IA):**
-- `S` (quick win): corrections de metadata (title, meta description, etc.)
+- `S` (quick win): correcciones de metadata (title, meta description, etc.)
 - `M`: SEO estructural (H1/H2, enlaces rotos, contenido escaso)
 - `L`: performance/arquitectura (profundidad de rastreo, infraestructura)
 - `impact` = severidad del hallazgo (critical→alto, warning→medio, info→bajo)
 
-**Sanitización por audiencia:** con `audience='client'` el renderer PDF occulta URLs absolutas (solo rutas sin querystring) y cualquier dato interno; `internal` muestra URL completa.
+**Sanitización por audiencia:** con `audience='client'` el renderer PDF oculta URLs absolutas (solo rutas sin querystring) y cualquier dato interno; `internal` muestra URL completa.
 
 ## 3. Renderers
 
@@ -79,7 +79,7 @@ Todos los prompts reciben el mismo `ExecSummary`:
 | Incident Brief (`api/intelligence/brief` + `IncidentBriefModal`) | La sección «Resumen Ejecutivo» abre con veredicto+score+delta inyectados por el núcleo |
 | `seo-report-service.ts` | La sección «🏢 Resumen Ejecutivo» abre con veredicto+KPIs; la IA narra sobre datos fijos |
 
-**Compatibilidad:** briefs persistidos en `exec_briefs` no cambian de forma; campos nuevos opcionales, parser tolerante con fallback al texto actual si la IA no devuelve la forna nueva (fallback Groq/Gemini intacto).
+**Compatibilidad:** briefs persistidos en `exec_briefs` no cambian de forma; campos nuevos opcionales, parser tolerante con fallback al texto actual si la IA no devuelve la forma nueva (fallback Groq/Gemini intacto).
 
 ## 4. Fuera de alcance
 
