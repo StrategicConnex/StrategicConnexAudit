@@ -13,6 +13,32 @@
     "reportHint": "Incluye en tu reporte: descripción del problema, pasos para reproducirlo, capturas de pantalla si aplica y navegador/version utilizada.",
     "acceptLabel": "He leído y acepto los términos del aviso legal",
     "accept": "Aceptar",
-    "updated": "Última actualización: Octubre 2026"
+    "updated": "Última actualización: Octubre 2026",
+    "roadmap": {
+      "title": "HOJA DE RUTA PÚBLICA (fechas estimadas)",
+      "notice": "Las fechas son estimaciones publicadas por transparencia. Cualquier ajuste se anunciará en el changelog público de la plataforma.",
+      "groups": {
+        "perf": "Rendimiento y observabilidad",
+        "integrations": "Integraciones avanzadas",
+        "compliance": "Cumplimiento y gobernanza",
+        "refinement": "Refinamiento y documentación"
+      },
+      "items": {
+        "partitioning": "Particionado de tablas de historial (consultas más rápidas)",
+        "aiCache": "Caché de respuestas de IA (menor latencia)",
+        "cdn": "Caché inmutable de assets estáticos",
+        "usagePanel": "Panel de uso de la plataforma",
+        "osint": "Nuevas fuentes OSINT: VirusTotal, AlienVault OTX, Shodan",
+        "webhooks": "Webhooks para integraciones externas",
+        "docx": "Exportación de reportes a DOCX/ODT",
+        "bgJobs": "Generación de reportes pesados en segundo plano",
+        "iso27001": "Panel de cumplimiento ISO 27001",
+        "soc2pci": "Cobertura SOC 2 y PCI DSS en el panel",
+        "soc2prep": "Inicio de preparación SOC 2 Type II (políticas)",
+        "docs": "Documentación técnica actualizada",
+        "tutorials": "Vídeos tutoriales",
+        "secReview": "Revisión final de rendimiento y seguridad"
+      }
+    }
   }
 }

@@ -8,6 +8,7 @@ import {
   sanitizeRedirect,
 } from "@/shared/lib/disclaimer";
 import { DisclaimerForm } from "./DisclaimerForm";
+import { RoadmapDisclosure } from "./RoadmapDisclosure";
 import esMessages from "./es.json";
 import enMessages from "./en.json";
 
@@ -120,6 +121,11 @@ export default async function DisclaimerPage({
               {messages.reportHint}
             </p>
           </div>
+
+          <RoadmapDisclosure
+            messages={messages.roadmap}
+            locale={locale === "en" ? "en" : "es"}
+          />
 
           <DisclaimerForm
             redirectTo={redirectTo}

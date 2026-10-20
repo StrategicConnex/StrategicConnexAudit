@@ -13,6 +13,32 @@
     "reportHint": "Include in your report: problem description, steps to reproduce, screenshots if applicable, and browser/version used.",
     "acceptLabel": "I have read and accept the terms of the legal notice",
     "accept": "Accept",
-    "updated": "Last updated: October 2026"
+    "updated": "Last updated: October 2026",
+    "roadmap": {
+      "title": "Public roadmap (estimated dates)",
+      "notice": "Dates are estimates published for transparency. Any adjustment will be announced in the platform's public changelog.",
+      "groups": {
+        "perf": "Performance and observability",
+        "integrations": "Advanced integrations",
+        "compliance": "Compliance and governance",
+        "refinement": "Refinement and documentation"
+      },
+      "items": {
+        "partitioning": "History tables partitioning (faster queries)",
+        "aiCache": "AI response caching (lower latency)",
+        "cdn": "Immutable caching for static assets",
+        "usagePanel": "Platform usage dashboard",
+        "osint": "New OSINT sources: VirusTotal, AlienVault OTX, Shodan",
+        "webhooks": "Webhooks for external integrations",
+        "docx": "Report export to DOCX/ODT",
+        "bgJobs": "Heavy report generation in the background",
+        "iso27001": "ISO 27001 compliance dashboard",
+        "soc2pci": "SOC 2 and PCI DSS coverage in the dashboard",
+        "soc2prep": "Start of SOC 2 Type II preparation (policies)",
+        "docs": "Updated technical documentation",
+        "tutorials": "Video tutorials",
+        "secReview": "Final performance and security review"
+      }
+    }
   }
 }
