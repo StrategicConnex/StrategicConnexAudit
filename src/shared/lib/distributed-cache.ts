@@ -27,6 +27,11 @@ export interface CacheStore {
   set(key: string, value: unknown, ttlMs?: number): Promise<void>;
   delete(key: string): Promise<void>;
   purgeExpired(): Promise<number>;
+  /**
+   * Elimina por prefijo (invalidación por scope, C2 del review).
+   * Opcional: los callers la usan con fail-open.
+   */
+  deleteByPrefix?(prefix: string): Promise<number>;
 }
 
 /** TTL por defecto de una entrada (5 min, igual que el L1 en memoria). */
@@ -61,6 +66,13 @@ export function createPostgresCacheStore(exec: SqlExec): CacheStore {
       const res = await exec(sql`DELETE FROM distributed_cache WHERE expires_at < now()`);
       return res.rowCount ?? 0;
     },
+
+    async deleteByPrefix(prefix: string): Promise<number> {
+      const res = await exec(
+        sql`DELETE FROM distributed_cache WHERE key LIKE ${prefix + "%"}`,
+      );
+      return res.rowCount ?? 0;
+    },
   };
 }
 
@@ -93,6 +105,16 @@ export function createMemoryCacheStore(): CacheStore {
         }
       }
       return purged;
+    },
+    async deleteByPrefix(prefix: string): Promise<number> {
+      let deleted = 0;
+      for (const k of Array.from(map.keys())) {
+        if (k.startsWith(prefix)) {
+          map.delete(k);
+          deleted++;
+        }
+      }
+      return deleted;
     },
   };
 }
@@ -166,6 +188,17 @@ export async function cachePurgeExpired(): Promise<number> {
     return await getCacheStore().purgeExpired();
   } catch (error) {
     logger.warn("[distributed-cache] purgeExpired falló (fail-open):", error);
+    return 0;
+  }
+}
+
+/** Borra por prefijo; ante cualquier error devuelve 0 (invalidación nunca rompe). */
+export async function cacheDeleteByPrefix(prefix: string): Promise<number> {
+  try {
+    const store = getCacheStore();
+    return (await store.deleteByPrefix?.(prefix)) ?? 0;
+  } catch (error) {
+    logger.warn(`[distributed-cache] deleteByPrefix falló (fail-open) para "${prefix}":`, error);
     return 0;
   }
 }

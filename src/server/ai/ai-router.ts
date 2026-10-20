@@ -335,8 +335,10 @@ export const MODEL_TIMEOUTS: Record<AITaskType, number> = {
 
 // ─── Caché semántica (P1-3) ─────────────────────────────────────────────────
 // Reemplaza al Map en memoria con clave de últimos 100 chars (hit-rate ~0).
-// Ver src/server/ai/ai-cache.ts: L1 memoria + L2 Redis, clave sha256 de los
-// mensajes completos + scope del caller.
+// Ver src/server/ai/ai-cache.ts: L1 memoria + L2 Postgres (distributed_cache,
+// ADR-008 C2), clave sha256 de los mensajes completos + taskType + scope (el
+// scope incluye tenant). El L2 tiene TTL cap 1h y soporta invalidación por
+// prefijo (cacheDeleteByPrefix) con fail-open.
 
 // ─── Circuit Breaker for OpenRouter ─────────────────────────────────────────
 
@@ -733,7 +735,9 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
   };
 
   // 1. Check cache (solo sin tools: los handlers devuelven estado mutable).
-  // P1-3: clave semántica (mensajes completos + scope) en Redis/memoria.
+  // P1-3: clave semántica (mensajes completos + scope de tenant) en L1 memoria
+  // + L2 Postgres `distributed_cache` (ver ADR-008-AMEND). NO Redis — eliminado
+  // por ADR-002 (enmiendas 14-15). Sin cacheScope → scope "global" → solo L1.
   const cacheKey = buildSemanticKey(taskType, options.cacheScope ?? "", messages);
   // modelOverride: evals miden al modelo real — el cache los enmascararía.
   if (!useTools && !options.modelOverride) {

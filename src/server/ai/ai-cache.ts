@@ -1,20 +1,30 @@
 import { createHash } from "node:crypto";
+import { logger } from "@/lib/logger";
 import type { AIMessage, AITaskType } from "./ai-router";
+import {
+  cacheGet,
+  cacheSet,
+  cacheDeleteByPrefix,
+  isDistributedCacheEnabled,
+} from "@/shared/lib/distributed-cache";
 
 /**
- * ai-cache.ts — Caché semántica IA (P1-3).
+ * ai-cache.ts — Caché semántica IA (P1-3) con L2 distribuido (6.2).
  *
- * Único nivel: Map en memoria por instancia (L1). El nivel L2 que vivía en
- * Upstash Redis desapareció con la eliminación de `@upstash/redis`: la
- * caché ya no sobrevive a un deploy ni se comparte entre instancias
- * serverless, de modo que una respuesta cacheada solo acelera repetición
- * dentro de la misma instancia caliente. Todo falla en silencio hacia
- * "miss": la caché nunca rompe una respuesta.
+ * L1: Map en memoria por instancia. Primer lookup, latencia 0; no sobrevive
+ * a un deploy ni se comparte entre instancias serverless.
+ *
+ * L2: tabla `distributed_cache` en Postgres vía `distributed-cache.ts`
+ * (ADR-008 C2, enmendado). Fail-open SIEMPRE: un fallo del L2 se trata
+ * como miss; la caché nunca rompe una respuesta.
  *
  * Clave = sha256(taskType + scope + mensajes COMPLETOS). El scope lo aporta
  * el caller (ej. `seo-report:{projectId}:{yyyy-mm-dd}`) para que regenerar
  * lo mismo dentro del TTL sea hit seguro.
  */
+
+/** C2 (review): el L2 jamás sirve respuestas de más de 1 h — cap sobre ttlFor(). */
+const L2_MAX_TTL_MS = 3_600_000;
 
 const TTL_BY_TASK: Record<AITaskType, number> = {
   "seo-report": 24 * 3600,
@@ -60,6 +70,19 @@ export function ttlFor(taskType: AITaskType): number {
 }
 
 /**
+ * C1 (review owner): determina si una key lleva tenant en el scope.
+ * Formato: `ai:<taskType>:<scope>:<hash>` — el hash (hex, sin ":") es el
+ * último segmento, así que el scope es TODO lo intermedio (puede tener ":").
+ * `scope === "global"` (callers sin cacheScope) → NO es tenant-scoped.
+ */
+function isTenantScopedKey(key: string): boolean {
+  const parts = key.split(":");
+  if (parts.length < 4) return false;
+  const scope = parts.slice(2, parts.length - 1).join(":");
+  return scope !== "global";
+}
+
+/**
  * Métricas de hit-rate (Sprint 1, idea #16). Contador en memoria por
  * instancia; el dashboard /ai/health muestra el ratio agregado. Los contadores
  * viven por proceso (serverless: vida corta) — orientativos, no facturables.
@@ -95,6 +118,21 @@ async function lookupSemanticCache(key: string): Promise<CacheHit | null> {
     return { content: mem.content, modelId: mem.modelId };
   }
   if (mem) memory.delete(key);
+  // L2 distribuido (ADR-008 C2): fail-open SIEMPRE. El wrapper cacheGet ya
+  // devuelve undefined ante error, pero el conector no delega su contrato de
+  // "la caché nunca rompe una respuesta" al almacén: cualquier fallo del L2
+  // se trata como miss aquí también (desviación D1 documentada en la tarea).
+  if (isDistributedCacheEnabled()) {
+    try {
+      const l2 = await cacheGet<CacheHit & { expiresAt: number }>(key);
+      if (l2 && l2.expiresAt > now) {
+        return { content: l2.content, modelId: l2.modelId };
+      }
+    } catch (error) {
+      logger.warn(`[ai-cache] lookup L2 falló (fail-open) para "${key}":`, error);
+      return null;
+    }
+  }
   return null;
 }
 
@@ -109,7 +147,27 @@ export async function setSemanticCache(
     const oldest = memory.keys().next().value;
     if (oldest) memory.delete(oldest);
   }
-  memory.set(key, { content, modelId, expiresAt: Date.now() + ttlSec * 1000 });
+  const expiresAt = Date.now() + ttlSec * 1000;
+  memory.set(key, { content, modelId, expiresAt });
+  // Guard C1 (review owner 2026-10-20): la persistencia cross-instancia del
+  // L2 amplifica el colisión que en L1 era transitoria. Una key SIN tenant en
+  // el scope ("ai:<type>:global:<hash>") puede corresponder a cualquier
+  // tenant con la misma secuencia de mensajes → su respuesta NUNCA se
+  // escribe al L2. Los 4 taskTypes sin cacheScope (copilot/brief/etc.) quedan
+  // en L1 como hasta ahora; su migración a scope por-tenant es follow-up.
+  if (isDistributedCacheEnabled() && isTenantScopedKey(key)) {
+    // Fail-open (D1): el wrapper cacheSet ya es fail-open; el conector se
+    // protege también aquí para que un L2 caído no rompa al caller.
+    try {
+      await cacheSet(
+        key,
+        { content, modelId, expiresAt },
+        Math.min(ttlSec * 1000, L2_MAX_TTL_MS)
+      );
+    } catch (error) {
+      logger.warn(`[ai-cache] set L2 falló (fail-open) para "${key}":`, error);
+    }
+  }
 }
 
 /**
@@ -117,8 +175,8 @@ export async function setSemanticCache(
  * nuevo de un proyecto, el caller pasa su cacheScope para que los resúmenes
  * cacheados (p.ej. exec-brief de 24h) nunca sirvan datos stale.
  *
- * Borra la caché de la instancia. Retorna las claves eliminadas.
- * Falla en silencio: la invalidación nunca rompe al caller.
+ * Borra la caché de la instancia Y del L2 distribuido. Retorna las claves
+ * eliminadas. Falla en silencio: la invalidación nunca rompe al caller.
  */
 export async function invalidateCacheScope(taskType: AITaskType, scope: string): Promise<number> {
   const prefix = `ai:${taskType}:${scope}`;
@@ -129,5 +187,8 @@ export async function invalidateCacheScope(taskType: AITaskType, scope: string):
       deleted++;
     }
   }
-  return deleted;
+  // Invalidación on-write en el L2 (fail-open del wrapper). El caller
+  // (audit.trigger.ts: invalidateCacheScope en cada scan nuevo) ya la dispara.
+  const l2Deleted = await cacheDeleteByPrefix(prefix);
+  return deleted + l2Deleted;
 }
