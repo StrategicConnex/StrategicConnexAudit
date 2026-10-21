@@ -1,6 +1,6 @@
 import {
   pgTable, uuid, text, integer, timestamp, pgEnum,
-  jsonb, boolean, numeric, date, bigint, unique, index
+  jsonb, boolean, numeric, date, bigint, unique, index, primaryKey
 } from "drizzle-orm/pg-core";
 
 // Enums
@@ -490,9 +490,11 @@ export const auditLogs = pgTable("audit_logs", {
   index("idx_audit_logs_user").on(t.userId),
 ]);
 
-// 30. Uptime Logs (Phase 2)
+// 30. Uptime Logs (Phase 2) — PARTICIONADO por RANGE(checked_at) (Sprint 6).
+// La PK debe incluir la key de partición (regla Postgres de constraints
+// únicos en tablas participadas).
 export const uptimeLogs = pgTable("uptime_logs", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: uuid("id").defaultRandom().notNull(),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: 'cascade' }).notNull(),
   isUp: boolean("is_up").notNull(),
   statusCode: integer("status_code"),
@@ -500,6 +502,7 @@ export const uptimeLogs = pgTable("uptime_logs", {
   errorMessage: text("error_message"),
   checkedAt: timestamp("checked_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
+  primaryKey({ columns: [t.id, t.checkedAt] }),
   index("idx_uptime_logs_project_checked").on(t.projectId, t.checkedAt),
   index("idx_uptime_logs_checked").on(t.checkedAt),
 ]);

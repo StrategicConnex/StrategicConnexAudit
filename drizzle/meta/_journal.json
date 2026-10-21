@@ -456,6 +456,13 @@
       "when": 1792876800000,
       "tag": "2026-10-21_sprint6_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1792963200000,
+      "tag": "2026-10-21_partition_uptime_logs",
+      "breakpoints": true
     }
   ]
 }
