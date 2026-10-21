@@ -31,6 +31,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Q4 6.4 (re-scoped): assets fingerprinted por Next son inmutables.
+        // next ya setea esto por defecto; explicito para no depender del
+        // default Y para que un reverse-proxy (Cloudflare) lo respete al
+        // añadido sin re-escribir (vamos a mantener los headers origen).
+        source: "/_next/static/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
         // SEO / crawler directives — NOT security; security headers
         // are applied dynamically by src/proxy.ts with a per-request
         // CSP nonce, HSTS, XFO, XCTO, Referrer-Policy, and Permissions-Policy.
