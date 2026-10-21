@@ -57,6 +57,9 @@ export const periodicAnomalyDetection = schedules.task({
               .join("\n");
             const ai = await callAIWithFallback({
               taskType: "anomaly-narrative",
+              // F-SCOPE (follow-up T3): sin userId disponible aquí, el scope
+              // es por proyecto — la narrativa nunca cruza between tenants.
+              cacheScope: `project:${project.id}`,
               messages: [
                 {
                   role: "system",

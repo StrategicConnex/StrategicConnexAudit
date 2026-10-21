@@ -55,6 +55,9 @@ export const POST = withRateLimit(
       const aiResult = await callAIWithFallback({
         taskType: 'general-chat',
         userId,
+        // F-SCOPE (follow-up T3): scope por tenant — la clave L1/L2 nunca es
+        // "global" y dos usuarios no comparten respuestas cacheadas.
+        cacheScope: `user:${userId}`,
         messages: aiMessages,
         temperature: 0.4,
         maxTokens: 4096,

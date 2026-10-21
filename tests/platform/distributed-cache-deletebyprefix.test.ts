@@ -52,4 +52,28 @@ describe("CacheStore.deleteByPrefix — postgres (C2)", () => {
   it("prefijo sin matches devuelve 0 (idempotente)", async () => {
     expect(await store.deleteByPrefix!("ai:seo-report:proj-a")).toBe(0);
   });
+
+  // Hardening LIKE-escape (follow-up del review T3): '%' y '_' del prefijo NO
+  // actúan como wildcards — un prefijo con '_' no borra keys hermanas.
+  it("los metacaracteres LIKE del prefijo se tratan como literales", async () => {
+    await store.set("ai:t:proj_b:hash-1", { c: "b" }, DEFAULT_TTL_MS);
+    await store.set("ai:t:projXb:hash-2", { c: "x" }, DEFAULT_TTL_MS); // '_' como wildcard lo casaría
+
+    const deleted = await store.deleteByPrefix!("ai:t:proj_b");
+    expect(deleted).toBe(1);
+
+    expect(await store.get("ai:t:proj_b:hash-1")).toBeUndefined();
+    expect(await store.get("ai:t:projXb:hash-2")).toEqual({ c: "x" });
+  });
+
+  it("un '%' contenido en el prefijo no purga taskTypes enteros", async () => {
+    await store.set("ai:seo-report:proj-c:hash-1", { c: "1" }, DEFAULT_TTL_MS);
+    await store.set("ai:exec-brief:proj-z:hash-2", { c: "2" }, DEFAULT_TTL_MS);
+
+    const deleted = await store.deleteByPrefix!("ai:%");
+    expect(deleted).toBe(0);
+
+    expect(await store.get("ai:seo-report:proj-c:hash-1")).toEqual({ c: "1" });
+    expect(await store.get("ai:exec-brief:proj-z:hash-2")).toEqual({ c: "2" });
+  });
 });

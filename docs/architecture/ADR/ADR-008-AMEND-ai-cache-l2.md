@@ -31,6 +31,8 @@ estado: Aprobado (condicional C1–C6, evidencia en tests)
 - Miss → path único `callAIWithFallback` intacto; la caché ni envuelve errores de proveedor ni toca circuit breakers (C5).
 
 ## 5. Interfaz añadida al ADR-008
+
+> **Actualización 2026-10-21 (follow-ups cerrados)**: (1) los 4 call-sites que caían en `global` (general-chat, incident-brief, copilot-remediation, anomaly-narrative) pasan ahora `cacheScope` por tenant (`user:`/`project:`, F-SCOPE) — toda la caché IA es tenant-scoped; (2) `deleteByPrefix` escapa los metacaracteres LIKE (`%`, `_`, `\`) como literales — la invalidación por prefijo no borra de más.
 - `CacheStore.deleteByPrefix?(prefix): Promise<number>` + wrapper `cacheDeleteByPrefix` fail-open (postgresql: DELETE key LIKE; memoria: ops Map). Opcional para backwards-compat.
 
 ## Consecuencia para §7 del ADR original

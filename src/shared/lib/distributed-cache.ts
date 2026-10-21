@@ -68,8 +68,13 @@ export function createPostgresCacheStore(exec: SqlExec): CacheStore {
     },
 
     async deleteByPrefix(prefix: string): Promise<number> {
+      // LIKE-escape (follow-up del review T3): '%', '_' y '\' en el prefijo se
+      // tratan como literales con el escape por defecto de LIKE en Postgres,
+      // para que la invalidación por scope no borre de más (un prefijo con
+      // "_" o "%" no debe actuar como wildcard).
+      const escaped = prefix.replace(/[%_\\]/g, "\\$&");
       const res = await exec(
-        sql`DELETE FROM distributed_cache WHERE key LIKE ${prefix + "%"}`,
+        sql`DELETE FROM distributed_cache WHERE key LIKE ${escaped + "%"}`,
       );
       return res.rowCount ?? 0;
     },

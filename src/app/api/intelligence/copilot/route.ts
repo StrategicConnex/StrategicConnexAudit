@@ -92,6 +92,9 @@ export const POST = withRateLimit(
       const aiResult = await callAIWithFallback({
         taskType: "copilot-remediation",
         userId: _userId,
+        // F-SCOPE (follow-up T3): el prompt incrusta evidencia del tenant —
+        // sin scope estaría cacheable bajo "global" cross-tenant en el L2.
+        cacheScope: `user:${_userId}`,
         messages: [systemMsg, userMsg],
         temperature: 0.3,
         maxTokens: 4096,

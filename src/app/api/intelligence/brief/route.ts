@@ -91,6 +91,9 @@ const handler = withErrorHandler(async (req: NextRequest, _userId: string) => {
   const aiResult = await callAIWithFallback({
     taskType: "incident-brief",
     userId: _userId,
+    // F-SCOPE (follow-up T3): scope por tenant; sin scope la clave cae en
+    // "global" y el L2 podría servir briefs entre usuarios distintos.
+    cacheScope: `user:${_userId}`,
     messages: [systemMsg, userMsg],
     temperature: 0.2,
     maxTokens: 1800,
