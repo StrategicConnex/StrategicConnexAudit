@@ -1,10 +1,11 @@
 {
-  "maxDirectDbCalls": 191,
+  "maxDirectDbCalls": 198,
   "maxDbCallsOutsideWithRLS": 81,
-  "maxTotalCalls": 272,
+  "maxTotalCalls": 279,
   "allowedFiles": [
     "src/app/admin/actions.ts",
     "src/app/admin/page.tsx",
+    "src/app/admin/usage/actions.ts",
     "src/app/ai/health/actions.ts",
     "src/app/api/ai/healthcheck/route.ts",
     "src/app/api/ai/status/route.ts",
@@ -96,6 +97,10 @@
     },
     "src/app/admin/page.tsx": {
       "directDb": 4,
+      "dbSinEnvolver": 0
+    },
+    "src/app/admin/usage/actions.ts": {
+      "directDb": 7,
       "dbSinEnvolver": 0
     },
     "src/app/ai/health/actions.ts": {
