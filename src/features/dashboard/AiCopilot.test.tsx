@@ -1,134 +1,241 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
-import { escapeHtml } from "./report-utils";
 import { AiCopilot } from "./AiCopilot";
 
+vi.mock("next-intl", () => {
+  const dict: Record<string, string> = {
+    title: "Strategic Copilot",
+    openAria: "Abrir Strategic Copilot",
+    dialogAria: "Strategic Copilot",
+    logAria: "Conversación con el copilot",
+    placeholderCopilot: "Pregúntale al Copilot...",
+    placeholderAnalyst: "Comandos forenses o consultas de análisis...",
+    retry: "Reintentar",
+    errorUnavailable: "No se pudo obtener respuesta: {detail}",
+    connError: "Error de conexión",
+    httpError: "Error del asistente (HTTP {status})",
+    greetingCopilot: "Hola. Soy Strategic Copilot. ¿En qué te puedo ayudar hoy?",
+    greetingAnalyst: "Analyst Mode activo.",
+  };
+  return {
+    useTranslations: () => (key: string, values?: Record<string, unknown>) => {
+      const template = dict[key] ?? key;
+      return template.replace(/\{(\w+)\}/g, (_match, name: string) =>
+        String(values?.[name] ?? ""),
+      );
+    },
+  };
+});
+
+// MermaidBlock importa `mermaid` (~2 MB) de forma dinámica; en jsdom no hace
+// falta renderizar SVG real: comprobamos que el bloque se delega con el código.
+vi.mock("./MermaidBlock", () => ({
+  MermaidBlock: ({ code }: { code: string }) => <div data-testid="mermaid-block">{code}</div>,
+}));
+
 // ═══════════════════════════════════════════════════════════════════════════
-// VULN-001 (REQ-101) — Regression test: la salida del modelo de IA nunca se
-// renderiza como HTML crudo. Antes del fix, `dangerouslySetInnerHTML` inyectaba
-// msg.content directo (XSS vía prompt injection). El fix aplica `escapeHtml()`
-// ANTES del replace de markdown.
+// VULN-001 (REQ-101) — la salida del modelo nunca se inyecta como HTML.
+// El renderer pasó de `dangerouslySetInnerHTML` + escape manual a
+// react-markdown SIN rehype-raw: interpreta Markdown (tablas, títulos) y
+// descarta el HTML crudo. Estos tests fijan ambas garantías.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Reproduce EXACTAMENTE el pipeline de render usado en AiCopilot.tsx:152. */
-function renderSafe(content: string): string {
-  return escapeHtml(content).replace(/\n/g, "<br/>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-}
+/** jsdom no implementa scrollIntoView (lo llama el useEffect al montar). */
+beforeEach(() => {
+  Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ||
+    (() => {}) as typeof Element.prototype.scrollIntoView;
+});
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
-// jsdom no implementa scrollIntoView — el useEffect del widget lo llama al
-// montar (scrollToBottom). Se stubbea para evitar el TypeError en los tests.
-beforeEach(() => {
-  Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ||
-    (() => {}) as typeof Element.prototype.scrollIntoView;
-});
+function mockReply(message: string) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ success: true, message }),
+    }) as Response),
+  );
+}
 
-// ─── 1. Unit: el pipeline de escape neutraliza payloads XSS ───────────────
+async function openAndSend(text = "resume los hallazgos") {
+  const utils = render(<AiCopilot contextData={{}} />);
+  fireEvent.click(screen.getByRole("button", { name: /Strategic Copilot/i }));
+  const textarea = screen.getByPlaceholderText(
+    /Pregúntale al Copilot/i,
+  ) as HTMLTextAreaElement;
+  fireEvent.change(textarea, { target: { value: text } });
+  fireEvent.keyDown(textarea, { key: "Enter" });
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  return utils;
+}
 
 describe("AiCopilot — sanitización de salida (VULN-001)", () => {
-  it("escapeHtml escapa tags HTML y atributos onerror", () => {
-    const payload = '<img src=x onerror=alert(document.cookie)>';
-    expect(escapeHtml(payload)).toContain("&lt;img");
-    expect(escapeHtml(payload)).toContain("&gt;");
-    expect(escapeHtml(payload)).not.toContain("<img");
+  it("un payload XSS del modelo no crea elementos ejecutables", async () => {
+    mockReply('<img src=x onerror=alert(document.cookie)><script>alert(1)</script>');
+    const { container } = await openAndSend();
+
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("script")).toBeNull();
+    expect(container.querySelector("svg[onload]")).toBeNull();
+    // El HTML crudo se muestra escapado como texto (nunca como elemento).
+    expect(container.textContent).toContain("<img src=x onerror=alert(document.cookie)>");
   });
 
-  it("el pipeline completo NO produce tags HTML a partir del contenido del modelo", () => {
-    const payloads = [
-      '<img src=x onerror=alert(1)>',
-      '<script>alert(1)</script>',
-      '<svg onload=alert(1)>',
-      '<a href="javascript:alert(1)">click</a>',
-      '"><script>alert(1)</script>',
-    ];
-    for (const p of payloads) {
-      const out = renderSafe(p);
-      expect(out).not.toContain("<script");
-      expect(out).not.toContain("<img");
-      expect(out).not.toContain("<svg");
-      expect(out).not.toContain("<a");
-      // El esquema javascript: puede aparecer como TEXTO escapado (inofensivo),
-      // pero NUNCA como atributo ejecutable sin comillas escapadas.
-      expect(out).not.toContain("href=\"javascript:");
-      expect(out).toContain("&lt;");
-    }
-  });
+  it("el mensaje del usuario se pinta como texto literal, no como HTML", async () => {
+    mockReply("ok");
+    const payload = '<img src=x onerror=alert(1)>';
+    const { container } = await openAndSend(payload);
 
-  it("el markdown **bold** sigue funcionando después del escape (sin regresión)", () => {
-    const out = renderSafe("Riesgo **alto** <b>legítimo</b>");
-    expect(out).toContain("<strong>alto</strong>");
-    // El <b> del contenido debe quedar escapado, no convertido en tag
-    expect(out).not.toContain("<b>legítimo</b>");
-    expect(out).toContain("&lt;b&gt;legítimo&lt;/b&gt;");
-  });
-
-  it("los saltos de línea siguen generando <br/>", () => {
-    const out = renderSafe("línea 1\nlínea 2");
-    expect(out).toContain("<br/>");
+    expect(screen.getByText(payload)).toBeTruthy();
+    expect(container.querySelector("img")).toBeNull();
   });
 });
 
-// ─── 2. Integration: el componente renderiza payloads como texto plano ─────
+describe("AiCopilot — Markdown real (tarea 0.5)", () => {
+  it("renderiza títulos, tablas GFM y negritas sin mostrar sintaxis cruda", async () => {
+    mockReply(
+      [
+        "#### Plan de acción",
+        "",
+        "| Día | Tarea |",
+        "| --- | --- |",
+        "| 1 | Escaneo de puertos |",
+        "",
+        "Prioridad **alta**.",
+      ].join("\n"),
+    );
 
-describe("AiCopilot — render del componente (integration, fetch mockeado)", () => {
-  it("una respuesta maliciosa del modelo se muestra como texto, no como HTML ejecutable", async () => {
-    // Mock del POST /api/ai/copilot devolviendo un payload XSS
-    const maliciousReply = '<img src=x onerror=alert(document.cookie)>';
-    vi.stubGlobal("fetch", vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ success: true, message: maliciousReply }),
-    }) as Response));
+    const { container } = await openAndSend();
 
-    const { container } = render(<AiCopilot contextData={{}} />);
+    await waitFor(() => expect(container.querySelector("table")).not.toBeNull());
 
-    // Abrir el widget (estado inicial cerrado → botón flotante)
-    fireEvent.click(screen.getByRole("button", { name: /Strategic Copilot/i }));
+    expect(container.querySelector("h4")?.textContent).toBe("Plan de acción");
+    expect(container.querySelectorAll("th")).toHaveLength(2);
+    expect(container.querySelector("th")?.textContent).toBe("Día");
+    expect(container.querySelector("td")?.textContent).toBe("1");
+    expect(container.querySelector("strong")?.textContent).toBe("alta");
 
-    // Escribir un prompt y enviarlo (Enter en el textarea)
-    const textarea = screen.getByPlaceholderText(/Pregúntale al Copilot/i) as HTMLTextAreaElement;
-    fireEvent.change(textarea, { target: { value: "resume los hallazgos" } });
-    fireEvent.keyDown(textarea, { key: "Enter" });
-
-    // Esperar a que llegue la respuesta del modelo
-    await waitFor(() => {
-      expect(fetch).toHaveBeenCalledTimes(1);
-    });
-
-    // ASSERT NÚCLEO (VULN-001): ningún tag img/script ejecutable en el DOM
-    expect(container.querySelector("img[onerror]")).toBeNull();
-    expect(container.querySelector("script")).toBeNull();
-    expect(container.querySelector("img")).toBeNull();
-
-    // El payload se muestra como texto plano (las entidades se decodifican
-    // en el textContent, pero NUNCA como elemento HTML)
-    const rendered = screen.getByText("<img src=x onerror=alert(document.cookie)>");
-    expect(rendered).toBeTruthy();
-    // Y la versión escapada existe en el innerHTML del mensaje
-    expect(container.innerHTML).toContain("&lt;img");
+    // La sintaxis Markdown ya no se ve como texto plano.
+    expect(container.textContent).not.toContain("####");
+    expect(container.textContent).not.toContain("| --- |");
+    expect(container.textContent).not.toContain("**alta**");
   });
 
-  it("el markdown del modelo se convierte a <strong> sin abrir XSS", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ success: true, message: "Prioridad **alta** y <script>alert(1)</script>" }),
-    }) as Response));
+  it("los enlaces se abren en pestaña nueva con rel=noopener", async () => {
+    mockReply("Consulta [la guía](https://example.com/guia) para más detalle.");
+    const { container } = await openAndSend();
 
-    const { container } = render(<AiCopilot contextData={{}} />);
-    fireEvent.click(screen.getByRole("button", { name: /Strategic Copilot/i }));
-    const textarea = screen.getByPlaceholderText(/Pregúntale al Copilot/i) as HTMLTextAreaElement;
-    fireEvent.change(textarea, { target: { value: "¿qué priorizo?" } });
-    fireEvent.keyDown(textarea, { key: "Enter" });
+    const link = container.querySelector("a");
+    expect(link?.getAttribute("href")).toBe("https://example.com/guia");
+    expect(link?.getAttribute("target")).toBe("_blank");
+    expect(link?.getAttribute("rel")).toContain("noopener");
+    expect(link?.getAttribute("rel")).toContain("noreferrer");
+  });
 
-    await waitFor(() => {
-      expect(container.querySelector("strong")).not.toBeNull();
+  it("delega los bloques ```mermaid``` a MermaidBlock", async () => {
+    mockReply("```mermaid\ngraph TD; A-->B\n```");
+    await openAndSend();
+
+    await waitFor(() => expect(screen.getByTestId("mermaid-block")).toBeTruthy());
+    expect(screen.getByTestId("mermaid-block").textContent).toContain("graph TD");
+  });
+});
+
+/**
+ * Tarea 0.6: un fallo del pool (503) o de cuota (429) NUNCA debe pintarse
+ * como una respuesta del asistente. Debe ser un estado de error visible,
+ * distinguible y reintentable.
+ */
+function mockSequence(
+  ...replies: Array<{ status?: number; body: unknown }>
+) {
+  const fn = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => {
+    const next = replies.shift();
+    if (!next) throw new Error("sin respuestas mockeadas");
+    const status = next.status ?? 200;
+    return {
+      ok: status < 400,
+      status,
+      json: async () => next.body,
+    } as Response;
+  });
+  vi.stubGlobal("fetch", fn);
+  return fn;
+}
+
+describe("AiCopilot — errores con semántica real (tarea 0.6)", () => {
+  it("503 → error visible y Reintentar reenvía sin duplicar el mensaje", async () => {
+    const fetchMock = mockSequence(
+      { status: 503, body: { success: false, error: "pool caído" } },
+      { status: 200, body: { success: true, message: "Respuesta recuperada" } },
+    );
+
+    const { container } = await openAndSend("consulta importante");
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Reintentar/i })).toBeTruthy(),
+    );
+    expect(container.textContent).toContain("pool caído");
+    expect(container.textContent).not.toContain("Respuesta recuperada");
+
+    fireEvent.click(screen.getByRole("button", { name: /Reintentar/i }));
+
+    await waitFor(() => expect(screen.getByText("Respuesta recuperada")).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const init = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    const secondBody = JSON.parse(String(init.body)) as {
+      messages: { role: string; content: string }[];
+    };
+    // Saludo + mensaje del usuario + respuesta; el error intermedio se retiró
+    // y el mensaje del usuario NO se duplica.
+    expect(
+      secondBody.messages.filter((m) => m.content === "consulta importante"),
+    ).toHaveLength(1);
+    expect(container.textContent).not.toContain("pool caído");
+  });
+
+  it("429 de cuota → motivo visible y Reintentar disponible", async () => {
+    mockSequence({
+      status: 429,
+      body: { success: false, error: "Cuota diaria agotada" },
     });
 
-    expect(container.querySelector("strong")?.textContent).toBe("alta");
-    expect(container.querySelector("script")).toBeNull();
-    expect(container.innerHTML).toContain("&lt;script&gt;");
+    await openAndSend();
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Reintentar/i })).toBeTruthy(),
+    );
+    expect(screen.getByText(/Cuota diaria agotada/)).toBeTruthy();
+  });
+});
+
+describe("AiCopilot — accesibilidad del diálogo (tarea 0.8)", () => {
+  it("expone la conversación como log y Escape cierra devolviendo el foco", async () => {
+    mockReply("ok");
+    render(<AiCopilot contextData={{}} />);
+
+    const trigger = screen.getByRole("button", { name: /Strategic Copilot/i });
+    fireEvent.click(trigger);
+
+    const log = screen.getByRole("log");
+    expect(log.getAttribute("aria-live")).toBe("polite");
+    expect(log.getAttribute("aria-relevant")).toBe("additions");
+    expect(log.getAttribute("aria-label")).toBe("Conversación con el copilot");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await waitFor(() =>
+      expect(screen.queryByPlaceholderText(/Pregúntale al Copilot/i)).toBeNull(),
+    );
+    // El trigger se desmonta al abrir y se remonta al cerrar: el foco vuelve
+    // al nodo nuevo (mismo nombre accesible), no al nodo desconectado.
+    const reopenedTrigger = screen.getByRole("button", { name: /Strategic Copilot/i });
+    expect(document.activeElement).toBe(reopenedTrigger);
+    expect(document.activeElement?.getAttribute("aria-haspopup")).toBe("dialog");
   });
 });
