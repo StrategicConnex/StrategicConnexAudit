@@ -3,6 +3,7 @@ import { createClient } from '@/shared/lib/supabase/server';
 import { withRateLimit } from '@/shared/lib/ratelimit';
 import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from '@/server/ai/ai-router';
 import { assertAiQuota } from '@/server/ai/ai-usage';
+import { buildCopilotSystemPrompt } from '@/server/ai/copilot-prompt';
 import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
@@ -29,20 +30,17 @@ export const POST = withRateLimit(
       const quota = await assertAiQuota(userId, "general-chat");
       if (quota) return quota;
 
-      const { messages, context, mode = 'copilot' } = await req.json();
+      const body = await req.json().catch(() => null);
+      const { messages, context, mode = 'copilot' } = body ?? {};
 
       if (!messages || !Array.isArray(messages)) {
         return NextResponse.json({ success: false, error: 'Mensajes inválidos' }, { status: 400 });
       }
 
-      // Build system prompt with mode context
-      const basePrompt = mode === 'analyst'
-        ? 'Eres un Analista de Ciberseguridad Senior (Blue Team / Threat Intelligence). Tu objetivo es analizar la superficie de ataque de infraestructura, logs y hallazgos técnicos. Eres altamente técnico, objetivo y vas directo al punto. Responde en un tono analítico y forense.'
-        : 'Eres Strategic Copilot, un asistente IA Enterprise experto en Auditorías Técnicas, Ciberseguridad y Arquitectura. Tu misión es explicar problemas en lenguaje humano, priorizar tareas, generar planes de acción y sugerir fixes técnicos. Sé conciso, directo y usa un tono profesional de agencia.';
-
+      // Prompt centralizado (grounding + anti-inyección), ver copilot-prompt.ts
       const systemMsg: AIMessage = {
         role: 'system',
-        content: `${basePrompt}\n\nContexto actual del objetivo analizado:\n${JSON.stringify(context || 'Sin contexto específico')}`
+        content: buildCopilotSystemPrompt(mode, context),
       };
 
       // Convert user messages to AIMessage format and prepend system
@@ -64,24 +62,28 @@ export const POST = withRateLimit(
       });
 
       if (!aiResult.success) {
-        // Solo el error de "sin claves" merece el onboarding; cualquier otro
-        // fallo (timeout, 429, circuito abierto, 5xx encadenado) NO es un
-        // problema de configuración — presentarlo como "configura tu API key"
-        // inducía a re-configurar claves que ya estaban bien (Modo Analista,
-        // 2026-10-19).
+        // Único caso "blando": no hay ninguna clave configurada (onboarding).
+        // Cualquier otro fallo (timeout, 429, circuito abierto, 5xx encadenado)
+        // se devuelve como 503 para que el cliente lo distinga de una respuesta.
         const missingKey =
           /not configured|no configurada|ninguna clave/i.test(aiResult.error ?? "");
+        if (missingKey) {
+          return NextResponse.json({
+            success: true,
+            message: getNoApiKeyResponse('general-chat'),
+            error: aiResult.error,
+          });
+        }
         return NextResponse.json({
-          success: true,
-          message: missingKey
-            ? getNoApiKeyResponse('general-chat')
-            : "## ⚠️ Motor de IA temporalmente no disponible\n\n" +
-              "El pool de IA (OpenRouter + failover Groq/Gemini) no devolvió " +
-              "respuesta para esta consulta. No es un problema de tu configuración: " +
-              "reintenta en unos momentos.\n\n" +
-              `**Detalle técnico:** ${aiResult.error ?? "desconocido"}`,
-          error: aiResult.error,
-        });
+          success: false,
+          error: aiResult.error ?? "AI pool unavailable",
+          message: "## ⚠️ Motor de IA temporalmente no disponible\n\n" +
+            "El pool de IA (OpenRouter + failover Groq/Gemini) no devolvió " +
+            "respuesta para esta consulta. No es un problema de tu configuración: " +
+            "reintenta en unos momentos.\n\n" +
+            `**Detalle técnico:** ${aiResult.error ?? "desconocido"}`,
+          modelUsed: null,
+        }, { status: 503 });
       }
 
       return NextResponse.json({
@@ -98,16 +100,22 @@ export const POST = withRateLimit(
       // que "IA sin configurar". Solo mapea al onboarding si el error real lo
       // indica; el resto es una incidencia transitoria del servicio.
       const missingKey = /not configured|no configurada|ninguna clave/i.test(errMsg);
+      if (missingKey) {
+        return NextResponse.json({
+          success: true,
+          message: getNoApiKeyResponse('general-chat'),
+          error: errMsg,
+        });
+      }
       return NextResponse.json({
-        success: true,
-        message: missingKey
-          ? getNoApiKeyResponse('general-chat')
-          : "## ⚠️ Servicio temporalmente no disponible\n\n" +
-            "No se pudo procesar la consulta con el motor de IA. Reintenta en " +
-            "unos momentos; si persiste, revisa el estado del pool en /ai/health.\n\n" +
-            `**Detalle técnico:** ${errMsg || "desconocido"}`,
+        success: false,
         error: errMsg || 'Servicio no disponible',
-      });
+        message: "## ⚠️ Servicio temporalmente no disponible\n\n" +
+          "No se pudo procesar la consulta con el motor de IA. Reintenta en " +
+          "unos momentos; si persiste, revisa el estado del pool en /ai/health.\n\n" +
+          `**Detalle técnico:** ${errMsg || "desconocido"}`,
+        modelUsed: null,
+      }, { status: 503 });
     }
   }
 );
