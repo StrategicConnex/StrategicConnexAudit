@@ -9,7 +9,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Windows + Chrome: más de un worker agota recursos y hace fallar
+  // `browserContext.addCookies` por timeout. CI ya usaba 1; local se alinea
+  // para que `pnpm test:e2e` sea determinista.
+  workers: 1,
   reporter: "line",
   // El arranque de Chrome (channel: "chrome") puede tardar ~30 s en local,
   // por encima del timeout por defecto de 30 s: el test fallaba en el setup.
