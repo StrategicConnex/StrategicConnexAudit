@@ -43,7 +43,7 @@ async function IntelligenceDashboardContent() {
     return projectsList;
   });
 
-  const activeProjectId = allProjects[0]?.id || "sandbox_default";
+  const activeProjectId = allProjects[0]?.id;
 
   return (
     <IntelligenceShell projectId={activeProjectId} />

@@ -3,7 +3,8 @@
 
    Tres snapshots en paralelo bajo RLS: uptime (últimos 5 checks, % 24h),
    findings (GROUP BY severidad) y events. Verifica:
-   - 401 sin sesión; 500 en error
+   - 401 sin sesión; 400 con IDs que no son UUID; 500 en error
+   - Sin projectId → uptime vacío sin tocar la BD (nunca 500)
    - uptimePercent como fracción, avgLatencyMs redondeado, checks ≤ 5
    - Sin investigationId → findings/events a cero sin ejecutar SQL
    - Sin datos de uptime → uptimePercent null
@@ -33,6 +34,9 @@ vi.mock("@/shared/db/rls", () => ({
 }));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
+const INVESTIGATION_ID = "22222222-2222-4222-8222-222222222222";
 
 function getRequest(query = ""): Request {
   return new Request(`http://localhost:3000/api/intelligence/live${query}`);
@@ -84,14 +88,48 @@ describe("Intelligence: Live — GET", () => {
   it("sin sesión → 401", async () => {
     mockUser = null;
 
-    const res = await GET(getRequest("?projectId=p1") as never);
+    const res = await GET(getRequest(`?projectId=${PROJECT_ID}`) as never);
     expect(res.status).toBe(401);
     expect(mockSelect).not.toHaveBeenCalled();
   });
 
+  it("projectId no-UUID (sandbox_default) → 400 sin consultar la BD", async () => {
+    const res = await GET(getRequest("?projectId=sandbox_default") as never);
+    expect(res.status).toBe(400);
+
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toBe("Parámetros inválidos");
+    expect(mockSelect).not.toHaveBeenCalled();
+  });
+
+  it("investigationId no-UUID → 400 sin consultar la BD", async () => {
+    const res = await GET(
+      getRequest(`?projectId=${PROJECT_ID}&investigationId=inv-1`) as never,
+    );
+    expect(res.status).toBe(400);
+
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toBe("Parámetros inválidos");
+    expect(mockSelect).not.toHaveBeenCalled();
+  });
+
+  it("sin projectId → 200 con uptime vacío y sin consultar la BD", async () => {
+    const res = await GET(getRequest("") as never);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.uptime).toEqual({ checks: [], uptimePercent: null, avgLatencyMs: null });
+    expect(body.findings).toEqual({ total: 0, critical: 0, high: 0, latest: [] });
+    expect(body.events).toEqual({ total: 0, latest: [] });
+    expect(mockSelect).not.toHaveBeenCalled();
+    expect(mockExecute).not.toHaveBeenCalled();
+  });
+
   it("200 con los tres snapshots", async () => {
     const res = await GET(
-      getRequest("?projectId=p1&investigationId=inv-1") as never,
+      getRequest(`?projectId=${PROJECT_ID}&investigationId=${INVESTIGATION_ID}`) as never,
     );
     expect(res.status).toBe(200);
 
@@ -119,7 +157,7 @@ describe("Intelligence: Live — GET", () => {
   });
 
   it("sin investigationId → findings/events a cero sin SQL de hallazgos", async () => {
-    const res = await GET(getRequest("?projectId=p1") as never);
+    const res = await GET(getRequest(`?projectId=${PROJECT_ID}`) as never);
     expect(res.status).toBe(200);
 
     const body = await res.json();
@@ -132,7 +170,7 @@ describe("Intelligence: Live — GET", () => {
   it("sin checks de uptime → uptimePercent y latencia null", async () => {
     mockSelect.mockImplementation(() => uptimeChain([]));
 
-    const res = await GET(getRequest("?projectId=p1") as never);
+    const res = await GET(getRequest(`?projectId=${PROJECT_ID}`) as never);
     const body = await res.json();
     expect(body.uptime.checks).toHaveLength(0);
     expect(body.uptime.uptimePercent).toBeNull();
@@ -146,7 +184,7 @@ describe("Intelligence: Live — GET", () => {
     });
 
     const res = await GET(
-      getRequest("?projectId=p1&investigationId=inv-1") as never,
+      getRequest(`?projectId=${PROJECT_ID}&investigationId=${INVESTIGATION_ID}`) as never,
     );
     const body = await res.json();
     expect(body.findings.total).toBe(4);
@@ -159,7 +197,7 @@ describe("Intelligence: Live — GET", () => {
       throw new Error("db down");
     });
 
-    const res = await GET(getRequest("?projectId=p1") as never);
+    const res = await GET(getRequest(`?projectId=${PROJECT_ID}`) as never);
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.success).toBe(false);

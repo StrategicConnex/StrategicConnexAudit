@@ -72,6 +72,9 @@ export function LiveMetricsBar({ projectId, investigationId }: LiveMetricsBarPro
   const transportRef = useRef<LiveTransport>("fallback");
 
   const poll = useCallback(async () => {
+    // Sin proyecto ni investigación no hay nada real que consultar: no se
+    // llama al endpoint (antes se hacía sin projectId y podía acabar en 500).
+    if (!projectId && !investigationId) return;
     // Pestaña oculta: no quemar batería/red; al volver, el intervalo retoma.
     if (typeof document !== "undefined" && document.hidden) return;
     try {

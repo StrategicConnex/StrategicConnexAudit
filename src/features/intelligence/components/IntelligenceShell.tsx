@@ -31,21 +31,6 @@ const TopologyView = dynamic(
   }
 );
 
-// ─── Demo Data ──────────────────────────────────────────────────────────────
-
-const DEMO_EVENTS = [
-  { id: "1", type: "info", tool: "dns.lookup", time: "Hace 2 min", message: "DNS resolvió exitosamente A (104.21.32.22) y AAAA." },
-  { id: "2", type: "warning", tool: "email.spf", time: "Hace 5 min", message: "SPF contiene demasiados lookups DNS remotos (11/10 máximo)." },
-  { id: "3", type: "success", tool: "tls.scan", time: "Hace 12 min", message: "Cadena de certificados SSL/TLS calificada con A+." },
-  { id: "4", type: "info", tool: "osint.whois", time: "Hace 20 min", message: "Expiración del dominio registrada para Noviembre 2028." },
-];
-
-const DEMO_EVIDENCES = [
-  { id: "e1", title: "SPF Mechanism Overlimit", severity: "medium", source: "email.spf", desc: "La política SPF excede el límite estándar de 10 consultas recursivas." },
-  { id: "e2", title: "Certificado SSL Óptimo", severity: "low", source: "tls.scan", desc: "Cifrado TLS v1.3 habilitado. Claves EC de 256 bits." },
-  { id: "e3", title: "Servidor expuesto (Puerto 80)", severity: "info", source: "network.port_scan", desc: "Puerto HTTP (80) abierto redireccionando mediante 301 Redirect a HTTPS." },
-];
-
 // ─── Tab Types ──────────────────────────────────────────────────────────────
 
 type TabId = "telemetry" | "evidence" | "topology";
@@ -59,7 +44,7 @@ const TABS: { id: TabId; label: string; countKey?: "events" | "findings" }[] = [
 // ─── Component ──────────────────────────────────────────────────────────────
 
 interface IntelligenceShellProps {
-  projectId: string;
+  projectId?: string;
 }
 
 export default function IntelligenceShell({ projectId }: IntelligenceShellProps) {
@@ -114,7 +99,7 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
     (e: React.FormEvent) => {
       e.preventDefault();
       if (!aiMessage.trim()) return;
-      sendMessage(aiMessage);
+      void sendMessage(aiMessage);
       setAiMessage("");
     },
     [aiMessage, sendMessage],
@@ -224,7 +209,9 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
             </div>
           </div>
 
+          {projectId && (
           <GlobalTargetCommand projectId={projectId} onSuccess={handleScanSuccess} />
+        )}
         </section>
 
         {/* Central Workspace */}
@@ -255,7 +242,6 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
                   {tab.label}
                   {tab.countKey === "events" && hasActiveInvestigation && <span> ({events.length})</span>}
                   {tab.countKey === "findings" && hasActiveInvestigation && <span> ({findings.length})</span>}
-                  {tab.countKey === "findings" && !hasActiveInvestigation && <span> ({DEMO_EVIDENCES.length})</span>}
                 </button>
               ))}
             </div>
@@ -264,8 +250,6 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
               <TelemetryTimeline
                 events={events}
                 isActive={hasActiveInvestigation}
-                isDemo={!hasActiveInvestigation}
-                demoEvents={DEMO_EVENTS}
               />
             )}
 
@@ -274,12 +258,10 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
                 findings={findings}
                 selectedEvidenceId={selectedEvidenceId}
                 onSelectEvidence={selectEvidence}
-                isDemo={!hasActiveInvestigation}
-                demoFindings={DEMO_EVIDENCES}
               />
             )}
 
-            {activeTab === "topology" && <TopologyView projectId={projectId} />}
+            {activeTab === "topology" && projectId && <TopologyView projectId={projectId} />}
           </div>
         </section>
       </main>
@@ -298,7 +280,9 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
         investigationStatus={investigation?.status}
       />
 
-      <LiveMetricsBar projectId={projectId} investigationId={activeInvestigationId ?? undefined} />
+      {projectId && (
+        <LiveMetricsBar projectId={projectId} investigationId={activeInvestigationId ?? undefined} />
+      )}
     </div>
   );
 }

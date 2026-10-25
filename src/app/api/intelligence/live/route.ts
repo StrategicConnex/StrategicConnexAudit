@@ -6,8 +6,18 @@ import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { withRequestContext } from "@/lib/request-context";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * IDs de query string: deben ser UUID. Un valor como "sandbox_default" llegaba
+ * tal cual a una columna uuid y Postgres lanzaba 22P02 → 500 en cada carga.
+ */
+const LiveQuerySchema = z.object({
+  projectId: z.string().uuid().optional(),
+  investigationId: z.string().uuid().optional(),
+});
 
 /**
  * GET /api/intelligence/live?projectId=xxx&investigationId=yyy
@@ -21,11 +31,15 @@ export const dynamic = "force-dynamic";
  * where SSE streams would time out (10s Hobby, 60s Pro).
  */
 async function getUptimeSnapshot(userId: string, projectId?: string | null) {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // Sin proyecto real no hay snapshot que consultar: devolver vacío en vez de
+  // consultar todas las filas visibles por RLS (era el origen del 500 con
+  // projectId="sandbox_default", que no es un UUID).
+  if (!projectId) {
+    return { checks: [], uptimePercent: null, avgLatencyMs: null };
+  }
 
-  const whereClause = projectId
-    ? and(eq(uptimeLogs.projectId, projectId), gte(uptimeLogs.checkedAt, since))
-    : gte(uptimeLogs.checkedAt, since);
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const whereClause = and(eq(uptimeLogs.projectId, projectId), gte(uptimeLogs.checkedAt, since));
 
   return withRLS(userId, async (tx) => {
     const recent = await tx
@@ -134,8 +148,19 @@ async function rawGet(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const projectId = searchParams.get("projectId");
-    const investigationId = searchParams.get("investigationId");
+    const parsed = LiveQuerySchema.safeParse({
+      projectId: searchParams.get("projectId") ?? undefined,
+      investigationId: searchParams.get("investigationId") ?? undefined,
+    });
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: "Parámetros inválidos" },
+        { status: 400 },
+      );
+    }
+
+    const { projectId, investigationId } = parsed.data;
 
     const [uptime, findings, events] = await Promise.all([
       getUptimeSnapshot(user.id, projectId),
