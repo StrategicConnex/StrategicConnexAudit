@@ -2,6 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // El spec CSP necesita el build de produccion (nonce real) y su propia
+  // configuracion (`playwright.csp.config.ts`). Excluirlo del suite dev evita
+  // falsos rojos: en `next dev` la CSP es permisiva y no hay nonce.
+  testIgnore: /csp\.spec\.ts/,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
