@@ -1,7 +1,8 @@
 # Plan de Implementación — Correcciones y Mejoras del Chatbot (SCAUDIT Pro)
 
 Archivo: docs/plans/CHATBOT-IMPROVEMENT-PLAN.md
-Versión: 1.0 — 2026-10-21
+Versión: 1.1 — 2026-10-21 (patch 1: Tasks 0.10/0.11, transversales
+A1-A6, tickets B1-B3, backlog C1-C5)
 Estado: Aprobado para ejecución
 Origen: Auditoría del chat en producción (2026-10-21, harness audit-prod.mjs) + knowledge base del repo
 Alcance: Strategic Copilot (/api/ai/copilot), sidebar de /intelligence (useAiChat), CopilotConsole por proyecto (IntelligenceTab), /api/intelligence/copilot, /api/intelligence/live
@@ -180,6 +181,44 @@ Pasos:
 3. Guard CI i18n parity en verde.
 Aceptación: locale EN muestra el chat en inglés.
 
+### Task 0.10 — Unificar nonce CSP (P1-7)
+Problema: la consola de producción registra violación CSP bloqueando
+/_next/static/immutable/chunks/<hash>.js. Causa: nonce + strict-dynamic con
+DOS nonces distintos en el mismo documento (header de proxy.ts y meta tag de
+páginas prerendered). Un script firmado con el nonce A falla cuando la política
+efectiva espera el nonce B.
+Archivos: src/proxy.ts (header CSP con nonce por request), src/app/layout.tsx
+(meta tag CSP defense-in-depth).
+Pasos:
+1. Test Playwright que carga /, /dashboard, /intelligence y /login escuchando
+   securitypolicyviolation y console.error; debe fallar hoy (1 violación).
+2. Auditar dónde nace el segundo nonce (meta tag con nonce estático o de otra
+   generación).
+3. Unificar: un solo nonce por documento. Opciones válidas: (a) eliminar el meta
+   tag donde el header ya aplica; (b) emitir el meta tag desde un server
+   component con el MISMO nonce del request. Nunca dos nonces por documento.
+4. Verificar que los scripts de Next (_next/static) reciben el nonce unificado
+   y que strict-dynamic sigue cubriendo la cadena de carga.
+5. Re-run del test Playwright: 0 violaciones en las 4 rutas.
+Aceptación: 0 violaciones CSP en consola en 10 cargas por ruta crítica; el chunk
+immutable carga correctamente.
+
+### Task 0.11 — Canned de 0 hallazgos: check de honestidad
+Archivo: src/app/api/intelligence/copilot/route.ts (respuesta canned cuando la
+investigación tiene 0 hallazgos).
+Riesgo: si ese canned simula un plan de remediación, es exactamente el patrón P0
+que este sprint elimina (dato falso presentado como análisis).
+Pasos:
+1. Clasificar el canned actual: (a) mensaje de ausencia → conservar;
+   (b) plan simulado → reemplazar.
+2. Si (b): reemplazar por mensaje honesto i18n: "La investigación aún no tiene
+   hallazgos. Ejecuta un escaneo para generar datos reales." + enlace real a la
+   ejecución de tools. Sin pasos de remediación inventados.
+3. Tests: investigación con 0 hallazgos → respuesta de ausencia sin pasos;
+   investigación con hallazgos → plan real del modelo.
+4. Actualizar tests de contrato (tests/api-contract).
+Aceptación: con 0 hallazgos el endpoint NUNCA devuelve un plan simulado.
+
 ### Criterios de aceptación Sprint 0 (harness audit-prod.mjs)
 | Criterio | Antes | Después |
 |---|---|---|
@@ -190,6 +229,11 @@ Aceptación: locale EN muestra el chat en inglés.
 | aria-live | ausente | presente |
 | Escape cierra | no | sí |
 | Textos EN | español | inglés |
+| Violaciones CSP en consola por carga | 1 (chunk bloqueado) | 0 |
+| Canned con 0 hallazgos | sin clasificar | mensaje de ausencia honesto |
+| Hooks cliente de chat | 3 divergentes | 1 contrato documentado (A1) |
+| PII/secretos en contexto del copilot | sin filtrar | scrubbed antes del LLM (A4) |
+| Gate axe-core E2E global | ausente | verde en rutas críticas (A6) |
 
 ---
 
@@ -303,12 +347,34 @@ Aceptación Sprint 5: before/after completo con audit-prod.mjs; todos los criter
 - IA: no tocar circuit breakers ni TASK_ROUTING sin verificación en vivo; modelo nuevo solo con supportsTools / supportsStructuredOutput / supportsStreaming verificados.
 - Caché: claves tenant-scoped siempre (F-SCOPE); invalidación on-write de findings.
 - PROHIBIDO: setTimeout como simulación de UX; fallos como success:true; datos demo con timestamps de recencia.
+- PROHIBIDO: respuestas canned que simulen análisis cuando no hay datos (solo se permite canned que comunique ausencia).
+- PROHIBIDO: emitir un segundo nonce CSP en un documento donde el header ya aplica (ver Task 0.10).
+
+---
+
+## 9bis. Registro de transversales plegados (A1-A6)
+Regla de plegado: cada transversal entra DENTRO de su tarea ancla y solo
+si no añade más de +0,5 días a esa tarea. Si se pasa del tope, pasa al
+backlog (sección 15) sin excepción y sin renegociar en caliente.
+
+| ID | Mejora | Ancla | Tope | Aceptación propia |
+|---|---|---|---|---|
+| A1 | Contrato de chat único: un solo hook cliente (useChatReal) y un contrato documentado para las 3 superficies | Task 0.1 | +0,5 d | 0 hooks duplicados; contrato en docs/ |
+| A2 | Métricas de streaming en ai_usage: columnas ttft_ms + streamed | Task 1.1 | +0,5 d | TTFT medible en prod vía SQL, no solo harness |
+| A3 | KPI de hit-rate de caché en /ai/health (hits 24 h, tokens evitados) | Tasks 1.1 / 4.2 | +0,5 d | Card visible con dato real de fromCache |
+| A4 | Redacción de PII/secretos en el contexto del copilot (dashboardData) | Task 0.7 | +0,5 d | Test: contexto con secreto ficticio → no llega al prompt |
+| A5 | Headers RateLimit-* visibles en respuestas 200 del chat (verificar que proxy.ts no los recorta) | Task 0.6 | +0,5 d | curl a /api/ai/copilot 200 muestra los 3 headers |
+| A6 | Paso axe-core en Playwright como gate de repo (no solo chat) | Task 0.8 | +0,5 d | Job E2E falla con axe crítico en cualquier ruta |
 
 ---
 
 ## 10. Orden de ejecución y dependencias
 Sprint 0 (bloqueante) → 1 → 2 → 3 → 4 → 5
 Internas: 0.6 antes de 1.1 (semántica de error); 0.7 antes de 2.1 (grounding); 0.5 antes de 1.4 (render); 3.1 antes de 3.2 (tabla antes que sync).
+- Task 0.10: independiente, paralelizable con 0.5.
+- Task 0.11: bloqueante para Sprint 2 (citas); vive en Sprint 0 por ser dato falso.
+- A1-A6: plegados en sus anclas (sección 9bis); el que exceda +0,5 d se mueve al backlog C sin excepción.
+- B1: independiente, esta semana. B2: con el checkpoint RUM del 22-oct. B3: con el bloque de latencia de la semana del 22-oct.
 
 ---
 
@@ -341,6 +407,14 @@ WHERE task_type = 'general-chat' AND created_at > now() - interval '24 hours';
 ```
 - Pool: GET /api/ai/status (esperado ≥6/7 sanos tras tráfico real).
 
+### 12bis. Tickets de verificación fechados (B1-B3)
+
+| ID | Ticket | Fecha objetivo | Base existente | Esfuerzo | Aceptación |
+|---|---|---|---|---|---|
+| B1 | Guard CI de bundle por ruta: fallar si first-load de /, /login o /dashboard crece >10 % vs baseline | semana del 21-oct | route-bundle-stats.json (H-10) | S | Job CI verde con baseline fijado y rojo al inyectar +15 % en test |
+| B2 | Alerta de regresión CWV: Z-score sobre p75 LCP/TTFB de web_vitals_logs → evento SIEM si degrada semana contra semana | checkpoint 22-oct | motor Z-score (P3.2) + RUM vivo | S-M | Alerta de prueba disparada y visible en /security/audit |
+| B3 | Investigar 401 inicial de 3,4 s (P2-13): medir updateSession de Supabase en cold start y corregir | semana del 22-oct | proxy.ts | M | p95 del primer auth < 1 s medido con RUM/harness |
+
 ---
 
 ## 13. Riesgos y mitigaciones
@@ -365,5 +439,17 @@ WHERE task_type = 'general-chat' AND created_at > now() - interval '24 hours';
 - src/app/components/AiCopilot.tsx (flotante)
 - messages/es.json · messages/en.json
 - Harness: audit-prod.mjs
+
+---
+
+## 15. Backlog estratégico (C1-C5, próximo ciclo)
+
+| ID | Ítem | Valor |
+|---|---|---|
+| C1 | Harness de evals de prompts: set dorado con aserciones de grounding/citas, ejecutado con modelOverride en cada cambio de system prompt | Protege calidad de IA como los tests protegen código |
+| C2 | ADR de arquitectura del chat: endpoint único, contrato de streaming, semántica de caché y cuotas | Congela decisiones al estilo de los ADR existentes |
+| C3 | Secret-scanning en CI (gitleaks) + guard de dependencias abandonadas (publicación > 2 años) | Lección html2canvas convertida en guard |
+| C4 | Feature flags para canary: streaming y nueva UI del chat primero en la cuenta del owner | Rollout gradual coherente con la cultura de gates |
+| C5 | Velocidad de CI: sharding de vitest para mantener feedback < 5 min con la suite > 2834 tests | DX del equipo |
 
 Fin del plan.
