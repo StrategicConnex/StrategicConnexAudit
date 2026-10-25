@@ -13,6 +13,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:csp": "playwright test --config playwright.csp.config.ts",
+    "test:e2e:a11y": "playwright test e2e/a11y.spec.ts",
+    "audit:chat": "node scripts/audit-chat-prod.mjs",
     "test:contract": "vitest run tests/api-contract",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "guard:secrets": "node scripts/guard-client-secrets.mjs",
@@ -85,6 +88,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@electric-sql/pglite": "^0.5.8",
     "@playwright/test": "^1.59.1",
     "@rolldown/binding-win32-x64-msvc": "^1.2.0",
@@ -101,6 +105,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.11",
     "@vitest/ui": "^4.1.11",
+    "axe-core": "^4.14.0",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
