@@ -1,18 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, Loader2, Sparkles, Terminal } from 'lucide-react';
+import { Check, Copy, Loader2, Sparkles, Terminal, ArrowRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { parseMarkdown, splitInlineMarkdown } from '@/features/intelligence/lib/rendering/markdown';
+
+interface CopilotAction {
+  href: string;
+  label: string;
+}
 
 interface CopilotConsoleProps {
   output: string | null;
   isGenerating: boolean;
-  step: number;
   planCopied: boolean;
   onGenerate: () => void;
   /** Copia el plan completo al portapapeles (dispara el feedback del padre) */
   onCopyPlan: () => void;
   onReset: () => void;
+  /** Acción real cuando la investigación no tiene hallazgos (nunca un paso inventado) */
+  action?: CopilotAction | null;
 }
 
 // Renderizador inline delegado al paquete puro de rendering (C01).
@@ -37,14 +44,6 @@ const renderInlineMarkdown = (text: string) => {
   });
 };
 
-const COPILOT_STEPS = [
-  { stepNum: 1, text: 'Leyendo evidencias de red normalizadas...' },
-  { stepNum: 2, text: 'Correlacionando brechas DNS con directivas OWASP...' },
-  { stepNum: 3, text: 'Redactando código de remediación automatizado...' },
-  { stepNum: 4, text: 'Compilando configuraciones Nginx, Apache y DNS TXT...' },
-  { stepNum: 5, text: 'Verificando consistencia semántica del plan...' },
-];
-
 /**
  * Bento-Row 4 del detalle de investigación: consola del Copilot de
  * remediación con IA (loader neural + salida markdown renderizada).
@@ -53,12 +52,13 @@ const COPILOT_STEPS = [
 export function CopilotConsole({
   output,
   isGenerating,
-  step,
   planCopied,
   onGenerate,
   onCopyPlan,
   onReset,
+  action,
 }: CopilotConsoleProps) {
+  const t = useTranslations('chat');
   const [copiedBlockIdx, setCopiedBlockIdx] = useState<number | null>(null);
 
   return (
@@ -66,10 +66,10 @@ export function CopilotConsole({
       <div className="p-8 border-b border-border bg-muted/1 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h3 className="font-extrabold text-foreground text-base tracking-tight flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary animate-pulse" /> Copilot de Remediación Técnica con IA
+            <Sparkles className="w-5 h-5 text-primary animate-pulse" /> {t('consoleTitle')}
           </h3>
           <p className="text-2xs font-bold text-muted-fg uppercase tracking-widest mt-0.5">
-            Genera scripts Nginx, configuraciones DNS y directivas SPF/DMARC a medida
+            {t('consoleSubtitle')}
           </p>
         </div>
 
@@ -79,7 +79,7 @@ export function CopilotConsole({
             disabled={isGenerating}
             className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-xl flex items-center gap-2 border border-primary/20 cursor-pointer hover:shadow-[0_0_20px_rgba(98,113,196,0.3)] hover:brightness-110 active:scale-95 transition-[color,background-color,border-color,opacity,box-shadow,transform,filter] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed text-center shrink-0 shadow-lg"
           >
-            Generar Plan IA <Sparkles className="w-3.5 h-3.5" />
+            {t('generateAiPlan')} <Sparkles className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
@@ -175,32 +175,17 @@ export function CopilotConsole({
                 <div className="w-2 h-2 rounded-full bg-[oklch(75% 0.13 80)]/80" />
                 <div className="w-2 h-2 rounded-full bg-chartreuse/80" />
               </div>
-              <span className="text-2xs font-black text-muted-fg uppercase tracking-widest ml-2">CONSOLA DE EJECUCIÓN CO-PILOTO</span>
+              <span className="text-2xs font-black text-muted-fg uppercase tracking-widest ml-2">{t('generationState')}</span>
             </div>
 
-            <div className="space-y-3.5 font-mono">
-              {COPILOT_STEPS.map((s) => {
-                const isActive = step === s.stepNum;
-                const isDone = step > s.stepNum;
-                return (
-                  <div key={s.stepNum} className={`flex items-center gap-3 transition-colors duration-300 ${isActive ? 'text-primary font-bold' : isDone ? 'text-chartreuse/70 font-semibold' : 'text-muted-fg'}`}>
-                    <div className="shrink-0 font-mono">
-                      {isDone ? (
-                        <span className="text-chartreuse font-black drop-shadow-[0_0_4px_rgba(140,200,80,0.5)]">✓</span>
-                      ) : isActive ? (
-                        <div className="w-3.5 h-3.5 flex items-center justify-center">
-                          <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                        </div>
-                      ) : (
-                        <span className="text-muted-fg/80 font-black">&bull;</span>
-                      )}
-                    </div>
-                    <span className={isActive ? 'drop-shadow-[0_0_6px_rgba(98,113,196,0.5)] font-bold' : ''}>
-                      {isActive ? `> ${s.text}` : `  ${s.text}`}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="space-y-3 font-mono">
+              <div className="flex items-center gap-3 text-primary font-bold">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>{t('generatingPlanLong')}</span>
+              </div>
+              <p className="text-muted-fg leading-relaxed">
+                {t('generationHelp')}
+              </p>
             </div>
           </div>
         </div>
@@ -213,7 +198,7 @@ export function CopilotConsole({
           {/* Actions & controls bar */}
           <div className="flex items-center justify-between px-1.5">
             <span className="text-2xs font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
-              <Terminal className="w-3.5 h-3.5" /> Plan de Acción e Instrucciones de Despliegue
+              <Terminal className="w-3.5 h-3.5" /> {t('planHeading')}
             </span>
             <button
               onClick={onCopyPlan}
@@ -221,11 +206,11 @@ export function CopilotConsole({
             >
               {planCopied ? (
                 <>
-                  <Check className="w-3 h-3 text-chartreuse" /> ¡Copiado!
+                  <Check className="w-3 h-3 text-chartreuse" /> {t('copied')}
                 </>
               ) : (
                 <>
-                  <Copy className="w-3 h-3" /> Copiar Plan Completo
+                  <Copy className="w-3 h-3" /> {t('copyPlan')}
                 </>
               )}
             </button>
@@ -282,7 +267,7 @@ export function CopilotConsole({
                     return (
                       <div key={idx} className="border border-border rounded-xl overflow-hidden my-4 bg-[#0a0a0f] shadow-md">
                         <div className="bg-[#0f0f16] px-4 py-2 border-b border-border/50 flex items-center justify-between text-2xs font-bold tracking-widest text-muted-fg uppercase select-none">
-                          <span>{block.language || 'código'}</span>
+                          <span>{block.language || t('code')}</span>
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(block.content || '');
@@ -293,11 +278,11 @@ export function CopilotConsole({
                           >
                             {copiedBlockIdx === idx ? (
                               <>
-                                <Check className="w-3 h-3 text-chartreuse" /> ¡Copiado!
+                                <Check className="w-3 h-3 text-chartreuse" /> {t('copied')}
                               </>
                             ) : (
                               <>
-                                <Copy className="w-3 h-3" /> Copiar Código
+                                <Copy className="w-3 h-3" /> {t('copyCode')}
                               </>
                             )}
                           </button>
@@ -319,13 +304,22 @@ export function CopilotConsole({
             </div>
           </div>
 
-          {/* Dynamic clean reset button */}
-          <div className="flex justify-end">
+          {/* Acción real + reset */}
+          <div className="flex items-center justify-end gap-5">
+            {action && (
+              <a
+                href={action.href}
+                className="text-2xs font-bold uppercase tracking-widest text-primary hover:underline transition-colors flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              >
+                {action.label}
+                <ArrowRight className="w-3 h-3" aria-hidden="true" />
+              </a>
+            )}
             <button
               onClick={onReset}
               className="text-2xs font-bold uppercase tracking-widest text-muted-fg hover:text-foreground transition-colors"
             >
-              Volver a Generar
+              {t('regenerate')}
             </button>
           </div>
 

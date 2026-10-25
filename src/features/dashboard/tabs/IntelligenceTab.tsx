@@ -58,6 +58,7 @@ export function IntelligenceTab({
   // IA Copilot remediation state
   const [isGeneratingCopilot, setIsGeneratingCopilot] = useState(false);
   const [copilotOutput, setCopilotOutput] = useState<string | null>(null);
+  const [copilotAction, setCopilotAction] = useState<{ href: string; label: string } | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export function IntelligenceTab({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [scanSpeed, setScanSpeed] = useState('0.0 KB/s');
   const [progressPercent, setProgressPercent] = useState(0);
-  const [copilotStep, setCopilotStep] = useState(0);
+
 
   // AI Integrations state
   const [showBriefModal, setShowBriefModal] = useState(false);
@@ -132,6 +133,7 @@ export function IntelligenceTab({
           assets: data.assets || []
         });
         setCopilotOutput(null); // Reset IA output when selection changes
+        setCopilotAction(null);
       } else {
         logger.error(data.error);
       }
@@ -216,6 +218,7 @@ export function IntelligenceTab({
     setScanProgress([]);
     setIsScanning(true);
     setCopilotOutput(null);
+    setCopilotAction(null);
     setErrorText(null);
     setElapsedTime(0);
     setScanSpeed('0.0 KB/s');
@@ -289,15 +292,7 @@ export function IntelligenceTab({
     if (!selectedDetails?.investigation.id) return;
     setIsGeneratingCopilot(true);
     setErrorText(null);
-    setCopilotStep(1);
-    
-    const stepInterval = setInterval(() => {
-      setCopilotStep(prev => {
-        if (prev < 5) return prev + 1;
-        clearInterval(stepInterval);
-        return prev;
-      });
-    }, 1200);
+    setCopilotAction(null);
 
     try {
       const res = await fetch('/api/intelligence/copilot', {
@@ -309,22 +304,23 @@ export function IntelligenceTab({
       });
 
       const data = await res.json();
-      
-      // Let the steps animation complete naturally for high-fidelity feeling
-      await new Promise(resolve => setTimeout(resolve, 3600));
-      
-      clearInterval(stepInterval);
-      setCopilotStep(5);
 
       if (data.success) {
         setCopilotOutput(data.remediationPlan);
+        setCopilotAction(
+          data.hasFindings === false &&
+            typeof data.action?.href === 'string' &&
+            typeof data.action?.label === 'string'
+            ? data.action
+            : null
+        );
       } else {
         setErrorText(data.error || 'No se pudo generar el plan de remediación con IA.');
+        setCopilotAction(null);
       }
     } catch (err: unknown) {
       setErrorText(`Error de comunicación con el motor de IA: ${getErrorMessage(err)}`);
     } finally {
-      clearInterval(stepInterval);
       setIsGeneratingCopilot(false);
     }
   };
@@ -1015,11 +1011,14 @@ export function IntelligenceTab({
             <CopilotConsole
               output={copilotOutput}
               isGenerating={isGeneratingCopilot}
-              step={copilotStep}
               planCopied={copiedIndex}
               onGenerate={handleGenerateCopilot}
               onCopyPlan={() => handleCopyToClipboard(copilotOutput ?? '')}
-              onReset={() => setCopilotOutput(null)}
+              onReset={() => {
+                setCopilotOutput(null);
+                setCopilotAction(null);
+              }}
+              action={copilotAction}
             />
 
           </div>
