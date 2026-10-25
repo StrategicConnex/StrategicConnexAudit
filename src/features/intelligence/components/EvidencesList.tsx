@@ -2,6 +2,7 @@
 
 import React from "react";
 import { BookOpen } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { FindingData } from "../hooks/useInvestigationRealtime";
 
 interface EvidenceItem {
@@ -18,8 +19,6 @@ interface EvidencesListProps {
   findings: FindingData[];
   selectedEvidenceId: string | null;
   onSelectEvidence: (id: string | null) => void;
-  isDemo?: boolean;
-  demoFindings?: EvidenceItem[];
 }
 
 const SEVERITY_CLASSES: Record<string, string> = {
@@ -30,8 +29,9 @@ const SEVERITY_CLASSES: Record<string, string> = {
   info: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
 };
 
-export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, isDemo, demoFindings }: EvidencesListProps) {
-  const items: EvidenceItem[] = isDemo && demoFindings ? demoFindings : findings;
+export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence }: EvidencesListProps) {
+  const t = useTranslations("intelligence");
+  const items: EvidenceItem[] = findings;
   const isEmpty = items.length === 0;
 
   return (
@@ -40,18 +40,15 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, 
         <div className="flex items-center space-x-2">
           <BookOpen className="w-4 h-4 text-muted-fg" />
           <span className="text-xs text-muted-fg font-mono">
-            {isDemo ? "Muestra de evidencias y recomendaciones (No hay auditoría activa)" : "Hallazgos de Seguridad Confirmados"}
+            {t("evidencesTitle")}
           </span>
         </div>
-        {isDemo && (
-          <span className="text-2xs bg-muted text-muted-fg border border-border px-2 py-0.5 rounded uppercase font-mono">Demo</span>
-        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3">
         {isEmpty ? (
           <div className="p-12 text-center border border-dashed border-border rounded-xl text-xs text-muted-fg font-mono">
-            No se han reportado hallazgos aún. Deja que el escaneo avance o ingresa un host válido.
+            {t("evidencesEmpty")}
           </div>
         ) : (
           items.map((item) => {
@@ -65,7 +62,7 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence, 
                   isSelected
                     ? "bg-card border-chartreuse/40 shadow-lg"
                     : "bg-card border-border hover:border-border"
-                } ${isDemo ? "opacity-60" : ""}`}
+                }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center space-x-2">

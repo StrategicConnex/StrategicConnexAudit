@@ -2,6 +2,7 @@
 
 import React from "react";
 import { History } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { RunEventData } from "../hooks/useInvestigationRealtime";
 import { formatTime } from '@/shared/utils/datetime';
 
@@ -18,8 +19,6 @@ interface TimelineItem {
 interface TelemetryTimelineProps {
   events: RunEventData[];
   isActive: boolean;
-  isDemo?: boolean;
-  demoEvents?: TimelineItem[];
 }
 
 const EVENT_STYLES: Record<string, string> = {
@@ -29,8 +28,9 @@ const EVENT_STYLES: Record<string, string> = {
   info: "bg-card border-border text-muted-fg",
 };
 
-export function TelemetryTimeline({ events, isActive, isDemo, demoEvents }: TelemetryTimelineProps) {
-  const items: TimelineItem[] = isDemo && demoEvents ? demoEvents : events;
+export function TelemetryTimeline({ events, isActive }: TelemetryTimelineProps) {
+  const t = useTranslations("intelligence");
+  const items: TimelineItem[] = events;
   const isEmpty = items.length === 0;
 
   return (
@@ -39,18 +39,15 @@ export function TelemetryTimeline({ events, isActive, isDemo, demoEvents }: Tele
         <div className="flex items-center space-x-2">
           <History className="w-4 h-4 text-muted-fg" />
           <span className="text-xs text-muted-fg font-mono">
-            {isDemo ? "Ejemplo de Telemetría (No hay auditoría activa)" : "Eventos en Tiempo Real"}
+            {t("telemetryTitle")}
           </span>
         </div>
-        {isDemo && (
-          <span className="text-2xs bg-muted text-muted-fg border border-border px-2 py-0.5 rounded uppercase font-mono">Demo</span>
-        )}
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-[#1f1f23]">
-        {isEmpty && isActive ? (
+        {isEmpty ? (
           <div className="p-8 text-center text-xs text-muted-fg font-mono">
-            Iniciando conexión con Supabase Realtime... Esperando el primer reporte de los escáneres perimetrales.
+            {isActive ? t("telemetryEmptyActive") : t("telemetryEmptyIdle")}
           </div>
         ) : (
           items.map((item) => {
