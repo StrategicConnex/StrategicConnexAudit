@@ -440,6 +440,78 @@
         }
       }
     },
+    "/api/intelligence/copilot": {
+      "post": {
+        "summary": "Generate Remediation Plan",
+        "description": "Genera un plan de remediación con IA para una investigación. Si la investigación no tiene hallazgos, devuelve un mensaje honesto de ausencia y una acción real para ejecutar un escaneo; nunca devuelve un plan simulado. Un fallo interno responde 500 con success=false.",
+        "tags": [
+          "Intelligence"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "investigationId"
+                ],
+                "properties": {
+                  "investigationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID de la investigación a analizar"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan real del modelo o mensaje de ausencia con acción de escaneo (hasFindings=false)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
     "/api/public/v1/intelligence": {
       "get": {
         "summary": "List Investigations",
@@ -1897,6 +1969,55 @@
             "nullable": true
           }
         }
+      },
+      "CopilotAction": {
+        "type": "object",
+        "required": [
+          "href",
+          "label"
+        ],
+        "properties": {
+          "href": {
+            "type": "string",
+            "description": "Enlace real a la ejecución de tools (nunca un paso inventado)",
+            "example": "/intelligence#intelligence-scan"
+          },
+          "label": {
+            "type": "string",
+            "example": "Escanear infraestructura"
+          }
+        }
+      },
+      "CopilotResponse": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "hasFindings": {
+            "type": "boolean",
+            "description": "false solo cuando la investigación no tiene hallazgos; la respuesta es entonces un mensaje de ausencia con acción de escaneo"
+          },
+          "remediationPlan": {
+            "type": "string",
+            "description": "Plan real del modelo o mensaje honesto de ausencia"
+          },
+          "action": {
+            "$ref": "#/components/schemas/CopilotAction"
+          },
+          "modelUsed": {
+            "type": "string"
+          },
+          "fromCache": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
       }
     },
     "responses": {
@@ -2011,6 +2132,30 @@
                 "error": {
                   "type": "string",
                   "example": "Error interno del servidor"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Service Unavailable — el pool de IA no pudo generar la respuesta",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "hasFindings": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "error": {
+                  "type": "string",
+                  "example": "all models down"
                 }
               }
             }

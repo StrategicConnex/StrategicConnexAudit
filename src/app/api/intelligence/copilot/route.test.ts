@@ -4,9 +4,9 @@
    withRateLimit en passthrough (inyecta userId). Verifica:
    - Cuota IA corta antes de trabajar; sin investigationId → 400;
      investigación inexistente → 404
-   - Sin hallazgos → plan estático sin IA; IA ok → plan + modelUsed;
-     fallo IA → success false con plan de fallback + error
-   - Excepción interna → catch devuelve plan de fallback (success true)
+   - Sin hallazgos → mensaje honesto de ausencia + CTA, sin IA ni plan
+     inventado; IA ok → plan real + hasFindings; fallo IA → success false
+   - Excepción interna → 500 success false, sin plan de fallback
    - TD-13: total de hallazgos con COUNT(group-by) y prompt acotado a 100
      filas (estado vacío decidido desde los counts, no desde el fetch)
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -55,11 +55,21 @@ vi.mock("@/shared/db/rls", () => ({
 
 vi.mock("@/server/ai/ai-router", () => ({
   callAIWithFallback: (...args: unknown[]) => mockCallAI(...args),
-  getNoApiKeyResponse: (task: string) => `Plan fallback (${task})`,
 }));
 
 vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: vi.fn(),
+}));
+
+vi.mock("@/i18n/request", () => ({
+  getLocale: async () => "es",
+  getMessages: async () => ({
+    intelligence: {
+      copilotNoFindings:
+        "La investigación aún no tiene hallazgos. Inicia un escaneo para generar datos reales.",
+      copilotRunScan: "Escanear infraestructura",
+    },
+  }),
 }));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -139,7 +149,7 @@ describe("Intelligence: Copilot — POST", () => {
     expect(mockCallAI).not.toHaveBeenCalled();
   });
 
-  it("sin hallazgos → plan estático sin llamar a la IA", async () => {
+  it("sin hallazgos → mensaje honesto de ausencia + CTA, sin llamar a la IA", async () => {
     mockSeverityCounts.mockResolvedValue([]);
     mockFindMany.mockResolvedValue([]);
 
@@ -147,8 +157,18 @@ describe("Intelligence: Copilot — POST", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(body.remediationPlan).toContain("No se encontraron vulnerabilidades");
+    expect(body).toEqual({
+      success: true,
+      hasFindings: false,
+      remediationPlan:
+        "La investigación aún no tiene hallazgos. Inicia un escaneo para generar datos reales.",
+      action: {
+        href: "/intelligence#intelligence-scan",
+        label: "Escanear infraestructura",
+      },
+    });
+    expect(body.remediationPlan).not.toContain("Felicidades");
+    expect(body.remediationPlan).not.toContain("No se encontraron vulnerabilidades");
     expect(mockCallAI).not.toHaveBeenCalled();
   });
 
@@ -159,6 +179,7 @@ describe("Intelligence: Copilot — POST", () => {
     const body = await res.json();
     expect(body).toEqual({
       success: true,
+      hasFindings: true,
       remediationPlan: "# Plan de remediación",
       modelUsed: "m1",
       fromCache: false,
@@ -172,19 +193,20 @@ describe("Intelligence: Copilot — POST", () => {
     );
   });
 
-  it("fallo IA → success false con plan de fallback y error", async () => {
+  it("fallo IA → 503 success false sin plan de fallback", async () => {
     mockCallAI.mockResolvedValue({ success: false, error: "all models down" });
 
     const res = await POST(createRequest({ investigationId: "inv-1" }) as never);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
 
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.remediationPlan).toBe("Plan fallback (copilot-remediation)");
+    expect(body.hasFindings).toBe(true);
+    expect(body.remediationPlan).toBeUndefined();
     expect(body.error).toBe("all models down");
   });
 
-  it("excepción interna → catch devuelve plan de fallback (success true)", async () => {
+  it("excepción interna → 500 success false sin plan de fallback", async () => {
     const res = await POST(
       new Request("http://localhost:3000/api/intelligence/copilot", {
         method: "POST",
@@ -192,11 +214,11 @@ describe("Intelligence: Copilot — POST", () => {
         body: "no-es-json",
       }) as never,
     );
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(500);
 
     const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(body.remediationPlan).toBe("Plan fallback (copilot-remediation)");
+    expect(body.success).toBe(false);
+    expect(body.remediationPlan).toBeUndefined();
     expect(body.error).toBeTruthy();
   });
 });

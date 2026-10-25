@@ -115,7 +115,7 @@ export default function GlobalTargetCommand({ projectId, onSuccess }: GlobalTarg
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4">
-      <form onSubmit={handleSubmit} className="relative group">
+      <form id="intelligence-scan" onSubmit={handleSubmit} className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
         
         <div className="relative flex items-center bg-background/80 backdrop-blur-md border border-border rounded-2xl p-1.5 focus-within:border-border focus-within:ring-1 focus-within:ring-border shadow-2xl transition-[color,background-color,border-color,box-shadow,filter] duration-300">

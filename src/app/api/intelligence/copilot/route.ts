@@ -4,10 +4,11 @@ import { intelligenceInvestigations, intelligenceFindings } from "@/shared/db/sc
 import { asc, count, eq } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
-import { callAIWithFallback, getNoApiKeyResponse, AIMessage } from "@/server/ai/ai-router";
+import { callAIWithFallback, AIMessage } from "@/server/ai/ai-router";
 import { assertAiQuota } from "@/server/ai/ai-usage";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/lib/logger";
+import { getLocale, getMessages } from "@/i18n/request";
 
 export const dynamic = "force-dynamic";
 
@@ -71,9 +72,19 @@ export const POST = withRateLimit(
       const totalFindings = severityRows.reduce((sum, r) => sum + Number(r.n), 0);
 
       if (totalFindings === 0) {
+        const locale = await getLocale();
+        const messages = await getMessages(locale);
+
         return NextResponse.json({
           success: true,
-          remediationPlan: "### ✅ No se encontraron vulnerabilidades\n\n¡Felicidades! La infraestructura evaluada no arrojó hallazgos de severidad media, alta o crítica. Sigue monitoreando con regularidad."
+          hasFindings: false,
+          // Mensaje de ausencia, no un plan: no afirmamos que la
+          // infraestructura esté limpia si todavía no se ha escaneado.
+          remediationPlan: messages.intelligence.copilotNoFindings,
+          action: {
+            href: "/intelligence#intelligence-scan",
+            label: messages.intelligence.copilotRunScan,
+          },
         });
       }
 
@@ -103,13 +114,14 @@ export const POST = withRateLimit(
       if (!aiResult.success) {
         return NextResponse.json({
           success: false,
-          remediationPlan: getNoApiKeyResponse("copilot-remediation"),
+          hasFindings: true,
           error: aiResult.error,
-        });
+        }, { status: 503 });
       }
 
       return NextResponse.json({
         success: true,
+        hasFindings: true,
         remediationPlan: aiResult.content,
         modelUsed: aiResult.modelUsed,
         fromCache: aiResult.fromCache,
@@ -117,11 +129,13 @@ export const POST = withRateLimit(
 
     } catch (error: unknown) {
       logger.error("Infrastructure Copilot execution failure:", { error: getErrorMessage(error) })
-      return NextResponse.json({
-        success: true,
-        remediationPlan: getNoApiKeyResponse("copilot-remediation"),
-        error: getErrorMessage(error),
-      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: getErrorMessage(error),
+        },
+        { status: 500 }
+      );
     }
   }
 );
