@@ -1,17 +1,8 @@
-'use client';
-
-import dynamic from 'next/dynamic';
-
-const NeuralNetworkBackground = dynamic(
-  () => import('@/components/NeuralNetworkBackground').then(mod => ({ default: mod.NeuralNetworkBackground })),
-  { ssr: false, loading: () => null }
-);
-
 export function DashboardSkeleton() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex animate-pulse relative overflow-hidden">
-      {/* Red neuronal de fondo — misma capa base que el dashboard (loading state) */}
-      <NeuralNetworkBackground />
+    <div data-testid="dashboard-skeleton" className="min-h-screen bg-background text-foreground flex animate-pulse relative overflow-hidden">
+      {/* Sin componentes cliente: el loading boundary no debe emitir scripts de
+          preinit sin nonce (Task 0.10). El fondo neuronal vive en el dashboard. */}
       {/* Sidebar Skeleton */}
       <aside className="w-72 border-r border-border/50 bg-muted/80 hidden md:flex flex-col shrink-0">
         <div className="h-20 flex items-center px-8 border-b border-border/50">
