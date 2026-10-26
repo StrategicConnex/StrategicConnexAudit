@@ -34,6 +34,30 @@ describe("ai-usage — telemetría anti-ruina (P0-1)", () => {
     });
   });
 
+  it("Sprint 1 A2: persiste ttft_ms + streamed (y default false/null)", async () => {
+    const streamedRow: { v?: unknown } = {};
+    await recordAiUsage(
+      {
+        userId: "u-1",
+        taskType: "general-chat",
+        modelUsed: "m",
+        latencyMs: 900,
+        success: true,
+        streamed: true,
+        ttftMs: 320,
+      },
+      fakeDb(streamedRow)
+    );
+    expect(streamedRow.v).toMatchObject({ streamed: true, ttftMs: 320, latencyMs: 900 });
+
+    const plainRow: { v?: unknown } = {};
+    await recordAiUsage(
+      { userId: null, taskType: "general-chat", modelUsed: "m", success: true },
+      fakeDb(plainRow)
+    );
+    expect(plainRow.v).toMatchObject({ streamed: false, ttftMs: null });
+  });
+
   it("recordAiUsage jamás lanza aunque la DB falle", async () => {
     await expect(
       recordAiUsage(

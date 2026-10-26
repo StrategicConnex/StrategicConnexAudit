@@ -25,6 +25,10 @@ export interface AiUsageEntry {
   costUsd?: number | null;
   /** Hash de versión del prompt (Sprint 1, #18). */
   promptVersion?: string | null;
+  /** TTFT en ms hasta el primer delta (Sprint 1 A2; null si no hubo stream). */
+  ttftMs?: number | null;
+  /** true = respuesta servida con streaming (Sprint 1 A2). */
+  streamed?: boolean;
 }
 
 type InsertableDb = {
@@ -52,6 +56,8 @@ export async function recordAiUsage(
         fromCache: entry.fromCache ?? false,
         costUsd: entry.costUsd ?? null,
         promptVersion: entry.promptVersion ?? null,
+        ttftMs: entry.ttftMs ?? null,
+        streamed: entry.streamed ?? false,
       });
       return;
     }
@@ -68,6 +74,8 @@ export async function recordAiUsage(
       fromCache: entry.fromCache ?? false,
       costUsd: entry.costUsd ?? null,
       promptVersion: entry.promptVersion ?? null,
+      ttftMs: entry.ttftMs ?? null,
+      streamed: entry.streamed ?? false,
     });
   } catch {
     // Silencio deliberado: la telemetría nunca rompe la respuesta al usuario.

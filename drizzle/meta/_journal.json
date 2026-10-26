@@ -463,6 +463,13 @@
       "when": 1792963200000,
       "tag": "2026-10-21_partition_uptime_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1793041556000,
+      "tag": "2026-10-26_ai_usage_stream_metrics",
+      "breakpoints": true
     }
   ]
 }

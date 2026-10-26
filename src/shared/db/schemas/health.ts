@@ -104,6 +104,20 @@ export const aiUsage = pgTable("ai_usage", {
   /** Hash de versión del prompt (Sprint 1 #18; evals reproducibles). */
   promptVersion: text("prompt_version"),
 
+  /**
+   * Time-to-first-token en ms: desde el inicio de la llamada hasta el
+   * primer delta entregado al cliente (Sprint 1 A2). Null = sin stream
+   * (respuesta no-stream o fallo antes del primer chunk).
+   */
+  ttftMs: integer("ttft_ms"),
+
+  /**
+   * true = la fila corresponde a una respuesta servida por streaming
+   * (al menos un delta entregado). Permite filtrar `streamed and not
+   * from_cache` para el objetivo TTFT p50 ≤ 1,5 s.
+   */
+  streamed: boolean("streamed").notNull().default(false),
+
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
   index("idx_ai_usage_user_created").on(t.userId, t.createdAt),

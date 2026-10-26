@@ -1209,6 +1209,425 @@ export async function callAIAgentLoop(options: AgentLoopOptions): Promise<AgentL
   };
 }
 
+// ─── Streaming (Sprint 1 chatbot: respuestas progresivas) ──────────────────
+//
+// Variante de callAIWithFallback que emite el texto por fragmentos a medida
+// que el proveedor lo genera, en lugar de esperar la respuesta completa.
+// Mantiene el pipeline del router: caché semántica, cadena de la task, circuit
+// breakers, failover Groq→Gemini, presupuesto Vercel y telemetría ai_usage.
+// Diferencias con el camino no-stream:
+//   • `stream: true` + parseo del SSE con formato OpenAI (data: {...} / [DONE]).
+//   • El fallback entre modelos SOLO ocurre antes del primer fragmento
+//     entregado: una vez que el cliente vio texto, cambiar de modelo
+//     duplicaría contenido. Un corte a mitad se devuelve como success:false
+//     con el parcial en `content` para que la ruta lo señale al cliente.
+//   • Sin tools ni response_format: el streaming es para chat de texto; las
+//     tareas JSON usan callAIWithFallback (que aplica self-heal).
+
+export interface AIStreamResult {
+  success: boolean;
+  /** Texto acumulado completo (parcial si el stream se cortó a mitad). */
+  content: string;
+  modelUsed: string;
+  latencyMs: number;
+  fromCache?: boolean;
+  error?: string;
+}
+
+interface ConsumedSSE {
+  content: string;
+  usage: AIUsageInfo | null;
+  error: string | null;
+}
+
+/**
+ * Parsea un body SSE con formato OpenAI (líneas `data: {...}`, fin `[DONE]`).
+ * Tolerante a líneas basura y JSON malformado: un chunk inválido no tumba la
+ * respuesta. Los deltas `reasoning` de los modelos thinking se ignoran
+ * (solo interesa `delta.content`).
+ */
+async function consumeOpenAiSSE(
+  body: ReadableStream<Uint8Array>,
+  onText: (text: string) => void
+): Promise<ConsumedSSE> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+  let usage: AIUsageInfo | null = null;
+  let error: string | null = null;
+  let finished = false;
+
+  const processLine = (line: string): void => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) return;
+    const payload = trimmed.slice(5).trim();
+    if (payload === "[DONE]") {
+      finished = true;
+      return;
+    }
+    let chunk: {
+      error?: { message?: string; code?: string } | string;
+      usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
+      choices?: Array<{ delta?: { content?: unknown } }>;
+    };
+    try {
+      chunk = JSON.parse(payload);
+    } catch {
+      return;
+    }
+    // Upstream puede embeber un error en un HTTP 200 (visto con Nvidia).
+    if (chunk.error) {
+      error = String(
+        typeof chunk.error === "string"
+          ? chunk.error
+          : (chunk.error.message ?? chunk.error.code ?? "error embebido")
+      ).slice(0, 200);
+      finished = true;
+      return;
+    }
+    if (chunk.usage && typeof chunk.usage.prompt_tokens === "number") {
+      usage = {
+        tokensIn: chunk.usage.prompt_tokens as number,
+        tokensOut:
+          typeof chunk.usage.completion_tokens === "number"
+            ? chunk.usage.completion_tokens
+            : null,
+      };
+    }
+    const delta = chunk.choices?.[0]?.delta;
+    if (typeof delta?.content === "string" && delta.content.length > 0) {
+      content += delta.content;
+      onText(delta.content);
+    }
+  };
+
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let newline = buffer.indexOf("\n");
+      while (newline !== -1) {
+        processLine(buffer.slice(0, newline));
+        buffer = buffer.slice(newline + 1);
+        if (finished) break;
+        newline = buffer.indexOf("\n");
+      }
+      if (finished) break;
+    }
+    if (!finished && buffer.length > 0) processLine(buffer);
+  } finally {
+    reader.releaseLock();
+  }
+
+  return { content, usage, error };
+}
+
+/**
+ * Streaming con fallback: emite `onChunk(text)` por cada delta de texto y
+ * devuelve el resultado final (éxito, fallo pre-commit o corte a mitad).
+ * Contrato de errores idéntico al no-stream: sin ninguna clave configurada
+ * devuelve success:false con el mensaje de onboarding (la ruta lo detecta
+ * por regex y responde 200 con el mensaje de bienvenida).
+ */
+export async function callAIWithFallbackStream(
+  options: AIRequestOptions,
+  onChunk: (text: string) => void
+): Promise<AIStreamResult> {
+  if (options.tools?.length || options.responseFormat) {
+    throw new Error(
+      "callAIWithFallbackStream no soporta tools/responseFormat: usa callAIWithFallback para esas tareas."
+    );
+  }
+  const { taskType, messages, temperature = 0.3, maxTokens = 4096 } = options;
+  const startTime = Date.now();
+  const pVersion = promptVersion(messages);
+  const errors: string[] = [];
+
+  // Primer delta entregado al cliente: base del TTFT (Sprint 1 A2). Null
+  // mientras no llegue texto — define también `streamed` en la telemetría
+  // (una fila sin ningún chunk no fue una respuesta servida en streaming).
+  let firstChunkAtMs: number | null = null;
+  const emit = (text: string): void => {
+    if (firstChunkAtMs === null) firstChunkAtMs = Date.now();
+    onChunk(text);
+  };
+
+  const track = (partial: {
+    modelUsed: string;
+    success: boolean;
+    fromCache?: boolean;
+    content: string;
+    usage?: AIUsageInfo | null;
+    error?: string;
+  }): AIStreamResult => {
+    const latencyMs = Date.now() - startTime;
+    void recordAiUsage({
+      userId: options.userId ?? null,
+      taskType,
+      modelUsed: partial.modelUsed,
+      latencyMs,
+      success: partial.success,
+      fromCache: partial.fromCache,
+      tokensIn: partial.usage?.tokensIn ?? null,
+      tokensOut: partial.usage?.tokensOut ?? null,
+      costUsd: estimateCostUsd(
+        partial.modelUsed,
+        partial.usage?.tokensIn,
+        partial.usage?.tokensOut
+      ),
+      promptVersion: pVersion,
+      // Sprint 1 A2: streamed solo si hubo al menos un delta entregado;
+      // ttft_ms mide inicio → primer delta (null sin stream).
+      streamed: firstChunkAtMs !== null,
+      ttftMs: firstChunkAtMs !== null ? firstChunkAtMs - startTime : null,
+    });
+    return {
+      success: partial.success,
+      content: partial.content,
+      modelUsed: partial.modelUsed,
+      latencyMs,
+      ...(partial.fromCache ? { fromCache: true as const } : {}),
+      ...(partial.error ? { error: partial.error } : {}),
+    };
+  };
+
+  // 1. Caché semántica: replay en un único chunk (el cliente lo pinta entero).
+  const cacheKey = buildSemanticKey(taskType, options.cacheScope ?? "", messages);
+  if (!options.modelOverride) {
+    const cached = await getSemanticCache(cacheKey);
+    if (cached) {
+      emit(cached.content);
+      return track({
+        modelUsed: cached.modelId,
+        success: true,
+        fromCache: true,
+        content: cached.content,
+      });
+    }
+  }
+
+  // 2. Sin NINGÚN proveedor con clave: mismo mensaje que el no-stream (el
+  //    regex de la ruta distingue el onboarding de un fallo real).
+  const hasFailoverKey = !!(envSecrets.groqApiKey || envSecrets.geminiApiKey);
+  if (!envSecrets.openRouterApiKey && !hasFailoverKey) {
+    return track({
+      modelUsed: "none",
+      success: false,
+      content: "",
+      error:
+        "No hay ninguna clave de IA configurada. Configura OPENROUTER_API_KEY " +
+        "(primario) o GROQ_API_KEY / GEMINI_API_KEY (failover). " +
+        "Get a FREE key at https://openrouter.ai/keys - no credit card needed.",
+    });
+  }
+  if (!envSecrets.openRouterApiKey) {
+    errors.push("[openrouter] sin API key en el entorno: cadena de OpenRouter omitida");
+  }
+
+  // 3. Cadena de modelos de la task (idéntica al no-stream).
+  const modelChain: string[] = !envSecrets.openRouterApiKey
+    ? []
+    : options.modelOverride
+      ? [options.modelOverride]
+      : TASK_ROUTING[taskType] || TASK_ROUTING["general-chat"];
+  const timeoutMs = MODEL_TIMEOUTS[taskType] ?? 20_000;
+
+  let accumulated = "";
+
+  // 4. Cadena OpenRouter en streaming.
+  for (let i = 0; i < modelChain.length; i++) {
+    const modelId = modelChain[i]!;
+    let emittedThisModel = false;
+    try {
+      // El breaker protege la APERTURA del stream (HTTP + primer byte):
+      // consumirlo corre fuera para que un corte a mitad no lo penalice.
+      const streamBody = await openRouterCircuitBreaker.execute(async () => {
+        const baseUrl = envSecrets.openRouterBaseUrl || "https://openrouter.ai/api/v1";
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: correlatedHeaders({
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${envSecrets.openRouterApiKey}`,
+            "HTTP-Referer": "https://scaudit.app",
+            "X-Title": "StrategicAudit Pro",
+          }),
+          body: JSON.stringify({
+            model: modelId,
+            messages,
+            temperature,
+            max_tokens: maxTokens,
+            stream: true,
+            // Param propio de OpenRouter: agrega el chunk final con usage
+            // (lo procesa el gateway, no el proveedor upstream).
+            usage: { include: true },
+          }),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        if (!response.ok) {
+          const text = await response.text().catch(() => "");
+          if (response.status === 402) {
+            throw new Error(`OpenRouter 402 — créditos insuficientes para ${modelId}.`);
+          }
+          if (response.status === 429) {
+            throw new Error(
+              `OpenRouter 429 — límite excedido para ${modelId}: ${text.slice(0, 150)}.`
+            );
+          }
+          throw new Error(`OpenRouter ${response.status} para ${modelId}: ${text.slice(0, 200)}`);
+        }
+        if (!response.body) {
+          throw new Error(`Sin body stream de ${modelId}`);
+        }
+        return response.body;
+      });
+
+      const consumed = await consumeOpenAiSSE(streamBody, (text) => {
+        emittedThisModel = true;
+        accumulated += text;
+        emit(text);
+      });
+
+      if (consumed.error) {
+        // Sin texto entregado el modelo simplemente FALLA (sigue la cadena).
+        // Con texto ya entregado no hay reintento limpio: parcial + fallo.
+        if (!emittedThisModel) throw new Error(consumed.error);
+        return track({
+          modelUsed: modelId,
+          success: false,
+          content: accumulated,
+          usage: consumed.usage,
+          error: `Stream interrumpido por ${modelId}: ${consumed.error}`,
+        });
+      }
+      if (!emittedThisModel) {
+        throw new Error(`Respuesta vacía del modelo ${modelId}`);
+      }
+
+      void setSemanticCache(cacheKey, accumulated, modelId, taskType);
+      logger.info(
+        `[AI Router] stream ${taskType} → ${modelId} (${Date.now() - startTime}ms) ` +
+          `[attempt ${i + 1}/${modelChain.length}]`
+      );
+      return track({ modelUsed: modelId, success: true, content: accumulated, usage: consumed.usage });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      errors.push(`[${modelId}] ${errorMsg}`);
+      logger.warn(`[AI Router] Stream model ${modelId} failed: ${errorMsg}. Trying fallback...`);
+    }
+  }
+
+  // 5. Cadena OpenRouter agotada → failover Groq → Gemini (mismo contrato).
+  let failoverAttempts = 0;
+  if (!options.modelOverride) {
+    const elapsedMs = Date.now() - startTime;
+    const hasVercelBudget = TASKS_WITH_VERCEL_BUDGET.has(taskType);
+    const remainingVercelMs = VERCEL_DEADLINE_MS - elapsedMs - 2_000;
+
+    for (const provider of FALLBACK_PROVIDERS) {
+      const apiKey = provider.getApiKey();
+      if (!apiKey) {
+        errors.push(`[${provider.id}] sin API key configurada (failover omitido)`);
+        continue;
+      }
+      let providerTimeoutMs = MODEL_TIMEOUTS[taskType] ?? 20_000;
+      if (hasVercelBudget) {
+        const remaining = Math.min(providerTimeoutMs, remainingVercelMs);
+        if (remaining < 8_000) {
+          errors.push(`[${provider.id}] presupuesto Vercel agotado (failover omitido)`);
+          continue;
+        }
+        providerTimeoutMs = remaining;
+      }
+
+      failoverAttempts++;
+      let emittedThisProvider = false;
+      try {
+        const streamBody = await providerBreakers[provider.id].execute(async () => {
+          const baseUrl = provider.getBaseUrl().replace(/\/+$/, "");
+          const response = await fetch(`${baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: correlatedHeaders({
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            }),
+            body: JSON.stringify({
+              model: provider.model,
+              messages,
+              temperature,
+              max_tokens: Math.max(maxTokens, 512),
+              stream: true,
+              ...provider.extraBody,
+            }),
+            signal: AbortSignal.timeout(providerTimeoutMs),
+          });
+          if (!response.ok) {
+            const text = await response.text().catch(() => "");
+            if (response.status === 429) {
+              throw new Error(
+                `${provider.id} 429 — límite free excedido para ${provider.model}: ${text.slice(0, 150)}.`
+              );
+            }
+            throw new Error(
+              `${provider.id} ${response.status} para ${provider.model}: ${text.slice(0, 200)}`
+            );
+          }
+          if (!response.body) {
+            throw new Error(`Sin body stream de ${provider.id}:${provider.model}`);
+          }
+          return response.body;
+        });
+
+        const providerModelId = `${provider.id}:${provider.model}`;
+        const consumed = await consumeOpenAiSSE(streamBody, (text) => {
+          emittedThisProvider = true;
+          accumulated += text;
+          emit(text);
+        });
+
+        if (consumed.error) {
+          if (!emittedThisProvider) throw new Error(consumed.error);
+          return track({
+            modelUsed: providerModelId,
+            success: false,
+            content: accumulated,
+            usage: consumed.usage,
+            error: `Stream interrumpido por ${providerModelId}: ${consumed.error}`,
+          });
+        }
+        if (!emittedThisProvider) {
+          throw new Error(`Respuesta vacía de ${providerModelId}`);
+        }
+
+        void setSemanticCache(cacheKey, accumulated, providerModelId, taskType);
+        logger.info(`[AI Router] stream failover ${taskType} → ${providerModelId}`);
+        return track({
+          modelUsed: providerModelId,
+          success: true,
+          content: accumulated,
+          usage: consumed.usage,
+        });
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        errors.push(`[${provider.id}:${provider.model}] ${errorMsg}`);
+        logger.warn(`[AI Router] Stream failover provider ${provider.id} failed: ${errorMsg}`);
+      }
+    }
+  }
+
+  const failoverNote =
+    failoverAttempts > 0
+      ? `Failover inter-proveedor también agotado (${failoverAttempts} intento(s)).\n`
+      : "";
+  return track({
+    modelUsed: modelChain[modelChain.length - 1] || "none",
+    success: false,
+    content: accumulated,
+    error: `OpenRouter no disponible. Verificar conectividad y API key.\n${failoverNote}${errors.join("\n")}`,
+  });
+}
+
 /**
  * Bilingual template strings for getNoApiKeyResponse.
  * Each task type has an en/es entry.
