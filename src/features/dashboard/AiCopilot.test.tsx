@@ -16,14 +16,20 @@ vi.mock("next-intl", () => {
     httpError: "Error del asistente (HTTP {status})",
     greetingCopilot: "Hola. Soy Strategic Copilot. ¿En qué te puedo ayudar hoy?",
     greetingAnalyst: "Analyst Mode activo.",
+    stop: "Detener generación",
+  };
+  // Estable entre renders, igual que el useTranslations real de next-intl
+  // (memoriza por locale). Devolver una función NUEVA por render haría que
+  // los efectos con `t` en dependencias (restauración del historial) entren
+  // en bucle infinito de setMessages.
+  const translator = (key: string, values?: Record<string, unknown>) => {
+    const template = dict[key] ?? key;
+    return template.replace(/\{(\w+)\}/g, (_match, name: string) =>
+      String(values?.[name] ?? ""),
+    );
   };
   return {
-    useTranslations: () => (key: string, values?: Record<string, unknown>) => {
-      const template = dict[key] ?? key;
-      return template.replace(/\{(\w+)\}/g, (_match, name: string) =>
-        String(values?.[name] ?? ""),
-      );
-    },
+    useTranslations: () => translator,
   };
 });
 
@@ -44,6 +50,10 @@ vi.mock("./MermaidBlock", () => ({
 beforeEach(() => {
   Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ||
     (() => {}) as typeof Element.prototype.scrollIntoView;
+  // El historial persiste en localStorage (Sprint 1): sin este clear, la
+  // conversación de un test se restauraría en el siguiente y los asserts
+  // de saludo / quick-questions dejarían de ser deterministas.
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -237,5 +247,107 @@ describe("AiCopilot — accesibilidad del diálogo (tarea 0.8)", () => {
     const reopenedTrigger = screen.getByRole("button", { name: /Strategic Copilot/i });
     expect(document.activeElement).toBe(reopenedTrigger);
     expect(document.activeElement?.getAttribute("aria-haspopup")).toBe("dialog");
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Task 1.2 — Botón Stop / AbortController (evidencia 2 del cierre Sprint 1)
+
+   El fetch se mockea RESPETANDO init.signal (como el fetch real): al abortar,
+   el reader pendiente del SSE se errora y consumeChatStream propaga el
+   AbortError. El componente debe distinguirlo de un fallo del servicio:
+   conserva el texto parcial y NO pinta estado de error reintentable.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Fetch SSE en abierto: entrega `firstChunk` (opcional) y se queda esperando
+ * hasta que el AbortSignal del caller se dispare → error del stream.
+ */
+function mockOpenStream(firstChunk?: string) {
+  const encoder = new TextEncoder();
+  const fn = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const signal = init?.signal ?? null;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        if (firstChunk) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: firstChunk })}\n\n`),
+          );
+        }
+        signal?.addEventListener("abort", () => {
+          try {
+            controller.error(new DOMException("The operation was aborted.", "AbortError"));
+          } catch {
+            // El stream ya estaba cerrado: nada que propagar.
+          }
+        });
+      },
+    });
+    return new Response(stream, {
+      status: 200,
+      headers: { "Content-Type": "text/event-stream" },
+    });
+  }) as unknown as typeof fetch;
+  vi.stubGlobal("fetch", fn);
+  return fn;
+}
+
+describe("AiCopilot — Stop con AbortController (Task 1.2)", () => {
+  it("el envío viaja con AbortSignal y Stop conserva el parcial SIN error", async () => {
+    const fetchMock = mockOpenStream("Texto parcial llegado ");
+    render(<AiCopilot contextData={{}} />);
+    fireEvent.click(screen.getByRole("button", { name: /Strategic Copilot/i }));
+
+    const textarea = screen.getByPlaceholderText(
+      /Pregúntale al Copilot/i,
+    ) as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: "pregunta larga" } });
+    fireEvent.keyDown(textarea, { key: "Enter" });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(init.signal).toBeTruthy(); // sin esto Stop no cancelaría nada
+
+    // Llega el primer chunk y mientras el stream sigue abierto aparece Stop.
+    await waitFor(() => expect(screen.getByText(/Texto parcial llegado/)).toBeTruthy());
+    const stopButton = await screen.findByRole("button", { name: /Detener generación/i });
+    fireEvent.click(stopButton);
+
+    // El stream se cerró: Stop desaparece, el envío vuelve a estar disponible.
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /Detener generación/i })).toBeNull(),
+    );
+    // Texto parcial conservado y NINGÚN estado de error reintentable.
+    expect(screen.getByText(/Texto parcial llegado/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Reintentar/i })).toBeNull();
+    expect(screen.queryByText(/No se pudo obtener respuesta/)).toBeNull();
+    // Tampoco queda "generando": el finally limpió isLoading.
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("Stop antes del primer chunk no deja error ni respuesta ficticia", async () => {
+    mockOpenStream(); // nunca entrega texto
+    render(<AiCopilot contextData={{}} />);
+    fireEvent.click(screen.getByRole("button", { name: /Strategic Copilot/i }));
+
+    const textarea = screen.getByPlaceholderText(
+      /Pregúntale al Copilot/i,
+    ) as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: "sin respuesta" } });
+    fireEvent.keyDown(textarea, { key: "Enter" });
+
+    const stopButton = await screen.findByRole("button", { name: /Detener generación/i });
+    fireEvent.click(stopButton);
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /Detener generación/i })).toBeNull(),
+    );
+    expect(screen.queryByRole("button", { name: /Reintentar/i })).toBeNull();
+    expect(screen.queryByText(/No se pudo obtener respuesta/)).toBeNull();
+    // El placeholder vacío se retiró del estado: sin indicador de "generando"
+    // ni burbuja de error; el mensaje del usuario sigue en la conversación.
+    expect(screen.queryByRole("status")).toBeNull();
+    const log = screen.getByRole("log");
+    expect(log.textContent).toContain("sin respuesta");
   });
 });
