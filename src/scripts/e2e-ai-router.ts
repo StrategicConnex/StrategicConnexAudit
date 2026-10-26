@@ -10,7 +10,7 @@
 // El parche DEBE ser el primer import: redirige 'server-only' al stub antes
 // de que ai-router → env-secrets lo resuelvan.
 import "../../scripts/patch-server-only.cjs";
-import { callAIWithFallback } from "@/server/ai/ai-router";
+import { callAIWithFallback, callAIWithFallbackStream } from "@/server/ai/ai-router";
 
 async function main() {
   console.log("\n════════════════════════════════════════════════");
@@ -55,6 +55,106 @@ async function main() {
     "6. incident-brief success",
     r3.success,
     `modelo=${r3.modelUsed} latencia=${r3.latencyMs}ms "${r3.content.slice(0, 60)}"`
+  );
+
+  // ── Test 4: streaming SSE en vivo por proveedor (Sprint 1, evidencia de la
+  // desviación de MODEL_CAPABILITIES: el streaming es transporte del gateway
+  // OpenAI-compatible, y aquí se prueba EN VIVO que cada proveedor del pool
+  // (cadena OpenRouter, Groq y Gemini) entrega deltas y cuánto tarda el
+  // primero (TTFT, objetivo p50 ≤ 1.500 ms vs baseline 4,9 s no-stream). ──
+  console.log("\n── Streaming en vivo (cadena OpenRouter → Groq → Gemini) ──\n");
+
+  interface StreamProbe {
+    name: string;
+    ok: boolean;
+    model: string;
+    ttftMs: number | null;
+    totalMs: number;
+    chars: number;
+  }
+
+  const runProbe = async (
+    name: string,
+    ask: string,
+  ): Promise<StreamProbe> => {
+    let ttftMs: number | null = null;
+    let chars = 0;
+    const t0 = Date.now();
+    const res = await callAIWithFallbackStream(
+      {
+        taskType: "general-chat",
+        messages: [{ role: "user" as const, content: ask }],
+        maxTokens: 60,
+        userId: null,
+      },
+      (text) => {
+        if (ttftMs === null) ttftMs = Date.now() - t0;
+        chars += text.length;
+      },
+    );
+    return {
+      name,
+      ok: res.success,
+      model: res.modelUsed,
+      ttftMs,
+      totalMs: Date.now() - t0,
+      chars,
+    };
+  };
+
+  const savedOpenRouterKey = process.env.OPENROUTER_API_KEY;
+  const savedGroqKey = process.env.GROQ_API_KEY;
+  const probes: StreamProbe[] = [];
+
+  // 4a. Cadena OpenRouter (primario, sin tocar el entorno).
+  probes.push(
+    await runProbe("openrouter", `Responde exactamente: STREAM-OR ${Date.now()}`),
+  );
+
+  // 4b. Groq: sin clave OpenRouter la cadena queda vacía → failover inter-
+  //     proveedor (envSecrets lee process.env en cada acceso, así que basta).
+  delete process.env.OPENROUTER_API_KEY;
+  probes.push(await runProbe("groq", `Responde exactamente: STREAM-GROQ ${Date.now()}`));
+
+  // 4c. Gemini: sin OpenRouter ni Groq → solo Gemini en el failover.
+  delete process.env.GROQ_API_KEY;
+  probes.push(await runProbe("gemini", `Responde exactamente: STREAM-GEMINI ${Date.now()}`));
+
+  // Restaurar el entorno para lo que venga después del probe.
+  if (savedOpenRouterKey) process.env.OPENROUTER_API_KEY = savedOpenRouterKey;
+  if (savedGroqKey) process.env.GROQ_API_KEY = savedGroqKey;
+
+  const streamSeq = 7;
+  for (const p of probes) {
+    check(
+      `${streamSeq}. stream ${p.name} success`,
+      p.ok,
+      `modelo=${p.model} ttft=${p.ttftMs ?? "-"}ms total=${p.totalMs}ms chars=${p.chars}`,
+    );
+    check(
+      `${streamSeq + 1}. stream ${p.name} entregó deltas (SSE real)`,
+      p.chars > 0,
+      `${p.chars} chars`,
+    );
+  }
+
+  // E6 — TTFT medido en vivo vs baseline no-stream (4,9 s p50 de la
+  // auditoría). El objetivo del sprint es p50 ≤ 1,5 s; aquí se compara con
+  // el baseline para demostrar el salto, y el p50 exacto se imprime siempre.
+  const ttfts = probes
+    .map((p) => p.ttftMs)
+    .filter((v): v is number => typeof v === "number")
+    .sort((a, b) => a - b);
+  const ttftP50 = ttfts.length > 0 ? (ttfts[Math.floor(ttfts.length / 2)] ?? null) : null;
+  const BASELINE_NO_STREAM_P50_MS = 4_900;
+  console.log(
+    `\n  📊 TTFT p50 de la sesión: ${ttftP50 ?? "n/d"} ms ` +
+      `(objetivo sprint ≤ 1500 ms · baseline no-stream ${BASELINE_NO_STREAM_P50_MS} ms)`,
+  );
+  check(
+    `${streamSeq + 2}. TTFT p50 por debajo del baseline no-stream`,
+    ttftP50 !== null && ttftP50 < BASELINE_NO_STREAM_P50_MS,
+    `p50=${ttftP50}ms < ${BASELINE_NO_STREAM_P50_MS}ms`,
   );
 
   // ── Resumen ──
