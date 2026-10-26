@@ -1,6 +1,6 @@
 # H-10b: Investigación chunk react-dom (+69.9 KB, causa INFERRED)
 
-## Estado: ABIERTO — FASE B (atribución LCP) · gate de apertura verificado 2026-10-27
+## Estado: CAUSA ACOTADA 2026-10-27 (Fase B) — render-blocking + elemento LCP tardío en `/`; hipótesis de bundle REFUTADA · punto de decisión abierto
 
 ## Contexto
 
@@ -45,6 +45,68 @@ patrón H-09/H-10: optimizar sin medir).
    del chunk react-dom (grep de rutas de módulos dentro del chunk).
 4. `pnpm why react-dom` / `pnpm ls react-dom` → descartar H2.
 5. Veredicto: **CONFIRMED** (causa X, evidencia Y) o **REFUTED**.
+
+## Fase B — Atribución LCP (2026-10-27, self-RUM 7 días)
+
+### Composición por ruta (p75, 7d)
+
+| Ruta | n | TTFB | FCP | LCP | Cliente (LCP−TTFB) | Veredicto |
+|------|---|------|-----|-----|--------------------|-----------|
+| `/login` | 792 | 2153 | 3784 | 105806 ⚠️ | — | **artifacto de medición** (TD-23): 1036 filas = 6 sesiones, 2 valores LCP |
+| **`/` (landing)** | 673 | 2165 (hoy ~200) | 3976 | **7196** | ~7042 | **aquí está el gate roto** |
+| `/projects/*` | 10+8 | 583–1971 | 2646 | 5100–5525 | 3554–5008 | secundario |
+| `/ask-ai` | 711 | 506 | 565 | 798 | 292 | referencia rápida ✅ |
+
+### Tendencia de `/` por día (FCP · LCP · TTFB p75)
+
+| Día | LCP | TTFB |
+|-----|-----|------|
+| 10-20 | 5872 | 3221 |
+| 10-21 | 5740 | 3173 |
+| 10-23 | 8504 | 927 |
+| 10-24 | 7304 | 336 |
+| 10-25 | 7196 | **154** |
+| 10-26 | 5704 | 238 |
+
+### Veredicto de atribución
+
+1. **TTFB ya no es el problema**: colapsó de 3221 ms (20–21 oct) a 154–239 ms
+   (25–26 oct).
+2. **FCP p75 ≈ 3,0–4,0 s con TTFB ~200 ms → ~2,7–3,8 s entre primer byte y
+   primer pintado** → render-blocking en el critical path del shell (coherente
+   con H-01).
+3. **LCP − FCP ≈ +3,2 s** en `/`: el elemento LCP pinta segundos después del
+   primer pintado (descubrimiento/carga tardía o swap de hidratación). CLS
+   0.0075 descarta layout shift grande.
+4. **LCP estable ~7,2 s desde el 20-oct**: estructural, no incidente. La
+   “tendencia favorable” 7d→48h fue **efecto de composición de tráfico**
+   (25–26 oct dominados por `/ask-ai`, rápido), no mejora real.
+5. **Sin mobile en campo**: 2213/2213 eventos desktop — el gate se mide solo
+   con escritorio (TD-23).
+
+### Veredicto sobre la hipótesis original (chunk react-dom)
+
+**REFUTADA como causa primaria**: INP p75 192 ms (interactividad sana), TTFB
+arreglado, LCP estable y estructural. La composición (FCP−TTFB + LCP−FCP) apunta
+a render-blocking y elemento tardío, no a tamaño de bundle.
+
+### Punto de decisión (siguiente paso)
+
+Causa acotada a dos frentes medibles en `/`:
+
+- **(i) render-blocking** (FCP−TTFB ≈ 2,7 s): CSS crítico inline / defer de no
+  crítico.
+- **(ii) elemento LCP tardío** (LCP−FCP ≈ 3,2 s): `preload`/`fetchpriority` si
+  es imagen; SSR del hero si es contenido de hidratación.
+- **Elemento exacto**: el beacon desplegado NO reporta `lcpElement` (0/1272
+  filas; web-vitals base build no expone `.element` — vitals.js:271 es dead
+  code sin el attribution build; TD-23). Habilitador: cargar attribution build
+  (1 línea + redeploy) → confirmación de campo en 48h; mientras, una corrida de
+  Lighthouse con filmstrip lo da al instante.
+
+Método: 1 Lighthouse run en `/` (filmstrip + render-blocking) → fix acotado →
+re-medir p75 de campo 48 h. **Retitular H-10b: “LCP del landing `/`”** — ya no
+“chunk react-dom”.
 
 ## Prohibido en esta fase
 
