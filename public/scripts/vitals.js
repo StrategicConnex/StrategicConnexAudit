@@ -259,16 +259,43 @@
   /* ===================== WEB VITALS ===================== */
   function loadWebVitals(callback) {
     const s = document.createElement('script');
-    // Self-hosted en el MISMO origin que este script (public/vendor/web-vitals
-    // .iife.js) — no contactar a unpkg: un CDN de terceros vería IP + Referer
-    // de cada visitante del cliente. script.src ya es la URL absoluta del
-    // snippet (p. ej. https://scaudit.vercel.app/scripts/vitals.js).
+    // Self-hosted en el MISMO origin que este script — no contactar a unpkg:
+    // un CDN de terceros vería IP + Referer de cada visitante del cliente.
+    // script.src ya es la URL absoluta del snippet (p. ej.
+    // https://scaudit.vercel.app/scripts/vitals.js).
+    //
+    // 2026-10-27 (TD-23 / H-10b): attribution build de web-vitals@3.5.2 — el
+    // build base NO expone el elemento LCP (entries[].element llegaba
+    // undefined en prod: 0/1272 filas), así que vitals.lcpElement era dead
+    // code. El attribution build añade metric.attribution.{element,
+    // resourceLoadDelay, resourceLoadTime, elementRenderDelay}: elemento LCP
+    // identificado + descomposición de campo (load delay / load time / render
+    // delay). Rollback de un byte: devolver el src a
+    // /vendor/web-vitals.iife.js (build base, conservado en el repo).
     const origin = (script.src || '').split('/scripts/vitals.js')[0];
-    s.src = origin ? `${origin}/vendor/web-vitals.iife.js` : '/vendor/web-vitals.iife.js';
+    s.src = origin ? `${origin}/vendor/web-vitals.attribution.iife.js` : '/vendor/web-vitals.attribution.iife.js';
     s.onload = function () {
       if (window.webVitals) {
         window.webVitals.onCLS(v => { vitals.cls = v.value; vitals.clsRating = v.rating; });
-        window.webVitals.onLCP(v => { vitals.lcp = v.value; vitals.lcpRating = v.rating; vitals.lcpElement = v.entries?.[0]?.element?.nodeName; });
+        window.webVitals.onLCP(v => {
+          vitals.lcp = v.value;
+          vitals.lcpRating = v.rating;
+          // attribution.element viene como STRING selector (p. ej.
+          // "h2.font-display…") — si algún día devuelve objeto, se acepta
+          // también; el fallback final es el nodeName del entry crudo.
+          const el = v.attribution && v.attribution.element;
+          vitals.lcpElement = (typeof el === 'string' && el) ||
+            (el && (el.selector || el.id || el.nodeName || el.tagName)) ||
+            (v.entries && v.entries.length && v.entries[v.entries.length - 1].element &&
+              v.entries[v.entries.length - 1].element.nodeName) || null;
+          // Descomposición LCP en campo (alimenta H-10b sin Lighthouse).
+          if (v.attribution) {
+            vitals.lcpTTFB = v.attribution.timeToFirstByte;
+            vitals.lcpResourceLoadDelay = v.attribution.resourceLoadDelay;
+            vitals.lcpResourceLoadTime = v.attribution.resourceLoadTime;
+            vitals.lcpElementRenderDelay = v.attribution.elementRenderDelay;
+          }
+        });
         window.webVitals.onINP(v => { vitals.inp = v.value; vitals.inpRating = v.rating; });
         window.webVitals.onFID(v => { vitals.fid = v.value; vitals.fidRating = v.rating; });
         window.webVitals.onFCP(v => { vitals.fcp = v.value; vitals.fcpRating = v.rating; });

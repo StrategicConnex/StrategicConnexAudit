@@ -98,11 +98,24 @@ Causa acotada a dos frentes medibles en `/`:
   crítico.
 - **(ii) elemento LCP tardío** (LCP−FCP ≈ 3,2 s): `preload`/`fetchpriority` si
   es imagen; SSR del hero si es contenido de hidratación.
-- **Elemento exacto**: el beacon desplegado NO reporta `lcpElement` (0/1272
-  filas; web-vitals base build no expone `.element` — vitals.js:271 es dead
-  code sin el attribution build; TD-23). Habilitador: cargar attribution build
-  (1 línea + redeploy) → confirmación de campo en 48h; mientras, una corrida de
-  Lighthouse con filmstrip lo da al instante.
+- **Elemento exacto — HABILITADOR EJECUTADO 2026-10-27**: el beacon desplegado
+  no reportaba `lcpElement` (0/1272 filas; web-vitals base build no expone
+  `.element` — vitals.js:271 era dead code; TD-23.b). Se implementó el
+  **attribution build de web-vitals@3.5.2** self-hosted
+  (`public/vendor/web-vitals.attribution.iife.js`, oficial del paquete — base
+  verificado byte-idéntico al vendor actual) + captura del selector y de la
+  descomposición (`lcpTTFB`/`lcpResourceLoadDelay`/`lcpResourceLoadTime`/
+  `lcpElementRenderDelay`). **Test dev verificado end-to-end**: probe devuelve
+  el elemento real y payload final del beacon con la descomposición que cierra
+  exacta (ttfb 2224 + loadDelay 0 + loadTime 0 + renderDelay 2399 = lcp 4623),
+  sin escribir en la BD (interceptores + project-id falso). Sube con el push
+  del 28-oct; los datos de campo reales llegan en 48 h.
+- **Hallazgo de estructura (dev, a confirmar en campo)**: el elemento LCP de
+  `/` es **texto — el `h2` del hero** (`h2.font-display.text-2xl.font-
+  extrabold…`), con **loadDelay = loadTime = 0** → el gap LCP−FCP es puro
+  **elementRenderDelay**. Prioriza hipótesis de pintado tardío del texto
+  (font-display bloqueando / swap por hidratación) y **de-prioriza**
+  `preload` de imágenes (no hay recurso de imagen en el elemento LCP).
 
 Método: 1 Lighthouse run en `/` (filmstrip + render-blocking) → fix acotado →
 re-medir p75 de campo 48 h. **Retitular H-10b: “LCP del landing `/`”** — ya no
