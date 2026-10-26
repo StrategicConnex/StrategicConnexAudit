@@ -1,6 +1,6 @@
 # CHANGE-007 - Paquete de aprobación: Sprint 6 rollout (índices compuestos + particionado uptime_logs + despliegue app)
 
-> **Estado:** ✅ **T4 EJECUTADO Y VERIFICADO EN PRODUCCIÓN (2026-10-21)** · ⚠️ T5 (particionado) **YA APLICADO en la misma BD de producción** el 2026-10-21 (con la decisión C1 del checkpoint, ANTES de la aprobación formal del paquete — ver §19 Revelación) · ⏳ pendientes: DROP de legacy, `CACHE_STORE=postgres`, RUM +48h.
+> **Estado:** ✅ **T4 EJECUTADO Y VERIFICADO EN PRODUCCIÓN (2026-10-21)** · ⚠️ T5 (particionado) **YA APLICADO en la misma BD de producción** el 2026-10-21 (con la decisión C1 del checkpoint, ANTES de la aprobación formal del paquete — ver §19 Revelación) · ⏳ pendientes: DROP de legacy · ~~`CACHE_STORE=postgres`~~ **RESUELTO: L2 activa desde `f4fge6byy` (2026-10-21; verificado 2026-10-27)** · RUM +48h **cumplido** (datos de campo desde 2026-10-25: p75 INP 192 ms ✅, p75 LCP 5704 ms ❌ → H-10b abierto).
 > **Fecha de preparación:** 2026-10-21 · **Ejecución T4:** 2026-10-21 · **T5:** pendiente de ventana
 > **Evidencia recopilada:** lectura de disco (2 migraciones versionadas + journal 64/65) + PGlite (tests 5/5) + BD dev real (paridad 6453=6453, cutover ensayado) + suite completa 2834/2834 — no de memoria
 > **Nota de trazabilidad:** este paquete se redactó inicialmente sobre el archivo CHANGE-003 (error de numeración: CHANGE-003..006 ya existían). Reconstruido y renumerado como **CHANGE-007**; el CHANGE-003 histórico (RLS realtime, APLICADO 2026-08-09) está restaurado intacto desde git.
@@ -168,7 +168,7 @@ flowchart LR
 | TB-1 | `uptime_logs` (RLS `uptime_logs_select_member_or_owner`) | Policy inerte tras particionado | Copia desde `pg_policies` + banderas desde `pg_class` (verificado en PGlite y dev: `relrowsecurity=true, forced=false` idéntico al legacy) | ✅ |
 | TB-2 | Superficie RLS congelada | Deriva de policies | `db:rls-surface-guard` 272/272 en dev sin regenerar snapshot; si en prod exigiera regeneración: MISMO commit con justificación (P3) | ✅ |
 | TB-3 | Grants | Pérdida de privilegios | Copia filtrada desde `information_schema.role_table_grants` (≠ PUBLIC/postgres) | ✅ |
-| TB-4 | Caché IA L2 | Fuga cross-tenant | Dormida en prod hasta decidir `CACHE_STORE=postgres`; el conector ya cumple C1-C6 (claves con tenant, cap TTL 1h, invalidación on-write, sin secretos, accounting limpio, failover intacto — ADR-008-AMEND) | ✅ |
+| TB-4 | Caché IA L2 | Fuga cross-tenant | ✅ **ACTIVA en prod desde `f4fge6byy` (2026-10-21)** — verificado 2026-10-27: `vercel env ls production` lista `CACHE_STORE` (secret, modificado hace 6 días ≈ 21-oct) y la L2 tiene escritura viva (10 claves `ai:*` con TTLs frescos). El conector ya cumple C1-C6 (claves con tenant, cap TTL 1h, invalidación on-write, sin secretos, accounting limpio, failover intacto — ADR-008-AMEND) | ✅ |
 
 ---
 
@@ -226,7 +226,7 @@ Query p75 LCP/TTFB sobre `web_vitals_logs` (ventana 7 días): **BASELINE captura
 1. **DDL T4** (aprobado y ejecutado — ver §18).
 2. **Deploy app** a Vercel Production (código ya en `main`).
 3. **T5** cuando el owner confirme ventana + counts: single-tx con `lock_timeout='10s'`, hueco entre ticks del cron de uptime, verificación catálogo + ledger entry 65.
-4. **`CACHE_STORE=postgres`** (opcional, decisión separada): activa el L2 de caché IA en prod; hasta entonces el L2 queda dormido y el sistema funciona solo con L1 (semántica P1-3).
+4. ~~**`CACHE_STORE=postgres`**~~ ✅ **EJECUTADO** (decisión del owner): el L2 de caché IA está activo en prod desde el redeploy `f4fge6byy` (2026-10-21). Verificado 2026-10-27 con `vercel env ls production` (env var presente, 6d) + escritura viva en `distributed_cache` (claves `ai:*`).
 5. `DROP TABLE uptime_logs_legacy`: NO en este paquete (R1 + ≥48 h + 2ª confirmación del owner).
 
 ---
@@ -345,7 +345,7 @@ Query p75 LCP/TTFB sobre `web_vitals_logs` (ventana 7 días): **BASELINE captura
 - El dominio `strategicconnex.com.ar` pertenece a OTRO proyecto Vercel (`strategic-app`, otro repo — el sitio marketing) y NO sirve esta app: `/disclaimer` 404 ahí es esperado.
 - **PENDIENTE owner:** confirmar la URL real que usan los usuarios de la app y verificar el roadmap ahí (posible alias desfasado a un deployment pre-sprint). Si el alias real sirve el build `1647c3b`, el roadmap DEBE aparecer; si no, re-alias.
 
-**Pendientes de decisión owner (con esta BD=prod como realidad):** (a) R1/R2/R3 post-hoc del T5 ya en curso (R1 paridad 6453 congelada vs nueva con delta del cron — comportamiento correcto); (b) DROP de `uptime_logs_legacy` tras ≥48h + 2ª confirmación; (c) activar o no `CACHE_STORE=postgres` (L2 dormida); (d) RUM +48h para REQ-002.
+**Pendientes de decisión owner (con esta BD=prod como realidad):** (a) R1/R2/R3 post-hoc del T5 ya en curso (R1 paridad 6453 congelada vs nueva con delta del cron — comportamiento correcto); (b) DROP de `uptime_logs_legacy` tras ≥48h + 2ª confirmación; (c) ~~activar o no `CACHE_STORE=postgres`~~ **RESUELTO: L2 activa desde `f4fge6byy` (2026-10-21; verificado 2026-10-27)**; (d) ~~RUM +48h para REQ-002~~ **cumplido**: p75 INP 192 ms ✅ / p75 LCP 5704 ms ❌ (24 h al 2026-10-27) → gate corregido a INP y H-10b abierto en fase B.
 
 ---
 
