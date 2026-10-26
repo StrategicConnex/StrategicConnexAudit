@@ -71,6 +71,8 @@ async function main() {
     ttftMs: number | null;
     totalMs: number;
     chars: number;
+    /** Error del router si success=false (para distinguir outage de regresión). */
+    error: string | null;
   }
 
   const runProbe = async (
@@ -99,6 +101,7 @@ async function main() {
       ttftMs,
       totalMs: Date.now() - t0,
       chars,
+      error: res.error ?? null,
     };
   };
 
@@ -125,12 +128,22 @@ async function main() {
   if (savedGroqKey) process.env.GROQ_API_KEY = savedGroqKey;
 
   const streamSeq = 7;
+  // Tolerancia de outage (review cierre Sprint 1): 503 "high demand" o
+  // cuelgue upstream son indisponibilidad del proveedor, no regresión del
+  // código — se omiten con ⚠️ para que la caída de un proveedor no teña de
+  // rojo una corrida local. Cualquier otro fallo sigue siendo ❌ (ahí sí hay
+  // algo del pool que investigar).
+  const OUTAGE_RE = /503|high demand|aborted due to timeout/i;
   for (const p of probes) {
-    check(
-      `${streamSeq}. stream ${p.name} success`,
-      p.ok,
-      `modelo=${p.model} ttft=${p.ttftMs ?? "-"}ms total=${p.totalMs}ms chars=${p.chars}`,
-    );
+    const detail = `modelo=${p.model} ttft=${p.ttftMs ?? "-"}ms total=${p.totalMs}ms chars=${p.chars}`;
+    if (!p.ok && p.error !== null && OUTAGE_RE.test(p.error)) {
+      console.log(
+        `  ⚠️  ${streamSeq}. stream ${p.name} OMITIDO (upstream no disponible): ` +
+          `${p.error.replace(/\n/g, " ").slice(0, 160)}`,
+      );
+      continue;
+    }
+    check(`${streamSeq}. stream ${p.name} success`, p.ok, detail);
     check(
       `${streamSeq + 1}. stream ${p.name} entregó deltas (SSE real)`,
       p.chars > 0,
