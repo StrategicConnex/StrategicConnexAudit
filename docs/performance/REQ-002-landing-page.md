@@ -19,15 +19,24 @@ estado: Propuesto
 
 ## Requisito
 
-| Métrica | Objetivo | Medido hoy (producción, 2026-10-18) | Estado |
-|---------|----------|-------------------------------------|--------|
-| LCP | **< 2,5 s** | 3,76 s | ❌ +1,26 s |
-| TBT | **< 300 ms** | 1.408 ms | ❌ |
-| Score Lighthouse perf | **> 80** | **63** | ❌ −17 pts |
+**Gate de cierre (corregido 2026-10-27):** `p75 LCP campo < 2,5 s` ∧ `p75 INP campo < 300 ms`,
+medidos con self-RUM en `web_vitals_logs`. El TBT se sustituyó por INP porque
+web-vitals de navegador **no reporta TBT** (métrica de lab); INP es su
+estándar de campo (web.dev). Lighthouse queda como referencia de lab, no como
+gate.
 
-Fuente: `docs/improvements/PERFORMANCE_REPORT.md` §8.1 (Lighthouse 13.7.0 vs
-`scaudit.vercel.app`, 1 run). `/login` ya cumple REQ-001 (LCP 2,33 s, score 76);
-`/pricing` score 82 — la brecha es específica de la ruta raíz.
+| Métrica | Objetivo | Medido hoy (campo, 24 h al 2026-10-27) | Estado |
+|---------|----------|---------------------------------------|--------|
+| **p75 LCP (campo, self-RUM)** | **< 2,5 s** | 5,704 s (n=5) | ❌ +3,2 s |
+| **p75 INP (campo, self-RUM)** | **< 300 ms** | 192 ms (n=11) | ✅ |
+| Score Lighthouse perf (lab, ref.) | > 80 | 63 (2026-10-18) | ❌ −17 pts |
+
+Lab histórica (2026-10-18, Lighthouse 13.7.0 vs `scaudit.vercel.app`, 1 run):
+LCP 3,76 s · TBT 1.408 ms — referencia, ya no gate. `/login` cumple REQ-001
+(LCP 2,33 s, score 76); `/pricing` score 82 — la brecha es específica de la
+ruta raíz. **Conclusión 2026-10-27:** INP cumple con margen; el gate lo falla
+LCP → H-10b abierto en fase B (atribución LCP), ver
+`docs/performance/H-10b-react-dom-investigation.md`.
 
 ## Causas conocidas (evidencia)
 
@@ -45,8 +54,8 @@ Fuente: `docs/improvements/PERFORMANCE_REPORT.md` §8.1 (Lighthouse 13.7.0 vs
 | 1 | Cerrar H-10 INFERRED→CONFIRMED: diff de imports compartidos vs build del 09-26 (git log + route-bundle-stats) | causa documentada con commit/cambio responsable |
 | 2 | Fix de bajo riesgo del bundle (re-segregar `next/dynamic` o `optimizePackageImports`) | `/` raw ≤ baseline 1.026 KB |
 | 3 | Dividir hidratación del shell (tabs en clientes separados + Suspense) | TBT ↓ medible en lab |
-| 4 | Re-medir Lighthouse `/` contra producción | REQ-002: LCP <2,5 s · TBT <300 ms · score >80 |
-| 5 | (Si RUM activo — ver H-09) validar con datos de campo | p75 LCP usuario real <2,5 s |
+| 4 | Re-medir Lighthouse `/` contra producción (lab de referencia) | score >80 |
+| 5 | Validar con datos de campo (self-RUM — ver H-09) | **gate: p75 LCP <2,5 s ∧ p75 INP <300 ms** |
 
 ## Definición de hecho (DoD)
 
