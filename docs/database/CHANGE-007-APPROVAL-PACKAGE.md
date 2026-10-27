@@ -1,6 +1,6 @@
 # CHANGE-007 - Paquete de aprobación: Sprint 6 rollout (índices compuestos + particionado uptime_logs + despliegue app)
 
-> **Estado:** ✅ **T4 EJECUTADO Y VERIFICADO EN PRODUCCIÓN (2026-10-21)** · ⚠️ T5 (particionado) **YA APLICADO en la misma BD de producción** el 2026-10-21 (con la decisión C1 del checkpoint, ANTES de la aprobación formal del paquete — ver §19 Revelación) · ⏳ pendientes: DROP de legacy · ~~`CACHE_STORE=postgres`~~ **RESUELTO: L2 activa desde `f4fge6byy` (2026-10-21; verificado 2026-10-27)** · RUM +48h **cumplido** (datos de campo desde 2026-10-25: p75 INP 192 ms ✅, p75 LCP 5704 ms ❌ → H-10b abierto).
+> **Estado:** ✅ **T4 EJECUTADO Y VERIFICADO EN PRODUCCIÓN (2026-10-21)** · ⚠️ T5 (particionado) **YA APLICADO en la misma BD de producción** el 2026-10-21 (con la decisión C1 del checkpoint, ANTES de la aprobación formal del paquete — ver §19 Revelación) · ⏳ pendientes: ~~DROP de legacy~~ **EJECUTADO 2026-10-28 (§20)** · ~~`CACHE_STORE=postgres`~~ **RESUELTO: L2 activa desde `f4fge6byy` (2026-10-21; verificado 2026-10-27)** · RUM +48h **cumplido** (datos de campo desde 2026-10-25: p75 INP 192 ms ✅, p75 LCP 5704 ms ❌ → H-10b abierto).
 > **Fecha de preparación:** 2026-10-21 · **Ejecución T4:** 2026-10-21 · **T5:** pendiente de ventana
 > **Evidencia recopilada:** lectura de disco (2 migraciones versionadas + journal 64/65) + PGlite (tests 5/5) + BD dev real (paridad 6453=6453, cutover ensayado) + suite completa 2834/2834 — no de memoria
 > **Nota de trazabilidad:** este paquete se redactó inicialmente sobre el archivo CHANGE-003 (error de numeración: CHANGE-003..006 ya existían). Reconstruido y renumerado como **CHANGE-007**; el CHANGE-003 histórico (RLS realtime, APLICADO 2026-08-09) está restaurado intacto desde git.
@@ -16,7 +16,7 @@
 2. Ejecutar el cutover online del particionado RANGE(checked_at) de `uptime_logs` (feature 6.1, T5) con la estrategia **SINGLE-TRANSACTION** validada en PGlite + BD dev.
 3. Desplegar la app (T1-T3, T6-T8) y capturar RUM p75 LCP/TTFB post-48h para cerrar REQ-002 (feature 6.4).
 
-**Fuera de alcance:** DROP de `uptime_logs_legacy` (fase posterior: requiere verificación R1 + ≥48 h estabilización + **segunda confirmación explícita del owner**); activación de `CACHE_STORE=postgres` en prod (decisión de configuración separada, §11); retención de particiones (TD-21, ticket abierta, deadline 2027-03-01); follow-ups F-SCOPE (cacheScope por tenant en 4 call-sites) y hardening LIKE-escape en `deleteByPrefix` (issues separadas). [VERIFIED — alcance de este documento]
+**Fuera de alcance:** ~~DROP de `uptime_logs_legacy`~~ (ejecutado 2026-10-28 — ver §20); activación de `CACHE_STORE=postgres` en prod (decisión de configuración separada, §11 — resuelta: activa desde `f4fge6byy`); retención de particiones (TD-21, ticket abierta, deadline 2027-03-01); follow-ups F-SCOPE (cacheScope por tenant en 4 call-sites) y hardening LIKE-escape en `deleteByPrefix` (issues separadas). [VERIFIED — alcance de este documento]
 
 ---
 
@@ -227,7 +227,7 @@ Query p75 LCP/TTFB sobre `web_vitals_logs` (ventana 7 días): **BASELINE captura
 2. **Deploy app** a Vercel Production (código ya en `main`).
 3. **T5** cuando el owner confirme ventana + counts: single-tx con `lock_timeout='10s'`, hueco entre ticks del cron de uptime, verificación catálogo + ledger entry 65.
 4. ~~**`CACHE_STORE=postgres`**~~ ✅ **EJECUTADO** (decisión del owner): el L2 de caché IA está activo en prod desde el redeploy `f4fge6byy` (2026-10-21). Verificado 2026-10-27 con `vercel env ls production` (env var presente, 6d) + escritura viva en `distributed_cache` (claves `ai:*`).
-5. `DROP TABLE uptime_logs_legacy`: NO en este paquete (R1 + ≥48 h + 2ª confirmación del owner).
+5. ~~`DROP TABLE uptime_logs_legacy`~~ ✅ **EJECUTADO 2026-10-28** con aprobación explícita del owner tras el ledger de paridad del §20 (export total previo + drift-check 6 extras + R2).
 
 ---
 
@@ -345,7 +345,36 @@ Query p75 LCP/TTFB sobre `web_vitals_logs` (ventana 7 días): **BASELINE captura
 - El dominio `strategicconnex.com.ar` pertenece a OTRO proyecto Vercel (`strategic-app`, otro repo — el sitio marketing) y NO sirve esta app: `/disclaimer` 404 ahí es esperado.
 - **PENDIENTE owner:** confirmar la URL real que usan los usuarios de la app y verificar el roadmap ahí (posible alias desfasado a un deployment pre-sprint). Si el alias real sirve el build `1647c3b`, el roadmap DEBE aparecer; si no, re-alias.
 
-**Pendientes de decisión owner (con esta BD=prod como realidad):** (a) R1/R2/R3 post-hoc del T5 ya en curso (R1 paridad 6453 congelada vs nueva con delta del cron — comportamiento correcto); (b) DROP de `uptime_logs_legacy` tras ≥48h + 2ª confirmación; (c) ~~activar o no `CACHE_STORE=postgres`~~ **RESUELTO: L2 activa desde `f4fge6byy` (2026-10-21; verificado 2026-10-27)**; (d) ~~RUM +48h para REQ-002~~ **cumplido**: p75 INP 192 ms ✅ / p75 LCP 5704 ms ❌ (24 h al 2026-10-27) → gate corregido a INP y H-10b abierto en fase B.
+**Pendientes de decisión owner (con esta BD=prod como realidad):** (a) R1/R2/R3 post-hoc del T5 ya en curso (R1 paridad 6453 congelada vs nueva con delta del cron — comportamiento correcto); (b) ~~DROP de `uptime_logs_legacy`~~ **EJECUTADO 2026-10-28 (§20)**; (c) ~~activar o no `CACHE_STORE=postgres`~~ **RESUELTO: L2 activa desde `f4fge6byy` (2026-10-21; verificado 2026-10-27)**; (d) ~~RUM +48h para REQ-002~~ **cumplido**: p75 INP 192 ms ✅ / p75 LCP 5704 ms ❌ (24 h al 2026-10-27) → gate corregido a INP y H-10b abierto en fase B.
+
+---
+
+## 20. D4 — DROP de `uptime_logs_legacy` (ejecutado 2026-10-28)
+
+**Ledger de paridad — por qué `6453 ≠ 4159` no era pérdida de datos:**
+
+| Componente | Filas | Desglose |
+|---|---|---|
+| legacy (congelada 2026-10-20 23:15:42Z) | 6453 | **4149** dentro de la ventana de retención de 30 días (todas presentes en la particionada: `legacy_solo_DENTRO_ventana = 0`) + **2304** vencidas (>30 d) purgadas de la particionada por el cron diario (`cleanup.trigger.ts` L26-27, política P2-14) |
+| particionada pre-cutover | 4159 | **4149** copiadas en el cutover + **10** primeros ticks del cron nuevo (23:30 y 23:45 del 20-oct, 5 proyectos × 2) → **cutover real ≈ 23:20Z del 2026-10-20** (el archivo de migración está fechado 21-oct en hora local) |
+| particionada total | 7172 | +3001 ticks del cron (21→26 oct) |
+
+**Ejecución (secuencia del owner):**
+
+1. Pre-checks: legacy congelada desde 20-oct ✓ · cron vivo (tick ≤15 min) ✓ ·
+   paridad literal 6453=4159 **NO** → ledger arriba → aprobación explícita
+   del owner (*DROP con export previo*).
+2. Export total: `exports/uptime_logs_legacy_pre-drop_2026-10-28.csv`
+   (6453 filas, 738 KB, **fuera del repo y del control de versiones**).
+3. `DROP TABLE uptime_logs_legacy` transaccional, **sin CASCADE** (0 FKs
+   hacia la legacy, verificado en `pg_constraint`), `lock_timeout='10s'` →
+   commandTag `DROP` → `to_regclass = NULL`.
+4. drift-check: **6 extras** (solo las particiones `uptime_logs_2026_09` →
+   `uptime_logs_2027_02`; era 7), exit 0, sin drift duro.
+5. R2: primer tick del cron post-DROP confirmado en `uptime_logs_2026_10`.
+
+**Rollback disponible:** el CSV del export (único artefacto fuera de la BD;
+Supabase Free sin PITR — RSK-04).
 
 ---
 
