@@ -1,6 +1,6 @@
 # H-10b: Investigación chunk react-dom (+69.9 KB, causa INFERRED)
 
-## Estado: F-A + F-B DESPLEGADOS 2026-10-28 (Fase D) — FCP resuelto en lab (−1,7…−2,9 s); LCP sigue en 2,4–3,6 s sobre meta 2,5 s → **F-C pendiente de aprobación del owner** · causa: streaming del servidor + main-thread (Fase C)
+## Estado: F-C DESPLEGADO 2026-10-28 (`aec3099`) — LCP anclado al h2 fijo en lab: **924 / 1024 / 2304 ms con FCP = LCP y CLS ≤ 0,01** (Fase E) → cierre de campo el 2026-10-30 (p75 con dedupe < 2,5 s) · causa raíz confirmada (Fase C): streaming del servidor + `h2` dentro del `<Suspense>` — resuelta en lab
 
 ## Contexto
 
@@ -170,7 +170,7 @@ cierran ~1 s antes que el LCP.
 |---|-----|------------------------|--------|---------------------|
 | F-A | **Paralelizar `loadDashboardData`**: `integrations`/`audits` vía `Promise.all` (hoy secuenciales) + considerar pooler warm | −0,3…−0,8 s y, sobre todo, **reduce la cola fría del outlier 8,6 s** | bajo (mismo contrato, queries independientes) | ✅ `cee6795` — **medido: ~0 s** (ver nota F-A) |
 | F-B | **`DashboardSkeleton` contentful** (texto real del saludo + “Cargando…”): FCP ≈ 1 s en vez de 2,7–3,9 s. *Nota honesta: el LCP final sigue siendo el `h2` real (texto más grande), así que mejora FCP/no-LCP* | FCP −1,7…−2,9 s; LCP indirecto | bajo (solo fallback) | ✅ `f2ef5b0` — **medido: FCP −1,7…−2,9 s** (Fase D) |
-| F-C | **Hero independiente de datos**: SSR del saludo sin `count` en el shell y `count` llegando después. Toca copy/estructura → **exige aprobación explícita** (regla “prohibido cambiar copy de `/`”) | −1,2…−2,4 s (pinta ≈ TTFB+CSS+shell; números actualizados abajo) | medio (UX/copy) | ⏳ **pendiente de aprobación** |
+| F-C | **Hero independiente de datos**: SSR del saludo sin `count` en el shell y `count` llegando después. Toca copy/estructura → **exigió aprobación explícita** (regla “prohibido cambiar copy de `/`”) | −1,2…−2,4 s (pinta ≈ TTFB+CSS+shell; números actualizados abajo) | medio (UX/copy) | ✅ `aec3099` — **medido: LCP = 924/1024/2304 ms, FCP = LCP** (Fase E) |
 
 **Nota F-A (honestidad de medición — por qué el win es ~0):** `withRLS`
 ejecuta todas las queries en la **misma conexión** de la transacción y pg
@@ -212,16 +212,47 @@ y el único componente que falta es exactamente el que ataca **F-C**.
   hero pintaría a ≈ TTFB + CSS + shell ≈ **0,6–1,2 s** → **LCP −1,2…−2,4 s**;
   con eso el p75 de campo proyecta **< 2,5 s** (REQ-002) — proyección, no
   medición: se confirma con la query de 48 h de abajo.
-- **Coste:** toca copy/estructura de `/` (el saludo pierde el `count` en el
-  primer paint; llega en el mismo bloque, después) → **exige aprobación
-  explícita del owner**.
-- **Recomendación: aprobar F-C.** F-A ya no mueve LCP y F-B ya hizo su parte
-  (FCP); sin F-C el gate de campo <2,5 s no se alcanza con estos dos.
+- **Coste (asumido con la aprobación del owner, 2026-10-28):** el saludo
+  pierde el `count` en el primer paint; llega como sublínea de badge
+  («Tienes N proyectos en monitoreo») rellenada in place tras hidratar, en el
+  mismo nodo y sin tocar el `h2`.
+- **Aprobado y ejecutado** (`aec3099`). F-A no mueve LCP y F-B ya hizo su
+  parte (FCP); con F-C medido abajo, el lab queda en rango del gate.
+
+### Fase E — verificación lab post-F-C (2026-10-28, `lcp-diag.mjs` ×3 en prod)
+
+Deploy `aec3099` confirmado en prod por los marcadores F-C del propio script:
+`hasFixedHeroTitle: true`, `heroBeforeQueries: true` (el `h2` viaja en el
+shell, ANTES que «Nodos de Monitoreo», que solo existe en los paneles con
+datos) y `hasSkeletonText: true`.
+
+| Corrida | TTFB | FCP | **LCP** | Elemento LCP | CLS | badge (post-hidratación) |
+|---------|------|-----|---------|--------------|-----|--------------------------|
+| 1 | 400 ms | 2304 ms | **2304 ms** | `h2` «Tu portafolio en monitoreo» | 0 | «Tienes 1 proyectos en monitoreo» ✓ |
+| 2 | 263 ms | 1024 ms | **1024 ms** | idem | 0,01 | ✓ |
+| 3 | 279 ms | 924 ms | **924 ms** | idem | 0,01 | ✓ |
+
+Lectura:
+
+- **FCP = LCP en las 3 corridas**: el `h2` fijo pinta con el primer paint y
+  ningún elemento posterior lo supera → el LCP dejó de esperar el streaming
+  (antes: 2444–3636 ms con el `h2`-con-count que solo existía al final).
+- **LCP −1,1…−2,7 s vs Fase D** (3636/3540/2444 → 2304/1024/924); la corrida 1
+  es la cola fría habitual (TTFB 400 ms).
+- **CLS 0–0,01 ≪ 0,1**: el badge se rellena en el mismo nodo y el `h2` no
+  muta (test (b) fija el nodo en unit; aquí lo confirma un navegador real).
+- Criterios a–d cumplidos: (a) `heroBeforeQueries`, (b) CLS, (c) paridad
+  i18n 819/819, (d) swap skeleton→contenido sin regresión
+  (`DashboardContentSkeleton` contentful + tests).
+
+**Pendiente único:** cierre de campo el **2026-10-30** (query con dedupe de
+abajo). Con estos números de lab la lectura es una confirmación, no una apuesta.
 
 ### Verificación en campo (48 h post-fix; dedupe por sesión — TD-23a)
 
-**Ventana:** correr a partir del deploy del **2026-10-28** (F-A+F-B); lectura
-el **2026-10-30**. Mismo baseline de la Fase D para comparar.
+**Ventana:** correr a partir del deploy del **2026-10-28** (F-A+F-B+F-C,
+`aec3099`); lectura el **2026-10-30**. Mismo baseline de la Fase D para
+comparar — la ventana mide F-B + F-C juntos.
 
 ```sql
 WITH dedup AS (
@@ -245,7 +276,8 @@ beacons repetidos de la misma sesión (TD-23a).
 
 ## Prohibido en esta fase
 
-- Cambiar diseño, contenido o copy de `/`.
+- Cambiar diseño, contenido o copy de `/` — **excepto F-C, aprobado
+  explícitamente por el owner el 2026-10-28** (h2 fijo + badge de count).
 - Tocar `proxy.ts`, RLS, auth o el pool de IA.
 - «Optimizaciones» sin medición antes/después.
 - Investigar react-dom antes de tener p75 de campo.
@@ -269,18 +301,20 @@ probe del 2026-10-20 verificó POSTs 204 reales del beacon; las filas caen en
 
 - [x] 48h de datos RUM acumulados (desde deploy `3143adc` + `ff3bad2`) —
       verificado 2026-10-27.
-- [ ] p75 LCP campo < 2.5 s **Y** p75 INP campo < 300 ms → cerrado sin acción
-      (2026-10-27: INP ✅ 192 ms, LCP ❌ 5704 ms → no se cierra sin acción).
+- [ ] p75 LCP campo < 2.5 s **Y** p75 INP campo < 300 ms → lectura final
+      2026-10-30 (2026-10-27: INP ✅ 192 ms, LCP ❌ 5704 ms; lab post-F-C ✅
+      924–2304 ms → la lectura de campo confirma o no).
 - [x] Fase B (atribución): segmentar `raw_payload` por ruta + descomponer LCP
       (TTFB / load delay / load time / render delay) + elemento LCP p75 →
       punto de decisión — completada 2026-10-27 (bundle REFUTADA; causa:
       render-blocking + elemento LCP tardío).
-- [x] Fix de bajo riesgo + re-medición en lab — **F-A `cee6795` + F-B
-      `f2ef5b0` desplegados y medidos 2026-10-28 (Fase D): FCP −1,7…−2,9 s,
-      CLS sin regresión**. LCP aún sobre meta → F-C pendiente de aprobación.
-- [ ] Verificación en campo 48 h post F-A+F-B (query con dedupe por sesión,
-      arriba) → lectura **2026-10-30**: p75 LCP < 2.5 s cierra H-10b; si no,
-      F-C va a decisión del owner.
+- [x] Fix de bajo riesgo + re-medición en lab — F-A `cee6795` + F-B
+      `f2ef5b0` (Fase D: FCP −1,7…−2,9 s) y **F-C `aec3099` aprobado por el
+      owner y medido 2026-10-28 (Fase E): LCP = 924/1024/2304 ms, FCP = LCP,
+      CLS ≤ 0,01** → LCP en rango de lab.
+- [ ] Verificación en campo 48 h post F-A+F-B+F-C (query con dedupe por
+      sesión, arriba) → lectura **2026-10-30**: p75 LCP < 2.5 s cierra
+      H-10b (con F-C desplegado en lab es una confirmación, no una apuesta).
 
 ## Notas
 
@@ -292,5 +326,5 @@ probe del 2026-10-20 verificó POSTs 204 reales del beacon; las filas caen en
 
 ## Fecha de revisión
 
-**2026-10-30** (lectura de campo 48 h post F-A+F-B; última actualización de
-registro: 2026-10-28 — Fase D).
+**2026-10-30** (lectura de campo 48 h post F-A+F-B+F-C; última actualización
+de registro: 2026-10-28 — Fase E, F-C medido en lab).
