@@ -365,6 +365,7 @@
   },
   "overview": {
     "greeting": "Hola",
+    "heroTitle": "Tu portafolio en monitoreo",
     "welcomeSummary": "Tienes {count} proyectos en monitoreo",
     "portfolioCoverage": "Cobertura de auditoría",
     "metricsProjects": "Proyectos",

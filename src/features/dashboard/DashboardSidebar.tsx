@@ -49,7 +49,9 @@ export type DashboardTab =
 interface DashboardSidebarProps {
   activeTab: DashboardTab;
   onTabChange: (tab: DashboardTab) => void;
-  projectCount: number;
+  /** null = los datos de página aún no llegaron (H-10b F-C: el chrome pinta
+   *  antes que las queries) → placeholders "…", nunca un 0 mentiroso. */
+  projectCount: number | null;
 }
 
 // ─── NavButton ────────────────────────────────────────────────────────────────
@@ -212,7 +214,7 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
             activeTab={activeTab}
             icon={<Globe size={18} strokeWidth={2} />}
             label={t("tabs.projects")}
-            badge={<Badge variant="neutral">{projectCount}</Badge>}
+            badge={<Badge variant="neutral">{projectCount ?? "…"}</Badge>}
             onClick={() => onTabChange("projects")}
           />
 
@@ -336,7 +338,19 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
               {t("copilotEngine")}
             </span>
             <div className="flex items-center gap-1">
-              {projectCount > 0 ? (
+              {projectCount === null ? (
+                /* Cargando (F-C): ni "ACTIVO" ni "sin datos" — los dos
+                   afirmarían algo que aún no se consultó. */
+                <>
+                  <span className="text-2xs text-muted-fg font-bold" aria-hidden="true">
+                    …
+                  </span>
+                  <span
+                    className="flex h-1.5 w-1.5 rounded-full bg-muted-fg/40"
+                    aria-hidden="true"
+                  />
+                </>
+              ) : projectCount > 0 ? (
                 <>
                   <span className="text-2xs text-chartreuse font-bold">{t("active")}</span>
                   <span className="flex h-1.5 w-1.5 rounded-full bg-chartreuse scan-pulse" />
@@ -359,9 +373,11 @@ export function DashboardSidebar({ activeTab, onTabChange, projectCount }: Dashb
               <ShieldCheck size={14} className="text-primary" /> {t("continuousAudit")}
             </div>
             <div className="text-2xs text-muted-fg">
-              {projectCount > 0
-                ? t("monitoringProjects", { count: projectCount })
-                : t("noProjectsYet")}
+              {projectCount === null
+                ? "…"
+                : projectCount > 0
+                  ? t("monitoringProjects", { count: projectCount })
+                  : t("noProjectsYet")}
             </div>
           </div>
         </div>

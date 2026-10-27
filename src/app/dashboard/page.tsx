@@ -1,9 +1,8 @@
-import { Suspense } from "react";
 import { projects, audits, integrations, issues } from "@/shared/db/schemas";
 import { eq, desc, isNull, and, inArray, count, sql } from "drizzle-orm";
 import { healthFromIssueCounts } from "@/shared/utils/health-score";
 import { DashboardContainer } from "@/features/dashboard/DashboardContainer";
-import { DashboardSkeleton } from "@/features/dashboard/DashboardSkeleton";
+import { DashboardShell } from "@/features/dashboard/DashboardShell";
 import { createClient } from "@/shared/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { withRLS } from "@/shared/db/rls";
@@ -134,7 +133,6 @@ async function PortfolioContent() {
       <DashboardContainer
         initialProjects={allProjects}
         dashboardData={dashboardData}
-        defaultTab="portfolio"
         userInitials="DEV"
       />
     );
@@ -157,16 +155,20 @@ async function PortfolioContent() {
     <DashboardContainer
       initialProjects={allProjects}
       dashboardData={dashboardData}
-      defaultTab="portfolio"
       userInitials={user.email?.slice(0, 2).toUpperCase() ?? "··"}
     />
   );
 }
 
+/**
+ * H-10b F-C: el chrome (sidebar/header) vive en el DashboardShell, fuera del
+ * Suspense; `PortfolioContent` (sesión + queries) queda dentro de la frontera
+ * de carga del shell. La pestaña inicial la fija el shell.
+ */
 export default function DashboardPortfolioPage() {
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
+    <DashboardShell defaultTab="portfolio">
       <PortfolioContent />
-    </Suspense>
+    </DashboardShell>
   );
 }

@@ -42,21 +42,40 @@ const session = {
 const cookieName = `sb-${ref}-auth-token`;
 const cookieValue = "base64-" + Buffer.from(JSON.stringify(session)).toString("base64url");
 
-// ── 2. SSR: ¿el h2 va en el HTML del servidor? ¿cuánto dura el streaming? ──
+// ── 2. SSR: ¿el h2 fijo va en el HTML del servidor? ¿antes que los datos? ──
+// F-C (H-10b): "Nodos de Monitoreo" solo existe dentro de los paneles
+// (OverviewTab, que se server-renderiza DESPUÉS de las queries con RLS), así
+// que su posición en el documento marca dónde termina el shell. El h2 del LCP
+// debe aparecer ANTES: eso prueba que viaja en el shell, fuera del
+// <Suspense>, sin esperar ninguna query.
+// Nota: el badge de count ahora se rellena en el cliente (contexto del shell),
+// por eso ya no se comprueba "proyectos en monitoreo" en el HTML del servidor.
+const HERO_ES = "Tu portafolio en monitoreo";
+const HERO_EN = "Your portfolio under monitoring";
 const t0 = performance.now();
 const docRes = await fetch(`${BASE}/`, {
   headers: { Cookie: `${cookieName}=${cookieValue}; disclaimer_accepted=true` },
   redirect: "follow",
 });
 const docHtml = await docRes.text();
+const idxHero = docHtml.includes(HERO_ES)
+  ? docHtml.indexOf(HERO_ES)
+  : docHtml.indexOf(HERO_EN);
+const PANELS_ES = "Nodos de Monitoreo";
+const PANELS_EN = "Monitoring Nodes";
+const idxPaneles = docHtml.includes(PANELS_ES)
+  ? docHtml.indexOf(PANELS_ES)
+  : docHtml.indexOf(PANELS_EN);
 const ssr = {
   finalUrl: docRes.url,
   status: docRes.status,
   totalMs: Math.round(performance.now() - t0),
-  hasHeroEs: docHtml.includes("proyectos en monitoreo"),
-  hasHeroEn: docHtml.includes("monitored projects"),
-  // Marcador de deploy F-B: el texto del skeleton viaja en el stream del
-  // documento (fallback del Suspense). true = el build nuevo ya está en prod.
+  // F-C: el h2 fijo del LCP viaja en el shell…
+  hasFixedHeroTitle: idxHero !== -1,
+  // …y se emitió ANTES que los paneles con datos (queries con RLS).
+  heroBeforeQueries: idxHero !== -1 && idxPaneles !== -1 && idxHero < idxPaneles,
+  // Marcador de deploy: texto del fallback de contenido en el stream del
+  // documento (F-B/F-C). true = el build nuevo ya está en prod.
   hasSkeletonText: docHtml.includes("Cargando tu portafolio"),
   htmlBytes: Buffer.byteLength(docHtml),
 };
@@ -113,6 +132,9 @@ for (let i = 0; i < RUNS; i++) {
   await page.waitForTimeout(4_000);
   const data = await page.evaluate(() => ({
     ...window.__lcp,
+    // F-C: h2 fijo + badge relleno in place tras hidratar (test de campo (b)).
+    heroTitle: document.querySelector('[data-testid="hero-title"]')?.textContent ?? null,
+    badgeText: document.querySelector('[data-testid="hero-count-badge"]')?.textContent ?? null,
     nav: (() => { const n = performance.getEntriesByType("navigation")[0]; return {
       ttfb: Math.round(n.responseStart), docResponseEnd: Math.round(n.responseEnd),
       domContentLoaded: Math.round(n.domContentLoadedEventEnd), loadEvent: Math.round(n.loadEventEnd),
@@ -132,6 +154,7 @@ for (let i = 0; i < RUNS; i++) {
   const fcp = data.paints.find((p) => p.name === "first-contentful-paint")?.t ?? null;
   runs.push({
     run: i + 1, navWallMs: navMs, fcp, lcp: data.lcp, fontsDone: data.fontsDone,
+    heroTitle: data.heroTitle, badgeText: data.badgeText,
     cls: Math.round(data.cls * 1000) / 1000,
     longTasksBeforeLcp: data.longTasks.filter((t) => t.t < (data.lcp?.t ?? 0)),
     longTaskTotalMs: data.longTasks.reduce((s, t) => s + t.dur, 0),

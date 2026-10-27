@@ -365,6 +365,7 @@
   },
   "overview": {
     "greeting": "Hello",
+    "heroTitle": "Your portfolio under monitoring",
     "welcomeSummary": "You have {count} monitored projects",
     "portfolioCoverage": "Audit coverage",
     "metricsProjects": "Projects",

@@ -8,7 +8,9 @@ import React from "react";
  * portafolio: es el enlace que un director pega en un ticket.
  *
  * Estos tests fijan ese comportamiento — que no vuelva a ser un redirect
- * silencioso ni un 404.
+ * silencioso ni un 404. Con H-10b F-C el chrome (sidebar/header/hero) vive en
+ * `DashboardShell` y la pestaña inicial la fija ÉL (`defaultTab="portfolio"`),
+ * mientras los paneles con datos quedan dentro de su frontera de Suspense.
  */
 
 const mocks = vi.hoisted(() => ({
@@ -35,9 +37,15 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+/** El shell es un client component: aquí se sustituye por un nodo que deja
+ *  ver su `defaultTab` (la pestaña inicial) y renderiza a sus hijos. */
+vi.mock("@/features/dashboard/DashboardShell", () => ({
+  DashboardShell: (props: { defaultTab?: string; children?: React.ReactNode }) =>
+    React.createElement("div", { "data-testid": "shell", "data-tab": props.defaultTab }, props.children),
+}));
+
 vi.mock("@/features/dashboard/DashboardContainer", () => ({
-  DashboardContainer: (props: { defaultTab?: string }) =>
-    React.createElement("div", { "data-testid": "container", "data-tab": props.defaultTab }),
+  DashboardContainer: () => React.createElement("div", { "data-testid": "container" }),
 }));
 
 /**
@@ -63,19 +71,19 @@ vi.mock("@/shared/db/rls", () => ({
 }));
 
 /**
- * El árbol envuelve la parte async en `<Suspense>`, que renderToStaticMarkup
- * no resuelve porque no espera promesas. Se baja al hijo, se invoca su
- * componente (que devuelve una promesa) y se serializa el árbol ya resuelto.
+ * Estructura post F-C: Page() → elemento del shell (mockeado) cuyo hijo es el
+ * componente async de la ruta (antes estaba envuelto en un `<Suspense>`; hoy
+ * esa frontera vive dentro del shell). Se invoca el hijo, se resuelve y se
+ * renderiza el shell ya con el contenido resuelto.
  */
 async function renderRoute(): Promise<string> {
   const { default: Page } = await import("./page");
-  const element = (Page as unknown as () => React.ReactElement)();
-  const children = (element as unknown as { props: { children: React.ReactNode } }).props;
-  const child = Array.isArray(children.children) ? children.children[0] : children.children;
-  const Inner = (child as React.ReactElement).type as () => Promise<React.ReactElement>;
+  const shell = (Page as unknown as () => React.ReactElement)();
+  const content = shell.props.children as React.ReactElement;
+  const Inner = content.type as () => Promise<React.ReactElement>;
   const resolved = await Inner();
   const { renderToStaticMarkup } = await import("react-dom/server");
-  return renderToStaticMarkup(resolved as never);
+  return renderToStaticMarkup(React.cloneElement(shell, {}, resolved));
 }
 
 describe("/dashboard", () => {
@@ -87,6 +95,8 @@ describe("/dashboard", () => {
   it("renderiza la vista de portafolio en vez de redirigir", async () => {
     const html = await renderRoute();
     expect(html).toContain('data-testid="container"');
+    // La pestaña inicial la fija el shell (chrome fuera del Suspense).
+    expect(html).toContain('data-testid="shell"');
     expect(html).toContain('data-tab="portfolio"');
     expect(mocks.redirect).not.toHaveBeenCalled();
   });

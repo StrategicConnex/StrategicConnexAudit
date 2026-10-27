@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { DashboardSidebar, type DashboardTab } from './DashboardSidebar';
-import { MobileNav, MobileBottomNav } from './MobileNav';
-import { DashboardHeader } from './DashboardHeader';
-import { CommandPalette } from '@/components/CommandPalette';
+import type { DashboardTab } from './DashboardSidebar';
+import { useDashboardUI } from './dashboard-ui-context';
 import { OverviewTab } from './tabs/OverviewTab';
 import { TabSkeleton } from './TabSkeleton';
 import { loadIntelligenceTab, loadPortfolioTab, loadTriageTab } from './tab-loaders';
@@ -77,25 +75,20 @@ const NewProjectModal = dynamic(() => import('./NewProjectModal').then(mod => mo
   loading: () => <div className="w-9 h-9 bg-muted/30 rounded-lg animate-pulse" />,
 });
 
-const AiCopilot = dynamic(() => import('./AiCopilot').then(mod => mod.AiCopilot), { ssr: false });
-
-const NeuralNetworkBackground = dynamic(
-  () => import('@/components/NeuralNetworkBackground').then(mod => ({ default: mod.NeuralNetworkBackground })),
-  { ssr: false, loading: () => null }
-);
-
 import { ProjectWithNested, type ProjectRow } from '@/shared/db/types';
 
 interface DashboardContainerProps {
   initialProjects: ProjectRow[];
   dashboardData: ProjectWithNested[];
-  defaultTab?: DashboardTab;
+  /** Iniciales de la sesión — solo se publican al chrome (hero/header). */
   userInitials?: string;
 }
 
-export function DashboardContainer({ initialProjects, dashboardData, defaultTab, userInitials }: DashboardContainerProps) {
-  const [activeTab, setActiveTab] = useState<DashboardTab>(defaultTab || 'overview');
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+export function DashboardContainer({ initialProjects, dashboardData, userInitials }: DashboardContainerProps) {
+  // F-C (H-10b): la pestaña activa vive en el DashboardShell (chrome fuera
+  // del Suspense) — el sidebar y la paleta la cambian y ESTOS paneles la
+  // leen del contexto.
+  const { activeTab, setActiveTab: openTab, publishChrome } = useDashboardUI();
   const [viewMode, setViewMode] = useState<'visual' | 'markdown'>('visual');
   const [keywordInput, setKeywordInput] = useState('');
   // Sin fixtures: la lista arranca vacía y KeywordsTab muestra su empty state.
@@ -103,8 +96,6 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
   const [selectedProjectId, setSelectedProjectId] = useState(initialProjects[0]?.id || '');
   const activeTabRef = useRef<DashboardTab>(activeTab);
   const projectRef = useRef<string>(selectedProjectId);
-  // El copilot "escucha" mientras genera → la red neuronal acelera su pulso
-  const [copilotGenerating, setCopilotGenerating] = useState(false);
 
   // AI Report state and actions live in the hook
   const aiReport = useAiReport(selectedProjectId);
@@ -154,12 +145,23 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
     projectRef.current = selectedProjectId;
   });
 
+  // F-C (H-10b): el chrome (hero/sidebar/header/paleta) vive fuera del
+  // Suspense y pinta con placeholders hasta que ESTOS paneles hidratan.
+  // Publicar aquí los datos de página los rellena in place: mismo nodo y
+  // mismas alturas → sin CLS y sin refrescar la página.
+  useEffect(() => {
+    publishChrome({ initialProjects, dashboardData, userInitials });
+  }, [publishChrome, initialProjects, dashboardData, userInitials]);
+
   // Carga perezosa de keywords: solo al abrir la pestaña o cambiar de
-  // proyecto estando en ella (P1-2). Sin useEffect con setState: eventos.
-  const openTab = useCallback((tab: DashboardTab) => {
-    setActiveTab(tab);
-    if (tab === 'keywords') void loadKeywords(projectRef.current);
-  }, [loadKeywords]);
+  // proyecto estando en ella (P1-2). El disparo vive en un efecto sobre
+  // `activeTab` porque la pestaña ahora puede cambiarse desde el chrome
+  // (sidebar, paleta ⌘K) por fuera de este componente: quien pulse
+  // "Keywords" ahí debe cargar exactamente lo mismo que quien lo hace
+  // desde el menú interno.
+  useEffect(() => {
+    if (activeTab === 'keywords') void loadKeywords(projectRef.current);
+  }, [activeTab, loadKeywords]);
 
   const pickProject = useCallback((id: string) => {
     setSelectedProjectId(id);
@@ -199,55 +201,10 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
     if (result.data?.success && selectedProjectId) await loadKeywords(selectedProjectId);
   };
 
+  // Los paneles viven dentro del <Suspense> del DashboardShell: este div es
+  // lo único que renderiza el contenedor (el chrome lo pinta el shell).
   return (
-    <div className="min-h-screen bg-background text-foreground flex relative overflow-hidden">
-      {/* Red neuronal de fondo — z-0, pointer-events none, theme-aware. El
-          micro-detalle "listening" se activa mientras el copilot genera. */}
-      <NeuralNetworkBackground listening={copilotGenerating} />
-
-      {/* Sidebar Component */}
-      <DashboardSidebar
-        activeTab={activeTab}
-        onTabChange={openTab}
-        projectCount={initialProjects.length}
-      />
-
-      {/* Mobile drawer — el sidebar es hidden en <md */}
-      <MobileNav
-        open={mobileNavOpen}
-        activeTab={activeTab}
-        onTabChange={openTab}
-        onClose={() => setMobileNavOpen(false)}
-      />
-
-      {/* Barra inferior móvil con las 5 pestañas principales */}
-      <MobileBottomNav activeTab={activeTab} onTabChange={openTab} />
-
-      {/* Paleta de comandos global (⌘K) */}
-      <CommandPalette
-        projects={initialProjects.map((p) => ({
-          id: p.id,
-          name: p.name,
-          domain: p.domain,
-        }))}
-        onNavigateTab={openTab}
-      />
-
-      {/* Main Content Area — bg transparente para dejar ver la red neuronal de fondo */}
-      <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Header Component */}
-        <DashboardHeader 
-          activeTab={activeTab} 
-          NewProjectModal={NewProjectModal} 
-          onMenu={() => setMobileNavOpen(true)}
-          onNavigateProjects={() => openTab('projects')}
-          onOpenSettings={() => openTab('settings')}
-          userInitials={userInitials}
-        />
-
-        {/* Dynamic Content Panel */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-10 pb-28 sm:pb-32 bg-muted/30 relative z-10">
-          <div key={activeTab} className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div key={activeTab} className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {activeTab === 'overview' && (
               <OverviewTab 
@@ -255,7 +212,6 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
                 dashboardData={dashboardData} 
                 setActiveTab={(tab) => openTab(tab as DashboardTab)}
                 projectId={selectedProjectId}
-                userInitials={userInitials}
               />
             )}
 
@@ -355,15 +311,6 @@ export function DashboardContainer({ initialProjects, dashboardData, defaultTab,
               />
             )}
 
-          </div>
-        </div>
-      </main>
-
-      {/* Floating AI Copilot Widget */}
-      <AiCopilot
-        contextData={dashboardData}
-        onGeneratingChange={setCopilotGenerating}
-      />
     </div>
   );
 }

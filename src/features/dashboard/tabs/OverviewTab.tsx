@@ -8,27 +8,23 @@ import {
   Activity,
   WifiOff,
   Radio,
-  Bell,
   Terminal,
   CheckCircle2,
   Zap,
-  ClipboardList,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ProjectCard } from "../ProjectCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { ScoreGauge } from "@/components/ui/ScoreGauge";
-import { MetricCard } from "@/components/MetricCard";
 import { ActivityTimeline, buildTimelineEvents } from "@/components/ActivityTimeline";
 import { JargonTerm } from "@/components/ui/JargonTerm";
 import { OnboardingChecklist } from "../OnboardingChecklist";
 import { ForecastCard } from "../ForecastCard";
 import { Card } from "@/components/ui/Card";
 import type { ProjectWithNested } from "@/shared/db/types";
-import type { TimelineEvent } from "@/components/ActivityTimeline";
 import { formatTime, formatTimeWithSeconds } from "@/shared/utils/datetime";
 import { isFlagEnabled } from "@/shared/lib/flags";
+import { useDashboardUI } from "../dashboard-ui-context";
 
 /**
  * BenchmarkingSection pulls in recharts (~570KB) — defer the chunk until the
@@ -80,8 +76,6 @@ interface OverviewTabProps {
   dashboardData: ProjectWithNested[];
   setActiveTab: (tab: string) => void;
   projectId?: string;
-  /** Iniciales para la bienvenida (p. ej. "AB"). */
-  userInitials?: string;
 }
 
 interface LiveCheck {
@@ -125,89 +119,10 @@ const REFRESH_COALESCE_MS = 1_000;
 /** Fuente que alimenta el hero: suscripción Realtime o refresco periódico. */
 export type HeroTransport = "realtime" | "polling";
 
-// ─── OverviewSummary (Semana 5) ─────────────────────────────────────────────
-
-function OverviewSummary({
-  userInitials,
-  projectCount,
-  auditedCount,
-  uptimePercent,
-  failedChecks,
-  checksLoading,
-  events,
-}: {
-  userInitials?: string;
-  projectCount: number;
-  auditedCount: number;
-  uptimePercent: number | null;
-  failedChecks: number;
-  checksLoading: boolean;
-  events: TimelineEvent[];
-}) {
-  const t = useTranslations("overview");
-  const coverage = projectCount > 0 ? (auditedCount / projectCount) * 100 : null;
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 p-6">
-          <p className="text-2xs font-extrabold uppercase tracking-widest text-primary">
-            {t("greeting")}
-            {userInitials ? `, ${userInitials}` : ""}
-          </p>
-          <h2 className="font-display text-2xl font-extrabold tracking-tight text-foreground mt-1">
-            {t("welcomeSummary", { count: projectCount })}
-          </h2>
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
-            <MetricCard
-              icon={<Globe aria-hidden="true" />}
-              label={t("metricsProjects")}
-              value={String(projectCount)}
-            />
-            <MetricCard
-              icon={<ClipboardList aria-hidden="true" />}
-              label={t("metricsAudits")}
-              value={String(auditedCount)}
-            />
-            <MetricCard
-              icon={<Activity aria-hidden="true" />}
-              label={t("metricsUptime")}
-              value={uptimePercent != null ? `${(uptimePercent * 100).toFixed(1)}%` : "—"}
-            />
-            <MetricCard
-              icon={<Bell aria-hidden="true" />}
-              label={t("metricsAlerts")}
-              value={checksLoading ? "—" : String(failedChecks)}
-            />
-          </div>
-        </Card>
-        <Card className="p-6 flex items-center gap-5">
-          <ScoreGauge value={coverage} ariaLabel={t("portfolioCoverage")} />
-          <div className="flex flex-col gap-1">
-            <p className="text-2xs font-extrabold uppercase tracking-widest text-muted-fg">
-              {t("portfolioCoverage")}
-            </p>
-            <p className="font-display text-xl font-extrabold tabular-nums text-foreground">
-              {auditedCount}
-              <span className="text-xs font-mono text-muted-fg">/{projectCount}</span>
-            </p>
-          </div>
-        </Card>
-      </div>
-      <Card className="p-6">
-        <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest mb-4">
-          {t("timelineTitle")}
-        </h3>
-        <ActivityTimeline events={events} emptyLabel={t("timelineEmpty")} />
-      </Card>
-    </div>
-  );
-}
-
 export function OverviewTab({
   dashboardData,
   setActiveTab,
   projectId,
-  userInitials,
 }: OverviewTabProps) {
   const t = useTranslations("overview");
   // Las etiquetas de transporte se reutilizan del namespace `live` (C1): el
@@ -223,6 +138,19 @@ export function OverviewTab({
   const [loadAttempt, setLoadAttempt] = useState(0);
   const auditedCount = dashboardData.filter((p) => p.latestAudit != null).length;
   const failedChecks = hero.checks.filter((c) => c.isUp === false).length;
+
+  // F-C (H-10b): el resumen con el h2 fijo vive en el DashboardShell (fuera
+  // del Suspense). Este componente solo le publica la telemetría de SU fetch:
+  // uptime, alertas y estado de carga, para que el shell la rellene in place
+  // en cuanto hidrata — sin duplicar peticiones ni suscripciones.
+  const { publishLive } = useDashboardUI();
+  useEffect(() => {
+    publishLive({
+      uptimePercent: hero.uptimePercent,
+      failedChecks,
+      checksLoading: hero.status === "loading",
+    });
+  }, [hero, failedChecks, publishLive]);
 
   // Telemetría real del hero: últimos chequeos de uptime (24h) + salud de IA.
   // 401/sin datos → estado vacío honesto, nunca cifras inventadas.
@@ -411,15 +339,6 @@ export function OverviewTab({
   const esRealtime = transport === "realtime";
   return (
     <div className="space-y-6">
-      {/* Page title — h1 lives in DashboardHeader; this is the in-content h2 */}
-      <div className="flex items-center gap-3">
-        <h2 className="text-xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-          <Activity aria-hidden="true" className="w-5 h-5 text-primary" />
-          {t("pageTitle")}
-        </h2>
-        <p className="text-sm text-muted-fg mt-0.5">{t("pageSubtitle")}</p>
-      </div>
-
       {/* P1-1 Onboarding: solo visible hasta completar u ocultar */}
       <OnboardingChecklist
         projectCount={dashboardData.length}
@@ -427,27 +346,31 @@ export function OverviewTab({
         setActiveTab={setActiveTab}
       />
 
-      {/* ═══ 0. BIENVENIDA + RESUMEN RÁPIDO (Semana 5 — solo datos reales) ═══ */}
-      <OverviewSummary
-        userInitials={userInitials}
-        projectCount={dashboardData.length}
-        auditedCount={dashboardData.filter((p) => p.latestAudit != null).length}
-        uptimePercent={hero.uptimePercent}
-        failedChecks={failedChecks}
-        checksLoading={hero.status === "loading"}
-        events={buildTimelineEvents({
-          projects: dashboardData.map((p) => ({
-            id: p.id,
-            name: p.name,
-            createdAt: p.createdAt ?? null,
-          })),
-          failedChecks: hero.checks
-            .filter((c) => c.isUp === false)
-            .map((c) => ({ checkedAt: c.checkedAt, responseTimeMs: c.responseTimeMs })),
-          projectAddedLabel: t("eventProjectAdded"),
-          checkFailedLabel: t("eventCheckFailed"),
-        })}
-      />
+      {/* ═══ 0. ACTIVIDAD RECIENTE ═══
+          El resumen (saludo + h2 fijo + badge de count) se mudó al
+          DashboardShell, fuera del <Suspense> (H-10b F-C): el h2 del LCP no
+          puede esperar las queries de esta pestaña. Queda la timeline, que sí
+          depende de datos que cargan aquí. */}
+      <Card className="p-6">
+        <h3 className="text-2xs font-bold text-muted-fg uppercase tracking-widest mb-4">
+          {t("timelineTitle")}
+        </h3>
+        <ActivityTimeline
+          events={buildTimelineEvents({
+            projects: dashboardData.map((p) => ({
+              id: p.id,
+              name: p.name,
+              createdAt: p.createdAt ?? null,
+            })),
+            failedChecks: hero.checks
+              .filter((c) => c.isUp === false)
+              .map((c) => ({ checkedAt: c.checkedAt, responseTimeMs: c.responseTimeMs })),
+            projectAddedLabel: t("eventProjectAdded"),
+            checkFailedLabel: t("eventCheckFailed"),
+          })}
+          emptyLabel={t("timelineEmpty")}
+        />
+      </Card>
 
       {/* ═══ 1. HERO CARD — telemetría real (últimos chequeos 24h) ═══ */}
       <Card variant="hero" className="p-6 sm:p-8 overflow-hidden">

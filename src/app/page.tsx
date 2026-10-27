@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { projects, audits, integrations, issues } from "@/shared/db/schemas";
 import { eq, desc, isNull, and, inArray, count, sql } from "drizzle-orm";
 import { healthFromIssueCounts } from "@/shared/utils/health-score";
@@ -7,7 +6,7 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { withRLS } from "@/shared/db/rls";
 import { directDb } from "@/shared/db";
-import { DashboardSkeleton } from "@/features/dashboard/DashboardSkeleton";
+import { DashboardShell } from "@/features/dashboard/DashboardShell";
 import type { DbTransaction } from "@/shared/lib/actions";
 
 export const dynamic = "force-dynamic";
@@ -164,10 +163,16 @@ async function DashboardContent() {
   );
 }
 
+/**
+ * H-10b F-C: el DashboardShell (chrome + hero con el h2 fijo) va FUERA de
+ * cualquier frontera de carga — pinta con el primer flush del documento. El
+ * boundary del Suspense vive dentro del shell y solo cubre `DashboardContent`
+ * (sesión + queries), así el elemento LCP no depende del streaming de datos.
+ */
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
+    <DashboardShell>
       <DashboardContent />
-    </Suspense>
+    </DashboardShell>
   );
 }
