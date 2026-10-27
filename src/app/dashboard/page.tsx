@@ -50,16 +50,21 @@ async function loadDashboardData(tx: DbTransaction, userId: string) {
   }[] = [];
 
   if (projectIds.length > 0) {
-    allIntegrations = await tx
-      .select()
-      .from(integrations)
-      .where(inArray(integrations.projectId, projectIds));
-
-    allAudits = await tx
-      .select()
-      .from(audits)
-      .where(inArray(audits.projectId, projectIds))
-      .orderBy(desc(audits.createdAt));
+    // F-A (H-10b): queries independientes → en paralelo. Nota honesta: dentro
+    // de withRLS comparten la MISMA conexión de la transacción (pg las
+    // serializa), así que el win de latencia aquí es ~0 — el salto de FCP lo
+    // da F-B (skeleton con texto). El veredicto se mide con lcp-diag post-push.
+    [allIntegrations, allAudits] = await Promise.all([
+      tx
+        .select()
+        .from(integrations)
+        .where(inArray(integrations.projectId, projectIds)),
+      tx
+        .select()
+        .from(audits)
+        .where(inArray(audits.projectId, projectIds))
+        .orderBy(desc(audits.createdAt)),
+    ]);
   }
 
   // Score real de salud por proyecto: issues de su ÚLTIMA auditoría completada.
