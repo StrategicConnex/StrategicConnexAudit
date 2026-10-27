@@ -27,6 +27,21 @@ export function DashboardSkeleton() {
 
         <div className="flex-1 p-10 space-y-10">
           <div className="max-w-[1400px] mx-auto space-y-10">
+            {/* Hero de bienvenida con TEXTO REAL (H-10b F-B): sin texto el
+                fallback no pinta contentful → no cuenta como FCP ni LCP
+                (Fase C). Espejo del hero de OverviewTab (greeting + h2);
+                el count real llega con los datos y lo reemplaza en ≤2 s.
+                ES hardcodeado con el mismo precedente que el skip-link del
+                layout (defaultLocale 'es'). */}
+            <div className="bg-card border border-border/50 rounded-xl p-6">
+              <p className="text-2xs font-extrabold uppercase tracking-widest text-primary">
+                Hola
+              </p>
+              <h2 className="font-display text-2xl font-extrabold tracking-tight text-foreground mt-1">
+                Cargando tu portafolio…
+              </h2>
+            </div>
+
             {/* KPI Stats Skeleton */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[...Array(3)].map((_, i) => (
