@@ -47,7 +47,12 @@ describe("useAiChat · chat real (Task 0.1)", () => {
       jsonResponse({ success: true, message: "Respuesta real del modelo", modelUsed: "test/model" })
     );
 
-    const { result } = renderHook(() => useAiChat());
+    const { result } = renderHook(() =>
+      useAiChat({
+        projectId: "11111111-1111-4111-8111-111111111111",
+        investigationId: "22222222-2222-4222-8222-222222222222",
+      }),
+    );
 
     await act(async () => {
       await result.current.sendMessage("¿Qué puertos abiertos tengo?");
@@ -60,9 +65,14 @@ describe("useAiChat · chat real (Task 0.1)", () => {
 
     const payload = JSON.parse(String(init.body)) as {
       mode: string;
+      intelligenceContext: { projectId?: string; investigationId?: string };
       messages: Array<{ role: string; content: string }>;
     };
-    expect(payload.mode).toBe("copilot");
+    expect(payload.mode).toBe("analyst");
+    expect(payload.intelligenceContext).toEqual({
+      projectId: "11111111-1111-4111-8111-111111111111",
+      investigationId: "22222222-2222-4222-8222-222222222222",
+    });
     expect(payload.messages.at(-1)).toEqual({
       role: "user",
       content: "¿Qué puertos abiertos tengo?",

@@ -10,6 +10,7 @@ import {
 } from '@/server/ai/ai-router';
 import { assertAiQuota } from '@/server/ai/ai-usage';
 import { buildCopilotSystemPrompt } from '@/server/ai/copilot-prompt';
+import { loadIntelligenceCopilotContext } from '@/server/ai/intelligence-context';
 import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
@@ -183,16 +184,48 @@ export const POST = withRateLimit(
       if (quota) return quota;
 
       const body = await req.json().catch(() => null);
-      const { messages, context, mode = 'copilot', stream } = body ?? {};
+      const { messages, context, mode = 'copilot', stream, intelligenceContext } = body ?? {};
 
       if (!messages || !Array.isArray(messages)) {
         return NextResponse.json({ success: false, error: 'Mensajes inválidos' }, { status: 400 });
       }
 
+      let promptContext = context;
+      let promptMode = mode;
+      if (intelligenceContext !== undefined) {
+        const ids = intelligenceContext as { projectId?: unknown; investigationId?: unknown };
+        const isUuid = (value: unknown): value is string =>
+          typeof value === 'string' &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+        if (
+          !ids || typeof ids !== 'object' || Array.isArray(ids) ||
+          (ids.projectId !== undefined && !isUuid(ids.projectId)) ||
+          (ids.investigationId !== undefined && !isUuid(ids.investigationId)) ||
+          Object.keys(ids).some((key) => key !== 'projectId' && key !== 'investigationId')
+        ) {
+          return NextResponse.json({ success: false, error: 'Contexto de Intelligence inválido' }, { status: 400 });
+        }
+
+        const resolvedContext = await loadIntelligenceCopilotContext(userId, {
+          projectId: ids.projectId as string | undefined,
+          investigationId: ids.investigationId as string | undefined,
+        });
+        if (!resolvedContext) {
+          return NextResponse.json(
+            { success: false, error: 'Recurso de Intelligence no encontrado o acceso denegado' },
+            { status: 404 },
+          );
+        }
+        // Nunca usar el objeto `context` ni el modo enviado por el navegador en este flujo.
+        promptContext = resolvedContext;
+        promptMode = 'analyst';
+      }
+
       // Prompt centralizado (grounding + anti-inyección), ver copilot-prompt.ts
       const systemMsg: AIMessage = {
         role: 'system',
-        content: buildCopilotSystemPrompt(mode, context),
+        content: buildCopilotSystemPrompt(promptMode, promptContext),
       };
 
       // Convert user messages to AIMessage format and prepend system

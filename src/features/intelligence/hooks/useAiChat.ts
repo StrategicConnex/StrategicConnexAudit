@@ -24,7 +24,12 @@ export interface UseAiChatReturn {
   addAssistantMessage: (text: string) => void;
 }
 
-export function useAiChat(): UseAiChatReturn {
+export interface IntelligenceChatContext {
+  projectId?: string;
+  investigationId?: string | null;
+}
+
+export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatReturn {
   const t = useTranslations("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", text: t("greeting") }]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -53,7 +58,11 @@ export function useAiChat(): UseAiChatReturn {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            mode: "copilot",
+            mode: "analyst",
+            intelligenceContext: {
+              ...(context.projectId ? { projectId: context.projectId } : {}),
+              ...(context.investigationId ? { investigationId: context.investigationId } : {}),
+            },
             messages: messagesRef.current.map((m) => ({ role: m.role, content: m.text })),
           }),
         });
@@ -83,7 +92,7 @@ export function useAiChat(): UseAiChatReturn {
         setIsGenerating(false);
       }
     },
-    [append, t]
+    [append, context.projectId, context.investigationId, t]
   );
 
   const requestRemediationPlan = useCallback(

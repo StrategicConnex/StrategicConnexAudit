@@ -58,7 +58,10 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
   const { investigation, findings, events } = useInvestigationRealtime(activeInvestigationId);
   const { health: apiHealth, loading: healthLoading, refresh: refreshHealth } = useApiHealth();
   const mailStatus = useMailHealthStatus(findings, activeInvestigationId);
-  const { messages, isGenerating, sendMessage, requestRemediationPlan, addAssistantMessage } = useAiChat();
+  const { messages, isGenerating, sendMessage, requestRemediationPlan, addAssistantMessage } = useAiChat({
+    projectId,
+    investigationId: activeInvestigationId,
+  });
 
   // Local state
   const [aiMessage, setAiMessage] = useState("");
