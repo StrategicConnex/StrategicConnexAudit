@@ -58,7 +58,15 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
   const { investigation, findings, events } = useInvestigationRealtime(activeInvestigationId);
   const { health: apiHealth, loading: healthLoading, refresh: refreshHealth } = useApiHealth();
   const mailStatus = useMailHealthStatus(findings, activeInvestigationId);
-  const { messages, isGenerating, sendMessage, requestRemediationPlan, addAssistantMessage } = useAiChat({
+  const {
+    messages,
+    isGenerating,
+    suggestion,
+    sendMessage,
+    requestRemediationPlan,
+    addAssistantMessage,
+    dismissSuggestion,
+  } = useAiChat({
     projectId,
     investigationId: activeInvestigationId,
   });
@@ -108,9 +116,28 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
     [aiMessage, sendMessage],
   );
 
-  const handleRequestRemediation = useCallback(() => {
-    if (activeInvestigationId) requestRemediationPlan(activeInvestigationId);
+  const handleRequestRemediation = useCallback((investigationId?: string) => {
+    const target = investigationId ?? activeInvestigationId;
+    if (target) requestRemediationPlan(target);
   }, [activeInvestigationId, requestRemediationPlan]);
+
+  // Cita verificada → abre la pestaña de evidencias con el hallazgo visible.
+  const handleOpenReference = useCallback((findingId: string) => {
+    setActiveTab("evidence");
+    selectEvidence(findingId);
+  }, [selectEvidence]);
+
+  // Fallback sin JS: /intelligence?evidence=<id> abre el hallazgo al cargar.
+  // Se aplica tras el primer paint para no romper la hidratación SSR.
+  useEffect(() => {
+    const evidenceId = new URLSearchParams(window.location.search).get("evidence");
+    if (!evidenceId) return;
+    const frame = requestAnimationFrame(() => {
+      setActiveTab("evidence");
+      selectEvidence(evidenceId);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selectEvidence]);
 
   const handleScanSuccess = useCallback(
     (id: string) => {
@@ -281,6 +308,9 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
         onRequestRemediation={handleRequestRemediation}
         hasActiveInvestigation={hasActiveInvestigation}
         investigationStatus={investigation?.status}
+        suggestion={suggestion}
+        onDismissSuggestion={dismissSuggestion}
+        onOpenReference={handleOpenReference}
       />
 
       {projectId && (

@@ -422,3 +422,120 @@ describe("useAiChat · memoria v2 (Sprint 2, C2)", () => {
     expect(result.current.messages[0]?.text).toBe("Hola. Soy tu Asistente de Inteligencia de Red.");
   });
 });
+
+describe("useAiChat · citas y sugerencias (Sprint 2, C4)", () => {
+  function suggestion(fingerprint: string, investigationId: string | null = INVESTIGATION_ID) {
+    return {
+      fingerprint,
+      findingIds: [FINDING_ID],
+      investigationId,
+      text: "Hay 1 hallazgo crítico reciente. ¿Revisamos el plan?",
+      ctaLabel: "Ver plan de remediación",
+    };
+  }
+
+  it("conserva las citas verificadas y el contador de no verificadas", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        message: "Riesgo [[ref:1]] y un marcador suelto.",
+        references: [{ id: FINDING_ID, title: "SPF ausente" }],
+        unverifiedCount: 2,
+        suggestion: null,
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useAiChat({ projectId: PROJECT_ID, investigationId: INVESTIGATION_ID }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("¿qué riesgo hay?");
+    });
+
+    expect(result.current.messages.at(-1)).toEqual({
+      role: "assistant",
+      text: "Riesgo [[ref:1]] y un marcador suelto.",
+      references: [{ id: FINDING_ID, title: "SPF ausente" }],
+      unverifiedCount: 2,
+    });
+    expect(result.current.suggestion).toBeNull();
+  });
+
+  it("muestra la sugerencia una sola vez por contexto dentro de 24 h", async () => {
+    const payload = { success: true, message: "ok", suggestion: suggestion("a".repeat(32)) };
+    fetchMock.mockResolvedValue(jsonResponse(payload));
+
+    const { result } = renderHook(() =>
+      useAiChat({ projectId: PROJECT_ID, investigationId: INVESTIGATION_ID }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("primera");
+    });
+    expect(result.current.suggestion?.fingerprint).toBe("a".repeat(32));
+    expect(
+      window.localStorage.getItem(`scaudit:chat:suggestion:shown:${INVESTIGATION_ID}`),
+    ).toContain("a".repeat(32));
+
+    await act(async () => {
+      await result.current.sendMessage("segunda");
+    });
+    expect(result.current.suggestion).toBeNull();
+  });
+
+  it("persiste el descarte por fingerprint y deja pasar un conjunto nuevo", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, message: "ok", suggestion: suggestion("a".repeat(32)) }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, message: "ok", suggestion: suggestion("b".repeat(32)) }),
+      );
+
+    const { result } = renderHook(() =>
+      useAiChat({ projectId: PROJECT_ID, investigationId: INVESTIGATION_ID }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("primera");
+    });
+    act(() => {
+      result.current.dismissSuggestion();
+    });
+
+    expect(result.current.suggestion).toBeNull();
+    expect(
+      window.localStorage.getItem(`scaudit:chat:suggestion:dismissed:${"a".repeat(32)}`),
+    ).toBe("1");
+
+    await act(async () => {
+      await result.current.sendMessage("segunda");
+    });
+    expect(result.current.suggestion?.fingerprint).toBe("b".repeat(32));
+  });
+
+  it("restaura citas y contador desde la memoria local", () => {
+    saveIntelligenceMemory(memoryKey(), [
+      { role: "user", content: "¿qué riesgo hay?" },
+      {
+        role: "assistant",
+        content: "Riesgo [[ref:1]]",
+        references: [{ id: FINDING_ID, title: "SPF ausente" }],
+        unverifiedCount: 1,
+      },
+    ]);
+
+    const { result } = renderHook(() =>
+      useAiChat({ projectId: PROJECT_ID, investigationId: INVESTIGATION_ID }),
+    );
+
+    expect(result.current.messages.at(-1)).toEqual({
+      role: "assistant",
+      text: "Riesgo [[ref:1]]",
+      references: [{ id: FINDING_ID, title: "SPF ausente" }],
+      unverifiedCount: 1,
+    });
+    expect(loadIntelligenceMemory(memoryKey()).at(-1)?.references).toHaveLength(1);
+  });
+});

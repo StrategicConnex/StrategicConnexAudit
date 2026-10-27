@@ -10,6 +10,13 @@ import {
   loadIntelligenceMemory,
   saveIntelligenceMemory,
 } from "../lib/chat-memory";
+import {
+  dismissSuggestion as dismissStoredSuggestion,
+  markSuggestionShown,
+  shouldShowSuggestion,
+  type StorageLike,
+} from "../lib/suggestion-state";
+import type { ChatReference, ChatSuggestion } from "@/shared/types/chat";
 
 export interface ChatAction {
   href: string;
@@ -21,15 +28,21 @@ export interface ChatMessage {
   text: string;
   isError?: boolean;
   action?: ChatAction;
+  /** Solo referencias verificadas por el servidor contra el conjunto RLS. */
+  references?: ChatReference[];
+  /** Marcadores de cita que el servidor no pudo verificar. */
+  unverifiedCount?: number;
 }
 
 export interface UseAiChatReturn {
   messages: ChatMessage[];
   isGenerating: boolean;
+  suggestion: ChatSuggestion | null;
   sendMessage: (text: string) => Promise<void>;
   requestRemediationPlan: (investigationId: string) => Promise<void>;
   clearChat: () => void;
   addAssistantMessage: (text: string) => void;
+  dismissSuggestion: () => void;
 }
 
 export interface IntelligenceChatContext {
@@ -39,12 +52,61 @@ export interface IntelligenceChatContext {
 
 const MEMORY_MODE = "analyst";
 
+function browserStorage(): StorageLike | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function parseReferences(value: unknown): ChatReference[] {
+  if (!Array.isArray(value)) return [];
+  const refs: ChatReference[] = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object") continue;
+    const ref = raw as { id?: unknown; title?: unknown };
+    if (typeof ref.id !== "string" || typeof ref.title !== "string" || !ref.id) continue;
+    if (refs.some((existing) => existing.id === ref.id)) continue;
+    refs.push({ id: ref.id, title: ref.title });
+  }
+  return refs;
+}
+
+function parseSuggestion(value: unknown): ChatSuggestion | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.fingerprint !== "string" ||
+    !Array.isArray(raw.findingIds) ||
+    !raw.findingIds.every((id) => typeof id === "string") ||
+    (raw.investigationId !== null && typeof raw.investigationId !== "string") ||
+    typeof raw.text !== "string" ||
+    typeof raw.ctaLabel !== "string"
+  ) {
+    return null;
+  }
+  return {
+    fingerprint: raw.fingerprint,
+    findingIds: raw.findingIds as string[],
+    investigationId: raw.investigationId as string | null,
+    text: raw.text,
+    ctaLabel: raw.ctaLabel,
+  };
+}
+
 export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatReturn {
   const t = useTranslations("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", text: t("greeting") },
   ]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [suggestion, setSuggestion] = useState<ChatSuggestion | null>(null);
+
+  // Mismo identificador de contexto que la memoria: la frecuencia anti-nag es
+  // por investigación > proyecto > contexto vacío.
+  const contextId = context.investigationId || context.projectId || "none";
 
   // Refs para que el payload incluya el historial completo aunque el callback
   // no se recree en cada render (y para bloquear envíos concurrentes).
@@ -81,8 +143,14 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
     lastPersistedRef.current = JSON.stringify(stored);
     setAll([
       { role: "assistant", text: t("greeting") },
-      ...stored.map((m) => ({ role: m.role, text: m.content })),
+      ...stored.map((m) => ({
+        role: m.role,
+        text: m.content,
+        ...(m.references?.length ? { references: m.references } : {}),
+        ...(m.unverifiedCount ? { unverifiedCount: m.unverifiedCount } : {}),
+      })),
     ]);
+    setSuggestion(null);
   }, [memoryKey, setAll, t]);
 
   // Persistencia: solo mensajes completados, excluyendo errores. Se compara
@@ -92,7 +160,13 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
 
     const persistable = messagesRef.current
       .slice(1)
-      .map((m) => ({ role: m.role, content: m.text, isError: m.isError }));
+      .map((m) => ({
+        role: m.role,
+        content: m.text,
+        isError: m.isError,
+        ...(m.references?.length ? { references: m.references } : {}),
+        ...(m.unverifiedCount ? { unverifiedCount: m.unverifiedCount } : {}),
+      }));
 
     const serialized = JSON.stringify(persistable);
     if (serialized === lastPersistedRef.current) return;
@@ -159,6 +233,9 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
           success?: boolean;
           message?: string;
           error?: string;
+          references?: unknown;
+          unverifiedCount?: unknown;
+          suggestion?: unknown;
         } | null;
 
         if (!response.ok || !data?.success || typeof data.message !== "string") {
@@ -169,7 +246,31 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
           throw new Error(detail);
         }
 
-        append({ role: "assistant", text: data.message });
+        const references = parseReferences(data.references);
+        const unverifiedCount =
+          typeof data.unverifiedCount === "number" && data.unverifiedCount > 0
+            ? Math.floor(data.unverifiedCount)
+            : 0;
+        append({
+          role: "assistant",
+          text: data.message,
+          ...(references.length > 0 ? { references } : {}),
+          ...(unverifiedCount > 0 ? { unverifiedCount } : {}),
+        });
+
+        // Anti-nag: el servidor decide si hay sugerencia; aquí solo se aplica
+        // la frecuencia (24 h por contexto) y el descarte por fingerprint.
+        const incoming = parseSuggestion(data.suggestion);
+        const storage = browserStorage();
+        setSuggestion(null);
+        if (
+          incoming &&
+          storage &&
+          shouldShowSuggestion({ suggestion: incoming, contextId, storage })
+        ) {
+          markSuggestionShown(incoming, contextId, storage);
+          setSuggestion(incoming);
+        }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         const findingUnavailable =
@@ -190,6 +291,7 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
       append,
       context.projectId,
       context.investigationId,
+      contextId,
       t,
     ]
   );
@@ -257,6 +359,7 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
     clearIntelligenceMemory(memoryKey);
     lastPersistedRef.current = "[]";
     setAll([{ role: "assistant", text: t("greeting") }]);
+    setSuggestion(null);
   }, [memoryKey, setAll, t]);
 
   const addAssistantMessage = useCallback(
@@ -266,12 +369,22 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
     [append]
   );
 
+  const dismissSuggestion = useCallback(() => {
+    const storage = browserStorage();
+    if (suggestion && storage) {
+      dismissStoredSuggestion(suggestion.fingerprint, storage);
+    }
+    setSuggestion(null);
+  }, [suggestion]);
+
   return {
     messages,
     isGenerating,
+    suggestion,
     sendMessage,
     requestRemediationPlan,
     clearChat,
     addAssistantMessage,
+    dismissSuggestion,
   };
 }

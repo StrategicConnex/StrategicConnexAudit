@@ -210,4 +210,60 @@ describe("memoria v2 · contexto saliente", () => {
     ]);
     expect(outgoing).toEqual([{ role: "user", content: "pregunta" }]);
   });
+
+  it("persiste citas verificadas y el contador de no verificadas", () => {
+    const key = keyFor(PROJECT_A, INVESTIGATION_A);
+    saveIntelligenceMemory(key, [
+      { role: "user", content: "¿qué riesgo hay?" },
+      {
+        role: "assistant",
+        content: "Riesgo [[ref:1]]",
+        references: [{ id: "finding-1", title: "SPF ausente" }],
+        unverifiedCount: 2,
+      },
+    ]);
+
+    expect(loadIntelligenceMemory(key)).toEqual([
+      { role: "user", content: "¿qué riesgo hay?" },
+      {
+        role: "assistant",
+        content: "Riesgo [[ref:1]]",
+        references: [{ id: "finding-1", title: "SPF ausente" }],
+        unverifiedCount: 2,
+      },
+    ]);
+  });
+
+  it("descarta referencias inválidas al leer y no inventa contadores", () => {
+    const key = keyFor(PROJECT_A, INVESTIGATION_A);
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        v: 2,
+        savedAt: Date.now(),
+        messages: [
+          {
+            role: "assistant",
+            content: "texto",
+            references: [
+              { id: "finding-1", title: "SPF ausente" },
+              { id: "", title: "sin id" },
+              { id: "finding-2" },
+              { id: "finding-1", title: "duplicado" },
+              "basura",
+            ],
+            unverifiedCount: -1,
+          },
+        ],
+      }),
+    );
+
+    expect(loadIntelligenceMemory(key)).toEqual([
+      {
+        role: "assistant",
+        content: "texto",
+        references: [{ id: "finding-1", title: "SPF ausente" }],
+      },
+    ]);
+  });
 });

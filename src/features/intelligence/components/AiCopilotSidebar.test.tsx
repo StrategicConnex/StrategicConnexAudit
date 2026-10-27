@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { fireEvent, render, screen, cleanup } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { AiCopilotSidebar } from "./AiCopilotSidebar";
 import type { ChatMessage } from "../hooks/useAiChat";
+import type { ChatSuggestion } from "@/shared/types/chat";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
@@ -28,6 +29,8 @@ function baseProps(overrides: Partial<SidebarProps> = {}): SidebarProps {
     isGenerating: false,
     onRequestRemediation: vi.fn(),
     hasActiveInvestigation: false,
+    suggestion: null,
+    onDismissSuggestion: vi.fn(),
     ...overrides,
   };
 }
@@ -72,5 +75,64 @@ describe("AiCopilotSidebar — acción honesta con 0 hallazgos (Task 0.11)", () 
 
     const link = screen.getByRole("link", { name: /Escanear infraestructura/i });
     expect(link.getAttribute("href")).toBe("/intelligence#intelligence-scan");
+  });
+});
+
+describe("AiCopilotSidebar — sugerencia anti-nag", () => {
+  const suggestion: ChatSuggestion = {
+    fingerprint: "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    findingIds: ["f-1"],
+    investigationId: "inv-1",
+    text: "Hay 1 hallazgo crítico reciente. ¿Revisamos el plan?",
+    ctaLabel: "Ver plan de remediación",
+  };
+
+  it("muestra la plantilla del servidor, su CTA y el descarte", () => {
+    render(<AiCopilotSidebar {...baseProps({ suggestion })} />);
+
+    expect(screen.getByText(suggestion.text)).toBeTruthy();
+    expect(screen.getByRole("button", { name: suggestion.ctaLabel })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "dismissSuggestion" })).toBeTruthy();
+  });
+
+  it("el CTA lleva al flujo real de remediación de la investigación sugerida", () => {
+    const onRequestRemediation = vi.fn();
+    render(
+      <AiCopilotSidebar {...baseProps({ suggestion, onRequestRemediation })} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: suggestion.ctaLabel }));
+
+    expect(onRequestRemediation).toHaveBeenCalledWith("inv-1");
+  });
+
+  it("descartar delega en el callback del hook", () => {
+    const onDismissSuggestion = vi.fn();
+    render(
+      <AiCopilotSidebar {...baseProps({ suggestion, onDismissSuggestion })} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "dismissSuggestion" }));
+
+    expect(onDismissSuggestion).toHaveBeenCalledTimes(1);
+  });
+
+  it("sin sugerencia no hay tarjeta", () => {
+    render(<AiCopilotSidebar {...baseProps({ suggestion: null })} />);
+
+    expect(screen.queryByText(suggestion.text)).toBeNull();
+    expect(screen.queryByRole("button", { name: suggestion.ctaLabel })).toBeNull();
+  });
+
+  it("no permite lanzar el plan si la sugerencia no apunta a una investigación", () => {
+    render(
+      <AiCopilotSidebar
+        {...baseProps({ suggestion: { ...suggestion, investigationId: null } })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: suggestion.ctaLabel }).hasAttribute("disabled"),
+    ).toBe(true);
   });
 });

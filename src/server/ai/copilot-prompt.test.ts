@@ -4,6 +4,10 @@ import {
   buildCopilotSystemPrompt,
   isEmptyTenantContext,
   serializeTenantContext,
+  truncateConversationHistory,
+  MAX_CONTEXT_CHARS,
+  MAX_CONTEXT_MESSAGES,
+  type ConversationTurn,
 } from "./copilot-prompt";
 
 describe("copilot-prompt", () => {
@@ -143,6 +147,63 @@ describe("copilot-prompt", () => {
       const prompt = buildCopilotSystemPrompt("analyst", { projects: [{ name: "Acme" }] });
       expect(prompt).toContain("Analista de Ciberseguridad");
       expect(prompt).toContain("<contexto_del_tenant>");
+    });
+  });
+
+  describe("truncateConversationHistory", () => {
+    const turn = (role: "user" | "assistant", content: string): ConversationTurn => ({
+      role,
+      content,
+    });
+
+    it("no toca un historial que ya cabe en el presupuesto", () => {
+      const turns = [turn("user", "hola"), turn("assistant", "hola"), turn("user", "sigue")];
+      expect(truncateConversationHistory(turns)).toBe(turns);
+    });
+
+    it("conserva como máximo 10 turnos, los más recientes", () => {
+      const turns = Array.from({ length: 30 }, (_, index) =>
+        turn(index % 2 === 0 ? "assistant" : "user", `turno-${index}`),
+      );
+
+      const kept = truncateConversationHistory(turns);
+
+      expect(kept).toHaveLength(MAX_CONTEXT_MESSAGES);
+      expect(kept[kept.length - 1]?.content).toBe("turno-29");
+      expect(kept[0]?.content).toBe("turno-20");
+    });
+
+    it("30 turnos de 1.000 caracteres → ≤10 turnos y ≤8.000 caracteres", () => {
+      const turns = Array.from({ length: 30 }, (_, index) =>
+        turn(index % 2 === 0 ? "assistant" : "user", "x".repeat(1_000)),
+      );
+
+      const kept = truncateConversationHistory(turns);
+      const chars = kept.reduce((sum, item) => sum + item.content.length, 0);
+
+      expect(kept.length).toBeLessThanOrEqual(MAX_CONTEXT_MESSAGES);
+      expect(chars).toBeLessThanOrEqual(MAX_CONTEXT_CHARS);
+      expect(kept).toHaveLength(8);
+      expect(kept[kept.length - 1]?.content).toHaveLength(1_000);
+    });
+
+    it("recorta el prefijo del turno más reciente si él solo excede el presupuesto", () => {
+      const turns = [turn("assistant", "viejo"), turn("user", "y".repeat(9_000))];
+
+      const kept = truncateConversationHistory(turns);
+
+      expect(kept).toHaveLength(1);
+      expect(kept[0]).toEqual({ role: "user", content: "y".repeat(8_000) });
+    });
+
+    it("mantiene el último turno de usuario como instrucción vigente", () => {
+      const turns = Array.from({ length: 30 }, (_, index) =>
+        turn(index === 29 ? "user" : index % 2 === 0 ? "assistant" : "user", `t-${index}`),
+      );
+
+      const kept = truncateConversationHistory(turns);
+
+      expect(kept[kept.length - 1]?.role).toBe("user");
     });
   });
 });

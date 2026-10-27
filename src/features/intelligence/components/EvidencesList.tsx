@@ -57,6 +57,7 @@ export function EvidencesList({ findings, selectedEvidenceId, onSelectEvidence }
             return (
               <div
                 key={item.id}
+                id={`finding-${item.id}`}
                 onClick={() => onSelectEvidence(isSelected ? null : item.id)}
                 className={`p-4 border rounded-xl cursor-pointer transition-colors duration-300 ${
                   isSelected

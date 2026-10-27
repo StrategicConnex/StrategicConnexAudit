@@ -1,6 +1,7 @@
 "use client";
 
 import { redactSensitiveText } from "@/shared/lib/redact-sensitive";
+import type { ChatReference } from "@/shared/types/chat";
 
 /**
  * Memoria local del chat de Intelligence — esquema v2.
@@ -28,6 +29,9 @@ export const MAX_CONTEXT_CHARS = 8_000;
 export interface IntelligenceMemoryMessage {
   role: "user" | "assistant";
   content: string;
+  /** Citas verificadas por el servidor (sobreviven a la recarga). */
+  references?: ChatReference[];
+  unverifiedCount?: number;
 }
 
 export interface IntelligenceMemoryContext {
@@ -82,13 +86,46 @@ function loadEnvelope(key: string): MemoryEnvelope | null {
 export function loadIntelligenceMemory(key: string): IntelligenceMemoryMessage[] {
   const envelope = loadEnvelope(key);
   if (!envelope) return [];
-  return envelope.messages.filter(
-    (m): m is IntelligenceMemoryMessage =>
-      !!m &&
-      (m.role === "user" || m.role === "assistant") &&
-      typeof m.content === "string" &&
-      m.content.length > 0,
-  );
+  return envelope.messages.flatMap((m) => {
+    if (
+      !m ||
+      (m.role !== "user" && m.role !== "assistant") ||
+      typeof m.content !== "string" ||
+      m.content.length === 0
+    ) {
+      return [];
+    }
+
+    const seenReferenceIds = new Set<string>();
+    const references = Array.isArray(m.references)
+      ? m.references.filter((ref): ref is ChatReference => {
+          if (
+            !ref ||
+            typeof ref.id !== "string" ||
+            typeof ref.title !== "string" ||
+            ref.id.length === 0
+          ) {
+            return false;
+          }
+          if (seenReferenceIds.has(ref.id)) return false;
+          seenReferenceIds.add(ref.id);
+          return true;
+        })
+      : [];
+    const unverifiedCount =
+      typeof m.unverifiedCount === "number" && m.unverifiedCount > 0
+        ? Math.floor(m.unverifiedCount)
+        : 0;
+
+    return [
+      {
+        role: m.role,
+        content: m.content,
+        ...(references.length > 0 ? { references } : {}),
+        ...(unverifiedCount > 0 ? { unverifiedCount } : {}),
+      },
+    ];
+  });
 }
 
 /**
@@ -111,7 +148,12 @@ export function saveIntelligenceMemory(
           m.content.trim().length > 0,
       )
       .slice(-MAX_PERSISTED_MESSAGES)
-      .map(({ role, content }) => ({ role, content }));
+      .map(({ role, content, references, unverifiedCount }) => ({
+        role,
+        content,
+        ...(references && references.length > 0 ? { references } : {}),
+        ...(unverifiedCount && unverifiedCount > 0 ? { unverifiedCount } : {}),
+      }));
 
     if (!persistable.some((m) => m.role === "user")) {
       window.localStorage.removeItem(key);

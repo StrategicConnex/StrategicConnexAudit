@@ -24,6 +24,17 @@ const MAX_CONTEXT_CHARS = 4000;
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 60;
 
+export type AppLogLevel = "error" | "warn";
+
+export interface AppLogEntry {
+  level: AppLogLevel;
+  message: string;
+  source: "console" | "request-error" | "chat";
+  code?: string;
+  path?: string;
+  context?: Record<string, unknown>;
+}
+
 export interface AppErrorEntry {
   message: string;
   source: "console" | "request-error";
@@ -125,15 +136,15 @@ function parseLoggerLine(args: unknown[]): {
 }
 
 /**
- * Persiste un error en `app_logs`. Nunca lanza: cualquier fallo interno del
+ * Persiste un evento en `app_logs`. Nunca lanza: cualquier fallo interno del
  * sink se descarta (fail-open) para no afectar al request que lo originó.
  */
-export async function captureAppError(entry: AppErrorEntry): Promise<void> {
+export async function captureAppLog(entry: AppLogEntry): Promise<void> {
   if (!sinkEnabled()) return;
   if (!entry.message || !allowByQuota()) return;
   try {
     await directDb.insert(appLogs).values({
-      level: "error",
+      level: entry.level,
       message: truncate(entry.message, MAX_MESSAGE_CHARS),
       code: entry.code,
       source: entry.source,
@@ -143,6 +154,14 @@ export async function captureAppError(entry: AppErrorEntry): Promise<void> {
   } catch {
     // Fail-open: un fallo del sink jamás debe propagarse al caller.
   }
+}
+
+/**
+ * Persiste un error en `app_logs` con el nivel histórico `error`.
+ * Se mantiene como fachada de `captureAppLog` para no tocar a sus callers.
+ */
+export async function captureAppError(entry: AppErrorEntry): Promise<void> {
+  await captureAppLog({ ...entry, level: "error" });
 }
 
 /**

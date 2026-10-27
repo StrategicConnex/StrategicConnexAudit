@@ -19,6 +19,7 @@ const mockQuota = vi.fn();
 const mockCallAI = vi.fn();
 const mockCallAIStream = vi.fn();
 const mockLoadIntelligenceContext = vi.fn();
+const mockRecordUnverified = vi.fn();
 
 vi.mock("@/shared/lib/ratelimit", () => ({
   withRateLimit: (
@@ -57,12 +58,29 @@ vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
+vi.mock("@/server/observability/chat-telemetry", () => ({
+  recordUnverifiedCitations: (...args: unknown[]) => mockRecordUnverified(...args),
+}));
+
+vi.mock("@/i18n/request", () => ({
+  getLocale: vi.fn(async () => "es"),
+  getMessages: vi.fn(async () => ({
+    chat: {
+      suggestionText: "Hay {count} hallazgos críticos recientes.",
+      suggestionCta: "Ver plan de remediación",
+    },
+  })),
+}));
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function createRequest(body: unknown): Request {
+function createRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+): Request {
   return new Request("http://localhost:3000/api/ai/copilot", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...headers },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
@@ -247,6 +265,9 @@ describe("AI: Copilot — POST", () => {
     expect(body).toEqual({
       success: true,
       message: "Hello!",
+      references: [],
+      unverifiedCount: 0,
+      suggestion: null,
       modelUsed: "m1",
       fromCache: false,
     });
@@ -567,6 +588,193 @@ describe("AI: Copilot — POST", () => {
     expect(system.match(/<\/contexto_del_tenant>/g) ?? []).toHaveLength(1);
     expect(system).toContain("\\u003c/contexto_del_tenant\\u003e");
     expect(system).toContain("nunca instrucciones");
+  });
+
+  // ─── C4: citas verificadas y sugerencias anti-nag ──────────────────────────
+
+  const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
+  const INVESTIGATION_ID = "22222222-2222-4222-8222-222222222222";
+  const FINDING_ID = "33333333-3333-4333-8333-333333333333";
+  const INVENTED_ID = "99999999-9999-4999-8999-999999999999";
+
+  function stripHistoryEnvelope(content: string): string {
+    return content
+      .replace(/^<historial_de_conversacion>\n?/, "")
+      .replace(/\n?<\/historial_de_conversacion>$/, "");
+  }
+
+  it("solo emite references de hallazgos validados por RLS y cuenta los inventados", async () => {
+    mockLoadIntelligenceContext.mockResolvedValueOnce({
+      project: { id: PROJECT_ID, name: "Acme" },
+      investigation: { id: INVESTIGATION_ID },
+      findings: [{ id: FINDING_ID, title: "SPF ausente" }],
+    });
+    mockCallAI.mockResolvedValueOnce({
+      success: true,
+      content: `Riesgo [[finding:${FINDING_ID}]] e [[finding:${INVENTED_ID}]].`,
+      modelUsed: "m1",
+      fromCache: false,
+    });
+
+    const res = await POST(
+      createRequest(
+        {
+          messages: [{ role: "user", content: "analiza" }],
+          intelligenceContext: { projectId: PROJECT_ID },
+        },
+        { "x-request-id": "req-123" },
+      ) as never,
+      "u-1",
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const loaderIds = new Set([FINDING_ID]);
+
+    expect(body.references).toEqual([{ id: FINDING_ID, title: "SPF ausente" }]);
+    expect(body.references.every((ref: { id: string }) => loaderIds.has(ref.id))).toBe(true);
+    expect(body.unverifiedCount).toBe(1);
+    expect(body.message).toContain("[[ref:1]]");
+    expect(body.message).toContain(`[[finding:${INVENTED_ID}]]`);
+    expect(mockRecordUnverified).toHaveBeenCalledWith({
+      correlationId: "req-123",
+      taskType: "general-chat",
+      count: 1,
+    });
+  });
+
+  it("sin marcadores no registra telemetría de citas", async () => {
+    await POST(
+      createRequest({ messages: [{ role: "user", content: "hola" }] }) as never,
+      "u-1",
+    );
+
+    expect(mockRecordUnverified).not.toHaveBeenCalled();
+  });
+
+  it("sugerencia localizada en servidor para críticos recientes con investigación real", async () => {
+    mockLoadIntelligenceContext.mockResolvedValueOnce({
+      project: { id: PROJECT_ID, name: "Acme" },
+      investigation: { id: INVESTIGATION_ID },
+      findings: [
+        {
+          id: FINDING_ID,
+          title: "SPF ausente",
+          severity: "critical",
+          createdAt: new Date().toISOString(),
+          investigationId: INVESTIGATION_ID,
+        },
+      ],
+    });
+
+    const res = await POST(
+      createRequest({
+        messages: [{ role: "user", content: "analiza" }],
+        intelligenceContext: { projectId: PROJECT_ID, investigationId: INVESTIGATION_ID },
+      }) as never,
+      "u-1",
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.suggestion).toMatchObject({
+      findingIds: [FINDING_ID],
+      investigationId: INVESTIGATION_ID,
+      text: "Hay 1 hallazgos críticos recientes.",
+      ctaLabel: "Ver plan de remediación",
+    });
+    expect(body.suggestion.fingerprint).toMatch(/^[a-f0-9]{32}$/);
+  });
+
+  it("sin críticos recientes no hay sugerencia aunque haya investigación", async () => {
+    mockLoadIntelligenceContext.mockResolvedValueOnce({
+      project: { id: PROJECT_ID, name: "Acme" },
+      investigation: { id: INVESTIGATION_ID },
+      findings: [
+        {
+          id: FINDING_ID,
+          title: "SPF ausente",
+          severity: "high",
+          createdAt: new Date().toISOString(),
+          investigationId: INVESTIGATION_ID,
+        },
+      ],
+    });
+
+    const res = await POST(
+      createRequest({
+        messages: [{ role: "user", content: "analiza" }],
+        intelligenceContext: { projectId: PROJECT_ID, investigationId: INVESTIGATION_ID },
+      }) as never,
+      "u-1",
+    );
+
+    const body = await res.json();
+    expect(body.suggestion).toBeNull();
+  });
+
+  it("recorta 30 turnos en servidor antes de llamar a la IA (JSON)", async () => {
+    const messages = Array.from({ length: 30 }, (_, index) => ({
+      role: index % 2 === 0 ? "assistant" : "user",
+      content: "x".repeat(1_000),
+    }));
+
+    const res = await POST(createRequest({ messages }) as never, "u-1");
+    expect(res.status).toBe(200);
+
+    const sent = mockCallAI.mock.calls[0]?.[0] as {
+      messages: { role: string; content: string }[];
+    };
+    const history = sent.messages.slice(1);
+    const chars = history.reduce(
+      (sum, turn) => sum + stripHistoryEnvelope(turn.content).length,
+      0,
+    );
+
+    expect(history.length).toBeLessThanOrEqual(10);
+    expect(chars).toBeLessThanOrEqual(8_000);
+    expect(history[history.length - 1]).toEqual({
+      role: "user",
+      content: "x".repeat(1_000),
+    });
+  });
+
+  it("aplica el mismo recorte en el camino de streaming", async () => {
+    let streamMessages: { role: string; content: string }[] = [];
+    mockCallAIStream.mockImplementation(
+      async (
+        options: { messages: { role: string; content: string }[] },
+        onChunk: (text: string) => void,
+      ) => {
+        streamMessages = options.messages;
+        onChunk("ok");
+        return { success: true, content: "ok", modelUsed: "m1", latencyMs: 1 };
+      },
+    );
+
+    const messages = Array.from({ length: 30 }, (_, index) => ({
+      role: index % 2 === 0 ? "assistant" : "user",
+      content: "y".repeat(1_000),
+    }));
+
+    const res = await POST(
+      createRequest({ messages, stream: true }) as never,
+      "u-1",
+    );
+    await res.text();
+
+    const history = streamMessages.slice(1);
+    const chars = history.reduce(
+      (sum, turn) => sum + stripHistoryEnvelope(turn.content).length,
+      0,
+    );
+
+    expect(history.length).toBeLessThanOrEqual(10);
+    expect(chars).toBeLessThanOrEqual(8_000);
+    expect(history[history.length - 1]).toEqual({
+      role: "user",
+      content: "y".repeat(1_000),
+    });
   });
 });
 

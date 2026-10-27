@@ -12,9 +12,15 @@ import { assertAiQuota } from '@/server/ai/ai-usage';
 import {
   buildConversationMessages,
   buildCopilotSystemPrompt,
+  truncateConversationHistory,
   type ConversationTurn,
 } from '@/server/ai/copilot-prompt';
 import { loadIntelligenceCopilotContext } from '@/server/ai/intelligence-context';
+import { parseCitations, toCitedFindings, type CitedFinding } from '@/server/ai/citations';
+import { buildCriticalSuggestion, toSuggestionFindings } from '@/server/ai/chat-suggestions';
+import { recordUnverifiedCitations } from '@/server/observability/chat-telemetry';
+import { getLocale, getMessages } from '@/i18n/request';
+import type { ChatSuggestion } from '@/shared/types/chat';
 import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
@@ -221,6 +227,8 @@ export const POST = withRateLimit(
 
       let promptContext = context;
       let promptMode = mode;
+      // Solo los hallazgos resueltos por el loader (RLS) pueden citarse.
+      let validatedFindings: CitedFinding[] = [];
       if (intelligenceContext !== undefined) {
         const ids = intelligenceContext as {
           projectId?: unknown;
@@ -257,6 +265,32 @@ export const POST = withRateLimit(
         // Nunca usar el objeto `context` ni el modo enviado por el navegador en este flujo.
         promptContext = resolvedContext;
         promptMode = 'analyst';
+        validatedFindings = toCitedFindings(resolvedContext);
+      }
+
+      // Sugerencia proactiva: plantilla localizada en servidor, solo para
+      // hallazgos críticos ≤7 días. El cliente aplica frecuencia y descarte.
+      let suggestion: ChatSuggestion | null = null;
+      if (intelligenceContext !== undefined && validatedFindings.length > 0) {
+        const locale = await getLocale();
+        const i18nMessages = await getMessages(locale);
+        const resolved = promptContext as Record<string, unknown>;
+        const investigation = resolved["investigation"];
+        const investigationId =
+          investigation && typeof investigation === "object" &&
+          typeof (investigation as { id?: unknown }).id === "string"
+            ? (investigation as { id: string }).id
+            : null;
+
+        suggestion = buildCriticalSuggestion({
+          findings: [
+            ...toSuggestionFindings(resolved["findings"]),
+            ...toSuggestionFindings([resolved["selectedFinding"]]),
+          ],
+          investigationId,
+          locale,
+          messages: i18nMessages as Record<string, unknown>,
+        });
       }
 
       // Prompt centralizado (grounding + anti-inyección), ver copilot-prompt.ts
@@ -265,9 +299,13 @@ export const POST = withRateLimit(
         content: buildCopilotSystemPrompt(promptMode, promptContext),
       };
 
+      // Presupuesto de historial impuesto por el servidor: después de validar
+      // roles y antes del scrub. Un cliente craftado no puede inflar el prompt.
+      const truncated = truncateConversationHistory(messages as ConversationTurn[]);
+
       // Scrub server-side + delimitación como DATOS de los turnos previos.
       // El último turno del usuario queda sin envolver: es la instrucción.
-      const conversation = buildConversationMessages(messages as ConversationTurn[]);
+      const conversation = buildConversationMessages(truncated);
       const aiMessages: AIMessage[] = [systemMsg, ...conversation];
 
       // C3: un turno con historia no puede reutilizar ni contaminar la caché
@@ -302,9 +340,24 @@ export const POST = withRateLimit(
         return aiFailureResponse(aiResult.error ?? "AI pool unavailable", "pool");
       }
 
+      // Citas: el cotejo ocurre en servidor contra el conjunto validado por
+      // RLS. Un marcador sin match queda como texto plano y se cuenta.
+      const cited = parseCitations(aiResult.content ?? "", validatedFindings);
+      if (cited.unverifiedCount > 0) {
+        const correlationId = req.headers.get("x-request-id") ?? globalThis.crypto.randomUUID();
+        await recordUnverifiedCitations({
+          correlationId,
+          taskType: "general-chat",
+          count: cited.unverifiedCount,
+        });
+      }
+
       return NextResponse.json({
         success: true,
-        message: aiResult.content,
+        message: cited.text,
+        references: cited.references,
+        unverifiedCount: cited.unverifiedCount,
+        suggestion,
         modelUsed: aiResult.modelUsed,
         fromCache: aiResult.fromCache,
       });

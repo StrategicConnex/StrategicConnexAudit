@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
-import { Sparkles, ChevronRight, ArrowRight, Loader2 } from "lucide-react";
+import { Sparkles, ChevronRight, ArrowRight, Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ChatMessage } from "../hooks/useAiChat";
+import { ChatMessageBody } from "./ChatMessageBody";
+import type { ChatSuggestion } from "@/shared/types/chat";
 
 interface AiCopilotSidebarProps {
   isOpen: boolean;
@@ -13,9 +15,12 @@ interface AiCopilotSidebarProps {
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   isGenerating: boolean;
-  onRequestRemediation: () => void;
+  onRequestRemediation: (investigationId?: string) => void;
   hasActiveInvestigation: boolean;
   investigationStatus?: string;
+  suggestion: ChatSuggestion | null;
+  onDismissSuggestion: () => void;
+  onOpenReference?: (findingId: string) => void;
 }
 
 export function AiCopilotSidebar({
@@ -29,6 +34,9 @@ export function AiCopilotSidebar({
   onRequestRemediation,
   hasActiveInvestigation,
   investigationStatus,
+  suggestion,
+  onDismissSuggestion,
+  onOpenReference,
 }: AiCopilotSidebarProps) {
   const t = useTranslations("chat");
   const canRequestPlan = hasActiveInvestigation &&
@@ -60,7 +68,7 @@ export function AiCopilotSidebar({
       {hasActiveInvestigation && (
         <div className="p-3 border-b border-border bg-background/40 shrink-0">
           <button
-            onClick={onRequestRemediation}
+            onClick={() => onRequestRemediation()}
             disabled={isGenerating || !canRequestPlan}
             className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg border border-chartreuse/20 bg-chartreuse/10 text-chartreuse text-xs font-mono hover:bg-chartreuse/20 active:scale-98 transition-[color,background-color,border-color,opacity,transform] disabled:opacity-40 disabled:scale-100"
           >
@@ -102,7 +110,12 @@ export function AiCopilotSidebar({
             <span className="text-2xs font-mono font-medium tracking-wide uppercase opacity-60">
               {msg.role === "user" ? t("you") : t("copilotAudit")}
             </span>
-            <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+            <ChatMessageBody
+              text={msg.text}
+              references={msg.references}
+              unverifiedCount={msg.unverifiedCount}
+              onOpenReference={onOpenReference}
+            />
             {msg.action && (
               <a
                 href={msg.action.href}
@@ -114,6 +127,34 @@ export function AiCopilotSidebar({
             )}
           </div>
         ))}
+
+        {suggestion && (
+          <div
+            role="status"
+            className="rounded-xl border border-chartreuse/30 bg-chartreuse/5 p-3 space-y-2"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs leading-relaxed text-foreground">{suggestion.text}</p>
+              <button
+                type="button"
+                onClick={onDismissSuggestion}
+                aria-label={t("dismissSuggestion")}
+                className="p-0.5 rounded text-muted-fg hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => onRequestRemediation(suggestion.investigationId ?? undefined)}
+              disabled={isGenerating || !suggestion.investigationId}
+              className="inline-flex items-center gap-1 text-2xs font-mono font-semibold text-primary hover:underline disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded"
+            >
+              {suggestion.ctaLabel}
+              <ArrowRight className="w-3 h-3" aria-hidden="true" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Input Box */}
