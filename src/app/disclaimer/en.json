@@ -13,7 +13,30 @@
     "reportHint": "Include in your report: problem description, steps to reproduce, screenshots if applicable, and browser/version used.",
     "acceptLabel": "I have read and accept the terms of the legal notice",
     "accept": "Accept",
-    "updated": "Last updated: October 2026",
+    "updated": "Last updated: October 27, 2026",
+    "status": {
+      "title": "Product status",
+      "intro": "A summary of what is already resolved and what is being implemented. The platform remains in beta and this status is updated with every release.",
+      "resolvedTitle": "Recently resolved",
+      "inProgressTitle": "In progress (Sprint 2)",
+      "resolved": [
+        "Copilot with SSE streaming, real Stop and local conversation history",
+        "Intelligence context authorized server-side under RLS and chat memory isolated by project or investigation",
+        "Local commands (/help, /finding) and semantic cache that does not contaminate turns with memory or share responses across tenants",
+        "Own RUM with field Core Web Vitals and LCP attribution",
+        "Landing first-load about 17% faster and immutable caching for static assets",
+        "Tenant-scoped AI L2 cache, findings/audits indexes and log partitioning",
+        "/admin/usage dashboard with usage KPIs and daily chart",
+        "RLS, CSP, accessibility (axe-core) and e2e hardening"
+      ],
+      "inProgress": [
+        "Verified citations and anti-nag contextual suggestions in the copilot",
+        "Remediation plan streaming",
+        "SSE, memory and references integrated into the Intelligence sidebar",
+        "Public OpenAPI/CHAT-CONTRACT for the copilot"
+      ],
+      "note": "Resolved means available in the current version; in progress may change before release. Roadmap dates are estimates."
+    },
     "roadmap": {
       "title": "Public roadmap (estimated dates)",
       "notice": "Dates are estimates published for transparency. Any adjustment will be announced in the platform's public changelog.",

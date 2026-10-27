@@ -28,3 +28,16 @@ describe("disclaimer JSON — paridad roadmap es/en", () => {
     expect(Object.keys(es.disclaimer.roadmap.items)).toHaveLength(14);
   });
 });
+
+describe("disclaimer JSON — paridad del estado del producto es/en", () => {
+  it("los dos locales exponen las MISMAS claves", () => {
+    const esKeys = flatten(es.disclaimer.status);
+    const enKeys = flatten(en.disclaimer.status);
+    expect([...esKeys].sort()).toEqual([...enKeys].sort());
+  });
+
+  it("mantiene la misma longitud en las listas de resueltos y en implementación", () => {
+    expect(es.disclaimer.status.resolved).toHaveLength(en.disclaimer.status.resolved.length);
+    expect(es.disclaimer.status.inProgress).toHaveLength(en.disclaimer.status.inProgress.length);
+  });
+});

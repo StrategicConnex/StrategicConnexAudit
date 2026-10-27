@@ -8,6 +8,7 @@ import {
   sanitizeRedirect,
 } from "@/shared/lib/disclaimer";
 import { DisclaimerForm } from "./DisclaimerForm";
+import { ProductStatus } from "./ProductStatus";
 import { RoadmapDisclosure } from "./RoadmapDisclosure";
 import esMessages from "./es.json";
 import enMessages from "./en.json";
@@ -104,6 +105,8 @@ export default async function DisclaimerPage({
               ))}
             </ul>
           </div>
+
+          <ProductStatus messages={messages.status} />
 
           <div className="rounded-lg border border-border bg-surface p-6 text-balance">
             <h2 className="font-semibold text-foreground">
