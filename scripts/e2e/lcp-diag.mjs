@@ -55,6 +55,9 @@ const ssr = {
   totalMs: Math.round(performance.now() - t0),
   hasHeroEs: docHtml.includes("proyectos en monitoreo"),
   hasHeroEn: docHtml.includes("monitored projects"),
+  // Marcador de deploy F-B: el texto del skeleton viaja en el stream del
+  // documento (fallback del Suspense). true = el build nuevo ya está en prod.
+  hasSkeletonText: docHtml.includes("Cargando tu portafolio"),
   htmlBytes: Buffer.byteLength(docHtml),
 };
 
