@@ -1,18 +1,64 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import { isBlockedAddress, isPrivateIp, assertPublicHostname, safeFetch, normalizeUrl, validateSafeUrl } from "./egress-guard";
-import { getErrorMessage } from "@/shared/lib/errors";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import type { Mock } from "vitest";
+import type { LookupAddress } from "node:dns";
+import { lookup } from "node:dns/promises";
+import {
+  isBlockedAddress,
+  isPrivateIp,
+  assertPublicHostname,
+  safeFetch,
+  normalizeUrl,
+  validateSafeUrl,
+} from "./egress-guard";
 
-// Sondeo previo de conectividad: los tests de red requieren internet real y
-// httpbin.org / example.com pueden estar caídos o filtrados (p.ej. detrás
-// de un proxy corporativo que devuelve 503). Si no hay red, se omiten en
-// vez de fallar — es flakiness ambiental, no una regresión del código (RSK-06).
-const networkReachablePromise = Promise.all(
-  ["https://example.com", "https://httpbin.org/status/200"].map((url) =>
-    fetch(url, { signal: AbortSignal.timeout(8_000), redirect: "manual" })
-      .then((res) => res.status < 500)
-      .catch(() => false),
-  )
-).then((results) => results.every(Boolean));
+/**
+ * Hermeticidad (PI-01 — tarea previa a C5)
+ *
+ * Este suite no toca la red externa: `node:dns/promises` va mockeado y
+ * `fetch` se sustituye por un stub en cada test. Los destinos iniciales son
+ * literales IP públicas, así que `assertPublicHostname` los clasifica sin
+ * DNS; las redirecciones se fabrican con `Response` locales.
+ *
+ * Antes se dependía de httpbin.org (`/redirect-to`): cuando httpbin pasó a
+ * responder 403 en vez de 302, dos tests rojos bloquearon el gate de sprint
+ * sin que hubiera regresión del guard. Un fallo del guard ahora es siempre
+ * reproducible y no depende de un tercero.
+ */
+
+vi.mock("node:dns/promises", () => {
+  const lookup = vi.fn();
+  return { lookup, default: { lookup } };
+});
+
+const lookupMock = lookup as unknown as Mock<(hostname: string) => Promise<LookupAddress[]>>;
+
+const PUBLIC_ADDRESSES: LookupAddress[] = [
+  { address: "93.184.216.34", family: 4 },
+  { address: "2606:4700:4700::1111", family: 6 },
+];
+
+const PRIVATE_REDIRECTS: Array<[string, string]> = [
+  ["loopback IPv4", "http://127.0.0.1/admin"],
+  ["RFC 1918", "http://10.0.0.7/admin"],
+  ["AWS metadata", "http://169.254.169.254/latest/meta-data/"],
+  ["IPv4-mapped IPv6", "http://[::ffff:127.0.0.1]/admin"],
+];
+
+const fetchMock = vi.fn<typeof fetch>();
+
+function redirectTo(location: string, status = 302): Response {
+  return new Response(null, { status, headers: { location } });
+}
+
+beforeEach(() => {
+  lookupMock.mockReset();
+  fetchMock.mockReset();
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("EgressGuard - SSRF and Private Network Protection Suite", () => {
   describe("isBlockedAddress() / isPrivateIp alias", () => {
@@ -113,35 +159,56 @@ describe("EgressGuard - SSRF and Private Network Protection Suite", () => {
     });
   });
 
-  describe("assertPublicHostname()", () => {
-    let networkReachable = false;
-
-    beforeAll(async () => {
-      networkReachable = await networkReachablePromise;
-    });
-
-    it("should immediately reject blocked IP inputs", async () => {
+  describe("assertPublicHostname() — DNS inyectado (sin red)", () => {
+    it("should immediately reject blocked IP inputs without DNS", async () => {
       await expect(assertPublicHostname("127.0.0.1")).rejects.toThrow(
         "SSRF Prevention: Blocked private or reserved IP target"
       );
       await expect(assertPublicHostname("10.0.0.1")).rejects.toThrow(
         "SSRF Prevention: Blocked private or reserved IP target"
       );
+      expect(lookupMock).not.toHaveBeenCalled();
     });
 
-    it("should resolve and accept safe public hostnames (DNS real, se omite sin red)", async () => {
-      // DNS real: bajo carga (suite completa en paralelo) la resolución puede
-      // ser lenta o fallar transitoriamente — mismo guard que los tests de red (RSK-06).
-      if (!networkReachable) return;
-      const result = await assertPublicHostname("google.com");
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0]!.address).toBeDefined();
+    it("should accept a hostname that resolves exclusively to public addresses", async () => {
+      lookupMock.mockResolvedValue(PUBLIC_ADDRESSES);
+
+      await expect(assertPublicHostname("public.example")).resolves.toEqual(PUBLIC_ADDRESSES);
+      expect(lookupMock).toHaveBeenCalledWith("public.example", { all: true, verbatim: false });
     });
 
-    it("should reject hostnames that resolve to private subnets", async () => {
-      // Create a local hostname check, or mock lookup for isolated test stability
-      // If we don't mock node:dns, some systems may not resolve specific local hostnames, 
-      // but let's test it against a mock resolver if needed.
+    it("should reject a hostname that resolves to a private subnet", async () => {
+      lookupMock.mockResolvedValue([{ address: "10.1.2.3", family: 4 }]);
+
+      await expect(assertPublicHostname("internal.example")).rejects.toThrow(
+        "Blocked DNS resolution to private/reserved address: 10.1.2.3"
+      );
+    });
+
+    it("should reject when any resolved address is private, even alongside public ones", async () => {
+      lookupMock.mockResolvedValue([...PUBLIC_ADDRESSES, { address: "192.168.1.10", family: 4 }]);
+
+      await expect(assertPublicHostname("mixed.example")).rejects.toThrow(
+        "Blocked DNS resolution to private/reserved address: 192.168.1.10"
+      );
+    });
+
+    it("should reject when DNS returns no addresses", async () => {
+      lookupMock.mockResolvedValue([]);
+
+      await expect(assertPublicHostname("empty.example")).rejects.toThrow(
+        "did not resolve to any addresses"
+      );
+    });
+
+    it("should classify IPv6 literals locally, without DNS", async () => {
+      await expect(assertPublicHostname("[::1]")).rejects.toThrow(
+        "Blocked private or reserved IP target: ::1"
+      );
+      await expect(assertPublicHostname("2001:4860:4860::8888")).resolves.toEqual([
+        { address: "2001:4860:4860::8888", family: 6 },
+      ]);
+      expect(lookupMock).not.toHaveBeenCalled();
     });
   });
 
@@ -182,20 +249,27 @@ describe("EgressGuard - SSRF and Private Network Protection Suite", () => {
     });
   });
 
-  describe("validateSafeUrl()", () => {
-    let networkReachable = false;
+  describe("validateSafeUrl() — DNS inyectado (sin red)", () => {
+    it("should accept a public URL when DNS resolves to public addresses", async () => {
+      lookupMock.mockResolvedValue(PUBLIC_ADDRESSES);
 
-    beforeAll(async () => {
-      networkReachable = await networkReachablePromise;
+      await expect(validateSafeUrl("https://public.example/report")).resolves.toBe(
+        "https://public.example/report"
+      );
     });
 
-    it("should accept valid public URLs", async () => {
-      // DNS real (lookup de google.com) — mismo guard que los tests de red: si no
-      // hay resolución el lookup cuelga hasta el timeout del resolver (RSK-06).
-      if (!networkReachable) return;
-      const url = "https://google.com";
-      const res = await validateSafeUrl(url);
-      expect(res).toBe(url);
+    it("should reject a hostname that resolves to a private address", async () => {
+      lookupMock.mockResolvedValue([{ address: "10.0.0.5", family: 4 }]);
+
+      await expect(validateSafeUrl("https://internal.example")).rejects.toThrow(
+        "se resuelve a una IP privada (10.0.0.5)"
+      );
+    });
+
+    it("should fail closed when DNS lookup fails", async () => {
+      lookupMock.mockRejectedValue(new Error("getaddrinfo ENOTFOUND"));
+
+      await expect(validateSafeUrl("https://unresolvable.example")).rejects.toThrow("fallo DNS");
     });
 
     it("should reject non HTTP/HTTPS schemes", async () => {
@@ -209,75 +283,69 @@ describe("EgressGuard - SSRF and Private Network Protection Suite", () => {
     });
   });
 
-  describe("safeFetch — integración real contra red (requiere internet)", () => {
-    let networkReachable = false;
+  describe("safeFetch() — redirecciones sin red (fetch inyectado)", () => {
+    it("should return a public response without redirect", async () => {
+      fetchMock.mockResolvedValue(new Response("ok", { status: 200 }));
 
-    beforeAll(async () => {
-      networkReachable = await networkReachablePromise;
-    });
+      const res = await safeFetch("https://93.184.216.34/health");
 
-    // Wrapper que omite el test si la red no está disponible (ambiental).
-    const itOnline = (name: string, fn: () => Promise<void>) =>
-      it(name, async () => {
-        if (!networkReachable) return;
-        await fn();
-      });
-
-    const HTTPBIN = "https://httpbin.org";
-
-    itOnline("debería fetchear exitosamente un dominio público sin redirección", async () => {
-      const res = await safeFetch("https://example.com", { method: "GET" });
       expect(res.ok).toBe(true);
       expect(res.status).toBe(200);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(lookupMock).not.toHaveBeenCalled();
     });
 
-    itOnline("debería seguir una redirección segura (a dominio público) cuando redirect=manual", async () => {
-      // httpbin.org/redirect-to?url=... devuelve 302 con Location al target
-      const target = encodeURIComponent("https://example.com");
-      const res = await safeFetch(`${HTTPBIN}/redirect-to?url=${target}`, {
-        method: "GET",
-        redirect: "manual",
-      });
-      // safeFetch devuelve la 302 sin seguir — verificar Location válido
+    it("should return the 3xx without following it and send redirect=manual by default", async () => {
+      fetchMock.mockResolvedValue(redirectTo("https://1.1.1.1/next"));
+
+      const res = await safeFetch("https://93.184.216.34/start");
+
       expect(res.status).toBe(302);
-      const location = res.headers.get("location");
-      expect(location).toBe("https://example.com");
+      expect(res.headers.get("location")).toBe("https://1.1.1.1/next");
+      const init = fetchMock.mock.calls[0]?.[1];
+      expect(init?.redirect).toBe("manual");
+      expect((init?.headers as Record<string, string>)["User-Agent"]).toContain(
+        "SCAuditIntelligenceBot"
+      );
     });
 
-    itOnline("debería BLOQUEAR redirección a IP privada en modo manual", async () => {
-      const target = encodeURIComponent("http://127.0.0.1");
-      await expect(
-        safeFetch(`${HTTPBIN}/redirect-to?url=${target}`, {
-          method: "GET",
-          redirect: "manual",
-        })
-      ).rejects.toThrow(/SSRF Prevention|Acceso denegado/);
+    it.each(PRIVATE_REDIRECTS)("should BLOCK a 3xx redirect to %s", async (_label, location) => {
+      fetchMock.mockResolvedValue(redirectTo(location));
+
+      await expect(safeFetch("https://93.184.216.34/start")).rejects.toThrow(
+        /SSRF Prevention|Acceso denegado/
+      );
     });
 
-    itOnline("debería BLOQUEAR redirección a AWS metadata IP en modo manual", async () => {
-      const target = encodeURIComponent("http://169.254.169.254/latest/meta-data/");
-      await expect(
-        safeFetch(`${HTTPBIN}/redirect-to?url=${target}`, {
-          method: "GET",
-          redirect: "manual",
-        })
-      ).rejects.toThrow(/SSRF Prevention|Acceso denegado/);
+    it("should NOT validate Location on non-3xx responses (httpbin 403 regression)", async () => {
+      // Antes este test dependía de que httpbin devolviera 302. Cuando pasó a
+      // devolver 403 con el mismo Location, el guard lo retornaba sin lanzar
+      // (comportamiento correcto: solo 300-399 son redirecciones). El caso
+      // queda fijado aquí para que un cambio de esa condición sea visible.
+      fetchMock.mockResolvedValue(
+        new Response("forbidden", { status: 403, headers: { location: "http://127.0.0.1/" } })
+      );
+
+      const res = await safeFetch("https://93.184.216.34/redirect-to");
+
+      expect(res.status).toBe(403);
     });
 
-    itOnline("NO debería lanzar SSRF error en modo follow (el caller eligió explícitamente)", async () => {
-      const target = encodeURIComponent("http://127.0.0.1:9999");
-      try {
-        await safeFetch(`${HTTPBIN}/redirect-to?url=${target}`, {
-          method: "GET",
-          redirect: "follow",
-        });
-        // Si milagrosamente conecta, no es SSRF
-      } catch (error: unknown) {
-        // Puede lanzar error de conexión (ECONNREFUSED) pero NO de SSRF
-        const msg = getErrorMessage(error);
-        expect(msg).not.toContain("SSRF Prevention");
-        expect(msg).not.toContain("Acceso denegado");
-      }
+    it("should return a 3xx without Location without throwing", async () => {
+      fetchMock.mockResolvedValue(new Response(null, { status: 302 }));
+
+      const res = await safeFetch("https://93.184.216.34/start");
+
+      expect(res.status).toBe(302);
+    });
+
+    it("should NOT apply SSRF validation in follow mode (explicit caller choice)", async () => {
+      fetchMock.mockResolvedValue(redirectTo("http://127.0.0.1:9999/"));
+
+      const res = await safeFetch("https://93.184.216.34/start", { redirect: "follow" });
+
+      expect(res.status).toBe(302);
+      expect(fetchMock.mock.calls[0]?.[1]?.redirect).toBe("follow");
     });
   });
 });
