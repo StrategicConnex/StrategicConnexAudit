@@ -94,7 +94,27 @@ Registro consolidado de **deuda técnica** de SCAUDIT Pro a partir de los hallaz
 
 > Estado TD-21 (2026-10-20, checkpoint C1): decisión del owner aplicada — trigger retirado (migración + BD dev corregida), el ticket sigue ABIERTA con la misma esencia (pre-creación N+1/N+2 + drop >13 meses vía `cleanup.trigger.ts`, sin cron nuevo).
 
-> **22 deudas registradas** (TD-01…TD-22): **15 RESUELTO** (TD-01…TD-07, TD-09…TD-16; TD-02/06/09/12 el 2026-09-17, TD-04/07/10/11 el 2026-09-25, TD-01/05 el 2026-09-26, TD-03 el 2026-09-27, TD-13 el 2026-10-01, TD-14/15/16 el 2026-10-18) y **7 ABIERTAS** (TD-08, TD-17, TD-18, TD-19, TD-20, TD-21, TD-22) (≥8 requeridas por T10-02). [VERIFIED]
+> **23 deudas registradas** (TD-01…TD-23): **15 RESUELTO** (TD-01…TD-07, TD-09…TD-16; TD-02/06/09/12 el 2026-09-17, TD-04/07/10/11 el 2026-09-25, TD-01/05 el 2026-09-26, TD-03 el 2026-09-27, TD-13 el 2026-10-01, TD-14/15/16 el 2026-10-18), **7 ABIERTAS** (TD-08, TD-17, TD-18, TD-19, TD-20, TD-21, TD-22) y **TD-23 parcial** ((b) resuelta en repo el 2026-10-27; (a) dedupe por sesión y (c) móvil abiertas) (≥8 requeridas por T10-02). **Incidentes de proceso:** PI-01 (§5.1). [VERIFIED]
+
+### 5.1 Incidentes de proceso (PI)
+
+Incidentes de **proceso**, no de código: acciones sobre `main` o sobre entornos reales ejecutadas sin el gate o la aprobación que el runbook exige. Se registran aquí para que el correctivo quede auditable y no dependa de la memoria del hilo. [VERIFIED — este documento]
+
+#### PI-01 — Push a `main` sin gates de sprint ni aprobación citada (2026-10-27)
+
+| Campo | Detalle |
+|-------|---------|
+| **Tipo** | Proceso · GOVERNANCE |
+| **Detectado** | 2026-10-27 19:09 -03, revisión del owner posterior al push |
+| **Acción** | `git push origin main` → `63a3afa..ae8a147` (6 commits: D + C1 + C2 + C3 + disclaimer + C4) |
+| **Aprobación** | **Existió** en el hilo: mensaje del owner «push to github», anterior al push. El fallo no es la autorización sino **no citarla** en el commit/reporte y **no ejecutar antes** los gates de sprint. No es un push no autorizado. |
+| **Alcance desplegado** | `main` → producción Vercel automática: D, C1 (`ca4ad20`), C2 (`c5af24b`), C3 (`4d3ac63`), disclaimer (`893daad`) y C4 (`ae8a147`) vivos ~1 h sin suite completa ni build de sprint |
+| **Impacto** | Riesgo **bajo-moderado**: lo desplegado es aditivo y opt-in (`intelligenceContext`, memoria cliente, citas, sugerencias), con contrato legacy preservado y validaciones que solo se activan con payloads nuevos. Mismo patrón que el incidente T5 (§19): acción sobre un entorno real antes de la aprobación formal. |
+| **Gates de sprint (contra `main`)** | Suite completa: **316 archivos / 3063 tests**, 315 archivos y 3061 tests en verde; 2 tests rojos en `src/server/intelligence/security/egress-guard.test.ts` (dependen de `httpbin.org`, que responde **403** en lugar del 302 esperado → `safeFetch` devuelve la respuesta sin lanzar; **brittleness ambiental, no regresión de C4**). `test:contract`: **2 archivos / 32 tests OK**. `guard:i18n`: **es=828 en=828, divergencia 0.00%** (máx 2.00%). `tsc --noEmit`: **0 errores**. `next build`: **exit 0** con tabla de rutas completa. |
+| **Spot-check de producción** | Deployment inmutable `strategic-connex-audit-cgsqo9l2n-strategicconnex.vercel.app`: contrato legacy **200** `{success, message, references: [], unverifiedCount: 0, suggestion: null, modelUsed}` sin stream; historia con rol `system` o terminada en `assistant` → **400** `Mensajes inválidos`; cita inventada → texto plano, `references: []`, `unverifiedCount: 1`; proyecto sin hallazgos → `suggestion: null`, `references: []`, `unverifiedCount: 0`. |
+| **Rollback** | Aplicado por la regla «cualquier rojo → rollback primero»: `vercel promote strategic-connex-audit-fddkbobqs-strategicconnex.vercel.app` → deployment `dpl_AxkoaWHnHjEbDLfJqtjMVffJY7zc`. `scaudit.vercel.app` sirve el deployment previo; verificado root **307** y `/api/ai/copilot` sin sesión **401**. |
+| **Correctivo** | (1) Todo push futuro **cita textualmente** el mensaje de aprobación del owner en el cuerpo del commit o en el reporte. (2) Antes de cualquier push: suite completa, `test:contract`, `guard:i18n`, `typecheck` y build de producción en verde. (3) C5, C6 y C7 solo se ejecutan y commitean en local; el próximo push será **único**, tras gates de sprint y aprobación expresa citada. (4) Cualquier gate rojo: promover el deployment previo primero, analizar después. |
+| **Estado** | **VERIFICADO / ABIERTO en correctivo** — gates y spot-check completados; push congelado; C5–C7 sin publicar. |
 
 ---
 
@@ -230,6 +250,7 @@ flowchart LR
 | 1.5 | 2026-10-20 | +TD-21 (higiene de particiones de `uptime_logs`: pre-creación 2 meses adelante + retención 13 meses vía `cleanup.trigger.ts`, fecha límite dura 2027-03-01, ABIERTA) — exigida por el ADDENDUM P5 del Task 5 del plan `2026-10-20-q4-sprint6-performance-observability.md` - cuenta: 21 deudas, 15 resueltas, 6 abiertas | Aprobado |
 | 1.6 | 2026-10-25 | +TD-22 (F-SCAN: progreso de escaneo con timestamps hardcodeados y `setInterval` en `IntelligenceTab.tsx`, sin `intelligence_run_events`; ABIERTA, objetivo Sprint 1) — cierre de Sprint 0 del plan `CHATBOT-IMPROVEMENT-PLAN.md` - cuenta: 22 deudas, 15 resueltas, 7 abiertas | Aprobado |
 | 1.7 | 2026-10-28 | TD-22 re-objetivada a **Sprint 2** (slip documentado: no entró en Sprint 1 por priorización de streaming SSE y atribución LCP). Sin cambio en la cuenta de deudas | Aprobado |
+| 1.8 | 2026-10-27 | +PI-01 (§5.1): push `63a3afa..ae8a147` sin gates de sprint ni aprobación citada — verificación completa (suite, contrato, i18n, typecheck, build), spot-check de producción y rollback a `fddkbobqs`; correctivo de aprobación textual y congelamiento de C5–C7. Se incorpora TD-23 a la cuenta (parcial) | Aprobado |
 
 **Verificación:** `node scripts/quality-gate.mjs docs/technical-debt/TECH-DEBT-REGISTER.md --min 80` → PASS
 
