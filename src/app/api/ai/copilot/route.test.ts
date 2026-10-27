@@ -183,6 +183,37 @@ describe("AI: Copilot — POST", () => {
     expect(sent.messages[3]).toEqual({ role: "user", content: "¿qué priorizo?" });
   });
 
+  it("el saludo sintético del asistente no convierte el primer turno en historia", async () => {
+    await POST(
+      createRequest({
+        messages: [
+          { role: "assistant", content: "Hola, soy el copiloto" },
+          { role: "user", content: "primer turno" },
+        ],
+      }) as never,
+      "u-1",
+    );
+
+    const sent = mockCallAI.mock.calls[0]?.[0] as { disableSemanticCache?: boolean };
+    expect(sent.disableSemanticCache).toBe(false);
+  });
+
+  it("dos turnos de usuario → disableSemanticCache true", async () => {
+    await POST(
+      createRequest({
+        messages: [
+          { role: "user", content: "turno 1" },
+          { role: "assistant", content: "respuesta" },
+          { role: "user", content: "turno 2" },
+        ],
+      }) as never,
+      "u-1",
+    );
+
+    const sent = mockCallAI.mock.calls[0]?.[0] as { disableSemanticCache?: boolean };
+    expect(sent.disableSemanticCache).toBe(true);
+  });
+
   it("un cierre de delimitador inyectado en la historia no escapa del bloque", async () => {
     await POST(
       createRequest({
@@ -605,10 +636,13 @@ describe("AI: Copilot — streaming (stream: true)", () => {
       messages: { role: string; content: string }[];
       taskType: string;
       userId: string;
+      disableSemanticCache?: boolean;
     };
     expect(options.taskType).toBe("general-chat");
     expect(options.userId).toBe("u-1");
     expect(options.messages[0]?.role).toBe("system");
+    // Primer turno: la caché tenant-scoped sigue activa.
+    expect(options.disableSemanticCache).toBe(false);
   });
 
   it("stream recibe la misma historia redactada y delimitada", async () => {
@@ -637,11 +671,13 @@ describe("AI: Copilot — streaming (stream: true)", () => {
 
     const options = mockCallAIStream.mock.calls[0]?.[0] as {
       messages: { role: string; content: string }[];
+      disableSemanticCache?: boolean;
     };
     expect(options.messages[1]?.content).toContain("<historial_de_conversacion>");
     expect(options.messages[1]?.content).toContain("[EMAIL]");
     expect(options.messages[1]?.content).not.toContain("ana@acme.com");
     expect(options.messages[3]).toEqual({ role: "user", content: "¿qué priorizo?" });
+    expect(options.disableSemanticCache).toBe(true);
   });
 
   it("stream cortado a mitad → evento error con el parcial ya entregado", async () => {

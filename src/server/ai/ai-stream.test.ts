@@ -17,8 +17,13 @@ vi.mock("./ai-usage", async (importOriginal) => {
 });
 vi.mock("./ai-cache", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./ai-cache")>();
-  // Envuelve el real: los tests que siembran la caché siguen funcionando.
-  return { ...actual, setSemanticCache: vi.fn(actual.setSemanticCache) };
+  // Envuelve los reales: los tests que siembran/leen la caché siguen
+  // funcionando y además se puede afirmar si el router hizo lookup o write.
+  return {
+    ...actual,
+    getSemanticCache: vi.fn(actual.getSemanticCache),
+    setSemanticCache: vi.fn(actual.setSemanticCache),
+  };
 });
 
 type FetchHandler = (url: string, init: RequestInit) => Promise<Response> | Response;
@@ -45,12 +50,13 @@ vi.stubGlobal(
   }),
 );
 
-import { callAIWithFallbackStream } from "./ai-router";
-import { buildSemanticKey, setSemanticCache } from "./ai-cache";
+import { callAIWithFallback, callAIWithFallbackStream } from "./ai-router";
+import { buildSemanticKey, getSemanticCache, setSemanticCache } from "./ai-cache";
 import { recordAiUsage } from "./ai-usage";
 import { resetAllCircuits } from "@/shared/lib/circuit-breaker";
 
 const usageMock = recordAiUsage as unknown as ReturnType<typeof vi.fn>;
+const cacheReadMock = getSemanticCache as unknown as ReturnType<typeof vi.fn>;
 const cacheWriteMock = setSemanticCache as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
@@ -409,5 +415,157 @@ describe("callAIWithFallbackStream — caché solo al stream completo", () => {
     expect(res.success).toBe(true);
     expect(cacheWriteMock).toHaveBeenCalledTimes(1);
     expect(cacheWriteMock.mock.calls[0]?.[1]).toBe("respuesta completa");
+  });
+});
+
+// ─── C3 — los turnos con historia no tocan la caché semántica ────────────────
+
+function jsonCompletionResponse(content: string): Response {
+  return new Response(
+    JSON.stringify({
+      choices: [{ message: { content } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5 },
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+describe("callAIWithFallbackStream — C3 bypass de caché con historia", () => {
+  it("disableSemanticCache evita el lookup aunque haya una entrada sembrada", async () => {
+    const messages = userMessages("c3-read");
+    const scope = "user:u-c3-read";
+    const key = buildSemanticKey("general-chat", scope, messages);
+    await setSemanticCache(key, "respuesta vieja", "m1", "general-chat");
+    cacheReadMock.mockClear();
+    cacheWriteMock.mockClear();
+    fetchHandler = () => sseResponse([deltaEvent("respuesta nueva"), usageEvent(), DONE_EVENT]);
+
+    const res = await callAIWithFallbackStream(
+      {
+        taskType: "general-chat",
+        messages,
+        cacheScope: scope,
+        userId: "u-c3-read",
+        disableSemanticCache: true,
+      },
+      () => {},
+    );
+
+    expect(cacheReadMock).not.toHaveBeenCalled();
+    expect(res.success).toBe(true);
+    expect(res.fromCache).toBeUndefined();
+    expect(res.content).toBe("respuesta nueva");
+  });
+
+  it("disableSemanticCache evita la escritura al completar el stream", async () => {
+    cacheWriteMock.mockClear();
+    fetchHandler = () => sseResponse([deltaEvent("completa"), usageEvent(), DONE_EVENT]);
+
+    const res = await callAIWithFallbackStream(
+      {
+        taskType: "general-chat",
+        messages: userMessages("c3-write"),
+        userId: "u-c3-write",
+        disableSemanticCache: true,
+      },
+      () => {},
+    );
+
+    expect(res.success).toBe(true);
+    expect(cacheWriteMock).not.toHaveBeenCalled();
+  });
+
+  it("sin el flag, un primer turno sigue leyendo y escribiendo la clave tenant-scoped", async () => {
+    const messages = userMessages("c3-first");
+    const scope = "user:u-c3-first";
+    const key = buildSemanticKey("general-chat", scope, messages);
+    cacheReadMock.mockClear();
+    cacheWriteMock.mockClear();
+    fetchHandler = () => sseResponse([deltaEvent("primera"), usageEvent(), DONE_EVENT]);
+
+    const res = await callAIWithFallbackStream(
+      { taskType: "general-chat", messages, cacheScope: scope, userId: "u-c3-first" },
+      () => {},
+    );
+
+    expect(cacheReadMock).toHaveBeenCalledWith(key);
+    expect(cacheWriteMock).toHaveBeenCalledWith(key, "primera", expect.any(String), "general-chat");
+    expect(res.fromCache).toBeUndefined();
+  });
+
+  it("el flag es por solicitud: no altera el cacheo de otra tarea posterior", async () => {
+    cacheWriteMock.mockClear();
+    fetchHandler = () => sseResponse([deltaEvent("bypass"), usageEvent(), DONE_EVENT]);
+    await callAIWithFallbackStream(
+      {
+        taskType: "general-chat",
+        messages: userMessages("c3-isolation-a"),
+        userId: "u-c3-a",
+        disableSemanticCache: true,
+      },
+      () => {},
+    );
+    expect(cacheWriteMock).not.toHaveBeenCalled();
+
+    cacheWriteMock.mockClear();
+    const messages = [{ role: "user" as const, content: `seo ${Date.now()}` }];
+    fetchHandler = () => sseResponse([deltaEvent("seo ok"), usageEvent(), DONE_EVENT]);
+    await callAIWithFallbackStream(
+      {
+        taskType: "seo-report",
+        messages,
+        cacheScope: "seo:c3",
+        userId: "u-c3-b",
+      },
+      () => {},
+    );
+    expect(cacheWriteMock).toHaveBeenCalledTimes(1);
+    expect(cacheWriteMock.mock.calls[0]?.[3]).toBe("seo-report");
+  });
+});
+
+describe("callAIWithFallback — C3 bypass de caché con historia (JSON)", () => {
+  it("disableSemanticCache no hace lookup ni escribe en el camino JSON", async () => {
+    cacheReadMock.mockClear();
+    cacheWriteMock.mockClear();
+    fetchHandler = () => jsonCompletionResponse("json nueva");
+
+    const res = await callAIWithFallback({
+      taskType: "general-chat",
+      messages: userMessages("c3-json-bypass"),
+      cacheScope: "user:u-c3-json",
+      userId: "u-c3-json",
+      disableSemanticCache: true,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.content).toBe("json nueva");
+    expect(cacheReadMock).not.toHaveBeenCalled();
+    expect(cacheWriteMock).not.toHaveBeenCalled();
+  });
+
+  it("sin el flag, el camino JSON cachea la respuesta completa", async () => {
+    cacheReadMock.mockClear();
+    cacheWriteMock.mockClear();
+    const messages = userMessages("c3-json-cache");
+    const scope = "user:u-c3-json-cache";
+    const key = buildSemanticKey("general-chat", scope, messages);
+    fetchHandler = () => jsonCompletionResponse("json cacheable");
+
+    const res = await callAIWithFallback({
+      taskType: "general-chat",
+      messages,
+      cacheScope: scope,
+      userId: "u-c3-json-cache",
+    });
+
+    expect(res.success).toBe(true);
+    expect(cacheReadMock).toHaveBeenCalledWith(key);
+    expect(cacheWriteMock).toHaveBeenCalledWith(
+      key,
+      "json cacheable",
+      expect.any(String),
+      "general-chat",
+    );
   });
 });

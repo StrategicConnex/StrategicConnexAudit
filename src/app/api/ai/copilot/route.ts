@@ -73,7 +73,11 @@ function aiFailureResponse(error: string, kind: "pool" | "infra"): NextResponse 
  * falla SIN emitir ni un chunk (pool caído, onboarding, etc.) se responde
  * JSON con el contrato histórico: el cliente distingue por Content-Type.
  */
-function streamCopilotResponse(aiMessages: AIMessage[], userId: string): Promise<Response> {
+function streamCopilotResponse(
+  aiMessages: AIMessage[],
+  userId: string,
+  disableSemanticCache: boolean,
+): Promise<Response> {
   const encoder = new TextEncoder();
   let started = false;
   let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
@@ -99,6 +103,7 @@ function streamCopilotResponse(aiMessages: AIMessage[], userId: string): Promise
       messages: aiMessages,
       temperature: 0.4,
       maxTokens: 4096,
+      disableSemanticCache,
     },
     (text) => {
       if (!started) {
@@ -265,9 +270,16 @@ export const POST = withRateLimit(
       const conversation = buildConversationMessages(messages as ConversationTurn[]);
       const aiMessages: AIMessage[] = [systemMsg, ...conversation];
 
+      // C3: un turno con historia no puede reutilizar ni contaminar la caché
+      // semántica de primeros turnos. Se cuenta el número de turnos de USUARIO:
+      // el saludo sintético del asistente no convierte el primer turno en
+      // historia. El primer turno sigue tenant-scoped cacheable.
+      const userTurns = conversation.filter((turn) => turn.role === "user").length;
+      const disableSemanticCache = userTurns > 1;
+
       // ── Streaming (Sprint 1): respuestas progresivas por SSE ─────────────
       if (stream === true) {
-        return await streamCopilotResponse(aiMessages, userId);
+        return await streamCopilotResponse(aiMessages, userId, disableSemanticCache);
       }
 
       // Call AI with model pool and automatic fallback
@@ -280,7 +292,8 @@ export const POST = withRateLimit(
         messages: aiMessages,
         temperature: 0.4,
         maxTokens: 4096,
-        });
+        disableSemanticCache,
+      });
 
       if (!aiResult.success) {
         // Único caso "blando": no hay ninguna clave configurada (onboarding).

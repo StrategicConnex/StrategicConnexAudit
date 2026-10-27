@@ -101,6 +101,12 @@ export interface AIRequestOptions {
    */
   cacheScope?: string;
   /**
+   * Desactiva lookup y escritura de caché semántica para esta llamada.
+   * Turnos con historia de conversación dependen del hilo: no deben
+   * reutilizar respuestas de otros turnos ni contaminar L1/L2 (Sprint 2, C3).
+   */
+  disableSemanticCache?: boolean;
+  /**
    * Fuerza un modelo concreto (Sprint 4 #8: evals del pool). Bypasea la
    * cadena de la task y el cache: mide al modelo real, sin contaminar la
    * caché de producción ni dejar que un hit enmascare un modelo caído.
@@ -740,7 +746,8 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
   // por ADR-002 (enmiendas 14-15). Sin cacheScope → scope "global" → solo L1.
   const cacheKey = buildSemanticKey(taskType, options.cacheScope ?? "", messages);
   // modelOverride: evals miden al modelo real — el cache los enmascararía.
-  if (!useTools && !options.modelOverride) {
+  // disableSemanticCache: turnos con historia no deben reutilizar respuestas.
+  if (!useTools && !options.modelOverride && !options.disableSemanticCache) {
     const cached = await getSemanticCache(cacheKey);
     if (cached) {
       const res = track({ modelUsed: cached.modelId, success: true, fromCache: true });
@@ -832,7 +839,12 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
 
       // Cache solo respuestas de contenido puro sin tools (nunca con
       // modelOverride: las respuestas de eval no deben servir a producción).
-      if (!useTools && !toolCalls?.length && !options.modelOverride) {
+      if (
+        !useTools &&
+        !toolCalls?.length &&
+        !options.modelOverride &&
+        !options.disableSemanticCache
+      ) {
         void setSemanticCache(cacheKey, message.content ?? "", modelId!, taskType);
       }
 
@@ -939,7 +951,12 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
         }
 
         // Cache igual que la cadena primaria (idéntico contrato).
-        if (!useTools && !toolCalls?.length) {
+        if (
+          !useTools &&
+          !toolCalls?.length &&
+          !options.modelOverride &&
+          !options.disableSemanticCache
+        ) {
           void setSemanticCache(cacheKey, message.content ?? "", providerModelId, taskType);
         }
 
@@ -1395,7 +1412,7 @@ export async function callAIWithFallbackStream(
 
   // 1. Caché semántica: replay en un único chunk (el cliente lo pinta entero).
   const cacheKey = buildSemanticKey(taskType, options.cacheScope ?? "", messages);
-  if (!options.modelOverride) {
+  if (!options.modelOverride && !options.disableSemanticCache) {
     const cached = await getSemanticCache(cacheKey);
     if (cached) {
       emit(cached.content);
@@ -1505,7 +1522,9 @@ export async function callAIWithFallbackStream(
         throw new Error(`Respuesta vacía del modelo ${modelId}`);
       }
 
-      void setSemanticCache(cacheKey, accumulated, modelId, taskType);
+      if (!options.modelOverride && !options.disableSemanticCache) {
+        void setSemanticCache(cacheKey, accumulated, modelId, taskType);
+      }
       logger.info(
         `[AI Router] stream ${taskType} → ${modelId} (${Date.now() - startTime}ms) ` +
           `[attempt ${i + 1}/${modelChain.length}]`
@@ -1600,7 +1619,9 @@ export async function callAIWithFallbackStream(
           throw new Error(`Respuesta vacía de ${providerModelId}`);
         }
 
-        void setSemanticCache(cacheKey, accumulated, providerModelId, taskType);
+        if (!options.modelOverride && !options.disableSemanticCache) {
+          void setSemanticCache(cacheKey, accumulated, providerModelId, taskType);
+        }
         logger.info(`[AI Router] stream failover ${taskType} → ${providerModelId}`);
         return track({
           modelUsed: providerModelId,
