@@ -45,6 +45,12 @@
 
 **Objetivo:** parser local de `/help`, `/finding <id>` y slash desconocido. `/finding` solo manda ID al endpoint autenticado. Extender el helper de memoria con clave `scaudit:chat:intelligence:v2:<mode>:<contextId>`, expiración 7 días, retención local compatible con límite existente de hasta 100 mensajes, y contexto saliente de máximo 10 mensajes y 8.000 caracteres recortando desde el más antiguo. Redactar la historia con el scrubber común antes del prompt.
 
+**Desviación D-C2-1 (aprobada por owner):** C2 amplía el contrato de `intelligenceContext` definido en C1 con `findingId`. Sin esta ampliación, `/finding` solo podría validarse en cliente, que es precisamente lo que el principio de autorización prohíbe. El servidor exige `projectId` cuando llega `findingId`, resuelve el hallazgo dentro de ese proyecto (y de la investigación si se indicó), sin ventana de 7 días, y conflatea hallazgo inexistente/ajeno en el mismo 404 genérico.
+
+**Contrato `intelligenceContext` (C1 + D-C2-1):** objeto opt-in con `projectId?`, `investigationId?`, `findingId?` (UUID). Todos los IDs son opcionales, pero `findingId` requiere `projectId`. El servidor re-autoriza cada recurso bajo RLS; el navegador nunca envía contenido de proyecto, investigación o hallazgo, solo IDs. Un recurso inexistente o de otro tenant devuelve el mismo 404 genérico.
+
+**Condición de revisión cerrada:** la historia entrante se redacta en servidor con `redactSensitiveText` antes de construir el prompt; el cliente no es la única barrera. Los turnos anteriores al último mensaje del usuario se envuelven en `<historial_de_conversacion>` (con `<`/`>` neutralizados) para que el modelo los trate como datos, y el último turno del usuario queda como instrucción vigente. Solo se aceptan roles `user`/`assistant` y la conversación debe terminar en un turno de usuario. Tests en `route.test.ts` y `copilot-prompt.test.ts`.
+
 **Pruebas:**
 - Parser: `/help`, `/finding <id>`, argumento ausente/malformado y `/foo`; ayuda y comando desconocido se resuelven sin fetch.
 - `/finding`: solo incluye recurso autorizado; recurso ajeno/inexistente da error genérico no revelador.
@@ -54,7 +60,7 @@
 
 ### C3 — `feat(chat): preservar caché semántica sin contaminar turnos con memoria`
 
-**Staging:** únicamente cambios al router/opciones internas de caché y tests de router. No incluir consumo SSE del cliente.
+**Staging:** cambios al router/opciones internas de caché, el cableado mínimo en `src/app/api/ai/copilot/route.ts` para activar la opción cuando la conversación tiene historia, y tests de router. No incluir consumo SSE del cliente.
 
 **Objetivo:** extender el input del router sin cambiar contratos de otras tareas: una opción interna explícita para desactivar caché. Turnos con historia no hacen lookup ni write L1/L2; turnos iniciales sin historia siguen tenant-scoped cacheables. Solicitudes canceladas/error no escriben caché. Sin cambio en contenido de claves existentes para los primeros turnos.
 

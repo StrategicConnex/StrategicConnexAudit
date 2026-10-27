@@ -5,10 +5,22 @@ import { intelligenceFindings, intelligenceInvestigations, projects } from "@/sh
 export interface IntelligenceContextIds {
   projectId?: string;
   investigationId?: string;
+  findingId?: string;
 }
 
 const RECENT_FINDINGS_DAYS = 7;
 const MAX_RECENT_FINDINGS = 25;
+const FINDING_COLUMNS = {
+  id: true,
+  investigationId: true,
+  severity: true,
+  title: true,
+  description: true,
+  recommendation: true,
+  evidence: true,
+  affectedAsset: true,
+  createdAt: true,
+} as const;
 
 /**
  * Resolve client-provided resource IDs under the authenticated user's RLS scope.
@@ -20,8 +32,9 @@ export async function loadIntelligenceCopilotContext(
 ): Promise<Record<string, unknown> | null> {
   const projectId = ids.projectId;
   const investigationId = ids.investigationId;
+  const findingId = ids.findingId;
   if (!projectId) {
-    if (investigationId) return null;
+    if (investigationId || findingId) return null;
     return {
       projects: [],
       summary: { totalProjects: 0 },
@@ -71,6 +84,24 @@ export async function loadIntelligenceCopilotContext(
       if (!investigation) return null;
     }
 
+    // `/finding <id>`: se autoriza el hallazgo concreto dentro del proyecto
+    // (y de la investigación, si se indicó). No se limita a la ventana de 7
+    // días: el usuario puede pedir analizar un hallazgo antiguo accesible.
+    const selectedFinding = findingId
+      ? await tx.query.intelligenceFindings.findFirst({
+          where: and(
+            eq(intelligenceFindings.id, findingId),
+            eq(intelligenceFindings.projectId, projectId),
+            ...(investigationId
+              ? [eq(intelligenceFindings.investigationId, investigationId)]
+              : []),
+          ),
+          columns: FINDING_COLUMNS,
+        })
+      : undefined;
+
+    if (findingId && !selectedFinding) return null;
+
     const since = new Date(Date.now() - RECENT_FINDINGS_DAYS * 24 * 60 * 60 * 1000);
     const findingConditions = [
       eq(intelligenceFindings.projectId, projectId),
@@ -83,19 +114,14 @@ export async function loadIntelligenceCopilotContext(
       where: and(...findingConditions),
       orderBy: [desc(intelligenceFindings.createdAt)],
       limit: MAX_RECENT_FINDINGS,
-      columns: {
-        id: true,
-        investigationId: true,
-        severity: true,
-        title: true,
-        description: true,
-        recommendation: true,
-        evidence: true,
-        affectedAsset: true,
-        createdAt: true,
-      },
+      columns: FINDING_COLUMNS,
     });
 
-    return { project, investigation, findings };
+    return {
+      project,
+      investigation,
+      findings,
+      ...(selectedFinding ? { selectedFinding } : {}),
+    };
   });
 }

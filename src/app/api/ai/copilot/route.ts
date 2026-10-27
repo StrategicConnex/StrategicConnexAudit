@@ -9,7 +9,11 @@ import {
   type AIStreamResult,
 } from '@/server/ai/ai-router';
 import { assertAiQuota } from '@/server/ai/ai-usage';
-import { buildCopilotSystemPrompt } from '@/server/ai/copilot-prompt';
+import {
+  buildConversationMessages,
+  buildCopilotSystemPrompt,
+  type ConversationTurn,
+} from '@/server/ai/copilot-prompt';
 import { loadIntelligenceCopilotContext } from '@/server/ai/intelligence-context';
 import { logger } from "@/lib/logger";
 
@@ -186,14 +190,38 @@ export const POST = withRateLimit(
       const body = await req.json().catch(() => null);
       const { messages, context, mode = 'copilot', stream, intelligenceContext } = body ?? {};
 
-      if (!messages || !Array.isArray(messages)) {
+      if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        return NextResponse.json({ success: false, error: 'Mensajes inválidos' }, { status: 400 });
+      }
+
+      // La historia la controla el cliente: no se confía en su forma ni en su
+      // contenido. Solo se aceptan turnos user/assistant y la conversación
+      // debe terminar en una pregunta del usuario (nunca en un turno assistant
+      // que pudiera actuar como instrucción de cierre).
+      const isChatRole = (role: unknown): role is 'user' | 'assistant' =>
+        role === 'user' || role === 'assistant';
+      const validTurns = messages.every((m: unknown) => {
+        if (!m || typeof m !== 'object') return false;
+        const turn = m as { role?: unknown; content?: unknown };
+        return (
+          isChatRole(turn.role) &&
+          typeof turn.content === 'string' &&
+          turn.content.trim().length > 0
+        );
+      });
+      const lastTurn = messages[messages.length - 1] as { role?: unknown } | undefined;
+      if (!validTurns || lastTurn?.role !== 'user') {
         return NextResponse.json({ success: false, error: 'Mensajes inválidos' }, { status: 400 });
       }
 
       let promptContext = context;
       let promptMode = mode;
       if (intelligenceContext !== undefined) {
-        const ids = intelligenceContext as { projectId?: unknown; investigationId?: unknown };
+        const ids = intelligenceContext as {
+          projectId?: unknown;
+          investigationId?: unknown;
+          findingId?: unknown;
+        };
         const isUuid = (value: unknown): value is string =>
           typeof value === 'string' &&
           /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -202,7 +230,10 @@ export const POST = withRateLimit(
           !ids || typeof ids !== 'object' || Array.isArray(ids) ||
           (ids.projectId !== undefined && !isUuid(ids.projectId)) ||
           (ids.investigationId !== undefined && !isUuid(ids.investigationId)) ||
-          Object.keys(ids).some((key) => key !== 'projectId' && key !== 'investigationId')
+          (ids.findingId !== undefined && !isUuid(ids.findingId)) ||
+          Object.keys(ids).some(
+            (key) => key !== 'projectId' && key !== 'investigationId' && key !== 'findingId',
+          )
         ) {
           return NextResponse.json({ success: false, error: 'Contexto de Intelligence inválido' }, { status: 400 });
         }
@@ -210,6 +241,7 @@ export const POST = withRateLimit(
         const resolvedContext = await loadIntelligenceCopilotContext(userId, {
           projectId: ids.projectId as string | undefined,
           investigationId: ids.investigationId as string | undefined,
+          findingId: ids.findingId as string | undefined,
         });
         if (!resolvedContext) {
           return NextResponse.json(
@@ -228,11 +260,10 @@ export const POST = withRateLimit(
         content: buildCopilotSystemPrompt(promptMode, promptContext),
       };
 
-      // Convert user messages to AIMessage format and prepend system
-      const aiMessages: AIMessage[] = [
-        systemMsg,
-        ...messages.map((m: { role: string; content: string }) => ({ role: m.role as 'user' | 'assistant', content: m.content } as AIMessage))
-      ];
+      // Scrub server-side + delimitación como DATOS de los turnos previos.
+      // El último turno del usuario queda sin envolver: es la instrucción.
+      const conversation = buildConversationMessages(messages as ConversationTurn[]);
+      const aiMessages: AIMessage[] = [systemMsg, ...conversation];
 
       // ── Streaming (Sprint 1): respuestas progresivas por SSE ─────────────
       if (stream === true) {
@@ -249,7 +280,7 @@ export const POST = withRateLimit(
         messages: aiMessages,
         temperature: 0.4,
         maxTokens: 4096,
-      });
+        });
 
       if (!aiResult.success) {
         // Único caso "blando": no hay ninguna clave configurada (onboarding).
