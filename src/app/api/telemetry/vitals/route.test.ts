@@ -129,4 +129,36 @@ describe("POST /api/telemetry/vitals — beacon token (P0-3)", () => {
     expect(json).toEqual({ error: "telemetry_unavailable", stage: "insert" });
     spy.mockRestore();
   });
+
+  it("conserva lcpElement y la descomposición LCP del attribution build en rawPayload (regresión post-push 2026-10-27)", async () => {
+    // Regresión real: el deploy del attribution build llegó a prod, pero el
+    // schema zod sin estas claves las descartaba al parsear → filas sin
+    // lcpElement (detectado en la verificación post-push 00:07Z).
+    findFirstMock.mockResolvedValue({
+      id: base.projectId,
+      deletedAt: null,
+      isDeleted: false,
+      isHidden: false,
+      beaconSecret: null,
+    });
+    const vitals = {
+      lcp: 4623.3,
+      fcp: 2200,
+      ttfb: 2223.9,
+      lcpElement: "h2.font-display.text-2xl.font-extrabold",
+      lcpTTFB: 2223.9,
+      lcpResourceLoadDelay: 0,
+      lcpResourceLoadTime: 0,
+      lcpElementRenderDelay: 2399.4,
+    };
+    const res = await POST(req({ ...base, vitals }));
+    expect(res.status).toBe(204);
+    expect(insertValuesMock).toHaveBeenCalledTimes(1);
+    const row = insertValuesMock.mock.calls[0]?.[0] as {
+      rawPayload: { vitals: typeof vitals };
+      lcp: string;
+    };
+    expect(row.rawPayload.vitals).toMatchObject(vitals);
+    expect(row.lcp).toBe("4623.3");
+  });
 });

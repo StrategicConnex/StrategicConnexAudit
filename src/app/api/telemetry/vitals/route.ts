@@ -58,6 +58,16 @@ const vitalsSchema = z.object({
     fid: z.number().optional(),
     fcp: z.number().optional(),
     ttfb: z.number().optional(),
+    // Attribution build de web-vitals@3.5.2 (TD-23.b / H-10b): selector del
+    // elemento LCP + descomposición en campo (load delay / load time /
+    // render delay). Sin declararlas aquí, zod las descarta al parsear y
+    // mueren antes de rawPayload — regresión detectada en la verificación
+    // post-push (2026-10-27T00:07Z: filas sin lcpElement pese al deploy).
+    lcpElement: z.string().max(512).optional(),
+    lcpTTFB: z.number().optional(),
+    lcpResourceLoadDelay: z.number().optional(),
+    lcpResourceLoadTime: z.number().optional(),
+    lcpElementRenderDelay: z.number().optional(),
   }).optional(),
 
   // Legacy payload compatibility
