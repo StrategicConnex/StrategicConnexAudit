@@ -1,6 +1,6 @@
 # H-10b: Investigación chunk react-dom (+69.9 KB, causa INFERRED)
 
-## Estado: CAUSA ACOTADA 2026-10-27 (Fase B) — render-blocking + elemento LCP tardío en `/`; hipótesis de bundle REFUTADA · punto de decisión abierto
+## Estado: CAUSA CONFIRMADA EN LAB 2026-10-28 (Fase C) — streaming del servidor + main-thread bloqueada; hipótesis de font REFUTADA · fix propuesto, punto de decisión abierto
 
 ## Contexto
 
@@ -120,6 +120,82 @@ Causa acotada a dos frentes medibles en `/`:
 Método: 1 Lighthouse run en `/` (filmstrip + render-blocking) → fix acotado →
 re-medir p75 de campo 48 h. **Retitular H-10b: “LCP del landing `/`”** — ya no
 “chunk react-dom”.
+
+## Fase C — Diagnóstico de laboratorio autenticado (2026-10-28)
+
+### Método
+
+`scripts/e2e/lcp-diag.mjs`: sesión real en prod (password grant + cookie
+forjada, mismo patrón que `audit-chat-prod.mjs`), 3 navegaciones frías a `/`
+con observadores buffered (paint, LCP con elemento, long tasks, font-face,
+recursos) + fetch del documento para medir streaming y presencia del `h2` en
+el HTML SSR.
+
+### Datos (3 corridas, 2026-10-28)
+
+| Señal | Corridas | Lectura |
+|-------|----------|---------|
+| TTFB | 246 / 253 / 252 ms | ✅ sano |
+| Fin de streaming del documento | 1919 / 1916 / 1841 ms | ❌ **el servidor tarda ~1,65 s** en terminar de emitir (auth `getUser()` + queries RLS dentro del `<Suspense>`) |
+| Fuentes (3 woff2, 112 KB) | cargadas a **1134 / 948 / 726 ms** | ❌ **hipótesis font REFUTADA** — ~1 s << LCP; CLS 0–0,005 |
+| FCP = LCP (el `h2` del hero) | 3924 / 2788 / 2716 ms | el `h2` va en el HTML SSR y pinta **sin hidratación** → hipótesis de “hidratación del hero” REFUTADA |
+| Long tasks previas al LCP | 455 / 426 / 274 ms (eval del bundle) | ❌ main-thread ocupada entre fin de doc y paint |
+| `DashboardSkeleton` (fallback) | pinta pero **sin texto** → no cuenta como FCP ni LCP | hallazgo clave |
+
+El HTML SSR **sí contiene el hero** (`hasHeroEs: true`, 136 KB) y el elemento
+LCP de campo (`h2.font-display…mt-1`, “Tienes N proyectos en monitoreo”) es el
+saludo del **dashboard** — no un landing de marketing: `page.tsx` redirige a
+`/login` sin sesión, así que **todos los eventos `/` del RUM son la vista
+autenticada** (reframe de REQ-002).
+
+### Veredicto — descomposición real del LCP
+
+```
+LCP 2,7–3,9 s (lab) / 2,4–8,6 s (campo) =
+  TTFB ~0,25 s
++ streaming del servidor ~1,65 s   ← auth Supabase + queries RLS; el fallback
+                                     sin texto no pinta contentful
++ main-thread ocupada 0,8–2,0 s    ← eval/hidratación del bundle (long tasks)
+```
+
+El outlier de campo de 8,6 s es la cola fría del pooler/lambda (misma
+descomposición, más latencia de BD) — por eso la varianza. Las hipótesis de
+la propuesta original (font-display: swap / preload manual / font-display:
+quedan descartadas con datos: `next/font` ya auto-hace preload y las fuentes
+cierran ~1 s antes que el LCP.
+
+### Fix propuesto (rankeado, requiere aprobación del owner)
+
+| # | Fix | Impacto esperado en LCP | Riesgo |
+|---|-----|------------------------|--------|
+| F-A | **Paralelizar `loadDashboardData`**: `integrations`/`audits`/`issues` vía `Promise.all` (hoy secuenciales) + considerar pooler warm | −0,3…−0,8 s y, sobre todo, **reduce la cola fría del outlier 8,6 s** | bajo (mismo contrato, queries independientes) |
+| F-B | **`DashboardSkeleton` contentful** (texto real del saludo + “Cargando…”): FCP ≈ 1 s en vez de 2,7–3,9 s. *Nota honesta: el LCP final sigue siendo el `h2` real (texto más grande), así que mejora FCP/no-LCP* | FCP −1,7…−2,9 s; LCP indirecto | bajo (solo fallback) |
+| F-C | **Hero independiente de datos**: SSR del saludo sin `count` en el shell y `count` llegando después. Toca copy/estructura → **exige aprobación explícita** (regla “prohibido cambiar copy de `/`”) | −1,5…−2,0 s (pinta ≈ TTFB+CSS) | medio (UX/copy) |
+
+Recomendación: **F-A + F-B** (sin tocar copy), medir en campo 48 h; si el p75
+sigue sobre 2,5 s, llevar F-C a decisión del owner con los números.
+
+### Verificación en campo (48 h post-fix; dedupe por sesión — TD-23a)
+
+```sql
+WITH dedup AS (
+  SELECT DISTINCT ON (session_id, path)
+    session_id, path, lcp,
+    (raw_payload->'vitals'->>'lcpElementRenderDelay')::numeric AS render_delay
+  FROM web_vitals_logs
+  WHERE recorded_at > now() - interval '48 hours'
+    AND path = '/'
+    AND raw_payload->'vitals'->>'lcpElementRenderDelay' IS NOT NULL
+  ORDER BY session_id, path, recorded_at DESC
+)
+SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY render_delay) AS p75_render_delay,
+       percentile_cont(0.75) WITHIN GROUP (ORDER BY lcp) AS p75_lcp,
+       count(*) AS sesiones
+FROM dedup;
+```
+
+Objetivo: p75 LCP < 2,5 s (REQ-002). Sin dedupe el p75 queda contaminado por
+beacons repetidos de la misma sesión (TD-23a).
 
 ## Prohibido en esta fase
 
