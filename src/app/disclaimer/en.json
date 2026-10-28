@@ -13,33 +13,33 @@
     "reportHint": "Include in your report: problem description, steps to reproduce, screenshots if applicable, and browser/version used.",
     "acceptLabel": "I have read and accept the terms of the legal notice",
     "accept": "Accept",
-    "updated": "Last updated: October 27, 2026",
+    "updated": "Last updated: October 28, 2026",
     "status": {
       "title": "Product status",
-      "intro": "A summary of what is already resolved and what is being implemented. The platform remains in beta and this status is updated with every release.",
-      "resolvedTitle": "Recently resolved",
-      "inProgressTitle": "In progress (Sprint 2)",
+      "intro": "A summary of available capabilities and recorded follow-ups. The platform remains in beta and this status is updated with every release.",
+      "resolvedTitle": "Implemented in the current code",
+      "inProgressTitle": "Pending",
       "resolved": [
-        "Copilot with SSE streaming, real Stop and local conversation history",
-        "Intelligence context authorized server-side under RLS and chat memory isolated by project or investigation",
-        "Local commands (/help, /finding) and semantic cache that does not contaminate turns with memory or share responses across tenants",
-        "Own RUM with field Core Web Vitals and LCP attribution",
-        "Landing first-load about 17% faster and immutable caching for static assets",
-        "Tenant-scoped AI L2 cache, findings/audits indexes and log partitioning",
-        "/admin/usage dashboard with usage KPIs and daily chart",
-        "RLS, CSP, accessibility (axe-core) and e2e hardening"
+        "Intelligence copilot with SSE streaming, cancellation, verified citations and context-isolated local memory",
+        "Project and investigation context loaded server-side under RLS, with /help and /finding commands and suggestions based on real findings",
+        "Chat history is bounded and redacted; semantic cache is skipped when memory is present and remains tenant-isolated",
+        "First-party RUM with field Core Web Vitals and LCP attribution",
+        "Landing first-load about 17% smaller and immutable caching for static assets",
+        "Tenant-scoped AI L2 cache, findings/audits indexes and uptime_logs partitioning",
+        "/admin/usage dashboard with usage and AI cache KPIs plus a daily chart",
+        "Automated RLS, CSP and axe-core accessibility gates, plus end-to-end tests",
+        "Remediation-plan streaming and documented OpenAPI and CHAT-CONTRACT specifications"
       ],
       "inProgress": [
-        "Verified citations and anti-nag contextual suggestions in the copilot",
-        "Remediation plan streaming",
-        "SSE, memory and references integrated into the Intelligence sidebar",
-        "Public OpenAPI/CHAT-CONTRACT for the copilot"
+        "TD-22: replace simulated scan progress with real intelligence_run_events status",
+        "TD-24: load and authorize floating Copilot context server-side instead of trusting client data"
       ],
-      "note": "Resolved means available in the current version; in progress may change before release. Roadmap dates are estimates."
+      "note": "This status reflects the repository code, not a deployment verification. Pending items may change before release; roadmap dates are estimates."
     },
     "roadmap": {
       "title": "Public roadmap (estimated dates)",
-      "notice": "Dates are estimates published for transparency. Any adjustment will be announced in the platform's public changelog.",
+      "notice": "Dates are estimates published for transparency; items without a confirmed current date are marked as to be determined. Any adjustment will be announced in the platform's public changelog.",
+      "dateToBeConfirmed": "Date to be determined",
       "groups": {
         "perf": "Performance and observability",
         "integrations": "Advanced integrations",
@@ -47,10 +47,7 @@
         "refinement": "Refinement and documentation"
       },
       "items": {
-        "partitioning": "History tables partitioning (faster queries)",
-        "aiCache": "AI response caching (lower latency)",
-        "cdn": "Immutable caching for static assets",
-        "usagePanel": "Platform usage dashboard",
+        "partitioning": "Additional history-table partitioning (faster queries)",
         "osint": "New OSINT sources: VirusTotal, AlienVault OTX, Shodan",
         "webhooks": "Webhooks for external integrations",
         "docx": "Report export to DOCX/ODT",

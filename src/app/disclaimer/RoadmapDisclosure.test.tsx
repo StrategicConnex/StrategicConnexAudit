@@ -13,7 +13,7 @@ beforeEach(() => {
 });
 
 describe("RoadmapDisclosure", () => {
-  it("renderiza los 4 grupos con 14 <time> totales dentro de un <details>", () => {
+  it("renderiza 4 grupos, 10 fechas y la fecha pendiente dentro de un <details>", () => {
     render(<RoadmapDisclosure messages={messages} locale="es" />);
 
     const root = screen.getByRole("group");
@@ -21,13 +21,14 @@ describe("RoadmapDisclosure", () => {
     for (const group of ["perf", "integrations", "compliance", "refinement"]) {
       expect(root.querySelector(`[data-roadmap-group="${group}"]`)).not.toBeNull();
     }
-    expect(root.querySelectorAll("time")).toHaveLength(14);
+    expect(root.querySelectorAll("time")).toHaveLength(10);
+    expect(root.textContent).toContain(messages.dateToBeConfirmed);
   });
 
-  it("formatea la fecha al locale: '21 de octubre de 2026' con dateTime ISO", () => {
+  it("formatea una fecha estimada al locale y conserva el dateTime ISO", () => {
     render(<RoadmapDisclosure messages={messages} locale="es" />);
-    const time = screen.getByText("21 de octubre de 2026");
-    expect(time.getAttribute("datetime")).toBe("2026-10-21");
+    const time = screen.getByText("6 de noviembre de 2026");
+    expect(time.getAttribute("datetime")).toBe("2026-11-06");
   });
 
   it("el aviso de estimaciones está visible al final", () => {

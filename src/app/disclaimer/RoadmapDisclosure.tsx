@@ -1,13 +1,10 @@
-import {
-  PUBLIC_ROADMAP,
-  ROADMAP_GROUPS,
-  type RoadmapGroupId,
-} from "@/shared/data/public-roadmap";
+import { PUBLIC_ROADMAP, ROADMAP_GROUPS, type RoadmapGroupId } from "@/shared/data/public-roadmap";
 
 /** Tipo espejo del namespace "disclaimer.roadmap" del JSON local. */
 export type RoadmapMessages = {
   title: string;
   notice: string;
+  dateToBeConfirmed: string;
   groups: Record<RoadmapGroupId, string>;
   items: Record<string, string>;
 };
@@ -50,8 +47,19 @@ export function RoadmapDisclosure({
             <ul className="mt-2 space-y-1 leading-relaxed">
               {PUBLIC_ROADMAP.filter((item) => item.group === group.id).map((item) => (
                 <li key={item.id} className="pl-4">
-                  <time dateTime={item.targetDate}>{fmt.format(new Date(item.targetDate))}</time>
-                  {" — "}
+                  {item.targetDate ? (
+                    <>
+                      <time dateTime={item.targetDate}>
+                        {fmt.format(new Date(`${item.targetDate}T00:00:00Z`))}
+                      </time>
+                      {" — "}
+                    </>
+                  ) : (
+                    <>
+                      <span>{messages.dateToBeConfirmed}</span>
+                      {" — "}
+                    </>
+                  )}
                   {messages.items[item.id]}
                 </li>
               ))}

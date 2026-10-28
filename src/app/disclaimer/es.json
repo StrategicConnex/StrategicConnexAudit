@@ -13,33 +13,33 @@
     "reportHint": "Incluye en tu reporte: descripción del problema, pasos para reproducirlo, capturas de pantalla si aplica y navegador/version utilizada.",
     "acceptLabel": "He leído y acepto los términos del aviso legal",
     "accept": "Aceptar",
-    "updated": "Última actualización: 27 de octubre de 2026",
+    "updated": "Última actualización: 28 de octubre de 2026",
     "status": {
       "title": "Estado del producto",
-      "intro": "Resumen de lo ya resuelto y de lo que está en implementación. La plataforma sigue en beta y este estado se actualiza con cada release.",
-      "resolvedTitle": "Resuelto recientemente",
-      "inProgressTitle": "En implementación (Sprint 2)",
+      "intro": "Resumen de las capacidades disponibles y los pendientes registrados. La plataforma sigue en beta y este estado se actualiza con cada release.",
+      "resolvedTitle": "Implementado en el código actual",
+      "inProgressTitle": "Pendiente",
       "resolved": [
-        "Copiloto con streaming SSE, Stop real e historial local de conversación",
-        "Contexto de Intelligence autorizado en el servidor bajo RLS y memoria de chat aislada por proyecto o investigación",
-        "Comandos locales (/help, /finding) y caché semántica que no contamina turnos con memoria ni comparte respuestas entre tenants",
+        "Copiloto de Intelligence con streaming SSE, cancelación, citas verificadas y memoria local aislada por contexto",
+        "Contexto de proyecto e investigación cargado en el servidor bajo RLS, con comandos /help y /finding y sugerencias basadas en hallazgos reales",
+        "Historial del chat limitado y redactado; la caché semántica se omite con memoria y mantiene aislamiento por tenant",
         "RUM propio con Core Web Vitals en campo y atribución del LCP",
         "First-load del landing ≈17% menor y caché inmutable para assets estáticos",
-        "Caché L2 de IA tenant-scoped, índices de findings/audits y particionado de logs",
-        "Panel /admin/usage con KPIs de uso y gráfico diario",
-        "Endurecimiento de RLS, CSP, accesibilidad (axe-core) y pruebas e2e"
+        "Caché L2 de IA tenant-scoped, índices de findings/audits y particionado de uptime_logs",
+        "Panel /admin/usage con KPIs de uso, caché IA y gráfico diario",
+        "Guardas automatizadas de RLS, CSP y accesibilidad con axe-core, además de pruebas e2e",
+        "Streaming del plan de remediación y contrato documentado en OpenAPI y CHAT-CONTRACT"
       ],
       "inProgress": [
-        "Citas verificadas y sugerencias contextuales anti-nag en el copiloto",
-        "Streaming del plan de remediación",
-        "Integración de SSE, memoria y referencias en el sidebar de Intelligence",
-        "Contrato público OpenAPI/CHAT-CONTRACT del copiloto"
+        "TD-22: sustituir el progreso ficticio de escaneo por el estado real de intelligence_run_events",
+        "TD-24: obtener y autorizar en el servidor el contexto del Copiloto flotante, en vez de confiar en datos del cliente"
       ],
-      "note": "Resuelto significa disponible en la versión actual; en implementación puede cambiar antes de su release. Las fechas de la hoja de ruta son estimaciones."
+      "note": "Este estado refleja el código del repositorio, no una verificación de despliegue. Los pendientes pueden cambiar antes de su release; las fechas de la hoja de ruta son estimaciones."
     },
     "roadmap": {
       "title": "HOJA DE RUTA PÚBLICA (fechas estimadas)",
-      "notice": "Las fechas son estimaciones publicadas por transparencia. Cualquier ajuste se anunciará en el changelog público de la plataforma.",
+      "notice": "Las fechas son estimaciones publicadas por transparencia; cuando no hay una fecha vigente confirmada se indica que está por definir. Cualquier ajuste se anunciará en el changelog público de la plataforma.",
+      "dateToBeConfirmed": "Fecha por definir",
       "groups": {
         "perf": "Rendimiento y observabilidad",
         "integrations": "Integraciones avanzadas",
@@ -47,10 +47,7 @@
         "refinement": "Refinamiento y documentación"
       },
       "items": {
-        "partitioning": "Particionado de tablas de historial (consultas más rápidas)",
-        "aiCache": "Caché de respuestas de IA (menor latencia)",
-        "cdn": "Caché inmutable de assets estáticos",
-        "usagePanel": "Panel de uso de la plataforma",
+        "partitioning": "Particionado adicional de tablas de historial (consultas más rápidas)",
         "osint": "Nuevas fuentes OSINT: VirusTotal, AlienVault OTX, Shodan",
         "webhooks": "Webhooks para integraciones externas",
         "docx": "Exportación de reportes a DOCX/ODT",

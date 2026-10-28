@@ -23,9 +23,9 @@ describe("disclaimer JSON — paridad roadmap es/en", () => {
     expect([...esKeys].sort()).toEqual([...enKeys].sort());
   });
 
-  it("cubre 4 grupos y 14 items", () => {
+  it("cubre 4 grupos y 11 items pendientes", () => {
     expect(Object.keys(es.disclaimer.roadmap.groups)).toHaveLength(4);
-    expect(Object.keys(es.disclaimer.roadmap.items)).toHaveLength(14);
+    expect(Object.keys(es.disclaimer.roadmap.items)).toHaveLength(11);
   });
 });
 
