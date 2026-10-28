@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StrategicAudit Pro - Diagramas</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, logLevel: 'error' });
+    </script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        h1 { color: #1976d2; }
+        h2 { color: #ff9800; margin-top: 3rem; }
+        .mermaid { margin: 2rem 0; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>StrategicAudit Pro - Diagramas Arquitectónicos</h1>
+
+    <h2>1. Flujo de Ruteo y Fallback de IA</h2>
+    <div class="mermaid">
+flowchart TD
+    START[Solicitud AI - Task Type]
+    METAMODEL[openrouter/free - Meta-modelo]
+    CHAIN[Cadena Tarea Especifica]
+    FALLBACK[Failover Groq a Gemini]
+    CIRCUIT[Circuit Breakers]
+    RESULT[Resultado AI]
+    LOG[recordAiUsage - fire and forget]
+
+    START --> METAMODEL
+    METAMODEL -->|Exito| CHAIN
+    METAMODEL -->|Fallo| FALLBACK
+    CHAIN --> CIRCUIT
+    CIRCUIT --> RESULT
+    FALLBACK --> RESULT
+    RESULT --> LOG
+    </div>
+
+    <h2>2. Flujo de RUM Self-Instrumentation</h2>
+    <div class="mermaid">
+flowchart TD
+    ENV[NEXT_PUBLIC_RUM_PROJECT_ID]
+    ENV_TOKEN[NEXT_PUBLIC_RUM_BEACON_TOKEN]
+    VALIDATION[Validacion UUID con Zod]
+    RUM_ID[rumProjectId definido si la validacion tiene exito]
+    RENDER[Renderizar vitals.js si existe rumProjectId]
+    SEND[POST /api/telemetry/vitals]
+    VALIDATE_ENDPOINT[Validar proyecto activo y beacon token]
+    PERSIST[Persistir en web_vitals_logs de D1]
+    CORS[Validar origen - permitir, null o 403]
+
+    ENV --> VALIDATION
+    ENV_TOKEN --> VALIDATE_ENDPOINT
+    VALIDATION --> RUM_ID
+    RUM_ID --> RENDER
+    RENDER --> SEND
+    SEND --> VALIDATE_ENDPOINT
+    VALIDATE_ENDPOINT --> PERSIST
+    VALIDATE_ENDPOINT --> CORS
+    </div>
+
+    <p><strong>Nota:</strong> Consulta <a href="MERMAID-DIAGRAMS.md">MERMAID-DIAGRAMS.md</a> para los cinco diagramas completos con estilos y detalles.</p>
+</body>
+</html>
