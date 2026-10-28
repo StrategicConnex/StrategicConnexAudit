@@ -27,6 +27,8 @@ function baseProps(overrides: Partial<SidebarProps> = {}): SidebarProps {
     onInputChange: vi.fn(),
     onSubmit: vi.fn(),
     isGenerating: false,
+    onStop: vi.fn(),
+    onClearHistory: vi.fn(),
     onRequestRemediation: vi.fn(),
     hasActiveInvestigation: false,
     suggestion: null,
@@ -134,5 +136,80 @@ describe("AiCopilotSidebar — sugerencia anti-nag", () => {
     expect(
       screen.getByRole("button", { name: suggestion.ctaLabel }).hasAttribute("disabled"),
     ).toBe(true);
+  });
+});
+
+describe("AiCopilotSidebar — streaming, citas y memoria (Sprint 2, C6)", () => {
+  it("muestra el estado interrumpido y conserva el parcial", () => {
+    render(
+      <AiCopilotSidebar
+        {...baseProps({
+          messages: [
+            { role: "user", text: "analiza" },
+            { role: "assistant", text: "parcial", interrupted: true },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("parcial")).toBeTruthy();
+    expect(screen.getByText("interrupted")).toBeTruthy();
+  });
+
+  it("renderiza solo las citas verificadas como enlaces y abre la evidencia", () => {
+    const onOpenReference = vi.fn();
+    render(
+      <AiCopilotSidebar
+        {...baseProps({
+          messages: [
+            {
+              role: "assistant",
+              text: "Riesgo [[ref:1]] e [[ref:2]]",
+              references: [{ id: "finding-1", title: "SPF ausente" }],
+            },
+          ],
+          onOpenReference,
+        })}
+      />,
+    );
+
+    const links = screen.getAllByRole("link", { name: /\[1\]/ });
+    expect(links).toHaveLength(2);
+    fireEvent.click(links[0]!);
+    expect(onOpenReference).toHaveBeenCalledWith("finding-1");
+    expect(screen.getByText("[[ref:2]]")).toBeTruthy();
+  });
+
+  it("el botón de borrar historial aparece con conversación y delega en el hook", () => {
+    const onClearHistory = vi.fn();
+    render(<AiCopilotSidebar {...baseProps({ onClearHistory })} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "clearHistory" }));
+
+    expect(onClearHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it("sin conversación no muestra el botón de borrar historial", () => {
+    render(
+      <AiCopilotSidebar
+        {...baseProps({ messages: [{ role: "assistant", text: "Hola" }] })}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "clearHistory" })).toBeNull();
+  });
+
+  it("mientras genera ofrece detener y no enviar", () => {
+    const onStop = vi.fn();
+    render(
+      <AiCopilotSidebar
+        {...baseProps({ isGenerating: true, inputValue: "texto", onStop })}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "sendAria" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "stop" }));
+
+    expect(onStop).toHaveBeenCalledTimes(1);
   });
 });

@@ -64,6 +64,8 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
     suggestion,
     sendMessage,
     requestRemediationPlan,
+    stopGenerating,
+    clearChat,
     addAssistantMessage,
     dismissSuggestion,
   } = useAiChat({
@@ -305,6 +307,8 @@ export default function IntelligenceShell({ projectId }: IntelligenceShellProps)
         onInputChange={setAiMessage}
         onSubmit={handleSendAi}
         isGenerating={isGenerating}
+        onStop={stopGenerating}
+        onClearHistory={clearChat}
         onRequestRemediation={handleRequestRemediation}
         hasActiveInvestigation={hasActiveInvestigation}
         investigationStatus={investigation?.status}

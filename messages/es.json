@@ -28,6 +28,8 @@
     "placeholderAnalyst": "Comandos forenses o consultas de análisis...",
     "sendAria": "Enviar mensaje",
     "stop": "Detener generación",
+    "clearHistory": "Borrar historial",
+    "interrupted": "Respuesta interrumpida",
     "disclaimer": "IA Experimental • Verificar datos con Analistas Humanos",
     "errorUnavailable": "No se pudo obtener respuesta: {detail}",
     "connError": "Error de conexión",

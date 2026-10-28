@@ -93,6 +93,7 @@ describe("AI: Copilot — POST", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockQuota.mockResolvedValue(null);
+    mockRecordUnverified.mockResolvedValue(undefined);
     mockLoadIntelligenceContext.mockResolvedValue({
       projects: [],
       summary: { totalProjects: 0 },
@@ -791,6 +792,7 @@ describe("AI: Copilot — streaming (stream: true)", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockQuota.mockResolvedValue(null);
+    mockRecordUnverified.mockResolvedValue(undefined);
     mockLoadIntelligenceContext.mockResolvedValue({
       projects: [],
       summary: { totalProjects: 0 },
@@ -992,5 +994,83 @@ describe("AI: Copilot — streaming (stream: true)", () => {
     // El fallo del router sin chunks responde con el JSON del pool (503):
     // el stream ya se había descartado, no hay estado SSE que informar.
     expect(body.message).toContain("Motor de IA temporalmente no disponible");
+  });
+
+  it("stream con Intelligence → done valida citas y adjunta sugerencia", async () => {
+    const projectId = "11111111-1111-4111-8111-111111111111";
+    const investigationId = "22222222-2222-4222-8222-222222222222";
+    const findingId = "33333333-3333-4333-8333-333333333333";
+    const inventedId = "99999999-9999-4999-8999-999999999999";
+
+    mockLoadIntelligenceContext.mockResolvedValueOnce({
+      project: { id: projectId, name: "Acme" },
+      investigation: { id: investigationId },
+      findings: [
+        {
+          id: findingId,
+          title: "SPF ausente",
+          severity: "critical",
+          createdAt: new Date().toISOString(),
+          investigationId,
+        },
+      ],
+    });
+    const content = `Riesgo [[finding:${findingId}]] e [[finding:${inventedId}]].`;
+    mockCallAIStream.mockImplementation(
+      async (
+        _options: unknown,
+        onChunk: (text: string) => void,
+      ): Promise<unknown> => {
+        onChunk(`Riesgo [[finding:${findingId}]]`);
+        onChunk(` e [[finding:${inventedId}]].`);
+        return { success: true, content, modelUsed: "m1", latencyMs: 10 };
+      },
+    );
+
+    const res = await POST(
+      createRequest(
+        {
+          messages: [{ role: "user", content: "analiza" }],
+          intelligenceContext: { projectId, investigationId },
+          stream: true,
+        },
+        { "x-request-id": "req-stream" },
+      ) as never,
+      "u-1",
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("text/event-stream");
+    const events = (await res.text())
+      .trim()
+      .split("\n\n")
+      .map((line) => JSON.parse(line.replace(/^data: /, "")) as Record<string, unknown>);
+    const done = events.at(-1);
+
+    expect(done).toMatchObject({
+      type: "done",
+      modelUsed: "m1",
+      fromCache: false,
+      references: [{ id: findingId, title: "SPF ausente" }],
+      unverifiedCount: 1,
+    });
+    expect(done?.suggestion).toMatchObject({
+      findingIds: [findingId],
+      investigationId,
+      text: "Hay 1 hallazgos críticos recientes.",
+      ctaLabel: "Ver plan de remediación",
+    });
+    // Los deltas siguen siendo crudos: el cliente normaliza al recibir `done`.
+    expect(events[0]).toEqual({
+      type: "chunk",
+      text: `Riesgo [[finding:${findingId}]]`,
+    });
+    await vi.waitFor(() =>
+      expect(mockRecordUnverified).toHaveBeenCalledWith({
+        correlationId: "req-stream",
+        taskType: "general-chat",
+        count: 1,
+      }),
+    );
   });
 });

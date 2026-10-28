@@ -17,6 +17,7 @@ import {
   type StorageLike,
 } from "../lib/suggestion-state";
 import type { ChatReference, ChatSuggestion } from "@/shared/types/chat";
+import { consumeChatStream, isEventStreamResponse } from "@/features/dashboard/chat/chat-stream";
 
 export interface ChatAction {
   href: string;
@@ -32,6 +33,10 @@ export interface ChatMessage {
   references?: ChatReference[];
   /** Marcadores de cita que el servidor no pudo verificar. */
   unverifiedCount?: number;
+  /** Respuesta aún en curso: la UI muestra el cursor y no se persiste. */
+  streaming?: boolean;
+  /** Corte por error o cancelación del usuario: parcial conservado, nunca éxito. */
+  interrupted?: boolean;
 }
 
 export interface UseAiChatReturn {
@@ -40,6 +45,7 @@ export interface UseAiChatReturn {
   suggestion: ChatSuggestion | null;
   sendMessage: (text: string) => Promise<void>;
   requestRemediationPlan: (investigationId: string) => Promise<void>;
+  stopGenerating: () => void;
   clearChat: () => void;
   addAssistantMessage: (text: string) => void;
   dismissSuggestion: () => void;
@@ -96,6 +102,20 @@ function parseSuggestion(value: unknown): ChatSuggestion | null {
   };
 }
 
+/**
+ * El stream entrega deltas con el marcador original (`[[finding:<id>]]`);
+ * al cerrar, el `done` trae las referencias verificadas en su orden. Solo esos
+ * IDs se convierten en `[[ref:n]]`; un marcador inventado queda literal.
+ */
+function normalizeCitationMarkers(text: string, references: ChatReference[]): string {
+  if (references.length === 0) return text;
+  const positions = new Map(references.map((ref, index) => [ref.id, index + 1]));
+  return text.replace(/\[\[finding:([^\]\r\n]+)\]\]/g, (raw, id: string) => {
+    const position = positions.get(id.trim());
+    return position ? `[[ref:${position}]]` : raw;
+  });
+}
+
 export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatReturn {
   const t = useTranslations("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -112,6 +132,10 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
   // no se recree en cada render (y para bloquear envíos concurrentes).
   const messagesRef = useRef<ChatMessage[]>(messages);
   const generatingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  // Identifica la petición vigente: al borrar el historial o detener, los
+  // callbacks de un stream anterior no deben escribir en la conversación nueva.
+  const requestIdRef = useRef(0);
 
   const memoryKey = buildIntelligenceMemoryKey({
     mode: MEMORY_MODE,
@@ -131,6 +155,36 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
       setAll([...messagesRef.current, message]);
     },
     [setAll],
+  );
+
+  const updateAt = useCallback(
+    (index: number, update: (message: ChatMessage) => ChatMessage) => {
+      const current = messagesRef.current;
+      const message = current[index];
+      if (!message) return;
+      const next = [...current];
+      next[index] = update(message);
+      setAll(next);
+    },
+    [setAll],
+  );
+
+  // Aplica la frecuencia anti-nag y el descarte por fingerprint. El servidor
+  // decide si existe sugerencia; el cliente no la inventa.
+  const applySuggestion = useCallback(
+    (incoming: ChatSuggestion | null) => {
+      const storage = browserStorage();
+      setSuggestion(null);
+      if (
+        incoming &&
+        storage &&
+        shouldShowSuggestion({ suggestion: incoming, contextId, storage })
+      ) {
+        markSuggestionShown(incoming, contextId, storage);
+        setSuggestion(incoming);
+      }
+    },
+    [contextId],
   );
 
   // Hidratación por contexto: al cambiar de investigación se carga solo su
@@ -160,6 +214,7 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
 
     const persistable = messagesRef.current
       .slice(1)
+      .filter((m) => !m.streaming && !m.interrupted)
       .map((m) => ({
         role: m.role,
         content: m.text,
@@ -203,23 +258,35 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
 
       generatingRef.current = true;
       setIsGenerating(true);
+      const requestId = ++requestIdRef.current;
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+      let streamedIndex: number | null = null;
+      let streamedText = "";
 
       try {
         // Solo los IDs viajan como contexto; el historial sale recortado y
-        // redactado (10 mensajes / 8.000 caracteres).
+        // redactado (10 mensajes / 8.000 caracteres). Los parciales de un
+        // stream interrumpido no se reenvían como memoria.
         const history = buildOutgoingHistory(
-          messagesRef.current.slice(1).map((m) => ({
-            role: m.role,
-            content: m.text,
-            isError: m.isError,
-          })),
+          messagesRef.current
+            .slice(1)
+            .filter((m) => !m.streaming && !m.interrupted)
+            .map((m) => ({
+              role: m.role,
+              content: m.text,
+              isError: m.isError,
+            })),
         );
 
         const response = await fetch("/api/ai/copilot", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             mode: MEMORY_MODE,
+            stream: true,
             intelligenceContext: {
               ...(context.projectId ? { projectId: context.projectId } : {}),
               ...(context.investigationId ? { investigationId: context.investigationId } : {}),
@@ -229,6 +296,65 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
           }),
         });
 
+        // ── SSE (Sprint 2, C6): el mismo endpoint con stream:true ─────────
+        if (isEventStreamResponse(response)) {
+          const outcome = await consumeChatStream(response, {
+            onChunk: (delta) => {
+              if (requestIdRef.current !== requestId || abortRef.current !== controller) return;
+              streamedText += delta;
+              if (streamedIndex === null) {
+                streamedIndex = messagesRef.current.length;
+                append({ role: "assistant", text: streamedText, streaming: true });
+              } else {
+                updateAt(streamedIndex, (message) => ({
+                  ...message,
+                  text: streamedText,
+                }));
+              }
+            },
+            onDone: (meta) => {
+              if (requestIdRef.current !== requestId || abortRef.current !== controller) return;
+              const references = parseReferences(meta.references);
+              const unverifiedCount =
+                typeof meta.unverifiedCount === "number" && meta.unverifiedCount > 0
+                  ? Math.floor(meta.unverifiedCount)
+                  : 0;
+              if (streamedIndex !== null) {
+                updateAt(streamedIndex, (message) => ({
+                  ...message,
+                  text: normalizeCitationMarkers(streamedText, references),
+                  streaming: false,
+                  ...(references.length > 0 ? { references } : {}),
+                  ...(unverifiedCount > 0 ? { unverifiedCount } : {}),
+                }));
+              }
+              applySuggestion(parseSuggestion(meta.suggestion));
+            },
+          });
+
+          if (requestIdRef.current !== requestId) return;
+
+          if (!outcome.ok && !controller.signal.aborted) {
+            if (streamedIndex !== null) {
+              updateAt(streamedIndex, (message) => ({
+                ...message,
+                streaming: false,
+                interrupted: true,
+              }));
+            } else {
+              append({
+                role: "assistant",
+                text: t("errorUnavailable", {
+                  detail: outcome.error ?? t("httpError", { status: response.status }),
+                }),
+                isError: true,
+              });
+            }
+          }
+          return;
+        }
+
+        // ── JSON legado: el contrato anterior sigue siendo válido ─────────
         const data = (await response.json().catch(() => null)) as {
           success?: boolean;
           message?: string;
@@ -260,39 +386,43 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
 
         // Anti-nag: el servidor decide si hay sugerencia; aquí solo se aplica
         // la frecuencia (24 h por contexto) y el descarte por fingerprint.
-        const incoming = parseSuggestion(data.suggestion);
-        const storage = browserStorage();
-        setSuggestion(null);
-        if (
-          incoming &&
-          storage &&
-          shouldShowSuggestion({ suggestion: incoming, contextId, storage })
-        ) {
-          markSuggestionShown(incoming, contextId, storage);
-          setSuggestion(incoming);
-        }
+        applySuggestion(parseSuggestion(data.suggestion));
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        const findingUnavailable =
-          findingId !== undefined && errorMessage === t("commandFindingUnavailable");
-        append({
-          role: "assistant",
-          text: findingUnavailable
-            ? errorMessage
-            : t("errorUnavailable", { detail: errorMessage }),
-          isError: true,
-        });
+        if (requestIdRef.current !== requestId) return;
+        if (streamedIndex !== null) {
+          // Corte a mitad: se conserva el parcial, marcado como interrumpido.
+          updateAt(streamedIndex, (message) => ({
+            ...message,
+            streaming: false,
+            interrupted: true,
+          }));
+        } else if (!controller.signal.aborted) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          const findingUnavailable =
+            findingId !== undefined && errorMessage === t("commandFindingUnavailable");
+          append({
+            role: "assistant",
+            text: findingUnavailable
+              ? errorMessage
+              : t("errorUnavailable", { detail: errorMessage }),
+            isError: true,
+          });
+        }
       } finally {
-        generatingRef.current = false;
-        setIsGenerating(false);
+        if (requestIdRef.current === requestId) {
+          if (abortRef.current === controller) abortRef.current = null;
+          generatingRef.current = false;
+          setIsGenerating(false);
+        }
       }
     },
     [
       append,
+      applySuggestion,
       context.projectId,
       context.investigationId,
-      contextId,
       t,
+      updateAt,
     ]
   );
 
@@ -303,13 +433,71 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
       generatingRef.current = true;
       setIsGenerating(true);
       append({ role: "user", text: t("remediationRequest") });
+      const requestId = ++requestIdRef.current;
+      const controller = new AbortController();
+      abortRef.current = controller;
+      let streamedIndex: number | null = null;
+      let streamedText = "";
 
       try {
         const response = await fetch("/api/intelligence/copilot", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ investigationId }),
+          signal: controller.signal,
+          body: JSON.stringify({ investigationId, stream: true }),
         });
+
+        // ── SSE (Sprint 2, C5/C6): el plan se reconstruye concatenando ───
+        if (isEventStreamResponse(response)) {
+          const outcome = await consumeChatStream(response, {
+            onChunk: (delta) => {
+              if (requestIdRef.current !== requestId || abortRef.current !== controller) return;
+              streamedText += delta;
+              if (streamedIndex === null) {
+                streamedIndex = messagesRef.current.length;
+                append({ role: "assistant", text: streamedText, streaming: true });
+              } else {
+                updateAt(streamedIndex, (message) => ({
+                  ...message,
+                  text: streamedText,
+                }));
+              }
+            },
+            onDone: () => {
+              if (requestIdRef.current !== requestId || abortRef.current !== controller) return;
+              if (streamedIndex !== null) {
+                updateAt(streamedIndex, (message) => ({
+                  ...message,
+                  text: streamedText,
+                  streaming: false,
+                }));
+              }
+            },
+          });
+
+          if (requestIdRef.current !== requestId) return;
+
+          if (!outcome.ok && !controller.signal.aborted) {
+            if (streamedIndex !== null) {
+              updateAt(streamedIndex, (message) => ({
+                ...message,
+                streaming: false,
+                interrupted: true,
+              }));
+            } else {
+              append({
+                role: "assistant",
+                text: t("remediationError", {
+                  detail: outcome.error ?? t("httpError", { status: response.status }),
+                }),
+                isError: true,
+              });
+            }
+          }
+          return;
+        }
+
+        // ── JSON legado: ausencia de hallazgos, cuota o error pre-stream ──
         const data = (await response.json().catch(() => null)) as {
           success?: boolean;
           hasFindings?: boolean;
@@ -317,6 +505,8 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
           error?: string;
           action?: { href?: unknown; label?: unknown };
         } | null;
+
+        if (requestIdRef.current !== requestId) return;
 
         if (!response.ok || !data?.success || typeof data.remediationPlan !== "string") {
           append({
@@ -341,21 +531,49 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
           });
         }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        append({
-          role: "assistant",
-          text: t("remediationConnError", { detail: errorMessage }),
-          isError: true,
-        });
+        if (requestIdRef.current !== requestId) return;
+        if (streamedIndex !== null) {
+          updateAt(streamedIndex, (message) => ({
+            ...message,
+            streaming: false,
+            interrupted: true,
+          }));
+        } else if (!controller.signal.aborted) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          append({
+            role: "assistant",
+            text: t("remediationConnError", { detail: errorMessage }),
+            isError: true,
+          });
+        }
       } finally {
-        generatingRef.current = false;
-        setIsGenerating(false);
+        if (requestIdRef.current === requestId) {
+          if (abortRef.current === controller) abortRef.current = null;
+          generatingRef.current = false;
+          setIsGenerating(false);
+        }
       }
     },
-    [append, t]
+    [append, t, updateAt]
   );
 
+  const stopGenerating = useCallback(() => {
+    const controller = abortRef.current;
+    if (!controller) return;
+    // Los deltas encolados dejan de aplicarse; el catch conserva el parcial
+    // como interrumpido y el finally rehabilita el envío.
+    abortRef.current = null;
+    controller.abort();
+  }, []);
+
   const clearChat = useCallback(() => {
+    // Una petición en vuelo no debe repoblar la conversación recién borrada.
+    requestIdRef.current += 1;
+    const controller = abortRef.current;
+    abortRef.current = null;
+    controller?.abort();
+    generatingRef.current = false;
+    setIsGenerating(false);
     clearIntelligenceMemory(memoryKey);
     lastPersistedRef.current = "[]";
     setAll([{ role: "assistant", text: t("greeting") }]);
@@ -383,6 +601,7 @@ export function useAiChat(context: IntelligenceChatContext = {}): UseAiChatRetur
     suggestion,
     sendMessage,
     requestRemediationPlan,
+    stopGenerating,
     clearChat,
     addAssistantMessage,
     dismissSuggestion,

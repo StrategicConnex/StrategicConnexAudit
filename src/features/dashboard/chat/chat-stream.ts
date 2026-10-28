@@ -15,6 +15,12 @@
 export interface ChatStreamMeta {
   modelUsed?: string;
   fromCache?: boolean;
+  /** Referencias verificadas por el servidor (solo si hay al menos una). */
+  references?: unknown;
+  /** Marcadores de cita no verificados (solo si el contador es > 0). */
+  unverifiedCount?: unknown;
+  /** Sugerencia proactiva ya localizada en servidor (solo si existe). */
+  suggestion?: unknown;
 }
 
 export interface ChatStreamHandlers {
@@ -71,6 +77,9 @@ export async function consumeChatStream(
       message?: unknown;
       modelUsed?: unknown;
       fromCache?: unknown;
+      references?: unknown;
+      unverifiedCount?: unknown;
+      suggestion?: unknown;
     };
     try {
       event = JSON.parse(payload);
@@ -85,6 +94,9 @@ export async function consumeChatStream(
       meta = {
         ...(typeof event.modelUsed === "string" ? { modelUsed: event.modelUsed } : {}),
         ...(typeof event.fromCache === "boolean" ? { fromCache: event.fromCache } : {}),
+        ...(event.references !== undefined ? { references: event.references } : {}),
+        ...(event.unverifiedCount !== undefined ? { unverifiedCount: event.unverifiedCount } : {}),
+        ...(event.suggestion !== undefined ? { suggestion: event.suggestion } : {}),
       };
     } else if (event.type === "error") {
       error = typeof event.message === "string" ? event.message : "stream error";

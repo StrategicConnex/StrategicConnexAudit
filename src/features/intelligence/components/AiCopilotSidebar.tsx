@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Sparkles, ChevronRight, ArrowRight, Loader2, X } from "lucide-react";
+import { Sparkles, ChevronRight, ArrowRight, Loader2, Square, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ChatMessage } from "../hooks/useAiChat";
 import { ChatMessageBody } from "./ChatMessageBody";
@@ -15,6 +15,8 @@ interface AiCopilotSidebarProps {
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   isGenerating: boolean;
+  onStop: () => void;
+  onClearHistory: () => void;
   onRequestRemediation: (investigationId?: string) => void;
   hasActiveInvestigation: boolean;
   investigationStatus?: string;
@@ -31,6 +33,8 @@ export function AiCopilotSidebar({
   onInputChange,
   onSubmit,
   isGenerating,
+  onStop,
+  onClearHistory,
   onRequestRemediation,
   hasActiveInvestigation,
   investigationStatus,
@@ -55,13 +59,26 @@ export function AiCopilotSidebar({
             {t("sidebarTitle")}
           </h3>
         </div>
-        <button
-          onClick={onToggle}
-          aria-label={t("hideAssistant")}
-          className="p-1 rounded hover:bg-muted text-muted-fg hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        <div className="flex items-center space-x-1">
+          {messages.length > 1 && (
+            <button
+              type="button"
+              onClick={onClearHistory}
+              aria-label={t("clearHistory")}
+              title={t("clearHistory")}
+              className="p-1 rounded hover:bg-muted text-muted-fg hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={onToggle}
+            aria-label={t("hideAssistant")}
+            className="p-1 rounded hover:bg-muted text-muted-fg hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Remediation Plan button */}
@@ -109,6 +126,11 @@ export function AiCopilotSidebar({
           >
             <span className="text-2xs font-mono font-medium tracking-wide uppercase opacity-60">
               {msg.role === "user" ? t("you") : t("copilotAudit")}
+              {msg.interrupted && (
+                <span className="ml-2 normal-case tracking-normal text-destructive">
+                  {t("interrupted")}
+                </span>
+              )}
             </span>
             <ChatMessageBody
               text={msg.text}
@@ -116,6 +138,12 @@ export function AiCopilotSidebar({
               unverifiedCount={msg.unverifiedCount}
               onOpenReference={onOpenReference}
             />
+            {msg.streaming && (
+              <span
+                aria-hidden="true"
+                className="inline-block h-3 w-1.5 animate-pulse rounded-sm bg-chartreuse align-middle"
+              />
+            )}
             {msg.action && (
               <a
                 href={msg.action.href}
@@ -168,14 +196,26 @@ export function AiCopilotSidebar({
             placeholder={t("askPlaceholder")}
             className="flex-1 bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-lg text-xs text-foreground placeholder:text-muted-fg py-2.5 px-3"
           />
-          <button
-            type="submit"
-            disabled={!inputValue.trim() || isGenerating}
-            aria-label={t("sendAria")}
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 active:scale-95 disabled:opacity-30 disabled:scale-100 transition-[color,background-color,opacity,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-          >
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          {isGenerating ? (
+            <button
+              type="button"
+              onClick={onStop}
+              aria-label={t("stop")}
+              title={t("stop")}
+              className="flex items-center justify-center w-8 h-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 active:scale-95 transition-[color,background-color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              <Square className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!inputValue.trim()}
+              aria-label={t("sendAria")}
+              className="flex items-center justify-center w-8 h-8 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 active:scale-95 disabled:opacity-30 disabled:scale-100 transition-[color,background-color,opacity,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </form>
     </aside>

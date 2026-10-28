@@ -28,6 +28,8 @@
     "placeholderAnalyst": "Forensic commands or analysis queries...",
     "sendAria": "Send message",
     "stop": "Stop generating",
+    "clearHistory": "Clear history",
+    "interrupted": "Interrupted response",
     "disclaimer": "Experimental AI • Verify data with human analysts",
     "errorUnavailable": "Could not get a response: {detail}",
     "connError": "Connection error",

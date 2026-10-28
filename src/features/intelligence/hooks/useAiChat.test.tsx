@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, cleanup } from "@testing-library/react";
+import { renderHook, act, cleanup, waitFor } from "@testing-library/react";
 import { useAiChat } from "./useAiChat";
 import {
   buildIntelligenceMemoryKey,
@@ -37,6 +37,39 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
     ok,
     status,
     json: async () => body,
+  } as unknown as Response;
+}
+
+type SseEvent = Record<string, unknown>;
+
+/**
+ * Respuesta SSE real (headers + ReadableStream). Con `hang:true` el stream
+ * queda abierto tras emitir los eventos y falla cuando se aborta la petición.
+ */
+function sseResponse(
+  events: SseEvent[],
+  options: { signal?: AbortSignal; hang?: boolean } = {},
+): Response {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const event of events) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      }
+      if (options.hang) {
+        options.signal?.addEventListener("abort", () => {
+          controller.error(new DOMException("Aborted", "AbortError"));
+        });
+      } else {
+        controller.close();
+      }
+    },
+  });
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({ "content-type": "text/event-stream; charset=utf-8" }),
+    body,
   } as unknown as Response;
 }
 
@@ -537,5 +570,300 @@ describe("useAiChat · citas y sugerencias (Sprint 2, C4)", () => {
       unverifiedCount: 1,
     });
     expect(loadIntelligenceMemory(memoryKey()).at(-1)?.references).toHaveLength(1);
+  });
+});
+
+describe("useAiChat · streaming SSE (Sprint 2, C6)", () => {
+  const INVENTED_FINDING_ID = "99999999-9999-4999-8999-999999999999";
+
+  it("consume chunk/done en una sola burbuja y conserva el contrato del stream", async () => {
+    fetchMock.mockResolvedValueOnce(
+      sseResponse([
+        { type: "chunk", text: "Riesgo " },
+        { type: "chunk", text: "alto" },
+        { type: "done", modelUsed: "m1", fromCache: false },
+      ]),
+    );
+
+    const { result } = renderHook(() =>
+      useAiChat({ projectId: PROJECT_ID, investigationId: INVESTIGATION_ID }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("¿qué riesgo hay?");
+    });
+
+    expect(result.current.messages).toHaveLength(3);
+    expect(result.current.messages.at(-1)).toEqual({
+      role: "assistant",
+      text: "Riesgo alto",
+      streaming: false,
+    });
+    expect(result.current.isGenerating).toBe(false);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const payload = JSON.parse(String(init.body)) as { stream?: boolean };
+    expect(payload.stream).toBe(true);
+  });
+
+  it("normaliza solo las citas verificadas y aplica la sugerencia del done", async () => {
+    fetchMock.mockResolvedValueOnce(
+      sseResponse([
+        {
+          type: "chunk",
+          text: `Riesgo [[finding:${FINDING_ID}]] e [[finding:${INVENTED_FINDING_ID}]]`,
+        },
+        {
+          type: "done",
+          modelUsed: "m1",
+          fromCache: false,
+          references: [{ id: FINDING_ID, title: "SPF ausente" }],
+          unverifiedCount: 1,
+          suggestion: {
+            fingerprint: "c".repeat(32),
+            findingIds: [FINDING_ID],
+            investigationId: INVESTIGATION_ID,
+            text: "Hay 1 hallazgo crítico reciente.",
+            ctaLabel: "Ver plan",
+          },
+        },
+      ]),
+    );
+
+    const { result } = renderHook(() =>
+      useAiChat({ projectId: PROJECT_ID, investigationId: INVESTIGATION_ID }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("analiza");
+    });
+
+    const last = result.current.messages.at(-1);
+    expect(last?.text).toBe(
+      `Riesgo [[ref:1]] e [[finding:${INVENTED_FINDING_ID}]]`,
+    );
+    expect(last?.references).toEqual([{ id: FINDING_ID, title: "SPF ausente" }]);
+    expect(last?.unverifiedCount).toBe(1);
+    expect(result.current.suggestion?.fingerprint).toBe("c".repeat(32));
+  });
+
+  it("un error SSE tras el primer delta conserva el parcial como interrumpido", async () => {
+    fetchMock.mockResolvedValueOnce(
+      sseResponse([
+        { type: "chunk", text: "parcial" },
+        { type: "error", message: "conexión muerta" },
+      ]),
+    );
+
+    const { result } = renderHook(() => useAiChat());
+
+    await act(async () => {
+      await result.current.sendMessage("hola");
+    });
+
+    const last = result.current.messages.at(-1);
+    expect(last?.text).toBe("parcial");
+    expect(last?.streaming).toBe(false);
+    expect(last?.interrupted).toBe(true);
+    expect(last?.isError).toBeUndefined();
+    expect(result.current.isGenerating).toBe(false);
+  });
+
+  it("stopGenerating aborta y conserva el parcial, sin convertirlo en éxito", async () => {
+    fetchMock.mockImplementation((_url: string, init: RequestInit) =>
+      Promise.resolve(
+        sseResponse([{ type: "chunk", text: "parcial" }], {
+          signal: init.signal ?? undefined,
+          hang: true,
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useAiChat());
+    let pending: Promise<void> = Promise.resolve();
+
+    act(() => {
+      pending = result.current.sendMessage("hola");
+    });
+
+    await waitFor(() => {
+      expect(result.current.messages.at(-1)?.text).toBe("parcial");
+    });
+
+    act(() => {
+      result.current.stopGenerating();
+    });
+    await act(async () => {
+      await pending;
+    });
+
+    const last = result.current.messages.at(-1);
+    expect(last?.text).toBe("parcial");
+    expect(last?.interrupted).toBe(true);
+    expect(last?.streaming).toBe(false);
+    expect(result.current.isGenerating).toBe(false);
+  });
+
+  it("abortar antes del primer delta no añade una burbuja de error", async () => {
+    fetchMock.mockImplementation((_url: string, init: RequestInit) =>
+      Promise.resolve(sseResponse([], { signal: init.signal ?? undefined, hang: true })),
+    );
+
+    const { result } = renderHook(() => useAiChat());
+    let pending: Promise<void> = Promise.resolve();
+
+    act(() => {
+      pending = result.current.sendMessage("hola");
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      result.current.stopGenerating();
+    });
+    await act(async () => {
+      await pending;
+    });
+
+    expect(result.current.messages).toHaveLength(2);
+    expect(result.current.messages.at(-1)).toEqual({ role: "user", text: "hola" });
+    expect(result.current.isGenerating).toBe(false);
+  });
+
+  it("no reenvía como memoria el parcial de un stream interrumpido", async () => {
+    let call = 0;
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      call += 1;
+      if (call === 1) {
+        return Promise.resolve(
+          sseResponse([{ type: "chunk", text: "parcial-no-memoria" }], {
+            signal: init.signal ?? undefined,
+            hang: true,
+          }),
+        );
+      }
+      return Promise.resolve(jsonResponse({ success: true, message: "ok" }));
+    });
+
+    const { result } = renderHook(() =>
+      useAiChat({ projectId: PROJECT_ID, investigationId: INVESTIGATION_ID }),
+    );
+    let pending: Promise<void> = Promise.resolve();
+
+    act(() => {
+      pending = result.current.sendMessage("primera");
+    });
+    await waitFor(() => {
+      expect(result.current.messages.at(-1)?.text).toBe("parcial-no-memoria");
+    });
+    act(() => {
+      result.current.stopGenerating();
+    });
+    await act(async () => {
+      await pending;
+    });
+
+    await act(async () => {
+      await result.current.sendMessage("segunda");
+    });
+
+    const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const payload = JSON.parse(String(init.body)) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    const joined = payload.messages.map((m) => m.content).join("\n");
+    expect(joined).not.toContain("parcial-no-memoria");
+    expect(joined).toContain("segunda");
+  });
+
+  it("clearChat durante el stream descarta la conversación y la respuesta en vuelo", async () => {
+    fetchMock.mockImplementation((_url: string, init: RequestInit) =>
+      Promise.resolve(
+        sseResponse([{ type: "chunk", text: "en vuelo" }], {
+          signal: init.signal ?? undefined,
+          hang: true,
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() =>
+      useAiChat({ projectId: PROJECT_ID, investigationId: INVESTIGATION_ID }),
+    );
+    let pending: Promise<void> = Promise.resolve();
+
+    act(() => {
+      pending = result.current.sendMessage("hola");
+    });
+    await waitFor(() => expect(result.current.messages.at(-1)?.text).toBe("en vuelo"));
+
+    act(() => {
+      result.current.clearChat();
+    });
+    await act(async () => {
+      await pending;
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0]?.role).toBe("assistant");
+    expect(result.current.isGenerating).toBe(false);
+  });
+
+  it("remediación con stream:true reconstruye el plan en una sola burbuja", async () => {
+    fetchMock.mockResolvedValueOnce(
+      sseResponse([
+        { type: "chunk", text: "# Plan" },
+        { type: "chunk", text: "\nPaso 1" },
+        { type: "done", modelUsed: "m1", fromCache: false },
+      ]),
+    );
+
+    const { result } = renderHook(() => useAiChat());
+
+    await act(async () => {
+      await result.current.requestRemediationPlan("inv-1");
+    });
+
+    const last = result.current.messages.at(-1);
+    expect(last).toEqual({
+      role: "assistant",
+      text: "# Plan\nPaso 1",
+      streaming: false,
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({
+      investigationId: "inv-1",
+      stream: true,
+    });
+  });
+
+  it("remediación abortada conserva el plan parcial como interrumpido", async () => {
+    fetchMock.mockImplementation((_url: string, init: RequestInit) =>
+      Promise.resolve(
+        sseResponse([{ type: "chunk", text: "Paso parcial" }], {
+          signal: init.signal ?? undefined,
+          hang: true,
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useAiChat());
+    let pending: Promise<void> = Promise.resolve();
+
+    act(() => {
+      pending = result.current.requestRemediationPlan("inv-1");
+    });
+    await waitFor(() => expect(result.current.messages.at(-1)?.text).toBe("Paso parcial"));
+
+    act(() => {
+      result.current.stopGenerating();
+    });
+    await act(async () => {
+      await pending;
+    });
+
+    const last = result.current.messages.at(-1);
+    expect(last?.text).toBe("Paso parcial");
+    expect(last?.interrupted).toBe(true);
+    expect(result.current.isGenerating).toBe(false);
   });
 });

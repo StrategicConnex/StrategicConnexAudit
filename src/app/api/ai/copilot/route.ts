@@ -83,6 +83,9 @@ function streamCopilotResponse(
   aiMessages: AIMessage[],
   userId: string,
   disableSemanticCache: boolean,
+  validatedFindings: CitedFinding[],
+  suggestion: ChatSuggestion | null,
+  correlationId: string,
 ): Promise<Response> {
   const encoder = new TextEncoder();
   let started = false;
@@ -131,7 +134,28 @@ function streamCopilotResponse(
       return;
     }
     if (result.success) {
-      send({ type: "done", modelUsed: result.modelUsed, fromCache: result.fromCache ?? false });
+      // C4/C6: el stream entrega deltas crudos; al cerrar se validan las citas
+      // contra el conjunto RLS y se envían solo los metadatos necesarios. Un
+      // `done` sin referencias ni sugerencia conserva exactamente el contrato
+      // anterior (modelUsed/fromCache).
+      const cited = parseCitations(result.content ?? "", validatedFindings);
+      if (cited.unverifiedCount > 0) {
+        void recordUnverifiedCitations({
+          correlationId,
+          taskType: "general-chat",
+          count: cited.unverifiedCount,
+        }).catch(() => {
+          // La telemetría nunca debe romper una respuesta ya emitida.
+        });
+      }
+      send({
+        type: "done",
+        modelUsed: result.modelUsed,
+        fromCache: result.fromCache ?? false,
+        ...(cited.references.length > 0 ? { references: cited.references } : {}),
+        ...(cited.unverifiedCount > 0 ? { unverifiedCount: cited.unverifiedCount } : {}),
+        ...(suggestion ? { suggestion } : {}),
+      });
     } else {
       send({ type: "error", message: result.error ?? "AI pool unavailable" });
     }
@@ -317,7 +341,15 @@ export const POST = withRateLimit(
 
       // ── Streaming (Sprint 1): respuestas progresivas por SSE ─────────────
       if (stream === true) {
-        return await streamCopilotResponse(aiMessages, userId, disableSemanticCache);
+        const correlationId = req.headers.get("x-request-id") ?? globalThis.crypto.randomUUID();
+        return await streamCopilotResponse(
+          aiMessages,
+          userId,
+          disableSemanticCache,
+          validatedFindings,
+          suggestion,
+          correlationId,
+        );
       }
 
       // Call AI with model pool and automatic fallback
