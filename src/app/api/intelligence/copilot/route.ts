@@ -4,7 +4,12 @@ import { intelligenceInvestigations, intelligenceFindings } from "@/shared/db/sc
 import { asc, count, eq } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
-import { callAIWithFallback, AIMessage } from "@/server/ai/ai-router";
+import {
+  callAIWithFallback,
+  callAIWithFallbackStream,
+  AIMessage,
+  type AIStreamResult,
+} from "@/server/ai/ai-router";
 import { assertAiQuota } from "@/server/ai/ai-usage";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/lib/logger";
@@ -18,6 +23,122 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 const COPILOT_FINDINGS_LIMIT = 100;
+
+/**
+ * Respuesta en streaming del plan de remediación: SSE con eventos
+ *   data: {"type":"chunk","text":"…"}       — delta Markdown del plan
+ *   data: {"type":"done","modelUsed":"…","fromCache":false}
+ *   data: {"type":"error","message":"…"}
+ *
+ * El primer chunk abre el stream (200 + text/event-stream). Si el pool falla
+ * SIN emitir ni un chunk se responde el JSON legado de error: el cliente
+ * distingue por Content-Type. `done` es terminal y NO contiene el plan; el
+ * cliente lo reconstruye concatenando los chunks.
+ */
+function streamRemediationResponse(
+  aiMessages: AIMessage[],
+  userId: string,
+): Promise<Response> {
+  const encoder = new TextEncoder();
+  let started = false;
+  let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+  let resolveStart: (stream: ReadableStream<Uint8Array> | null) => void = () => {};
+  const startPromise = new Promise<ReadableStream<Uint8Array> | null>((resolve) => {
+    resolveStart = resolve;
+  });
+
+  const send = (event: Record<string, unknown>): void => {
+    try {
+      controller?.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+    } catch {
+      // Cliente desconectado: no hay a quién entregar, se ignora.
+    }
+  };
+
+  const resultPromise = callAIWithFallbackStream(
+    {
+      taskType: "copilot-remediation",
+      userId,
+      // F-SCOPE (follow-up T3): el prompt incrusta evidencia del tenant;
+      // mismo scope por usuario que el camino no-stream.
+      cacheScope: `user:${userId}`,
+      messages: aiMessages,
+      temperature: 0.3,
+      maxTokens: 4096,
+    },
+    (text) => {
+      if (!started) {
+        started = true;
+        const stream = new ReadableStream<Uint8Array>({
+          start(c) {
+            controller = c;
+          },
+        });
+        resolveStart(stream);
+      }
+      send({ type: "chunk", text });
+    },
+  );
+
+  const settle = (result: AIStreamResult): void => {
+    if (!started) {
+      resolveStart(null);
+      return;
+    }
+    if (result.success) {
+      send({ type: "done", modelUsed: result.modelUsed, fromCache: result.fromCache ?? false });
+    } else {
+      send({ type: "error", message: result.error ?? "AI pool unavailable" });
+    }
+    try {
+      controller?.close();
+    } catch {
+      // Stream ya cerrado/cancelado.
+    }
+  };
+
+  void resultPromise.then(settle, (err: unknown) => {
+    settle({
+      success: false,
+      content: "",
+      modelUsed: "none",
+      latencyMs: 0,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+
+  return startPromise.then(async (stream) => {
+    if (stream) {
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+          // Sin esto los proxies bufferizan el SSE y el plan llega de golpe.
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+    let result: AIStreamResult;
+    try {
+      result = await resultPromise;
+    } catch (err) {
+      result = {
+        success: false,
+        content: "",
+        modelUsed: "none",
+        latencyMs: 0,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+    return NextResponse.json({
+      success: false,
+      hasFindings: true,
+      error: result.error ?? "AI pool unavailable",
+    }, { status: 503 });
+  });
+}
+
 
 export const POST = withRateLimit(
   {
@@ -36,7 +157,7 @@ export const POST = withRateLimit(
       const quota = await assertAiQuota(_userId, "copilot-remediation");
       if (quota) return quota;
 
-      const { investigationId } = await req.json();
+      const { investigationId, stream } = await req.json();
       if (!investigationId) {
         return NextResponse.json({ success: false, error: "Falta ID de investigación" }, { status: 400 });
       }
@@ -98,6 +219,12 @@ export const POST = withRateLimit(
         role: "user",
         content: `Por favor genera un plan de remediación técnica interactivo para el host "${investigation.target}" (Tipo de objetivo: ${investigation.targetType}).\nLa postura de seguridad calculada es: ${investigation.score}/100.\n\nHallazgos de seguridad encontrados: ${totalFindings}${findings.length < totalFindings ? ` (mostrando ${findings.length} de mayor severidad)` : ""}:\n${findings.map((f, i) => `${i + 1}. [Severidad: ${f.severity.toUpperCase()}] **${f.title}**\n   - Descripción: ${f.description}\n   - Recomendación inicial: ${f.recommendation}\n   - Evidencia técnica: ${JSON.stringify(f.evidence)}`).join("\n\n")}`
       };
+
+      // ── Streaming (Sprint 2, C5): plan progresivo por SSE ───────────────
+      // El path sin flag conserva el JSON con `remediationPlan` estructurado.
+      if (stream === true) {
+        return await streamRemediationResponse([systemMsg, userMsg], _userId);
+      }
 
       // Call AI with model pool and automatic fallback
       const aiResult = await callAIWithFallback({

@@ -366,6 +366,28 @@ describe("callAIWithFallbackStream — telemetría A2 (ttft_ms + streamed)", () 
     );
   });
 
+  it("plan de remediación → streamed=true y ttft_ms numérico (C5)", async () => {
+    fetchHandler = () => sseResponse([deltaEvent("## Plan"), DONE_EVENT]);
+
+    await callAIWithFallbackStream(
+      {
+        taskType: "copilot-remediation",
+        messages: userMessages("c5-plan"),
+        userId: "u-c5-plan",
+        cacheScope: "user:u-c5-plan",
+      },
+      () => {},
+    );
+
+    expect(usageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskType: "copilot-remediation",
+        streamed: true,
+        ttftMs: expect.any(Number),
+      }),
+    );
+  });
+
   it("respuesta en caché → streamed=true con ttft ~0 (replay instantáneo)", async () => {
     const messages = userMessages("a2-cache");
     const scope = "user:u-a2-cache";
