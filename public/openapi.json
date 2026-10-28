@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "SCAUDIT — StrategicAudit Pro REST API",
-    "description": "API pública de inteligencia de infraestructura cibernética. Automatiza escaneos de subdominios, TLS, DNS, emails y más.\n\n## Autenticación\n- **API Key** (para endpoints públicos): `Authorization: Bearer sa_live_xxx`\n- **Session Cookie** (para endpoints del dashboard): autenticación vía Supabase\n\n## Rate Limiting\nTodas las respuestas incluyen headers de rate limiting estándar (IETF) que indican el estado actual de tu cuota:\n| Header | Descripción |\n|--------|-------------|\n| `RateLimit-Limit` | Máximo de requests permitidos en la ventana de tiempo |\n| `RateLimit-Remaining` | Requests restantes en la ventana actual |\n| `RateLimit-Reset` | Timestamp Unix (ms) del momento en que se reestablece la cuota |\n| `Retry-After` | (Solo 429) Segundos hasta reintentar |\n\nLímites vigentes:\n- Endpoints públicos: 60 requests/min por API Key\n- Endpoints de dashboard: 30 requests/min por sesión\n- Reportes PDF: 5 requests/min\n- Escaneos de inteligencia: 30 requests/min por usuario Outbound events (project webhooks): finding.created, finding.critical, anomaly.detected, uptime.down. Scopes de API key: intelligence:read, intelligence:write, reports:read, findings:read, adversary:read.",
-    "version": "1.0.0",
+    "description": "API pública de inteligencia de infraestructura cibernética. Automatiza escaneos de subdominios, TLS, DNS, emails y más.\n\n## Autenticación\n- **API Key** (para endpoints públicos): `Authorization: Bearer sa_live_xxx`\n- **Session Cookie** (para endpoints del dashboard): autenticación vía Supabase\n\n## Rate Limiting\nTodas las respuestas incluyen headers de rate limiting estándar (IETF) que indican el estado actual de tu cuota:\n| Header | Descripción |\n|--------|-------------|\n| `RateLimit-Limit` | Máximo de requests permitidos en la ventana de tiempo |\n| `RateLimit-Remaining` | Requests restantes en la ventana actual |\n| `RateLimit-Reset` | Timestamp Unix (ms) del momento en que se reestablece la cuota |\n| `Retry-After` | (Solo 429) Segundos hasta reintentar |\n\nLímites vigentes:\n- Endpoints públicos: 60 requests/min por API Key\n- Endpoints de dashboard: 30 requests/min por sesión\n- Reportes PDF: 5 requests/min\n- Escaneos de inteligencia: 30 requests/min por usuario Outbound events (project webhooks): finding.created, finding.critical, anomaly.detected, uptime.down. Scopes de API key: intelligence:read, intelligence:write, reports:read, findings:read, adversary:read.\n\n## Chat\n`POST /api/ai/copilot` y `POST /api/intelligence/copilot` aceptan `stream: true` y responden Server-Sent Events (`chunk`/`done`/`error`) además del JSON histórico. Las respuestas SSE y JSON comparten autenticación por cookie de sesión, rate limit y errores.",
+    "version": "1.1.0",
     "contact": {
       "name": "Strategic Connex",
       "url": "https://strategicconnex.com.ar"
@@ -31,16 +31,6 @@
         "responses": {
           "200": {
             "description": "All services operational — all dependency env vars are configured",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthCheck"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service degraded — one or more dependency env vars are missing",
             "content": {
               "application/json": {
                 "schema": {
@@ -89,6 +79,16 @@
               "Retry-After": {
                 "schema": {
                   "type": "integer"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service degraded — one or more dependency env vars are missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
                 }
               }
             }
@@ -443,7 +443,7 @@
     "/api/intelligence/copilot": {
       "post": {
         "summary": "Generate Remediation Plan",
-        "description": "Genera un plan de remediación con IA para una investigación. Si la investigación no tiene hallazgos, devuelve un mensaje honesto de ausencia y una acción real para ejecutar un escaneo; nunca devuelve un plan simulado. Un fallo interno responde 500 con success=false.",
+        "description": "Genera un plan de remediación con IA para una investigación. Sin `stream` devuelve JSON con `remediationPlan`; con `stream: true` y hallazgos devuelve SSE. Si no hay hallazgos devuelve el JSON honesto de ausencia sin invocar IA, incluso con `stream: true`. Un fallo interno responde 500 con success=false.",
         "tags": [
           "Intelligence"
         ],
@@ -466,6 +466,11 @@
                     "type": "string",
                     "format": "uuid",
                     "description": "ID de la investigación a analizar"
+                  },
+                  "stream": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "true devuelve SSE cuando hay hallazgos; con cero hallazgos conserva el JSON de ausencia y no invoca IA."
                   }
                 }
               }
@@ -474,12 +479,19 @@
         },
         "responses": {
           "200": {
-            "description": "Plan real del modelo o mensaje de ausencia con acción de escaneo (hasFindings=false)",
+            "description": "Plan real del modelo, mensaje de ausencia (hasFindings=false) o SSE cuando stream=true. `done` no incluye el plan.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CopilotResponse"
                 }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "SSE (`text/event-stream`). `chunk` lleva deltas Markdown del plan; `done` es terminal y no incluye `remediationPlan`; el cliente reconstruye el plan concatenando los chunks.",
+                "example": "data: {\"type\":\"chunk\",\"text\":\"## Plan de remediación\\n\"}\n\ndata: {\"type\":\"done\",\"modelUsed\":\"proveedor/modelo\",\"fromCache\":false}\n\n"
               }
             },
             "headers": {
@@ -496,6 +508,9 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
@@ -1660,6 +1675,78 @@
           }
         }
       }
+    },
+    "/api/ai/copilot": {
+      "post": {
+        "summary": "General chat (Copilot)",
+        "description": "Chat general con contexto opcional del panel flotante y contexto de Intelligence resuelto bajo RLS. Sin `stream` devuelve JSON; con `stream: true` devuelve SSE. Un fallo del pool antes del primer chunk conserva el JSON legado de error.",
+        "tags": [
+          "Intelligence"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta real del modelo. `application/json` por defecto; `text/event-stream` cuando `stream: true` y el pool emite al menos un chunk. La ausencia de claves de IA puede devolver 200 JSON de onboarding.",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "SSE (`text/event-stream`). Cada evento es una línea `data: <json>` seguida de una línea vacía. El cliente concatena los `chunk` y usa `done` solo para metadatos.",
+                "example": "data: {\"type\":\"chunk\",\"text\":\"## Plan\\n\"}\n\ndata: {\"type\":\"done\",\"modelUsed\":\"proveedor/modelo\",\"fromCache\":false}\n\n"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2016,6 +2103,223 @@
           },
           "error": {
             "type": "string"
+          }
+        }
+      },
+      "ChatTurn": {
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "description": "Solo se aceptan turnos user/assistant; la historia debe terminar en user."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "ChatReference": {
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Hallazgo resuelto bajo RLS."
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatSuggestion": {
+        "type": "object",
+        "required": [
+          "fingerprint",
+          "findingIds",
+          "investigationId",
+          "text",
+          "ctaLabel"
+        ],
+        "properties": {
+          "fingerprint": {
+            "type": "string"
+          },
+          "findingIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "investigationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "text": {
+            "type": "string",
+            "description": "Plantilla localizada en servidor; no la redacta el modelo."
+          },
+          "ctaLabel": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatRequest": {
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "copilot",
+              "analyst"
+            ],
+            "default": "copilot"
+          },
+          "messages": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/ChatTurn"
+            }
+          },
+          "context": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Contexto del panel flotante. El servidor lo delimita y escapa; intelligenceContext lo reemplaza."
+          },
+          "intelligenceContext": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "IDs resueltos server-side bajo RLS. Sustituye a context y fuerza mode=analyst.",
+            "properties": {
+              "projectId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "investigationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "findingId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "stream": {
+            "type": "boolean",
+            "default": false,
+            "description": "true devuelve SSE; si el pool falla antes del primer chunk, devuelve el JSON legado de error."
+          }
+        }
+      },
+      "ChatResponse": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatReference"
+            }
+          },
+          "unverifiedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "suggestion": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChatSuggestion"
+              }
+            ],
+            "nullable": true
+          },
+          "modelUsed": {
+            "type": "string"
+          },
+          "fromCache": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatStreamEvent": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "description": "Evento SSE serializado como `data: <json>\\n\\n`. `chunk` contiene un delta de texto; `done` es terminal y no repite el contenido; `error` puede aparecer tras un parcial.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "chunk",
+              "done",
+              "error"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "Delta de texto Markdown (solo chunk)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Error del pool (solo error)."
+          },
+          "modelUsed": {
+            "type": "string",
+            "description": "Solo done."
+          },
+          "fromCache": {
+            "type": "boolean",
+            "description": "Solo done."
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatReference"
+            }
+          },
+          "unverifiedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "suggestion": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChatSuggestion"
+              }
+            ],
+            "nullable": true
           }
         }
       }
