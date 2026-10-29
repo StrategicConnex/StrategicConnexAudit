@@ -4,8 +4,8 @@
    Encola escaneos masivos con rate limit (authenticate) + RLS. Verifica:
    - 401 sin sesión (authenticate → null)
    - 400 en validación zod: uuid, lista vacía y >10 targets
-   - 404 si el proyecto no existe; 500 si el insert falla
-   - 200 con targetType inferido (domain/email/url), normalización y fetch
+   - 404 si el proyecto no existe; errores de programación de trabajo
+   - 200 con targets normalizados, disparados internamente sin credenciales
    - Caso borde: targets en blanco se omiten (0 en cola)
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -14,14 +14,17 @@ import { NextRequest } from "next/server";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
-let mockUser: { id: string } | null = { id: "u-1" };
-const mockFindFirst = vi.fn();
-const mockInsert = vi.fn();
-const mockFetch = vi.fn();
+const mocks = vi.hoisted(() => ({
+  user: { current: { id: "u-1" } as { id: string } | null },
+  findFirst: vi.fn(),
+  after: vi.fn(),
+  runIntelligenceScan: vi.fn(),
+  fetch: vi.fn(),
+}));
 
 vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { getUser: async () => ({ data: { user: mockUser } }) },
+    auth: { getUser: async () => ({ data: { user: mocks.user.current } }) },
   }),
 }));
 
@@ -46,12 +49,18 @@ vi.mock("@/shared/lib/ratelimit", () => ({
 vi.mock("@/shared/db/rls", () => ({
   withRLS: (_userId: string, cb: (tx: unknown) => Promise<unknown>) =>
     cb({
-      query: { projects: { findFirst: (...args: unknown[]) => mockFindFirst(...args) } },
-      insert: (...args: unknown[]) => mockInsert(...args),
+      query: { projects: { findFirst: (...args: unknown[]) => mocks.findFirst(...args) } },
     }),
 }));
 
-vi.stubGlobal("fetch", mockFetch);
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: mocks.after };
+});
+
+vi.mock("@/app/api/intelligence/route", () => ({
+  POST: mocks.runIntelligenceScan,
+}));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -71,19 +80,6 @@ const validBody = {
   targets: ["Example.COM", "user@Host.io", "https://a.example"],
 };
 
-type InsertedRow = {
-  projectId: string;
-  ownerId: string;
-  title: string;
-  target: string;
-  normalizedTarget: string;
-  targetType: string;
-  status: string;
-};
-
-const insertedRows: InsertedRow[] = [];
-let insertSeq = 0;
-
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe("Bulk Scan — POST", () => {
@@ -91,42 +87,23 @@ describe("Bulk Scan — POST", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockUser = { id: "u-1" };
-    insertedRows.length = 0;
-    insertSeq = 0;
-    mockFindFirst.mockResolvedValue({ id: PROJECT_ID });
-    mockInsert.mockImplementation(() => ({
-      values: (rows: InsertedRow) => {
-        insertedRows.push(rows);
-        return {
-          returning: () => {
-            insertSeq += 1;
-            return Promise.resolve([
-              {
-                id: `inv-${insertSeq}`,
-                target: rows.target,
-                status: rows.status,
-                createdAt: new Date("2026-09-26T10:00:00.000Z"),
-              },
-            ]);
-          },
-        };
-      },
-    }));
-    mockFetch.mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", mocks.fetch);
+    mocks.user.current = { id: "u-1" };
+    mocks.findFirst.mockResolvedValue({ id: PROJECT_ID });
+    mocks.runIntelligenceScan.mockResolvedValue(new Response(null, { status: 200 }));
     const mod = await import("./route");
     POST = mod.POST;
   });
 
   it("sin sesión → 401", async () => {
-    mockUser = null;
+    mocks.user.current = null;
 
     const res = await POST(createRequest(validBody));
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(mockFindFirst).not.toHaveBeenCalled();
-    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mocks.findFirst).not.toHaveBeenCalled();
+    expect(mocks.runIntelligenceScan).not.toHaveBeenCalled();
   });
 
   it("projectId que no es uuid → 400", async () => {
@@ -134,7 +111,8 @@ describe("Bulk Scan — POST", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Argumentos inválidos");
-    expect(mockFindFirst).not.toHaveBeenCalled();
+    expect(mocks.findFirst).not.toHaveBeenCalled();
+    expect(mocks.after).not.toHaveBeenCalled();
   });
 
   it("targets vacíos → 400", async () => {
@@ -142,6 +120,7 @@ describe("Bulk Scan — POST", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Argumentos inválidos");
+    expect(mocks.after).not.toHaveBeenCalled();
   });
 
   it("11 targets → 400 por el límite de 10", async () => {
@@ -152,47 +131,52 @@ describe("Bulk Scan — POST", () => {
       }),
     );
     expect(res.status).toBe(400);
-    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mocks.findFirst).not.toHaveBeenCalled();
+    expect(mocks.after).not.toHaveBeenCalled();
   });
 
   it("proyecto no encontrado → 404", async () => {
-    mockFindFirst.mockResolvedValue(undefined);
+    mocks.findFirst.mockResolvedValue(undefined);
 
     const res = await POST(createRequest(validBody));
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe("Proyecto no encontrado");
-    expect(mockInsert).not.toHaveBeenCalled();
-    expect(mockFetch).not.toHaveBeenCalled();
+
+    expect(mocks.runIntelligenceScan).not.toHaveBeenCalled();
+    expect(mocks.after).not.toHaveBeenCalled();
   });
 
-  it("200 con targets encolados, targetType inferido y fetch disparado", async () => {
-    const res = await POST(createRequest(validBody));
+  it("agenda los escaneos en el handler interno sin reenviar credenciales ni usar fetch", async () => {
+    const req = createRequest(validBody);
+    req.headers.set("cookie", "session=secret");
+    req.headers.set("authorization", "Bearer secret");
+
+    const res = await POST(req);
     expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.message).toBe("3 escaneos en cola con éxito.");
-    expect(body.queued).toHaveLength(3);
-    expect(body.queued.map((q: { status: string }) => q.status)).toEqual([
-      "running",
-      "running",
-      "running",
+    expect(body.queued).toEqual([
+      { target: "example.com", status: "queued" },
+      { target: "user@host.io", status: "queued" },
+      { target: "https://a.example", status: "queued" },
     ]);
-    expect(body.queued[0].createdAt).toBe("2026-09-26T10:00:00.000Z");
 
-    expect(insertedRows.map((r) => r.target)).toEqual([
-      "example.com",
-      "user@host.io",
-      "https://a.example",
-    ]);
-    expect(insertedRows.map((r) => r.targetType)).toEqual(["domain", "email", "url"]);
-    expect(insertedRows.every((r) => r.ownerId === "u-1")).toBe(true);
-    expect(insertedRows.every((r) => r.projectId === PROJECT_ID)).toBe(true);
-    expect(insertedRows.every((r) => r.title.startsWith("Escaneo Masivo:"))).toBe(true);
+    expect(mocks.after).toHaveBeenCalledTimes(1);
+    expect(mocks.runIntelligenceScan).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    const [backgroundWork] = mocks.after.mock.calls[0] as [() => Promise<void>];
+    await backgroundWork();
 
-    expect(mockFetch).toHaveBeenCalledTimes(3);
-    expect(mockFetch.mock.calls[0]?.[0]).toBe("http://localhost:3000/api/intelligence");
+    expect(mocks.runIntelligenceScan).toHaveBeenCalledTimes(3);
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    const [scanRequest] = mocks.runIntelligenceScan.mock.calls[0] as [NextRequest];
+    expect(scanRequest.url).toBe("http://internal/api/intelligence");
+    expect(scanRequest.headers.get("cookie")).toBeNull();
+    expect(scanRequest.headers.get("authorization")).toBeNull();
+    await expect(scanRequest.json()).resolves.toEqual({ target: "example.com", projectId: PROJECT_ID });
   });
 
   it("targets en blanco se omiten → 0 en cola", async () => {
@@ -203,21 +187,9 @@ describe("Bulk Scan — POST", () => {
     expect(body.success).toBe(true);
     expect(body.message).toBe("0 escaneos en cola con éxito.");
     expect(body.queued).toEqual([]);
-    expect(mockInsert).not.toHaveBeenCalled();
-    expect(mockFetch).not.toHaveBeenCalled();
+
+    expect(mocks.runIntelligenceScan).not.toHaveBeenCalled();
+    expect(mocks.after).not.toHaveBeenCalled();
   });
 
-  it("fallo en el insert → 500", async () => {
-    mockInsert.mockImplementation(() => ({
-      values: () => ({
-        returning: () => Promise.reject(new Error("insert failed")),
-      }),
-    }));
-
-    const res = await POST(createRequest(validBody));
-    expect(res.status).toBe(500);
-    const body = await res.json();
-    expect(body.success).toBe(false);
-    expect(body.error).toBe("Error interno del servidor");
-  });
 });

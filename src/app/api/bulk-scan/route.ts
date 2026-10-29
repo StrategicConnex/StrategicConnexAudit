@@ -1,10 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
+import { POST as runIntelligenceScan } from "@/app/api/intelligence/route";
 import { z } from "zod";
 import { withRLS } from "@/shared/db/rls";
-import {
-  projects,
-  intelligenceInvestigations
-} from "@/shared/db/schemas";
+import { projects } from "@/shared/db/schemas";
 import { eq } from "drizzle-orm";
 import { createClient } from "@/shared/lib/supabase/server";
 import { withRateLimit } from "@/shared/lib/ratelimit";
@@ -50,69 +48,34 @@ export const POST = withRateLimit(
         return NextResponse.json({ success: false, error: "Proyecto no encontrado" }, { status: 404 });
       }
 
-      const cookieHeader = req.headers.get("cookie") || "";
-      const authHeader = req.headers.get("authorization") || "";
+      const queuedTargets = targets
+        .map((target) => target.trim().toLowerCase())
+        .filter(Boolean);
 
-      const queuedInvestigations: Array<typeof intelligenceInvestigations.$inferSelect> = [];
-
-      // Trigger each target asynchronously in RLS transactions
-      for (const target of targets) {
-        const cleanTarget = target.trim().toLowerCase();
-        if (!cleanTarget) continue;
-
-        // Insert a placeholder investigation as "running"
-        const investigation = await withRLS(userId, async (tx) => {
-          let targetType: "domain" | "hostname" | "url" | "ip" | "email" = "domain";
-          if (cleanTarget.includes("@")) {
-            targetType = "email";
-          } else if (cleanTarget.includes("://")) {
-            targetType = "url";
-          }
-
-          const [record] = await tx.insert(intelligenceInvestigations).values({
-            projectId,
-            ownerId: userId,
-            title: `Escaneo Masivo: ${cleanTarget}`,
-            target: cleanTarget,
-            normalizedTarget: cleanTarget,
-            targetType,
-            status: "running"
-          }).returning();
-
-          return record;
-        });
-
-        if (!investigation) throw new Error("Fallo al crear la investigación en cola");
-        queuedInvestigations.push(investigation);
-
-        // Fire-and-forget background execution using our established intelligence route
-        const targetUrl = new URL("/api/intelligence", req.nextUrl!.origin);
-
-        fetch(targetUrl.toString(), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Cookie": cookieHeader,
-            "Authorization": authHeader
-          },
-          body: JSON.stringify({
-            target: cleanTarget,
-            projectId
-          })
-        }).catch(err => {
-          logger.error(`Background bulk-scan failed for target ${cleanTarget}:`, err);
+      if (queuedTargets.length > 0) {
+        after(async () => {
+          await Promise.all(queuedTargets.map(async (target) => {
+            try {
+              const scanRequest = new NextRequest("http://internal/api/intelligence", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ target, projectId }),
+              });
+              const response = await runIntelligenceScan(scanRequest);
+              if (!response.ok) {
+                logger.error(`Background bulk-scan failed for target ${target}: HTTP ${response.status}`);
+              }
+            } catch (error: unknown) {
+              logger.error(`Background bulk-scan failed for target ${target}:`, error);
+            }
+          }));
         });
       }
 
       return NextResponse.json({
         success: true,
-        message: `${queuedInvestigations.length} escaneos en cola con éxito.`,
-        queued: queuedInvestigations.map(inv => ({
-          id: inv.id,
-          target: inv.target,
-          status: inv.status,
-          createdAt: inv.createdAt
-        }))
+        message: `${queuedTargets.length} escaneos en cola con éxito.`,
+        queued: queuedTargets.map((target) => ({ target, status: "queued" as const }))
       });
     } catch (error: unknown) {
       logger.error("POST bulk scan route failure:", { error: getErrorMessage(error) })
