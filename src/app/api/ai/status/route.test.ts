@@ -2,11 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockAuthGetUser = vi.fn();
-vi.mock("@/shared/lib/supabase/server", () => ({
-  createClient: async () => ({
-    auth: { getUser: async () => mockAuthGetUser() },
-  }),
+const mockRequireAdmin = vi.fn();
+vi.mock("@/server/auth/admin", () => ({
+  requireAdmin: async () => mockRequireAdmin(),
 }));
 
 const mockLimit = vi.fn();
@@ -39,15 +37,31 @@ describe("GET /api/ai/status", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockAuthGetUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    mockRequireAdmin.mockResolvedValue({ ok: true, userId: "u-admin" });
     mockLimit.mockResolvedValue([]);
     GET = (await import("./route")).GET;
   });
 
-  it("401 sin sesión", async () => {
-    mockAuthGetUser.mockResolvedValue({ data: { user: null } });
+  it("401 sin sesión y no consulta métricas", async () => {
+    const denied = new Response(JSON.stringify({ error: "No autorizado" }), { status: 401 });
+    mockRequireAdmin.mockResolvedValue({ ok: false, response: denied });
+
     const res = await GET();
+
+    expect(res).toBe(denied);
     expect(res.status).toBe(401);
+    expect(mockSelect).not.toHaveBeenCalled();
+  });
+
+  it("403 para usuario autenticado sin rol admin y no consulta métricas", async () => {
+    const denied = new Response(JSON.stringify({ error: "Prohibido" }), { status: 403 });
+    mockRequireAdmin.mockResolvedValue({ ok: false, response: denied });
+
+    const res = await GET();
+
+    expect(res).toBe(denied);
+    expect(res.status).toBe(403);
+    expect(mockSelect).not.toHaveBeenCalled();
   });
 
   it("200 con el último chequeo persistido (lectura, sin testear modelos)", async () => {
@@ -70,6 +84,7 @@ describe("GET /api/ai/status", () => {
     expect(body.modelsHealthy).toBe(2);
     expect(body.modelsTotal).toBe(5);
     expect(body.checkedAt).toBe(checkedAt.toISOString());
+    expect(mockRequireAdmin).toHaveBeenCalledTimes(1);
     expect(mockSelect).toHaveBeenCalledTimes(1);
   });
 
