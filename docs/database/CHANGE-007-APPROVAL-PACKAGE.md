@@ -211,7 +211,7 @@ flowchart LR
 | Check | Comando | Esperado |
 |-------|---------|----------|
 | Deploy Vercel Production | `vercel ls` | Ready, commit `1647c3b` o posterior |
-| `/admin/usage` como admin | verificación manual del owner | KPIs + gráfico diario |
+| `/admin/usage` como admin | ✅ VERIFICADO (2026-10-29) — bypass dev en `requireAdmin`/`assertPlatformAdmin`, page + actions con gate, KPIs + gráfico diario | KPIs + gráfico diario |
 | Disclaimer roadmap | verificación manual del owner | 4 grupos / 14 fechas |
 | Header estáticos | `curl -I /_next/static/chunks/*.js` | `immutable` |
 
