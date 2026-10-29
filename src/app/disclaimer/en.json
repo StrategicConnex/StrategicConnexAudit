@@ -13,26 +13,31 @@
     "reportHint": "Include in your report: problem description, steps to reproduce, screenshots if applicable, and browser/version used.",
     "acceptLabel": "I have read and accept the terms of the legal notice",
     "accept": "Accept",
-    "updated": "Last updated: October 28, 2026",
+    "updated": "Last updated: October 29, 2026",
     "status": {
       "title": "Product status",
       "intro": "A summary of available capabilities and recorded follow-ups. The platform remains in beta and this status is updated with every release.",
       "resolvedTitle": "Implemented in the current code",
-      "inProgressTitle": "Pending",
+      "inProgressTitle": "In progress",
       "resolved": [
-        "Intelligence copilot with SSE streaming, cancellation, verified citations and context-isolated local memory",
-        "Project and investigation context loaded server-side under RLS, with /help and /finding commands and suggestions based on real findings",
-        "Chat history is bounded and redacted; semantic cache is skipped when memory is present and remains tenant-isolated",
-        "First-party RUM with field Core Web Vitals and LCP attribution",
-        "Landing first-load about 17% smaller and immutable caching for static assets",
-        "Tenant-scoped AI L2 cache, findings/audits indexes and uptime_logs partitioning",
-        "/admin/usage dashboard with usage and AI cache KPIs plus a daily chart",
-        "Automated RLS, CSP and axe-core accessibility gates, plus end-to-end tests",
-        "Remediation-plan streaming and documented OpenAPI and CHAT-CONTRACT specifications"
+        "Copilot with SSE streaming, real Stop, local history and /help and /finding commands",
+        "Intelligence context authorized server-side under RLS and chat memory isolated by project or investigation",
+        "Verified citations with real references and context-aware anti-nag suggestions",
+        "Remediation-plan streaming with SSE, memory and references integrated in the sidebar",
+        "Public OpenAPI 1.1.0 contract and CHAT-CONTRACT 2.0 for the copilot",
+        "Tenant-scoped semantic cache that does not contaminate turns with memory or share responses across tenants",
+        "First-party RUM with field Core Web Vitals and LCP attribution (element and breakdown)",
+        "Landing first-load ~17% smaller, immutable static asset caching and hero SSR outside Suspense",
+        "Tenant-scoped AI L2 cache active in production, findings/audits indexes and uptime_logs partitioning",
+        "/admin/usage dashboard with usage KPIs and daily chart",
+        "RLS hardening, CSP, accessibility (axe-core), e2e tests and hermetic security tests"
       ],
       "inProgress": [
-        "TD-22: replace simulated scan progress with real intelligence_run_events status",
-        "TD-24: load and authorize floating Copilot context server-side instead of trusting client data"
+        "Field validation of the copilot (T+48h, ≥20 streamed turns with critical findings)",
+        "Field closure of REQ-002: dashboard LCP p75 with session deduplication (desktop declared)",
+        "Real database round-trip optimization (F-A)",
+        "F-SCAN/TD-22: scan progress driven by real events instead of simulated times",
+        "TD-24: floating dashboard copilot context resolved and authorized server-side"
       ],
       "note": "This status reflects the repository code, not a deployment verification. Pending items may change before release; roadmap dates are estimates."
     },

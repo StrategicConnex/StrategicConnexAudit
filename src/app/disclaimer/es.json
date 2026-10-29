@@ -13,26 +13,31 @@
     "reportHint": "Incluye en tu reporte: descripción del problema, pasos para reproducirlo, capturas de pantalla si aplica y navegador/version utilizada.",
     "acceptLabel": "He leído y acepto los términos del aviso legal",
     "accept": "Aceptar",
-    "updated": "Última actualización: 28 de octubre de 2026",
+    "updated": "Última actualización: 29 de octubre de 2026",
     "status": {
       "title": "Estado del producto",
       "intro": "Resumen de las capacidades disponibles y los pendientes registrados. La plataforma sigue en beta y este estado se actualiza con cada release.",
       "resolvedTitle": "Implementado en el código actual",
-      "inProgressTitle": "Pendiente",
+      "inProgressTitle": "En progreso",
       "resolved": [
-        "Copiloto de Intelligence con streaming SSE, cancelación, citas verificadas y memoria local aislada por contexto",
-        "Contexto de proyecto e investigación cargado en el servidor bajo RLS, con comandos /help y /finding y sugerencias basadas en hallazgos reales",
-        "Historial del chat limitado y redactado; la caché semántica se omite con memoria y mantiene aislamiento por tenant",
-        "RUM propio con Core Web Vitals en campo y atribución del LCP",
-        "First-load del landing ≈17% menor y caché inmutable para assets estáticos",
-        "Caché L2 de IA tenant-scoped, índices de findings/audits y particionado de uptime_logs",
-        "Panel /admin/usage con KPIs de uso, caché IA y gráfico diario",
-        "Guardas automatizadas de RLS, CSP y accesibilidad con axe-core, además de pruebas e2e",
-        "Streaming del plan de remediación y contrato documentado en OpenAPI y CHAT-CONTRACT"
+        "Copiloto con streaming SSE, Stop real, historial local y comandos /help y /finding",
+        "Contexto de Intelligence autorizado en el servidor bajo RLS y memoria de chat aislada por proyecto o investigación",
+        "Citas verificadas con referencias reales y sugerencias contextuales anti-nag",
+        "Streaming del plan de remediación e integración de SSE, memoria y referencias en el sidebar",
+        "Contrato público OpenAPI 1.1.0 y CHAT-CONTRACT 2.0 del copiloto",
+        "Caché semántica tenant-scoped que no contamina turnos con memoria ni comparte respuestas entre tenants",
+        "RUM propio con Core Web Vitals en campo y atribución del LCP (elemento y descomposición)",
+        "First-load del landing ≈17% menor, caché inmutable de assets estáticos y hero SSR fuera del Suspense",
+        "Caché L2 de IA activa en producción, índices de findings/audits y particionado de logs de uptime",
+        "Panel /admin/usage con KPIs de uso y gráfico diario",
+        "Endurecimiento de RLS, CSP, accesibilidad (axe-core), pruebas e2e y hermeticidad de tests de seguridad"
       ],
       "inProgress": [
-        "TD-22: sustituir el progreso ficticio de escaneo por el estado real de intelligence_run_events",
-        "TD-24: obtener y autorizar en el servidor el contexto del Copiloto flotante, en vez de confiar en datos del cliente"
+        "Validación de campo del copiloto (T+48h, muestra ≥20 turnos streamed con hallazgos críticos)",
+        "Cierre de campo REQ-002: LCP p75 del dashboard con dedupe por sesión (escritorio declarado)",
+        "Optimización de round-trips de base de datos (F-A real)",
+        "F-SCAN/TD-22: progreso de escaneo con eventos reales en lugar de tiempos ficticios",
+        "TD-24: contexto del copiloto flotante del dashboard resuelto en el servidor"
       ],
       "note": "Este estado refleja el código del repositorio, no una verificación de despliegue. Los pendientes pueden cambiar antes de su release; las fechas de la hoja de ruta son estimaciones."
     },
