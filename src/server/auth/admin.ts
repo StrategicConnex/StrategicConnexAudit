@@ -58,6 +58,11 @@ export async function requireAdmin(): Promise<AdminGate> {
     return { ok: false, response: unauthorized() };
   }
 
+  // D6: todos los gates de admin permiten acceso autenticado en dev, sin exigir rol admin en BD.
+  if (process.env.NODE_ENV === "development") {
+    return { ok: true, userId: user.id };
+  }
+
   const role = await getPlatformRole(user.id);
   if (role !== "admin") {
     return { ok: false, response: forbidden() };
@@ -72,6 +77,11 @@ export async function assertPlatformAdmin(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     throw new Error("No autorizado");
+  }
+
+  // D6: todos los gates de admin permiten acceso autenticado en dev, sin exigir rol admin en BD.
+  if (process.env.NODE_ENV === "development") {
+    return user.id;
   }
 
   const role = await getPlatformRole(user.id);
