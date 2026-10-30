@@ -1,15 +1,15 @@
 ---
-version: 2.4
-date: 2026-08-09
+version: 2.5
+date: 2026-10-29
 author: Equipo SCAUDIT — Security Review
-status: Aprobado — VULN-001..010 remediados (008/009 cerrados 2026-09-24, TSK-011/012); v2.4 cierre de fugas a terceros (CDNs + Google Fonts + tiles)
+status: Revisión estática actualizada 2026-10-29 — hallazgos abiertos documentados en §19; la aprobación histórica v2.4 queda reemplazada
 ---
 
 # 🔐 SCAUDIT — Reporte de Auditoría de Seguridad (OWASP / DevSecOps)
 
-> **Fecha:** 2026-08-09 · **Versión:** 2.4 · **Autor:** Equipo SCAUDIT (skills `security-review` + `security-auditor`) · **Estado:** ✅ Aprobado — VULN-001..010 **remediados** · **v2.4:** cierre de fugas a terceros (VULN-010: tiles/markers self-hosted, web-vitals self-hosted, Google Fonts fuera de PDFs) · **2026-09-24:** VULN-008/009 cerrados (TSK-011/012: auth + RBAC + withRLS + route tests)
+> **Baseline histórica:** 2026-08-09 · **Versión histórica:** 2.4 · VULN-001..010 se cerraron según las verificaciones documentadas entonces. La revisión actual del **2026-10-29** y sus hallazgos abiertos están en §19; su resultado prevalece sobre el resumen histórico.
 > **Metodología:** OWASP Top 10 + Cheat Sheet Series · trazado de flujo de datos (UI → API → Admin SDK → DB) · adversarial analysis · reporte HIGH-confidence-only.
-> **Alcance de esta revisión:** commit `739e09d` (post-B01). Inventario de las 42 rutas de `src/app/api`, separación de cliente/servidor Supabase, y escaneo de secretos.
+> **Alcance de la revisión histórica v2.4:** commit `739e09d` (post-B01), inventario de 42 rutas, separación cliente/servidor y secretos. La revisión de 2026-10-29 es un análisis estático del checkout actual; no es una prueba de penetración del despliegue.
 
 ---
 
@@ -418,4 +418,47 @@ Ver §3 (arquitectura) — 1 bloque mermaid, 11 nodos, válido.
 
 ## 18. Resumen ejecutivo
 
-**0 hallazgos abiertos (0 críticos, 0 high, 0 medium, 0 low).** La aplicación tiene una postura de seguridad sólida: RLS transaccional, egress-guard con CIDR matching, sandbox sin shell, hashing de API keys, CSP, `CRON_SECRET` en crons y separación cliente/servidor verificada (Service Role nunca en bundle). La **revisión v2.1** detectó dos IDOR cross-tenant HIGH (VULN-004/005) que fueron remediados. La **revisión v2.2** cierra el batch P0: VULN-001 (XSS IA → `escapeHtml` antes del render), VULN-002 (secret webhooks enmascarado + test), VULN-003 (`/intelligence` en middleware), VULN-006 (looker-studio fail-closed + `timingSafeEqual`), VULN-007 (progreso PDF namespaced por usuario con sesión). La **revisión v2.3** endurece el CSP: el nonce (antes generado pero **no aplicado**) ahora viaja en los headers del request, Next.js 16 lo aplica a todos sus scripts inline, se eliminó `'unsafe-inline'` de `script-src` (anulaba la validación por nonce), se añadió `'strict-dynamic'` y `object-src 'none'`, y `connect-src` se redujo a `'self'` + `*.supabase.co` (se eliminaron dominios muertos de LLM/SIEM que solo ampliaban la superficie de exfiltración); como los nonces exigen render dinámico, se eliminaron las 2 últimas páginas estáticas (`force-static`/`generateStaticParams`). Los últimos 2 hallazgos Low (**VULN-008/009**) fueron cerrados el 2026-09-24 (TSK-011/012: auth + RBAC + `withRLS` + route tests). No se detectaron secretos reales en el repo (gitleaks es ahora barrera dura en CI).
+**Conclusión histórica de v2.4 (2026-08-09):** la afirmación “0 hallazgos abiertos” reflejaba aquel baseline y no describe el checkout actual. No debe interpretarse como certificación vigente. La revisión actual, resultados y prioridades se documentan en §19. Los cierres de VULN-001..010 y el guard de secretos en CI son controles previos, no sustituyen este análisis.
+
+---
+
+## 19. Revisión estática del checkout — 2026-10-29
+
+### 19.1 Alcance, método y límites
+
+Revisión del código actual enfocada en dependencias, SSRF/egress, autenticación y autorización, exposición de datos, RLS/grants, manejo de secretos y controles CI. Se contrastaron rutas API y workers con los módulos de seguridad y migraciones; se ejecutaron los guards disponibles y un conjunto de pruebas de regresión. No se enviaron peticiones a producción ni a dominios de clientes, no se consultó la base de datos alojada, no se ejecutó gitleaks sobre el historial y no se dispone de evidencia de configuración real de Vercel/Supabase. Por ello, el alcance es estático/local y no equivale a una prueba de penetración ni prueba explotación en el despliegue.
+
+### 19.2 Hallazgos vigentes priorizados
+
+| ID | Prioridad | Hallazgo y evidencia actual | Impacto / confianza | Acción recomendada |
+|---|---|---|---|---|
+| AUD-2026-01 | **Crítica — dependencia** | `next@16.3.3` está por debajo de las versiones corregidas indicadas por el audit: RCE en `next/og` (parche desde 16.3.6), procesamiento de SVG del optimizador de imágenes y fallos en funciones `use cache` con typed arrays (parches desde 16.4.1). No se encontró uso de `ImageResponse`/`next/og` ni `use cache`; la configuración de imágenes no habilita SVG ni remotos, lo que reduce la evidencia de alcanzabilidad pero no elimina la dependencia vulnerable. | Probabilidad condicionada a que rutas/funciones afectadas sean alcanzables; la versión instalada y los advisories son confirmados, no se demostró explotación. | Actualizar Next.js a la última versión corregida compatible y actualizar lockfile. Volver a ejecutar audit, build y pruebas tras la actualización. |
+| AUD-2026-02 | **Alta — SSRF/egress** | `getWithCapture` en los checks de evaluación usa `fetch(..., { redirect: "follow" })`; esto sigue redirecciones automáticamente desde URLs de destino controladas por el proyecto, sin que el egress guard pueda revalidar cada salto. Además, la resolución/validación DNS no fija la conexión a la IP verificada, dejando ventana de DNS rebinding. | Elude controles de defensa ante destinos privados en redirecciones/rebinding. El patrón de código está confirmado; explotación efectiva depende de resolución DNS y entorno del worker. | Desactivar redirecciones automáticas para checks. Seguir manualmente cada salto con validación de esquema, hostname, IP y límite de saltos; fijar IP validada o aplicar egress de red. Añadir pruebas específicas sobre `getWithCapture`. |
+| AUD-2026-03 | **Alta — SSRF y posible fuga de credenciales** | `/api/bulk-scan` deriva el origen de un self-fetch de `req.nextUrl.origin` y reenvía `Cookie` y `Authorization` capturados de la petición al endpoint interno. | Si el proxy acepta Host controlado por el cliente, el servidor puede reenviar credenciales a ese origen. Código confirmado; exploitabilidad depende del manejo de Host del despliegue, no verificado aquí. | Fijar el origen a configuración confiable o reemplazar self-fetch por llamada interna; no reenviar credenciales al origen derivado de request. Verificar con Host-header test en staging. |
+| AUD-2026-04 | **Alta — dependencias de producción** | `pnpm audit` reportó advisories críticos/altos en dependencias directas y transitivas de producción, incluyendo `dompurify`, `axios`, `follow-redirects`, `zod`, `sharp`, `source-map-js` y `systeminformation`. Algunos advisories aplican a usos/configuraciones concretos y la presencia de un advisory no demuestra que el vector sea alcanzable. | Riesgo de cadena de suministro confirmado por el audit; alcance de explotación no demostrado. | Actualizar a releases corregidos compatibles; priorizar dependencias alcanzables en producción, conservar lockfile y volver a ejecutar auditoría y pruebas. |
+| AUD-2026-05 | **Media — autorización/telemetría global** | `/api/ai/status` requiere sesión, pero consulta `ai_health_logs` mediante `directDb` sin comprobar que el usuario sea platform admin. La migración configura policy `ai_health_logs_admin`; el acceso directo evita esa policy y expone métricas agregadas globales a usuarios autenticados. | Exposición cross-tenant de estado y latencia de proveedores/modelos; no se observa devolución de secretos en los campos seleccionados. Confirmado en el código. | Aplicar autorización admin en la ruta o acceder con rol/RLS que respete la policy; si es intencional para todos, publicar solo un agregado explícitamente aprobado. |
+| AUD-2026-06 | **Media — carrera de autorización en assessment** | La ruta de creación comprueba `activeTestingAuthorized`, pero `executeAssessment` carga assessment/proyecto y lanza `runRealAssessment` sin volver a comprobar consentimiento actual ni comparar `assessment.target` con el dominio vigente del proyecto. | Un consentimiento revocado o un dominio cambiado mientras el trabajo está en cola no cancela necesariamente la ejecución previamente autorizada. Defecto confirmado; ventana operativa depende del scheduling. | En el worker, comprobar inmediatamente antes del egress que el proyecto sigue activo, el consentimiento sigue vigente y el destino coincide con el dominio autorizado; cubrir la revocación en tests. |
+| AUD-2026-07 | **Media — grants residuales en base de datos** | El guard de grants heredados registra 52 tablas con privilegios `DELETE`/`TRIGGER`/`REFERENCES` conservados en el baseline. El guard pasa frente a nuevas regresiones, pero no valida que esos grants sean necesarios. | Superficie de privilegio excesivo confirmada por baseline local; no demuestra por sí sola una ruta explotable ni refleja necesariamente el estado actual de la base alojada. | Contrastar grants con staging, retirar los que no sean necesarios por rol, verificar impacto funcional y mantener el control anti-regresión. |
+
+### 19.3 Controles ejecutados y límites
+
+| Control | Resultado |
+|---|---|
+| `pnpm guard:secrets` | PASS: guard de separación server/client. No es escaneo de historial ni reemplaza gitleaks. |
+| `pnpm db:rls-surface-guard` | PASS: no detectó cambio en el baseline de superficies de acceso; el conteo no certifica cada autorización. |
+| `pnpm rls:inventory` | PASS con observaciones: RLS detectada en 78 tablas; 8 sin policies están clasificadas como fail-closed; queda una discrepancia documentada de `project_members`. |
+| `pnpm db:inherited-grants-guard` | PASS contra cambios nuevos; 52 tablas siguen en baseline de grants heredados. |
+| Pruebas focalizadas | El intento de ejecutar en conjunto 5 archivos (egress, `/api/ai/status`, `/api/bulk-scan`) excedió el límite de 10 minutos y no se confirmó su resultado. Sí pasó `pnpm exec vitest run src/server/intelligence/security/egress-follow.test.ts` (4 pruebas). Las pruebas existentes no cubren el bypass de `getWithCapture` descrito arriba. |
+| `pnpm audit --json` | FAIL (exit 1): 71 advisories únicos (5 critical, 26 high, 30 moderate, 10 low); 4 critical y 16 high afectan dependencias marcadas como producción. Advisories no equivalen automáticamente a explotación. |
+
+La ruta adversaria revisada exige autenticación, permiso `scan:execute`, consentimiento para crear la tarea y acceso al proyecto. No se confirmó acceso anónimo en ese flujo. No se probaron las configuraciones reales de Vercel/Supabase, ni se realizaron escaneos de producción o de dominios de terceros. Tampoco se ejecutó gitleaks sobre historial completo.
+
+### 19.4 Prioridad de remediación
+
+1. Actualizar Next.js y dependencias vulnerables en producción; repetir audit, build y pruebas.
+2. Cerrar el seguimiento automático y DNS rebinding en egress, validando cada salto.
+3. Eliminar el origen derivado de la petición y el reenvío de credenciales en `/api/bulk-scan`.
+4. Respetar la policy admin en `/api/ai/status` y revalidar consentimiento/dominio en el worker de assessment.
+5. Auditar grants contra staging y ejecutar escaneo de secretos del historial completo antes de declarar la postura del despliegue.
+
+**Estado:** hallazgos reportados, sin remediación de código en esta revisión; pendiente verificación del entorno desplegado.
