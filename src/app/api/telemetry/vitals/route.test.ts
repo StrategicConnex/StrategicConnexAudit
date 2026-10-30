@@ -161,4 +161,39 @@ describe("POST /api/telemetry/vitals — beacon token (P0-3)", () => {
     expect(row.rawPayload.vitals).toMatchObject(vitals);
     expect(row.lcp).toBe("4623.3");
   });
+
+  it("persiste la marca de origen sintético y su perfil en rawPayload (TD-25)", async () => {
+    // Sin esta columna en el schema zod, la marca del harness moría al parsear
+    // y los gates de campo no podían excluir las corridas de diagnóstico.
+    findFirstMock.mockResolvedValue({
+      id: base.projectId,
+      deletedAt: null,
+      isDeleted: false,
+      isHidden: false,
+      beaconSecret: null,
+    });
+    const res = await POST(req({ ...base, synthetic: true, syntheticProfile: "mobile" }));
+    expect(res.status).toBe(204);
+    const row = insertValuesMock.mock.calls[0]?.[0] as {
+      rawPayload: { synthetic?: boolean; syntheticProfile?: string };
+    };
+    expect(row.rawPayload.synthetic).toBe(true);
+    expect(row.rawPayload.syntheticProfile).toBe("mobile");
+  });
+
+  it("no marca como sintética una sesión que no lo declara (ausencia ≠ true)", async () => {
+    findFirstMock.mockResolvedValue({
+      id: base.projectId,
+      deletedAt: null,
+      isDeleted: false,
+      isHidden: false,
+      beaconSecret: null,
+    });
+    const res = await POST(req({ ...base, vitals: { lcp: 1200 } }));
+    expect(res.status).toBe(204);
+    const row = insertValuesMock.mock.calls[0]?.[0] as {
+      rawPayload: { synthetic?: boolean };
+    };
+    expect(row.rawPayload.synthetic).toBeUndefined();
+  });
 });

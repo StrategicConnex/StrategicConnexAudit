@@ -82,6 +82,14 @@ const vitalsSchema = z.object({
   pageViews: z.number().optional(),
   sessionDuration: z.number().optional(),
   timeOnPage: z.number().optional(),
+  // Procedencia de la muestra (TD-25): el beacon marca `synthetic` cuando la
+  // sesión es automatizada (harness de diagnóstico, e2e, pentest) y
+  // `syntheticProfile` con el perfil declarado (desktop | mobile). Los gates
+  // de campo excluyen estas filas. Sin declararlas aquí, zod las descarta al
+  // parsear y la marca moriría antes de rawPayload — el mismo modo de fallo
+  // que sufrió `lcpElement` (2026-10-27).
+  synthetic: z.boolean().optional(),
+  syntheticProfile: z.string().max(32).optional(),
   // El cliente envía máx 10/20/10 por lote; se tolera hasta 50 por margen.
   errors: z.array(boundedEntry).max(50).optional(),
   interactions: z.array(boundedEntry).max(50).optional(),

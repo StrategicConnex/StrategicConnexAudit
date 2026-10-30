@@ -3,10 +3,11 @@ layout: default
 title: REQ-002 — Landing Page (/)
 nav_order: 8.10
 permalink: /docs/performance/req-002-landing-page
-version: 1.0
+version: 2.0
 fecha: 2026-10-18
+actualizado: 2026-10-30
 autor: StrategicConnex Engineering
-estado: Propuesto
+estado: Abierto — gate v2 (rediseño por TD-25)
 ---
 
 # REQ-002 — Landing Page (`/`)
@@ -19,17 +20,121 @@ estado: Propuesto
 
 ## Requisito
 
-**Gate de cierre (corregido 2026-10-27):** `p75 LCP campo < 2,5 s` ∧ `p75 INP campo < 300 ms`,
-medidos con self-RUM en `web_vitals_logs`. El TBT se sustituyó por INP porque
-web-vitals de navegador **no reporta TBT** (métrica de lab); INP es su
-estándar de campo (web.dev). Lighthouse queda como referencia de lab, no como
-gate.
+**Gate v2 (rediseño 2026-10-30, motivado por TD-25):** dos gates de naturaleza
+distinta, porque en este producto **el tráfico orgánico es ≈0** y un percentil de
+campo sin muestra no es una medición: es ruido con formato de dato.
 
-| Métrica | Objetivo | Medido hoy (campo, 24 h al 2026-10-27) | Estado |
-|---------|----------|---------------------------------------|--------|
-| **p75 LCP (campo, self-RUM)** | **< 2,5 s** | 5,704 s (n=5) | ❌ +3,2 s |
-| **p75 INP (campo, self-RUM)** | **< 300 ms** | 192 ms (n=11) | ✅ |
-| Score Lighthouse perf (lab, ref.) | > 80 | 63 (2026-10-18) | ❌ −17 pts |
+| Gate | Qué mide | Umbral | ¿Cierra REQ-002? |
+|------|----------|--------|------------------|
+| **G-1 (cierre)** | LCP sintético reproducible, perfil declarado, 3 corridas | p75 < 2 500 ms | ✅ sí |
+| **G-2 (corroboración)** | LCP/INP de campo por ruta, sin sesiones sintéticas, dedupe por sesión | p75 < 2 500 ms / < 200 ms con **n ≥ 20 sesiones** por ruta | ❌ no — avala o contradice G-1 |
+
+El TBT se descartó (2026-10-27) porque web-vitals de navegador **no lo reporta**
+(es métrica de lab); INP es su sustituto estándar de campo (web.dev). Lighthouse
+permanece como referencia de lab, no como gate. El `p75 LCP < 2,5 s` sigue siendo
+el umbral; lo que cambia es **de dónde sale la muestra**.
+
+Por qué el gate anterior ("p75 de campo en `web_vitals_logs`") no servía: en 7
+días esa tabla acumuló **0 sesiones reales** con LCP en la ruta de entrada
+anónima. Sostener un gate rojo sobre eso no era rigor, era un dashboard.
+
+### Anatomía del recorrido anónimo (por qué `/` no es la ruta de entrada)
+
+`src/proxy.ts` aplica el *disclaimer gate* **antes** de todo: sin
+`disclaimer_accepted=true`, cualquier ruta no pública responde 307 a
+`/disclaimer?redirect=…`. `/login` **no** está en `isDisclaimerPublicPath` (a
+propósito), así que el recorrido de un visitante nuevo nunca pinta `/`:
+
+| Paso | Ruta | ¿Pinta? | ¿Emite RUM con LCP? |
+|------|------|---------|---------------------|
+| 1 | `GET /` sin cookie | no (307 a `/disclaimer`) | no |
+| 2 | `GET /disclaimer` | **sí** | sí |
+| 3 | `GET /` tras aceptar | no (`redirect("/login")` en `src/app/page.tsx`) | no |
+| 4 | `GET /login` | **sí** | **no** — 0 valores de LCP |
+
+Volumen real (7 d al 2026-10-30, dedupe por `(path, session_id)` con `max(lcp)`):
+
+| Ruta | sesiones con LCP | p75 LCP | sesiones con INP | p75 INP | sesiones móvil |
+|------|------------------|---------|------------------|---------|----------------|
+| `/` | 23 | 5 716 ms | 8 | 408 ms | 4 |
+| `/intelligence` | 3 | 3 332 ms | 2 | 48 ms | 0 |
+| `/projects/05eb80d6…` | 2 | 5 373 ms | 0 | — | 0 |
+| `/disclaimer?redirect=%2F` | 2 | 1 665 ms | 0 | — | 1 |
+| `/disclaimer?redirect=%2Fintelligence` | 1 | 1 288 ms | 0 | — | 0 |
+| `/ask-ai` | 1 | 798 ms | 1 | 24 ms | 0 |
+| `/login` | **0** | — | 0 | — | 0 |
+
+Dos hechos incómodos sostienen el rediseño:
+
+1. **Las 23 sesiones de `/` son todas del harness** (cookie forjada con
+   `TEST_AUTH_EMAIL`). El n de campo real de `/` es **0**. Matiz importante: la
+   marca `synthetic` empieza a escribirse con este cambio, y las filas
+   históricas **no** la tienen, así que G-2 las seguirá contando (23) hasta que
+   salgan de la ventana de 7 días. El filtro no las limpia retroactivamente
+   porque no hay forma de distinguirlas sin la marca — que es, literalmente, la
+   deuda que TD-25 cierra.
+2. **`/login` no aporta LCP**: 15 filas en 7 d y **0** valores de LCP (1 sesión).
+   Mecanismo no verificado; queda como sub-ítem de TD-25. Sin LCP, `/login` no
+   puede alimentar G-2 hoy.
+
+### Opción rechazada: beacon en un placeholder antes del redirect
+
+Se propuso montar el beacon en una pantalla "Cargando…" con `setTimeout(2500)`
+antes de redirigir, para que `/` emitiera filas anónimas. **Rechazada**, por tres
+razones:
+
+1. **Mide el placeholder, no la landing**: el LCP del `<p>Cargando…</p>` es el
+tiempo hasta un texto que el usuario no pidió, y no es comparable con el LCP del
+hero que el gate debe proteger.
+2. **Es una regresión de UX deliberada**: +2,5 s a cada visitante anónimo para
+alimentar un dashboard interno.
+3. **No resuelve la causa**: seguiría sin haber usuarios reales midiendo, que es
+el problema de fondo (TD-25), no un problema de montaje del beacon.
+
+### Protocolo G-1 (medición sintética reproducible)
+
+```bash
+LCP_PROFILE=desktop LCP_RUNS=3 node scripts/e2e/lcp-diag.mjs
+LCP_PROFILE=mobile  LCP_RUNS=3 node scripts/e2e/lcp-diag.mjs
+```
+
+Sesión real (`TEST_AUTH_EMAIL`), contra la build desplegada, mismo host:
+
+- `desktop`: Chromium estable, sin throttling.
+- `mobile`: CPU 4× + Slow 4G (150 ms RTT, 1,6 Mbps) + viewport 412×915 — valores
+de referencia de Lighthouse mobile. Cubre **TD-23c** (0 % de sesiones móvil en
+campo), que el gate anterior no podía medir.
+
+Cada corrida deja rastro en `web_vitals_logs` con `synthetic: true` y
+`syntheticProfile` en `raw_payload` (campo añadido al beacon y al schema zod el
+2026-10-30), de modo que G-2 puede excluirlas. Cualquier automatización queda
+marcada también vía `navigator.webdriver`, aunque el script no lo declare.
+
+### Consulta G-2 (campo, sin sintéticas)
+
+```sql
+with base as (
+  select path, session_id, lcp::numeric as lcp, inp::numeric as inp
+  from web_vitals_logs
+  where recorded_at > now() - interval '7 days'
+    and raw_payload->>'synthetic' is distinct from 'true'   -- TD-25
+), per_session as (
+  select path, session_id, max(lcp) as lcp, max(inp) as inp
+  from base
+  group by path, session_id
+)
+select path,
+       count(lcp) as n_lcp,
+       round(percentile_cont(0.75) within group (order by lcp)::numeric) as p75_lcp,
+       count(inp) as n_inp,
+       round(percentile_cont(0.75) within group (order by inp)::numeric) as p75_inp
+from per_session
+group by path
+order by n_lcp desc;
+```
+
+G-2 solo se pronuncia con **n ≥ 20 sesiones** en la ruta; por debajo de eso se
+reporta como muestra insuficiente, no como verde ni rojo.
 
 ### Re-medición de campo 2026-10-30 (ventana 7 d, dedupe por sesión — TD-23a)
 
@@ -91,10 +196,14 @@ Desde que existe el attribution build (27-oct) **ninguna** sesión supera 4 276 
 n=3 para hoy exige prudencia: mismo host, escritorio, AR, sin throttling. No es evidencia
 suficiente para declarar mejora; sí para descartar la regresión de telemetría.
 
-**Estado del gate: ROJO y ABIERTO**, pero por una razón distinta a la registrada el
-30-oct: no espera "que vuelva a llegar tráfico" (no hay tráfico orgánico ni lo habrá a
-corto plazo), sino que la muestra de campo **separe sesiones de harness de usuarios
-reales** y deje de mezclar dos generaciones de instrumentación (TD-25).
+**Estado del gate: ABIERTO con gate v2**, y la razón ya no es "esperar a que vuelva a
+llegar tráfico": es que el tráfico de campo **no existe** (0 sesiones reales de `/`,
+0 valores de LCP en `/login`), así que el cierre se decide con G-1 —medición
+sintética reproducible bajo perfil declarado— y G-2 queda como corroboración cuando
+haya muestra. Esta sección conserva el diagnóstico que motivó el cambio: el sesgo
+bimodal de la muestra antigua y la ausencia de atribución antes del 27-oct no eran
+defectos del beacon, eran el resultado de mezclar corridas del harness con usuarios
+reales (TD-25).
 Lab histórica (2026-10-18, Lighthouse 13.7.0 vs `scaudit.vercel.app`, 1 run):
 LCP 3,76 s · TBT 1.408 ms — referencia, ya no gate. `/login` cumple REQ-001
 (LCP 2,33 s, score 76); `/pricing` score 82 — la brecha es específica de la
@@ -119,13 +228,14 @@ LCP → H-10b abierto en fase B (atribución LCP), ver
 | 2 | Fix de bajo riesgo del bundle (re-segregar `next/dynamic` o `optimizePackageImports`) | `/` raw ≤ baseline 1.026 KB |
 | 3 | Dividir hidratación del shell (tabs en clientes separados + Suspense) | TBT ↓ medible en lab |
 | 4 | Re-medir Lighthouse `/` contra producción (lab de referencia) | score >80 |
-| 5 | Validar con datos de campo (self-RUM — ver H-09) | **gate: p75 LCP <2,5 s ∧ p75 INP <300 ms** |
+| 5 | Validar con G-1 (sintético, ambos perfiles) y contrastar con G-2 (campo) | **gate v2: p75 LCP <2,5 s en `desktop` y en `mobile`, 3 corridas** |
 
 ## Definición de hecho (DoD)
 
-REQ-002 cerrado solo con tres medidades consecutivas en verde contra producción
-(gate defendible, no lab-único), registrado en PERFORMANCE_REPORT §8 con score
-y fecha. Un solo run verde no cierra.
+REQ-002 se cierra con **G-1 en verde tres veces consecutivas, en días distintos, y
+en ambos perfiles** (`desktop` y `mobile`), contra la build desplegada, con G-2 sin
+contradicción cuando exista muestra. Un solo run verde no cierra, y un G-2 rojo con
+n ≥ 20 sesiones reabre el requisito aunque G-1 esté verde.
 
 ## Dependencias
 

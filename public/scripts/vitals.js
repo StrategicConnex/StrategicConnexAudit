@@ -38,6 +38,23 @@
   // Sampling: solo % de usuarios envía métricas (1.0 = 100%)
   if (Math.random() > SAMPLING_RATE) return;
 
+  /* ============ PROCEDENCIA DE LA MUESTRA (TD-25) ============ */
+  // Los harness de diagnóstico (Playwright) navegan con sesión forjada y
+  // escribían filas indistinguibles de las de un usuario real: cada corrida
+  // nuestra contaminaba el p75 de campo (las 7 sesiones de 5,7-9,2 s de
+  // finales de octubre son todas del harness, no de usuarios).
+  //
+  // `navigator.webdriver` cubre cualquier automatización aunque el script no
+  // declare nada; `window.__scauditSynthetic` permite marcar corridas
+  // manuales. NO es un control de seguridad —un cliente puede mentir— es una
+  // etiqueta de procedencia para que las queries de gate puedan excluirla.
+  const SYNTHETIC =
+    window.__scauditSynthetic === true || navigator.webdriver === true;
+  const SYNTHETIC_PROFILE =
+    typeof window.__scauditSyntheticProfile === 'string'
+      ? window.__scauditSyntheticProfile.slice(0, 32)
+      : null;
+
   /* ===================== STATE ===================== */
   const sessionId = getOrCreateSessionId();
   const sessionStart = Date.now();
@@ -202,6 +219,8 @@
       interactions: interactions.splice(0, 20),
       resources: resources.length ? resources.splice(0, 10) : getResourceHints(),
       isFinal: isFinal,
+      synthetic: SYNTHETIC,
+      ...(SYNTHETIC_PROFILE ? { syntheticProfile: SYNTHETIC_PROFILE } : {}),
     };
   }
 

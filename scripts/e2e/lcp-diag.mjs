@@ -5,12 +5,23 @@
 //   · SSR: si el h2 del hero va en el HTML del servidor y cuánto tarda el
 //     streaming completo del documento (time-to-last-byte).
 // Uso: node scripts/e2e/lcp-diag.mjs   (salida: JSON en stdout)
+//
+// LCP_PROFILE=desktop|mobile — perfil declarado de la corrida. El gate REQ-002
+// (v2, 2026-10-30) se cierra con corridas sintéticas reproducibles bajo un
+// perfil declarado, así que el perfil tiene que viajar con la medida:
+//   · desktop (default): sin throttling.
+//   · mobile: CPU 4× + Slow 4G (150 ms RTT, 1,6 Mbps) + viewport 412×915 —
+//     los valores de referencia de Lighthouse mobile. Cubre el sesgo de
+//     TD-23c (0% de sesiones mobile en campo).
+// Las filas que produce quedan marcadas `synthetic` en web_vitals_logs
+// (TD-25), así no contaminan el p75 de usuarios reales.
 import fs from "node:fs";
 import { chromium } from "playwright";
 
 const BASE = process.env.AUDIT_BASE_URL || "https://scaudit.vercel.app";
 const RUNS = Number(process.env.LCP_RUNS || 3);
 const HOST = new URL(BASE).hostname;
+const PROFILE = (process.env.LCP_PROFILE || "desktop").toLowerCase() === "mobile" ? "mobile" : "desktop";
 
 const env = Object.fromEntries(
   fs.readFileSync(".env.local", "utf8").split(/\r?\n/)
@@ -114,6 +125,10 @@ const OBSERVERS = `
   });
 `;
 
+// Marca de procedencia (TD-25): sin esto, cada corrida del diagnóstico escribe
+// filas indistinguibles de las de un usuario real y contamina el p75 de campo.
+const SYNTHETIC_INIT = `window.__scauditSynthetic = true; window.__scauditSyntheticProfile = ${JSON.stringify(PROFILE)};`;
+
 // ── 4. Navegaciones frías (RUNS) ────────────────────────────────────────────
 const browser = await chromium.launch({ channel: "chrome" });
 const runs = [];
@@ -124,7 +139,20 @@ for (let i = 0; i < RUNS; i++) {
     { name: "disclaimer_accepted", value: "true", domain: HOST, path: "/" },
   ]);
   await ctx.addInitScript(OBSERVERS);
+  await ctx.addInitScript(SYNTHETIC_INIT);
   const page = await ctx.newPage();
+  if (PROFILE === "mobile") {
+    // Perfil declarado: tiene que aplicarse ANTES de la navegación.
+    const cdp = await ctx.newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    await cdp.send("Network.emulateNetworkConditions", {
+      offline: false,
+      latency: 150,
+      downloadThroughput: (1.6 * 1024 * 1024) / 8,
+      uploadThroughput: (750 * 1024) / 8,
+    });
+    await page.setViewportSize({ width: 412, height: 915 });
+  }
   const tNav = performance.now();
   await page.goto(`${BASE}/`, { waitUntil: "load", timeout: 60_000 });
   const navMs = Math.round(performance.now() - tNav);
@@ -165,4 +193,4 @@ for (let i = 0; i < RUNS; i++) {
 await browser.close();
 
 // ── 5. Reporte ──────────────────────────────────────────────────────────────
-console.log(JSON.stringify({ base: BASE, at: new Date().toISOString(), ssr, runs }, null, 2));
+console.log(JSON.stringify({ base: BASE, at: new Date().toISOString(), profile: PROFILE, ssr, runs }, null, 2));
