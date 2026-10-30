@@ -110,6 +110,37 @@ Cada corrida deja rastro en `web_vitals_logs` con `synthetic: true` y
 2026-10-30), de modo que G-2 puede excluirlas. Cualquier automatización queda
 marcada también vía `navigator.webdriver`, aunque el script no lo declare.
 
+### Línea base G-1 — 2026-10-30 (día 1 de 3)
+
+Primera medición con el gate v2, contra producción y con la marca de procedencia
+ya desplegada. `LCP_RUNS=3` por perfil:
+
+| Perfil | LCP por corrida | p75 | ¿< 2 500 ms? | FCP | TTFB | Long tasks (total) | CLS |
+|--------|-----------------|-----|--------------|-----|------|--------------------|-----|
+| `desktop` | 2 164 · 1 008 · 1 004 ms | **2 164 ms** | ✅ | 2 164 · 1 008 · 1 004 ms | 261–293 ms | 527–860 ms | 0–0,01 |
+| `mobile` | 2 680 · 3 352 · 3 092 ms | **3 352 ms** | ❌ +852 ms | 1 896–1 932 ms | 276–361 ms | 3 670–4 436 ms | 0,02–0,029 |
+
+**G-1: escritorio en verde, móvil en rojo.** Es el resultado que el gate anterior no
+podía producir: con 0 % de sesiones móviles en campo (TD-23c), el "p75 de campo"
+siempre fue un número de escritorio disfrazado de universal. Bajo CPU 4× + Slow 4G el
+LCP sube ~55 % (2 164 → 3 352 ms) y las long tasks se multiplican por ~5 (527–860 →
+3 670–4 436 ms), lo que vuelve a señalar al hilo principal: el TTFB es casi idéntico
+en ambos perfiles (261–293 vs 276–361 ms), así que la red no explica la brecha.
+
+Verificación de la marca en BD para esa corrida (6 sesiones, todas etiquetadas):
+
+| Perfil | sesiones | `synthetic` | LCP máx. por sesión |
+|--------|----------|-------------|---------------------|
+| `desktop` | 3 | `true` | 2 164 · 1 008 · 1 004 ms |
+| `mobile` | 3 | `true` | 2 680 · 3 352 · 3 092 ms |
+
+La consulta G-2 de abajo, ejecutada tras la corrida, **sigue mostrando `/` con n=23 y
+p75 5 716 ms**: son las filas históricas sin marca, que no pueden excluirse
+retroactivamente. Confirma en la práctica el matiz documentado más arriba — el filtro
+empieza a discriminar desde este deploy, no antes.
+
+**REQ-002 sigue ABIERTO**: el DoD pide tres días distintos y `mobile` no cumple.
+
 ### Consulta G-2 (campo, sin sintéticas)
 
 ```sql
@@ -196,7 +227,8 @@ Desde que existe el attribution build (27-oct) **ninguna** sesión supera 4 276 
 n=3 para hoy exige prudencia: mismo host, escritorio, AR, sin throttling. No es evidencia
 suficiente para declarar mejora; sí para descartar la regresión de telemetría.
 
-**Estado del gate: ABIERTO con gate v2**, y la razón ya no es "esperar a que vuelva a
+**Estado del gate: ABIERTO con gate v2 — día 1 de 3 medido: `desktop` 2 164 ms ✅ /
+`mobile` 3 352 ms ❌ (ver "Línea base G-1" arriba).** La razón ya no es "esperar a que vuelva a
 llegar tráfico": es que el tráfico de campo **no existe** (0 sesiones reales de `/`,
 0 valores de LCP en `/login`), así que el cierre se decide con G-1 —medición
 sintética reproducible bajo perfil declarado— y G-2 queda como corroboración cuando
