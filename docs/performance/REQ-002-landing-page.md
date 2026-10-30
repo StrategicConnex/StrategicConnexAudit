@@ -123,9 +123,9 @@ ya desplegada. `LCP_RUNS=3` por perfil:
 **G-1: escritorio en verde, móvil en rojo.** Es el resultado que el gate anterior no
 podía producir: con 0 % de sesiones móviles en campo (TD-23c), el "p75 de campo"
 siempre fue un número de escritorio disfrazado de universal. Bajo CPU 4× + Slow 4G el
-LCP sube ~55 % (2 164 → 3 352 ms) y las long tasks se multiplican por ~5 (527–860 →
-3 670–4 436 ms), lo que vuelve a señalar al hilo principal: el TTFB es casi idéntico
-en ambos perfiles (261–293 vs 276–361 ms), así que la red no explica la brecha.
+LCP sube ~55 % (2 164 → 3 352 ms). Ojo con la lectura fácil de las long tasks: su total
+(3 670–4 436 ms) es de toda la sesión, pero **antes del LCP solo hay 276–502 ms** (ver
+Diagnóstico abajo); el TTFB es casi idéntico en ambos perfiles (261–293 vs 276–361 ms).
 
 Verificación de la marca en BD para esa corrida (6 sesiones, todas etiquetadas):
 
@@ -140,6 +140,33 @@ retroactivamente. Confirma en la práctica el matiz documentado más arriba — 
 empieza a discriminar desde este deploy, no antes.
 
 **REQ-002 sigue ABIERTO**: el DoD pide tres días distintos y `mobile` no cumple.
+
+### Diagnóstico de causa raíz — Paso 1 (2026-10-30)
+
+Objetivo: explicar por qué el LCP móvil (3 352 ms p75) duplica al de escritorio
+(2 164 ms). Cada hipótesis se probó con una medición propia, no por inspección:
+
+| Hipótesis | Cómo se probó | Resultado |
+|-----------|---------------|-----------|
+| El servidor emite el hero tarde (streaming) | lectura por chunks del HTML con cookies, 3 corridas | **Descartada**: el hero viaja en el **primer chunk**, 289–599 ms (≈ TTFB); documento completo 1 250–1 500 ms |
+| Un script bloquea el parser antes del hero | análisis del HTML: 22 scripts antes del hero con sus atributos reales | **Descartada**: 21 llevan `async`; el único clásico es `noModule` (polyfills, 110 KB), que los navegadores modernos **no descargan** (0 entradas en resource timing) |
+| Las webfonts retrasan el LCP | A/B con `.woff2` abortado, 3 vs 3 | **Descartada**: control 2 044–2 532 ms vs bloqueadas 1 956–2 568 ms |
+| La red (bytes) | perfil solo-red vs solo-CPU, 3 cada uno | **Inconcluso**: solo-red 1 475–1 606 ms, solo-CPU 1 376–2 907 ms, ambos 1 704–1 964 ms — el ruido entre sesiones (±800 ms) se come el efecto |
+
+Lo que queda medido: TTFB 276–361 ms en ambos perfiles; CSS render-blocking (32 KB)
+termina en 1 406–1 538 ms; FCP móvil 1 784–1 932 ms; long tasks antes del LCP 276–502 ms.
+
+**Advertencia metodológica:** el sondeo de visibilidad del hero corre en el hilo
+principal, así que bajo CPU 4× sus muestras se retrasan y sus tiempos son **cotas
+superiores**, no mediciones exactas. Y la varianza del LCP móvil entre sesiones
+idénticas (±800 ms) es hoy mayor que cualquier efecto que se quiera atribuir a n=3.
+
+**Conclusión del Paso 1: no hay un único culpable identificable con la instrumentación
+actual.** Quedan descartados servidor, JS bloqueante y fuentes. El coste residual está
+repartido entre CSS render-blocking, hidratación y trabajo de render, y el primer
+requisito para optimizar ya no es un cambio de código sino **reducir el ruido**:
+n ≥ 10 por configuración y una traza temporal (no un sampling profiler) del intervalo
+TTFB → LCP.
 
 ### Consulta G-2 (campo, sin sintéticas)
 
