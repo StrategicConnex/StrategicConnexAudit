@@ -29,6 +29,28 @@ gate.
 |---------|----------|---------------------------------------|--------|
 | **p75 LCP (campo, self-RUM)** | **< 2,5 s** | 5,704 s (n=5) | ❌ +3,2 s |
 | **p75 INP (campo, self-RUM)** | **< 300 ms** | 192 ms (n=11) | ✅ |
+
+### Re-medición de campo 2026-10-30 (ventana 7 d, dedupe por sesión — TD-23a)
+
+Consulta de solo lectura sobre `web_vitals_logs` (`percentile_cont(0.75)` sobre una
+fila por `(path, session_id)` para eliminar los beacons repetidos de una misma sesión):
+
+| Ruta | n LCP | p75 LCP | n INP | p75 INP | LCP < 2,5 s | INP < 300 ms |
+|------|-------|---------|-------|---------|-------------|--------------|
+| **`/`** | 22 | **6 070 ms** | 9 | **368 ms** | ❌ | ❌ |
+| `/intelligence` | 3 | 3 332 ms | 2 | 48 ms | ❌ | ✅ |
+| `/projects/05eb80d6…` | 2 | 5 373 ms | 0 | — | ❌ | — |
+| `/ask-ai` | 1 | 798 ms | 1 | 24 ms | ✅ | ✅ |
+
+Volumen crudo de `/`: **591 filas / 32 sesiones** (2026-10-23 → **2026-10-27T23:55Z**),
+con **4 filas mobile** de 591 → el sesgo de dispositivo de TD-23c se mantiene.
+
+**Hallazgo crítico de la sesión:** no hay **ninguna** fila de RUM para `/` posterior al
+push del 2026-10-28 (`2dd4a91`). Con el dedupe por sesión el p75 LCP sigue en **6,07 s**
+(n=22) y el p75 INP pasa a **368 ms** — con la ventana de 7 d y dedupe, INP tampoco cumple
+(el 192 ms previo era la ventana de 24 h sin dedupe). No existe, por tanto, evidencia de
+campo post-push que permita atribuir mejora o regresión: **el gate REQ-002 sigue ROJO y
+la medición post-push está pendiente de que vuelva a llegar tráfico a `/`.**
 | Score Lighthouse perf (lab, ref.) | > 80 | 63 (2026-10-18) | ❌ −17 pts |
 
 Lab histórica (2026-10-18, Lighthouse 13.7.0 vs `scaudit.vercel.app`, 1 run):
