@@ -112,6 +112,14 @@ export interface AIRequestOptions {
    * caché de producción ni dejar que un hit enmascare un modelo caído.
    */
   modelOverride?: string;
+  /**
+   * Presupuesto de primer token por intento en streaming (TD-28). Si un modelo
+   * no entrega ni un delta en este tiempo, se abandona y sigue la cadena.
+   * Sin este tope, un modelo :free congestionado consume el timeout completo
+   * de generación (20 s en chat) ANTES de que el siguiente modelo empiece, y
+   * el TTFT acaba siendo la suma de intentos muertos. Inyectable para tests.
+   */
+  firstTokenTimeoutMs?: number;
 }
 
 export interface AIResponse {
@@ -338,6 +346,45 @@ export const MODEL_TIMEOUTS: Record<AITaskType, number> = {
   // Trigger.dev (dispatch-webhook): narración de 2-4 frases, presupuesto de chat.
   "narrated-alert": 20_000,
 };
+
+/**
+ * Presupuesto de PRIMER TOKEN por intento en streaming (TD-28).
+ *
+ * `MODEL_TIMEOUTS` acota la generación completa, no el arranque: con 20 s por
+ * modelo y una cadena de 4, un turno podía pasar 40 s pagando dos modelos que
+ * nunca emitían nada antes de llegar al bueno. Medido en producción el
+ * 2026-10-30: TTFT p50 9 300 ms y máximos de 50 s, con `openrouter/free` p50
+ * 2 421 ms frente a 566 ms del failover. Este presupuesto es ~10× la mediana
+ * sana del failover, así que no descarta modelos rápidos: descarta los que no
+ * arrancan. Sólo aplica al camino de streaming (el TTFT no existe fuera de él).
+ */
+export const STREAM_FIRST_TOKEN_TIMEOUT: Record<AITaskType, number> = {
+  "general-chat": 6_000,
+  "copilot-remediation": 6_000,
+  "incident-brief": 6_000,
+  "anomaly-narrative": 6_000,
+  "narrated-alert": 6_000,
+  // Generaciones largas: el arranque legítimo de estos modelos es más lento.
+  "seo-report": 12_000,
+  "adversary-analysis": 15_000,
+  "finding-triage": 15_000,
+  "exec-brief": 15_000,
+};
+
+/** Combina señales de aborto (Node 20+ trae `AbortSignal.any`; fallback manual). */
+function combineAbortSignals(...signals: AbortSignal[]): AbortSignal {
+  const anyFn = (AbortSignal as unknown as { any?: (s: AbortSignal[]) => AbortSignal }).any;
+  if (typeof anyFn === "function") return anyFn(signals);
+  const controller = new AbortController();
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+      return controller.signal;
+    }
+    signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
+  }
+  return controller.signal;
+}
 
 // ─── Caché semántica (P1-3) ─────────────────────────────────────────────────
 // Reemplaza al Map en memoria con clave de últimos 100 chars (hit-rate ~0).
@@ -1265,7 +1312,8 @@ interface ConsumedSSE {
  */
 async function consumeOpenAiSSE(
   body: ReadableStream<Uint8Array>,
-  onText: (text: string) => void
+  onText: (text: string) => void,
+  budget?: { firstTokenTimeoutMs: number; onFirstTokenTimeout?: () => void }
 ): Promise<ConsumedSSE> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -1274,6 +1322,29 @@ async function consumeOpenAiSSE(
   let usage: AIUsageInfo | null = null;
   let error: string | null = null;
   let finished = false;
+
+  // Presupuesto de primer token: compite contra el PRIMER `read()`. Se desarma
+  // en cuanto llega un delta, así que no afecta a una generación ya en curso.
+  let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+  let deadline: Promise<never> | null = null;
+  if (budget) {
+    deadline = new Promise<never>((_, reject) => {
+      deadlineTimer = setTimeout(() => {
+        budget.onFirstTokenTimeout?.();
+        reject(new Error(`sin primer token en ${budget.firstTokenTimeoutMs}ms`));
+      }, budget.firstTokenTimeoutMs);
+    });
+    // Si el primer delta llega antes, nadie espera esta promesa: evitar que un
+    // rechazo posterior quede sin manejar.
+    deadline.catch(() => {});
+  }
+  const clearDeadline = (): void => {
+    if (deadlineTimer !== undefined) {
+      clearTimeout(deadlineTimer);
+      deadlineTimer = undefined;
+    }
+    deadline = null;
+  };
 
   const processLine = (line: string): void => {
     const trimmed = line.trim();
@@ -1315,13 +1386,21 @@ async function consumeOpenAiSSE(
     const delta = chunk.choices?.[0]?.delta;
     if (typeof delta?.content === "string" && delta.content.length > 0) {
       content += delta.content;
+      // Primer delta entregado: el intento ya arrancó, sin presupuesto.
+      if (deadline) clearDeadline();
       onText(delta.content);
     }
   };
 
   try {
     for (;;) {
-      const { value, done } = await reader.read();
+      const readPromise = reader.read();
+      // Si pierde la carrera, el read puede rechazar después: no es un error
+      // del llamador y no debe aparecer como unhandled rejection.
+      readPromise.catch(() => {});
+      const { value, done } = deadline
+        ? await Promise.race([readPromise, deadline])
+        : await readPromise;
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       let newline = buffer.indexOf("\n");
@@ -1335,7 +1414,13 @@ async function consumeOpenAiSSE(
     }
     if (!finished && buffer.length > 0) processLine(buffer);
   } finally {
-    reader.releaseLock();
+    if (deadlineTimer !== undefined) clearTimeout(deadlineTimer);
+    try {
+      reader.releaseLock();
+    } catch {
+      // Queda un read pendiente porque ganó el presupuesto: el cuerpo se
+      // abandona (y el AbortController del intento cierra la conexión).
+    }
   }
 
   return { content, usage, error };
@@ -1450,6 +1535,10 @@ export async function callAIWithFallbackStream(
       ? [options.modelOverride]
       : TASK_ROUTING[taskType] || TASK_ROUTING["general-chat"];
   const timeoutMs = MODEL_TIMEOUTS[taskType] ?? 20_000;
+  // Tope de arranque por intento: un modelo que no emite no debe consumir el
+  // timeout de generación completo antes de que empiece el siguiente (TD-28).
+  const firstTokenTimeoutMs =
+    options.firstTokenTimeoutMs ?? STREAM_FIRST_TOKEN_TIMEOUT[taskType] ?? 6_000;
 
   let accumulated = "";
 
@@ -1457,6 +1546,8 @@ export async function callAIWithFallbackStream(
   for (let i = 0; i < modelChain.length; i++) {
     const modelId = modelChain[i]!;
     let emittedThisModel = false;
+    // Aborta SOLO este intento cuando vence el presupuesto de primer token.
+    const attemptController = new AbortController();
     try {
       // El breaker protege la APERTURA del stream (HTTP + primer byte):
       // consumirlo corre fuera para que un corte a mitad no lo penalice.
@@ -1480,7 +1571,7 @@ export async function callAIWithFallbackStream(
             // (lo procesa el gateway, no el proveedor upstream).
             usage: { include: true },
           }),
-          signal: AbortSignal.timeout(timeoutMs),
+          signal: combineAbortSignals(AbortSignal.timeout(timeoutMs), attemptController.signal),
         });
         if (!response.ok) {
           const text = await response.text().catch(() => "");
@@ -1500,11 +1591,18 @@ export async function callAIWithFallbackStream(
         return response.body;
       });
 
-      const consumed = await consumeOpenAiSSE(streamBody, (text) => {
-        emittedThisModel = true;
-        accumulated += text;
-        emit(text);
-      });
+      const consumed = await consumeOpenAiSSE(
+        streamBody,
+        (text) => {
+          emittedThisModel = true;
+          accumulated += text;
+          emit(text);
+        },
+        {
+          firstTokenTimeoutMs,
+          onFirstTokenTimeout: () => attemptController.abort(),
+        }
+      );
 
       if (consumed.error) {
         // Sin texto entregado el modelo simplemente FALLA (sigue la cadena).
@@ -1562,6 +1660,7 @@ export async function callAIWithFallbackStream(
 
       failoverAttempts++;
       let emittedThisProvider = false;
+      const providerController = new AbortController();
       try {
         const streamBody = await providerBreakers[provider.id].execute(async () => {
           const baseUrl = provider.getBaseUrl().replace(/\/+$/, "");
@@ -1579,7 +1678,10 @@ export async function callAIWithFallbackStream(
               stream: true,
               ...provider.extraBody,
             }),
-            signal: AbortSignal.timeout(providerTimeoutMs),
+            signal: combineAbortSignals(
+              AbortSignal.timeout(providerTimeoutMs),
+              providerController.signal
+            ),
           });
           if (!response.ok) {
             const text = await response.text().catch(() => "");
@@ -1599,11 +1701,18 @@ export async function callAIWithFallbackStream(
         });
 
         const providerModelId = `${provider.id}:${provider.model}`;
-        const consumed = await consumeOpenAiSSE(streamBody, (text) => {
-          emittedThisProvider = true;
-          accumulated += text;
-          emit(text);
-        });
+        const consumed = await consumeOpenAiSSE(
+          streamBody,
+          (text) => {
+            emittedThisProvider = true;
+            accumulated += text;
+            emit(text);
+          },
+          {
+            firstTokenTimeoutMs,
+            onFirstTokenTimeout: () => providerController.abort(),
+          }
+        );
 
         if (consumed.error) {
           if (!emittedThisProvider) throw new Error(consumed.error);

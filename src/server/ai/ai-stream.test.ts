@@ -591,3 +591,63 @@ describe("callAIWithFallback — C3 bypass de caché con historia (JSON)", () =>
     );
   });
 });
+
+// ─── TD-28: presupuesto de primer token ─────────────────────────────────────
+//
+// `MODEL_TIMEOUTS` acota la generación completa, no el arranque. Sin tope de
+// arranque, un modelo que nunca emite se cobra los 20 s enteros y el TTFT pasa
+// a ser la suma de intentos muertos (medido en producción: hasta 50 s con el
+// primer modelo bueno en el intento 3).
+
+describe("callAIWithFallbackStream — presupuesto de primer token (TD-28)", () => {
+  it("abandona un modelo que no emite dentro del presupuesto y usa el siguiente", async () => {
+    let openRouterCalls = 0;
+    fetchHandler = () => {
+      openRouterCalls++;
+      if (openRouterCalls === 1) {
+        // Stream abierto que nunca entrega datos ni cierra: el escenario real
+        // de un modelo :free congestionado que no arranca.
+        return new Response(new ReadableStream<Uint8Array>({ start() {} }), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        });
+      }
+      return sseResponse([deltaEvent("segundo modelo"), DONE_EVENT]);
+    };
+
+    const chunks: string[] = [];
+    const res = await callAIWithFallbackStream(
+      {
+        taskType: "general-chat",
+        messages: userMessages("ttft-budget"),
+        firstTokenTimeoutMs: 30,
+      },
+      (text) => chunks.push(text),
+    );
+
+    expect(chunks).toEqual(["segundo modelo"]);
+    expect(res.success).toBe(true);
+    expect(res.modelUsed).toBe("nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free");
+    expect(openRouterCalls).toBe(2);
+  });
+
+  it("no penaliza un modelo que emite antes del presupuesto", async () => {
+    let openRouterCalls = 0;
+    fetchHandler = () => {
+      openRouterCalls++;
+      return sseResponse([deltaEvent("ok"), DONE_EVENT]);
+    };
+
+    const res = await callAIWithFallbackStream(
+      {
+        taskType: "general-chat",
+        messages: userMessages("ttft-no-penalty"),
+        firstTokenTimeoutMs: 5_000,
+      },
+      () => {},
+    );
+
+    expect(openRouterCalls).toBe(1);
+    expect(res.modelUsed).toBe("openrouter/free");
+  });
+});

@@ -855,6 +855,33 @@ describe("AI: Copilot — streaming (stream: true)", () => {
     expect(options.disableSemanticCache).toBe(false);
   });
 
+  // TD-28: sin el reparto por fases, atribuir el TTFT es adivinar. El header
+  // es diagnóstico y no debe alterar el cuerpo del SSE.
+  it("expone el desglose por fases en Server-Timing", async () => {
+    mockCallAIStream.mockImplementation(
+      async (
+        _options: unknown,
+        onChunk: (text: string) => void,
+      ): Promise<unknown> => {
+        onChunk("ok");
+        return { success: true, content: "ok", modelUsed: "m1", latencyMs: 1 };
+      },
+    );
+
+    const res = await POST(
+      createRequest({ messages: [{ role: "user", content: "hola" }], stream: true }) as never,
+      "u-1",
+    );
+    await res.text();
+
+    const timing = res.headers.get("Server-Timing") ?? "";
+    for (const phase of ["quota", "body", "ctx", "suggest", "prompt", "router"]) {
+      expect(timing).toContain(`${phase};dur=`);
+    }
+    // El tramo router sólo existe con primer delta: debe ser un número, no null.
+    expect(timing).toMatch(/router;dur=\d+/);
+  });
+
   it("stream recibe la misma historia redactada y delimitada", async () => {
     mockCallAIStream.mockImplementation(
       async (

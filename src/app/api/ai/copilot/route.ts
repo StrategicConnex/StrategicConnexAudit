@@ -30,6 +30,37 @@ export const dynamic = 'force-dynamic';
 // respuesta.
 export const maxDuration = 120;
 
+/**
+ * Desglose del tiempo hasta el primer token (TD-28).
+ *
+ * El router ya persiste `ttft_ms` (inicio del router → primer delta), pero todo
+ * lo que ocurre ANTES —cuota, parseo, carga del contexto bajo RLS, sugerencia e
+ * i18n, construcción del prompt— no se medía en ningún sitio. Sin ese reparto,
+ * atribuir el TTFT a "la IA" o a "la base de datos" es adivinar: por eso se
+ * mide por fases y se expone en `Server-Timing`, que es un header estándar de
+ * diagnóstico y no altera el cuerpo ni el contrato del SSE.
+ */
+type ChatTimings = {
+  quota: number;
+  body: number;
+  ctx: number;
+  suggest: number;
+  prompt: number;
+  router: number | null;
+};
+
+function emptyTimings(): ChatTimings {
+  return { quota: 0, body: 0, ctx: 0, suggest: 0, prompt: 0, router: null };
+}
+
+/** `Server-Timing` con una entrada `dur` por fase medida (ms). */
+function serverTimingValue(timings: ChatTimings): string {
+  return (Object.entries(timings) as [string, number | null][])
+    .filter(([, value]) => typeof value === "number")
+    .map(([name, value]) => `${name};dur=${value}`)
+    .join(", ");
+}
+
 /** ¿El error es "ningún proveedor de IA configurado" (onboarding) o una incidencia? */
 function isMissingKeyError(error: string): boolean {
   return /not configured|no configurada|ninguna clave/i.test(error);
@@ -86,6 +117,8 @@ function streamCopilotResponse(
   validatedFindings: CitedFinding[],
   suggestion: ChatSuggestion | null,
   correlationId: string,
+  timings: ChatTimings,
+  routerStartedAt: number,
 ): Promise<Response> {
   const encoder = new TextEncoder();
   let started = false;
@@ -117,6 +150,8 @@ function streamCopilotResponse(
     (text) => {
       if (!started) {
         started = true;
+        // Primer delta: aquí ya se conoce el tramo router (caché + proveedor).
+        timings.router = Date.now() - routerStartedAt;
         const stream = new ReadableStream<Uint8Array>({
           start(c) {
             controller = c;
@@ -182,6 +217,7 @@ function streamCopilotResponse(
         headers: {
           "Content-Type": "text/event-stream; charset=utf-8",
           "Cache-Control": "no-cache, no-transform",
+          "Server-Timing": serverTimingValue(timings),
           Connection: "keep-alive",
           // Los proxies (Cloudflare) bufferizan el SSE sin esto y el texto
           // llegaría de golpe al final, matando el streaming.
@@ -217,12 +253,23 @@ export const POST = withRateLimit(
     }
   },
   async (req: NextRequest, userId: string) => {
+    // Fases pre-router medidas (TD-28). `phaseAt` avanza en cada `mark`, de
+    // modo que cada fase mide SU tramo y no el acumulado.
+    const timings = emptyTimings();
+    let phaseAt = Date.now();
+    const mark = (phase: Exclude<keyof ChatTimings, "router">): void => {
+      const now = Date.now();
+      timings[phase] = now - phaseAt;
+      phaseAt = now;
+    };
     try {
       // Cuota diaria P0-1: antes de cualquier trabajo costoso
       const quota = await assertAiQuota(userId, "general-chat");
       if (quota) return quota;
+      mark("quota");
 
       const body = await req.json().catch(() => null);
+      mark("body");
       const { messages, context, mode = 'copilot', stream, intelligenceContext } = body ?? {};
 
       if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -291,6 +338,7 @@ export const POST = withRateLimit(
         promptMode = 'analyst';
         validatedFindings = toCitedFindings(resolvedContext);
       }
+      mark("ctx");
 
       // Sugerencia proactiva: plantilla localizada en servidor, solo para
       // hallazgos críticos ≤7 días. El cliente aplica frecuencia y descarte.
@@ -316,6 +364,7 @@ export const POST = withRateLimit(
           messages: i18nMessages as Record<string, unknown>,
         });
       }
+      mark("suggest");
 
       // Prompt centralizado (grounding + anti-inyección), ver copilot-prompt.ts
       const systemMsg: AIMessage = {
@@ -338,6 +387,10 @@ export const POST = withRateLimit(
       // historia. El primer turno sigue tenant-scoped cacheable.
       const userTurns = conversation.filter((turn) => turn.role === "user").length;
       const disableSemanticCache = userTurns > 1;
+      mark("prompt");
+
+      // Origen del tramo router: desde aquí hasta el primer delta del modelo.
+      const routerStartedAt = Date.now();
 
       // ── Streaming (Sprint 1): respuestas progresivas por SSE ─────────────
       if (stream === true) {
@@ -349,6 +402,8 @@ export const POST = withRateLimit(
           validatedFindings,
           suggestion,
           correlationId,
+          timings,
+          routerStartedAt,
         );
       }
 
@@ -384,15 +439,19 @@ export const POST = withRateLimit(
         });
       }
 
-      return NextResponse.json({
-        success: true,
-        message: cited.text,
-        references: cited.references,
-        unverifiedCount: cited.unverifiedCount,
-        suggestion,
-        modelUsed: aiResult.modelUsed,
-        fromCache: aiResult.fromCache,
-      });
+      timings.router = Date.now() - routerStartedAt;
+      return NextResponse.json(
+        {
+          success: true,
+          message: cited.text,
+          references: cited.references,
+          unverifiedCount: cited.unverifiedCount,
+          suggestion,
+          modelUsed: aiResult.modelUsed,
+          fromCache: aiResult.fromCache,
+        },
+        { headers: { "Server-Timing": serverTimingValue(timings) } },
+      );
 
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
