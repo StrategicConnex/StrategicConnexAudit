@@ -13,7 +13,7 @@
     "reportHint": "Include in your report: problem description, steps to reproduce, screenshots if applicable, and browser/version used.",
     "acceptLabel": "I have read and accept the terms of the legal notice",
     "accept": "Accept",
-    "updated": "Last updated: October 29, 2026",
+    "updated": "Last updated: November 1, 2026",
     "status": {
       "title": "Product status",
       "intro": "A summary of available capabilities and recorded follow-ups. The platform remains in beta and this status is updated with every release.",
@@ -30,13 +30,14 @@
         "Landing first-load ~17% smaller, immutable static asset caching and hero SSR outside Suspense",
         "Tenant-scoped AI L2 cache active in production, findings/audits indexes and uptime_logs partitioning",
         "/admin/usage dashboard with usage KPIs and daily chart",
-        "RLS hardening, CSP, accessibility (axe-core), e2e tests and hermetic security tests"
+        "RLS hardening, CSP, accessibility (axe-core), e2e tests and hermetic security tests",
+        "Intelligence scanning without simulated times: real clock, indeterminate bar, and each run's real events in the detail view"
       ],
       "inProgress": [
         "Field validation of the copilot (T+48h, ≥20 streamed turns with critical findings)",
         "Field closure of REQ-002: dashboard LCP p75 with session deduplication (desktop declared)",
         "Real database round-trip optimization (F-A)",
-        "F-SCAN/TD-22: scan progress driven by real events instead of simulated times",
+        "Reducing the copilot's time-to-first-token (TTFT): instrumented phases and early attempt abandonment shipped; the 1.5s target is still in progress",
         "TD-24: floating dashboard copilot context resolved and authorized server-side"
       ],
       "note": "This status reflects the repository code, not a deployment verification. Pending items may change before release; roadmap dates are estimates."

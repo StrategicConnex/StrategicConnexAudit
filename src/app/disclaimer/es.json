@@ -13,7 +13,7 @@
     "reportHint": "Incluye en tu reporte: descripción del problema, pasos para reproducirlo, capturas de pantalla si aplica y navegador/version utilizada.",
     "acceptLabel": "He leído y acepto los términos del aviso legal",
     "accept": "Aceptar",
-    "updated": "Última actualización: 29 de octubre de 2026",
+    "updated": "Última actualización: 1 de noviembre de 2026",
     "status": {
       "title": "Estado del producto",
       "intro": "Resumen de las capacidades disponibles y los pendientes registrados. La plataforma sigue en beta y este estado se actualiza con cada release.",
@@ -30,13 +30,14 @@
         "First-load del landing ≈17% menor, caché inmutable de assets estáticos y hero SSR fuera del Suspense",
         "Caché L2 de IA activa en producción, índices de findings/audits y particionado de logs de uptime",
         "Panel /admin/usage con KPIs de uso y gráfico diario",
-        "Endurecimiento de RLS, CSP, accesibilidad (axe-core), pruebas e2e y hermeticidad de tests de seguridad"
+        "Endurecimiento de RLS, CSP, accesibilidad (axe-core), pruebas e2e y hermeticidad de tests de seguridad",
+        "Escaneo de inteligencia sin tiempos ficticios: reloj real, barra indeterminada y los eventos reales de cada run en la vista de detalle"
       ],
       "inProgress": [
         "Validación de campo del copiloto (T+48h, muestra ≥20 turnos streamed con hallazgos críticos)",
         "Cierre de campo REQ-002: LCP p75 del dashboard con dedupe por sesión (escritorio declarado)",
         "Optimización de round-trips de base de datos (F-A real)",
-        "F-SCAN/TD-22: progreso de escaneo con eventos reales en lugar de tiempos ficticios",
+        "Agilizar el primer token del copiloto (TTFT): fases instrumentadas y abandono temprano del primer intento desplegados; el objetivo de 1,5 s sigue en progreso",
         "TD-24: contexto del copiloto flotante del dashboard resuelto en el servidor"
       ],
       "note": "Este estado refleja el código del repositorio, no una verificación de despliegue. Los pendientes pueden cambiar antes de su release; las fechas de la hoja de ruta son estimaciones."
