@@ -52,7 +52,7 @@ export function IntelligenceTab({
   // Form input & loading states
   const [targetInput, setTargetInput] = useState('');
   const [isScanning, setIsScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState<string[]>([]);
+  const [scanTarget, setScanTarget] = useState('');
   const [scanStatusMessage, setScanStatusMessage] = useState('');
   
   // IA Copilot remediation state
@@ -68,8 +68,6 @@ export function IntelligenceTab({
   // Advanced interaction states
   const [expandedAccordions, setExpandedAccordions] = useState<Record<string, boolean>>({});
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [scanSpeed, setScanSpeed] = useState('0.0 KB/s');
-  const [progressPercent, setProgressPercent] = useState(0);
 
 
   // AI Integrations state
@@ -186,65 +184,61 @@ export function IntelligenceTab({
     }
   }, [selectedId, fetchInvestigationDetails]);
 
-  // Scroll to bottom of terminal console
+  // Scroll to bottom of terminal console (la consola muestra el estado real)
   useEffect(() => {
     if (consoleEndRef.current) {
       consoleEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [scanProgress]);
+  }, [scanStatusMessage, elapsedTime]);
 
-  // Simulated live console log generator
-  const simulateConsoleLogs = (target: string, onFinish: () => void) => {
-    const steps = [
-      `[00:01] ⚡ Inicializando motor de inteligencia cibernética a nivel de infraestructura...`,
-      `[00:03] 🌐 Resolviendo registros de DNS para "${target}" en servidores autoritativos...`,
-      `[00:05]    ├─ Consulta de registro A: completado.`,
-      `[00:06]    ├─ Consulta de registro AAAA: completado.`,
-      `[00:08]    ├─ Consulta de registro MX: completado.`,
-      `[00:10]    └─ Consulta de registro TXT / SPF / DMARC: completado.`,
-      `[00:12] 🔒 Iniciando handshake SSL/TLS de alta fidelidad...`,
-      `[00:15]    ├─ Verificación de cadena de certificación y validez temporal...`,
-      `[00:18]    ├─ Escaneo de soporte de ciphers obsoletos (SSLv3, TLS 1.0, TLS 1.1)...`,
-      `[00:21]    └─ Comprobación de vulnerabilidades conocidas (Heartbleed, Logjam)...`,
-      `[00:24] 🛡️ Analizando cabeceras de seguridad HTTP aplicadas...`,
-      `[00:27]    ├─ Evaluando directiva Strict-Transport-Security (HSTS)...`,
-      `[00:30]    ├─ Evaluando directiva Content-Security-Policy (CSP)...`,
-      `[00:32]    └─ Comprobando protección contra Clickjacking (X-Frame-Options)...`,
-      `[00:35] ⚖️ Evaluando deducción de puntaje y catalogación de riesgos...`,
-      `[00:38] 🧠 Compilando análisis heurístico final...`,
-      `[00:40] 🚀 Proceso completado exitosamente. Sincronizando registros persistentes en base de datos.`
-    ];
-
-    setScanProgress([]);
+  /**
+   * TD-22: aquí había un generador de logs FICTICIO —17 líneas con timestamps
+   * inventados (`[00:32] …`), una tasa de transferencia aleatoria (22–37 KB/s) y
+   * un porcentaje que avanzaba por temporizador— que corría 13 s ANTES de
+   * llamar a la API. El usuario veía un escaneo que no ocurría.
+   *
+   * El POST de /api/intelligence es síncrono: la investigación se crea, corren
+   * las tools y los `intelligence_run_events` se escriben en la MISMA
+   * transacción final, así que durante el escaneo no existe ningún progreso
+   * observable (ni por polling ni por SSE). Se muestra solo lo verificable: el
+   * objetivo, el reloj real y el estado en curso. Al terminar, la vista de
+   * detalle muestra los eventos reales del run.
+   */
+  const runScan = async (target: string) => {
     setIsScanning(true);
     setCopilotOutput(null);
     setCopilotAction(null);
     setErrorText(null);
     setElapsedTime(0);
-    setScanSpeed('0.0 KB/s');
-    setProgressPercent(0);
+    setScanTarget(target);
+    setScanStatusMessage(`Ejecutando análisis de ${target}…`);
 
-    let idx = 0;
-    const startTime = Date.now();
-    
+    const startedAt = Date.now();
     const timeTimer = setInterval(() => {
-      setElapsedTime(Math.round((Date.now() - startTime) / 1000));
-      setScanSpeed((Math.random() * 15 + 22).toFixed(1) + ' KB/s');
-    }, 500);
+      setElapsedTime(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
 
-    const logTimer = setInterval(() => {
-      if (idx < steps.length) {
-        setScanProgress(prev => [...prev, steps[idx]!]);
-        setScanStatusMessage(steps[idx]!.replace(/\[\d+:\d+\] /, ''));
-        setProgressPercent(Math.round(((idx + 1) / steps.length) * 100));
-        idx++;
+    try {
+      const res = await fetch('/api/intelligence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: selectedProjectId, target }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        await fetchInvestigations(selectedProjectId);
+        setSelectedId(data.investigation.id);
       } else {
-        clearInterval(logTimer);
-        clearInterval(timeTimer);
-        setProgressPercent(100);
-        onFinish();
+        setErrorText(data.error || 'Ocurrió un error inesperado durante el análisis.');
       }
-    }, 800);
+    } catch (err: unknown) {
+      setErrorText(`Error de conexión con la API de Inteligencia: ${getErrorMessage(err)}`);
+    } finally {
+      clearInterval(timeTimer);
+      setElapsedTime(Math.floor((Date.now() - startedAt) / 1000));
+      setIsScanning(false);
+    }
   };
 
   // Launch scan handler
@@ -261,30 +255,7 @@ export function IntelligenceTab({
       return;
     }
 
-    simulateConsoleLogs(target, async () => {
-      try {
-        const res = await fetch('/api/intelligence', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            projectId: selectedProjectId,
-            target: target
-          })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-          await fetchInvestigations(selectedProjectId);
-          setSelectedId(data.investigation.id);
-        } else {
-          setErrorText(data.error || 'Ocurrió un error inesperado durante el análisis.');
-        }
-      } catch (err: unknown) {
-        setErrorText(`Error de conexión con la API de Inteligencia: ${getErrorMessage(err)}`);
-      } finally {
-        setIsScanning(false);
-      }
-    });
+    await runScan(target);
   };
 
   // Call IA Copilot Remediation
@@ -521,44 +492,31 @@ export function IntelligenceTab({
             </div>
 
             {/* Terminal Top Status Metrics Panel */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-8 py-5 bg-background/90 border-b border-chartreuse/10 relative z-30 font-mono text-2xs text-muted-fg">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-8 py-5 bg-background/90 border-b border-chartreuse/10 relative z-30 font-mono text-2xs text-muted-fg">
               <div className="space-y-1 border-r border-chartreuse/5 pr-4">
-                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">MÓDULO DE INTELIGENCIA</span>
-                <span className="font-extrabold text-foreground/80 uppercase truncate block">
-                  {progressPercent < 30 ? 'INICIALIZACIÓN' : progressPercent < 60 ? 'MÉTRICAS DNS / WHOIS' : progressPercent < 90 ? 'CUBIERTA SSL/TLS' : 'COMPILACIÓN FINAL'}
-                </span>
+                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">OBJETIVO</span>
+                <span className="font-extrabold text-foreground/80 truncate block">{scanTarget}</span>
               </div>
               <div className="space-y-1 border-r border-chartreuse/5 pr-4">
-                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">TASA DE TRANSFERENCIA</span>
-                <span className="font-extrabold text-chartreuse block">{scanSpeed}</span>
-              </div>
-              <div className="space-y-1 border-r border-chartreuse/5 pr-4">
-                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">TIEMPO TRANSCURRIDO</span>
-                <span className="font-extrabold text-foreground/80 block">{elapsedTime}s</span>
+                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">ESTADO</span>
+                <span className="font-extrabold text-chartreuse block uppercase">EN CURSO</span>
               </div>
               <div className="space-y-1">
-                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">PROGRESO GENERAL</span>
-                <span className="font-extrabold text-chartreuse/90 block">{progressPercent}%</span>
+                <span className="block text-2xs font-bold text-muted-fg uppercase tracking-widest">TIEMPO TRANSCURRIDO</span>
+                <span className="font-extrabold text-foreground/80 block">{elapsedTime}s</span>
               </div>
             </div>
 
             {/* Retro Phosphor Screen Body */}
             <div className="p-8 font-mono text-xs leading-relaxed text-chartreuse/90 bg-background max-h-[350px] overflow-y-auto flex flex-col gap-3.5 border-b border-chartreuse/10 relative z-30 scroll-smooth">
-              {scanProgress.map((line, idx) => (
-                <div key={idx} className="animate-in fade-in duration-200 font-semibold font-mono tracking-wide flex items-start gap-1">
-                  <span className="text-chartreuse/50 select-none">&gt;</span>
-                  <span className="flex-1">{line}</span>
-                  {idx === scanProgress.length - 1 && (
-                    <span className="inline-block w-2.5 h-4 bg-chartreuse animate-pulse ml-1 text-center font-bold shadow-[0_0_6px_rgba(140,200,80,0.5)] select-none">▋</span>
-                  )}
-                </div>
-              ))}
-              {scanProgress.length === 0 && (
-                <div className="text-chartreuse/30 font-mono font-bold tracking-widest flex items-center gap-2">
-                  <span>Conectando a servicios de escaneo remoto...</span>
-                  <span className="inline-block w-2.5 h-4 bg-chartreuse animate-pulse shadow-[0_0_6px_rgba(140,200,80,0.5)] select-none">▋</span>
-                </div>
-              )}
+              <div className="animate-in fade-in duration-200 font-semibold font-mono tracking-wide flex items-start gap-1">
+                <span className="text-chartreuse/50 select-none">&gt;</span>
+                <span className="flex-1">{scanStatusMessage}</span>
+                <span className="inline-block w-2.5 h-4 bg-chartreuse animate-pulse ml-1 text-center font-bold shadow-[0_0_6px_rgba(140,200,80,0.5)] select-none">▋</span>
+              </div>
+              <div className="text-chartreuse/30 font-mono font-bold tracking-widest">
+                Los eventos del run se registran al finalizar el análisis; esta consola no los inventa.
+              </div>
               <div ref={consoleEndRef} />
             </div>
 
@@ -574,13 +532,14 @@ export function IntelligenceTab({
               {/* Green Retro Progress Bar */}
               <div className="w-full md:w-72 flex items-center gap-4">
                 <div className="flex-1 h-3 bg-black border border-chartreuse/20 rounded-full overflow-hidden p-0.5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
-                  <div 
-                    className="h-full bg-gradient-to-r from-chartreuse to-primary rounded-full transition-[width,background-color,box-shadow] duration-300 shadow-[0_0_10px_rgba(140,200,80,0.4)]"
-                    style={{ width: `${progressPercent}%` }}
+                  {/* Indeterminada a propósito: el servidor no expone avance
+                      parcial (ver TD-22), así que un porcentaje sería inventado. */}
+                  <div
+                    className="h-full w-1/3 bg-gradient-to-r from-chartreuse to-primary rounded-full animate-pulse shadow-[0_0_10px_rgba(140,200,80,0.4)]"
                   />
                 </div>
                 <span className="font-mono text-2xs text-chartreuse font-extrabold min-w-[32px] text-right">
-                  {progressPercent}%
+                  …
                 </span>
               </div>
             </div>
