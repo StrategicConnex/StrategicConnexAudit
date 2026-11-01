@@ -18,47 +18,71 @@
 <body>
     <h1>StrategicAudit Pro - Diagramas Arquitectónicos</h1>
 
-    <h2>1. Flujo de Ruteo y Fallback de IA</h2>
+    <h2>1. Ruteo, caché y fallback de IA</h2>
     <div class="mermaid">
 flowchart TD
-    START[Solicitud AI - Task Type]
-    METAMODEL[openrouter/free - Meta-modelo]
-    CHAIN[Cadena Tarea Especifica]
-    FALLBACK[Failover Groq a Gemini]
-    CIRCUIT[Circuit Breakers]
-    RESULT[Resultado AI]
-    LOG[recordAiUsage - fire and forget]
+    START["callAIWithFallback - taskType"]
+    CACHE{"Cache semantica L1 + L2 aplicable?"}
+    HIT["Respuesta cacheada - fromCache true"]
+    CHAIN["Cadena TASK_ROUTING de la tarea"]
+    MODEL["Modelo N con CircuitBreaker openrouter_api"]
+    SELFHEAL["Self-heal JSON - 1 reintento al mismo modelo"]
+    GROQ["Failover 1 - Groq openai/gpt-oss-120b"]
+    GEMINI["Failover 2 - Gemini gemini-3.8-flash"]
+    RESULT["Resultado AI"]
+    LOG["recordAiUsage - fire and forget"]
 
-    START --> METAMODEL
-    METAMODEL -->|Exito| CHAIN
-    METAMODEL -->|Fallo| FALLBACK
-    CHAIN --> CIRCUIT
-    CIRCUIT --> RESULT
-    FALLBACK --> RESULT
+    START --> CACHE
+    CACHE -->|hit| HIT
+    CACHE -->|miss| CHAIN
+    CACHE -->|tools o modelOverride| CHAIN
+    CHAIN --> MODEL
+    MODEL -->|200 con contenido| RESULT
+    MODEL -->|timeout 429 402 o 200 vacio| CHAIN
+    MODEL -->|JSON critico invalido| SELFHEAL
+    SELFHEAL -->|JSON corregido| RESULT
+    SELFHEAL -->|sigue invalido| CHAIN
+    CHAIN -->|cadena agotada| GROQ
+    GROQ -->|sin clave o falla| GEMINI
+    GROQ -->|200| RESULT
+    GEMINI -->|200| RESULT
+    HIT --> LOG
     RESULT --> LOG
     </div>
 
     <h2>2. Flujo de RUM Self-Instrumentation</h2>
     <div class="mermaid">
 flowchart TD
-    ENV[NEXT_PUBLIC_RUM_PROJECT_ID]
-    ENV_TOKEN[NEXT_PUBLIC_RUM_BEACON_TOKEN]
-    VALIDATION[Validacion UUID con Zod]
-    RUM_ID[rumProjectId definido si la validacion tiene exito]
-    RENDER[Renderizar vitals.js si existe rumProjectId]
-    SEND[POST /api/telemetry/vitals]
-    VALIDATE_ENDPOINT[Validar proyecto activo y beacon token]
-    PERSIST[Persistir en web_vitals_logs de D1]
-    CORS[Validar origen - permitir, null o 403]
+    ENV["NEXT_PUBLIC_RUM_PROJECT_ID"]
+    ENV_TOKEN["NEXT_PUBLIC_RUM_BEACON_TOKEN"]
+    VALIDATION["Validacion UUID con Zod"]
+    RUM_ID["rumProjectId definido si la validacion pasa"]
+    RENDER["Renderizar vitals.js si existe rumProjectId"]
+    SEND["POST /api/telemetry/vitals - 60 req/min"]
+    CORS["Validar origen - ALLOWED_TELEMETRY_ORIGINS"]
+    REJECT403["403 origen no permitido"]
+    SIZE["Guard de tamano - 64 KB"]
+    VALIDATE["Proyecto activo y beacon token"]
+    REJECT404["404 proyecto inactivo o inexistente"]
+    REJECT401["401 beacon token invalido"]
+    PERSIST["Insert en web_vitals_logs - PostgreSQL Supabase"]
+    OK["204 sin contenido"]
+    REJECT503["503 telemetry_unavailable"]
 
     ENV --> VALIDATION
-    ENV_TOKEN --> VALIDATE_ENDPOINT
+    ENV_TOKEN --> SEND
     VALIDATION --> RUM_ID
     RUM_ID --> RENDER
     RENDER --> SEND
-    SEND --> VALIDATE_ENDPOINT
-    VALIDATE_ENDPOINT --> PERSIST
-    VALIDATE_ENDPOINT --> CORS
+    SEND --> CORS
+    CORS -->|origen no permitido| REJECT403
+    CORS -->|origen permitido| SIZE
+    SIZE --> VALIDATE
+    VALIDATE -->|inactivo| REJECT404
+    VALIDATE -->|token invalido| REJECT401
+    VALIDATE --> PERSIST
+    PERSIST --> OK
+    PERSIST -->|fallo DB| REJECT503
     </div>
 
     <p><strong>Nota:</strong> Consulta <a href="MERMAID-DIAGRAMS.md">MERMAID-DIAGRAMS.md</a> para los cinco diagramas completos con estilos y detalles.</p>
