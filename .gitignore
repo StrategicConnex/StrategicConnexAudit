@@ -99,3 +99,8 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# workspace residues (2026-11-01): drafts, empty logs and obsolete captures
+# live at the workspace root (outside this repo) - never let them in here
+_archivados-*/
+.cloud-attachments/
