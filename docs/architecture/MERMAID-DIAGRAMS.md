@@ -102,7 +102,7 @@ La vista RUM representa envío de telemetría y persistencia en `web_vitals_logs
 ## 14. Unknowns y assumptions
 
 - [UNKNOWN] No hay evidencia en este commit sobre disponibilidad o latencia actual de los slugs `:free`; las capacidades citadas son las verificadas en vivo por el router (comentarios de `ai-router.ts`, agosto/septiembre 2026).
-- [UNKNOWN] Supabase Storage se muestra en el diagrama de origen pero no tiene llamadas en `src`; si se adopta, este documento debe actualizarse con el bucket y sus políticas.
+- [UNKNOWN] Supabase Storage: ver nodo `STORAGE` en FIG-003 (§18); no invocado desde `src/`.
 - [ASSUMPTION] Las relaciones de flecha muestran el flujo previsto del sistema y no todas las interacciones posibles.
 - [VERIFIED] Umbrales del breaker (5 / 30 s / 2), cadenas por tarea, timeouts por intento y destinos de persistencia son los del código citado.
 
@@ -204,11 +204,13 @@ flowchart LR
     classDef db fill:#e3f2fd,stroke:#1976d2,stroke-width:2px;
     classDef cache fill:#f1f8e9,stroke:#388e3c,stroke-width:2px;
     classDef external fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
+    classDef unused fill:#f5f5f5,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray: 5 5;
 
     UI["Interfaz de Usuario - Next.js"]:::frontend
     API["API Routes - /api/*"]:::api
     VERCEL["Plataforma Vercel"]:::external
     SUPABASE["Supabase Auth - sesion SSR"]:::external
+    STORAGE["Supabase Storage<br/>(no invocado desde src/<br/>provisión no verificable desde el repo)"]:::unused
     AI["Motor IA - ai-router.ts"]:::ai
     CACHE["Cache semantica L1 memoria + L2 distributed_cache"]:::cache
     UTILS["Utilidades IA - ai-usage, ai-cache"]:::ai
