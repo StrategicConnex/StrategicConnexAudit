@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { checkAiDailyQuota } from "@/shared/lib/ratelimit";
 import type { AITaskType } from "./ai-router";
 
@@ -79,6 +79,38 @@ export async function recordAiUsage(
     });
   } catch {
     // Silencio deliberado: la telemetría nunca rompe la respuesta al usuario.
+  }
+}
+
+/**
+ * TD-28(b): programa el registro de uso para que sobreviva al cierre de la
+ * respuesta.
+ *
+ * `void recordAiUsage(…)` se perdía cuando Vercel congela la invocación en
+ * cuanto termina el stream: la medición de campo del 2026-10-30 encontró 26
+ * filas de `ai_usage` para 33 turnos generados (~21 % sin fila), y las que
+ * faltaban eran justo las dos más pesadas. `after()` mantiene la función viva
+ * hasta que la promesa se resuelve, así que la fila se escribe siempre.
+ *
+ * Fuera de un request scope (tasks de Trigger.dev, scripts, tests) `after()`
+ * lanza; ahí se mantiene el fire-and-forget de siempre.
+ *
+ * Recibe el registro como callback (no la fila) para que quien llama siga
+ * invocando `recordAiUsage` y los spies de los tests sigan observándolo.
+ */
+export function scheduleAiUsage(run: () => unknown): void {
+  const safe = (): void => {
+    try {
+      void Promise.resolve(run()).catch(() => {});
+    } catch {
+      // La telemetría nunca rompe la respuesta, ni siquiera si el callback
+      // lanza de forma síncrona.
+    }
+  };
+  try {
+    after(safe);
+  } catch {
+    safe();
   }
 }
 

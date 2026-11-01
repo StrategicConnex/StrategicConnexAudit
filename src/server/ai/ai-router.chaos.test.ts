@@ -22,6 +22,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // Telemetría fuera del camino: evita importar la capa DB.
 vi.mock("./ai-usage", () => ({
   recordAiUsage: vi.fn(async () => {}),
+  // TD-28(b): el router programa el registro con `after()`; en los tests no hay
+  // request scope, así que se resuelve con un spy sin efectos.
+  scheduleAiUsage: vi.fn(),
   assertAiQuota: vi.fn(async () => null),
 }));
 

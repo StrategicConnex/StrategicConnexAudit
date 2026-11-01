@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { recordAiUsage, assertAiQuota } from "./ai-usage";
+import { describe, it, expect, vi } from "vitest";
+import { recordAiUsage, scheduleAiUsage, assertAiQuota } from "./ai-usage";
 import { checkAiDailyQuota } from "@/shared/lib/ratelimit";
 
 function fakeDb(captured: { v?: unknown }, fail = false) {
@@ -103,5 +103,27 @@ describe("ai-usage — telemetría anti-ruina (P0-1)", () => {
   it("assertAiQuota retorna null con cuota disponible", async () => {
     const res = await assertAiQuota(`q4-${Date.now()}`, "seo-report");
     expect(res).toBeNull();
+  });
+});
+
+describe("TD-28(b) — el registro de uso sobrevive al cierre de la respuesta", () => {
+  it("sin request scope (tests, Trigger.dev) ejecuta el registro igualmente", async () => {
+    // `after()` lanza fuera de un request scope: el fallback debe ejecutar el
+    // callback, no perder la fila en silencio.
+    let called = 0;
+    scheduleAiUsage(() => {
+      called++;
+    });
+    await Promise.resolve();
+    expect(called).toBe(1);
+  });
+
+  it("un fallo del registro no se propaga al llamador", async () => {
+    expect(() =>
+      scheduleAiUsage(() => {
+        throw new Error("db caída");
+      })
+    ).not.toThrow();
+    await Promise.resolve();
   });
 });

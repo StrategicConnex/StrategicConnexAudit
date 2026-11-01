@@ -73,27 +73,28 @@ describe("withRLS — aislamiento multi-tenant", () => {
     executedStatements.length = 0;
   });
 
-  it("ejecuta set_config con claims del usuario y SET LOCAL ROLE authenticated", async () => {
+  it("fija claims y rol authenticated en un único statement transaccional", async () => {
     const { withRLS } = await import("./rls");
 
     await withRLS("user-a", async () => {});
 
-    // 2 statements ejecutados dentro de la transacción
+    // TD-28(a): un solo statement (antes eran dos roundtrips por transacción)
     expect(mockDb.transaction).toHaveBeenCalledTimes(1);
-    expect(executedStatements).toHaveLength(2);
+    expect(executedStatements).toHaveLength(1);
 
-    const [setConfig, setRole] = [render(executedStatements[0]), render(executedStatements[1])];
+    const setup = render(executedStatements[0]);
 
-    expect(setConfig.sql).toContain("set_config('request.jwt.claims'");
-    expect(setConfig.sql).toContain("true");
-    expect(setConfig.params).toHaveLength(1);
+    expect(setup.sql).toContain("set_config('request.jwt.claims'");
+    expect(setup.params).toHaveLength(1);
 
-    const claims = JSON.parse(setConfig.params[0] as string);
+    const claims = JSON.parse(setup.params[0] as string);
     expect(claims.sub).toBe("user-a");
     expect(claims.role).toBe("authenticated");
 
-    // SET LOCAL (transaccional) — nunca SET ROLE persistente
-    expect(setRole.sql).toContain("SET LOCAL ROLE authenticated");
+    // El rol se fija de forma TRANSACCIONAL (is_local = true), nunca con un
+    // SET ROLE persistente que contaminaría la conexión del pool.
+    expect(setup.sql).toContain("set_config('role', 'authenticated', true)");
+    expect(setup.sql).not.toMatch(/SET\s+ROLE/i);
   });
 
   it("diferentes usuarios producen claims distintos (aislamiento por tenant)", async () => {
@@ -103,7 +104,7 @@ describe("withRLS — aislamiento multi-tenant", () => {
     await withRLS("user-b", async () => {});
 
     const claimsA = JSON.parse(render(executedStatements[0]).params[0] as string);
-    const claimsB = JSON.parse(render(executedStatements[2]).params[0] as string);
+    const claimsB = JSON.parse(render(executedStatements[1]).params[0] as string);
 
     expect(claimsA.sub).toBe("user-a");
     expect(claimsB.sub).toBe("user-b");

@@ -22,7 +22,16 @@
 import { envSecrets } from "@/shared/config/env-secrets";
 import { CircuitBreaker } from "@/shared/lib/circuit-breaker";
 import { logger } from "@/lib/logger";
-import { recordAiUsage } from "./ai-usage";
+import { recordAiUsage, scheduleAiUsage, type AiUsageEntry } from "./ai-usage";
+
+/**
+ * TD-28(b): `recordAiUsage` fire-and-forget se perdía al congelarse la función
+ * de Vercel en cuanto terminaba el stream (~21 % de turnos sin fila en la
+ * medición de campo). `scheduleAiUsage` lo mantiene vivo con `after()`; ver
+ * ai-usage.ts. El registro sigue siendo `recordAiUsage` para los tests.
+ */
+const trackUsage = (entry: AiUsageEntry): void =>
+  scheduleAiUsage(() => recordAiUsage(entry));
 import { buildSemanticKey, getSemanticCache, setSemanticCache } from "./ai-cache";
 import { estimateCostUsd } from "./ai-cost";
 import { promptVersion } from "./prompt-version";
@@ -760,7 +769,7 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
   }): AIResponse & { error?: string } => {
     const latencyMs = Date.now() - startTime;
     {
-      void recordAiUsage({
+      trackUsage({
         userId: options.userId ?? null,
         taskType,
         modelUsed: partial.modelUsed,
@@ -902,7 +911,7 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
       );
 
       {
-        void recordAiUsage({
+        trackUsage({
           userId: options.userId ?? null,
           taskType,
           modelUsed: modelId!,
@@ -1012,7 +1021,7 @@ export async function callAIWithFallback(options: AIRequestOptions): Promise<AIR
         );
 
         {
-          void recordAiUsage({
+          trackUsage({
             userId: options.userId ?? null,
             taskType,
             modelUsed: providerModelId,
@@ -1465,7 +1474,7 @@ export async function callAIWithFallbackStream(
     error?: string;
   }): AIStreamResult => {
     const latencyMs = Date.now() - startTime;
-    void recordAiUsage({
+    trackUsage({
       userId: options.userId ?? null,
       taskType,
       modelUsed: partial.modelUsed,

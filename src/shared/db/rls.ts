@@ -21,9 +21,16 @@ export async function withRLS<T>(
       // tras el COMMIT y contamina la conexin del pool: la siguiente query con
       // `db` plano correra como authenticated y fallara con 42501 permission
       // denied en tablas sin grants para ese rol (ej. adversary_runs).
+      // TD-28(a): los dos ajustes viajan en UN statement. Eran dos roundtrips
+      // por cada transacción RLS (≈250 ms cada uno desde Vercel según la
+      // medición de TD-28), y en el copilot el contexto carga dentro de una
+      // transacción. `set_config('role', …, true)` es el equivalente
+      // transaccional de `SET LOCAL ROLE` — verificado contra Postgres: el rol
+      // y el claim valen dentro de la transacción y revierten tras COMMIT.
       const claims = JSON.stringify({ sub: userId, role: 'authenticated' });
-      await tx.execute(sql`SELECT set_config('request.jwt.claims', ${claims}, true)`);
-      await tx.execute(sql`SET LOCAL ROLE authenticated`);
+      await tx.execute(
+        sql`SELECT set_config('request.jwt.claims', ${claims}, true), set_config('role', 'authenticated', true)`
+      );
       
       return await callback(tx);
     });

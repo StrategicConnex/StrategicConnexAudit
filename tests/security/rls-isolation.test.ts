@@ -11,7 +11,8 @@
  * migraciones, este test lo detecta sin necesidad de una base de datos.
  *
  * La sesión se abre igual que `withRLS()` en producción:
- *   `set_config('request.jwt.claims', {sub}, true)` + `SET LOCAL ROLE authenticated`.
+ *   `set_config('request.jwt.claims', {sub}, true)` + el rol authenticated en la
+ *   misma transacción (`set_config('role', 'authenticated', true)`, TD-28a).
  * Un test comprueba que esa emulación sigue coincidiendo con `src/shared/db/rls.ts`.
  */
 import fs from "node:fs";
@@ -114,7 +115,12 @@ describe("D3 — aislamiento multi-tenant vía RLS (Postgres real)", () => {
   it("la emulación de sesión coincide con withRLS() de producción", () => {
     const src = fs.readFileSync(RLS_TS, "utf8");
     expect(src).toMatch(/set_config\('request\.jwt\.claims'/);
-    expect(src).toMatch(/SET LOCAL ROLE authenticated/);
+    // TD-28(a): el rol se fija con set_config('role', …) en el MISMO statement
+    // que los claims (un roundtrip menos). El invariante sigue siendo el de
+    // antes: transaccional (is_local = true), nunca un SET ROLE persistente que
+    // contaminaría la conexión del pool.
+    expect(src).toMatch(/set_config\('role',\s*'authenticated',\s*true\)/);
+    expect(src).not.toMatch(/SET\s+ROLE\s+authenticated/i);
     expect(src).toMatch(/sub:\s*userId/);
   });
 

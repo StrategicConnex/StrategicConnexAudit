@@ -67,7 +67,10 @@ describe("P0.2-D — el historial WHOIS no cruza de tenant (Postgres real)", () 
   it("la emulación de sesión coincide con withRLS() de producción", () => {
     const src = fs.readFileSync(RLS_TS, "utf8");
     expect(src).toMatch(/set_config\('request\.jwt\.claims'/);
-    expect(src).toMatch(/SET LOCAL ROLE authenticated/);
+    // TD-28(a): claims y rol viajan en el mismo statement; el rol sigue siendo
+    // transaccional (is_local = true) y nunca un SET ROLE persistente.
+    expect(src).toMatch(/set_config\('role',\s*'authenticated',\s*true\)/);
+    expect(src).not.toMatch(/SET\s+ROLE\s+authenticated/i);
   });
 
   it("el dueño lee su propio historial (control positivo)", async () => {
