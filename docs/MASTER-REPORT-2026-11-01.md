@@ -160,7 +160,7 @@ Fuente única y actualizada: `docs/technical-debt/TECH-DEBT-REGISTER.md`.
 ## 7. Próximos pasos recomendados
 
 1. **Commit de esta consolidación** en `strategicaudit-pro` (los nuevos/archivados están listos; ejecutar push para que Pages regenere el sitio).
-2. **TD-29**: habilitar la suite de integración real (único rojo conocido de CI).
+2. **TD-29**: habilitar la suite de integración real — uno de los **dos rojos estructurales de CI** (verificado en runs 373/374, mismo perfil de jobs: `Integration (Postgres real)` roja [TD-29] y `API Contract Test` roja [TD-20, fail-closed sin variables por diseño]; los 7 jobs restantes en verde).
 3. **TD-20**: implementar el **modo efímero en CI** (servidor Next + BD de CI avalada por TD-19 + API key de test + Newman contra localhost; sin dependencia del owner). Ruta alternativa: staging Vercel persistente (Sprint 5). Ojo: **TD-27 no la desbloquea un staging** — exige credenciales de una cuenta con hallazgos `critical` reales (decisión del owner; reevaluación 2026-11-04); mientras tanto queda como limitación documentada del QA.
 4. **TD-26**: traza temporal LCP (CDP/Long Animation Frames) — desbloquea cierre móvil de REQ-002.
 5. **TD-21**: implementar higiene de particiones en `cleanup.trigger.ts` antes de feb-2027 (fecha límite dura 2027-03-01).
