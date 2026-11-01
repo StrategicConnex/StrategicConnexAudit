@@ -411,16 +411,34 @@ jobs:
   api-contract-test:
     name: API Contract Test
     runs-on: ubuntu-latest
-    # El contrato en vivo SOLO puede apuntar a un entorno NO productivo.
-    # `TEST_ENV` declara el entorno objetivo (staging|test) y
-    # `SCAUDIT_CONTRACT_BASE_URL` la URL base contra la que Newman dispara.
-    # Son *variables* de repositorio, no secretos (una URL no lo es):
-    # Settings → Secrets and variables → Actions → Variables.
-    # Sin ambas, el guard `target` FALLA con un ::error:: explícito en vez de
-    # golpear producción o de cerrar el pipeline en verde por omisión.
+    # TD-20 (2026-11-01) — MODO EFÍMERO: el contrato en vivo ya no depende de
+    # variables del owner. El job levanta su propio entorno en localhost con
+    # TEST_ENV=test: Postgres de servicio (BD efímera) + stubs de Supabase +
+    # migraciones + API key de test sembrada + servidor Next en build real, y
+    # Newman dispara contra http://127.0.0.1. El guard `target` sigue actuando
+    # (TEST_ENV ∈ {staging,test} + blocklist de hosts de producción) y localhost
+    # no está en la blocklist: el contrato en vivo nunca sale del runner.
+    # Historial del diseño anterior: revertible vía `git log -p` en este bloque.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scaudit_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      TEST_ENV: ${{ vars.TEST_ENV }}
-      SCAUDIT_CONTRACT_BASE_URL: ${{ vars.SCAUDIT_CONTRACT_BASE_URL }}
+      TEST_ENV: test
+      SCAUDIT_CONTRACT_BASE_URL: http://127.0.0.1:3100
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/scaudit_test?sslmode=disable
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/scaudit_test?sslmode=disable
+      NEXT_PUBLIC_SUPABASE_URL: https://qwebfomwtwxxbkxbrrwm.supabase.co
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -431,6 +449,53 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+
+      # BD efímera: los mismos stubs (roles Supabase + auth.uid) que el job
+      # `integration` (TD-19), para que las migraciones 0016+ no exploten.
+      - name: Prepare Supabase stubs + migraciones (BD efímera)
+        run: |
+          pnpm db:prepare-test
+          pnpm db:migrate
+
+      # API key de contrato: usuario + proyecto + developer_api_keys sobre la
+      # BD efímera. El token crudo cae a test-results/ (ignorado por git).
+      - name: Sembrar API key de contrato (BD efímera)
+        run: node scripts/db/seed-contract-api-key.mjs
+
+      # El token pasa al env del job enmascarado; nunca se imprime su valor.
+      - name: Exportar token de prueba (enmascarado)
+        run: |
+          set -e
+          TOKEN="$(cat test-results/contract-api-key.txt)"
+          rm -f test-results/contract-api-key.txt
+          echo "::add-mask::$TOKEN"
+          echo "SCAUDIT_API_KEY_LOCAL=$TOKEN" >> "$GITHUB_ENV"
+
+      # Build real del artefacto para asegurar el TESTING del contrato sin
+      # mocks: el mismo binario que desplegaría Vercel.
+      - name: Build (producción)
+        run: pnpm build
+
+      # Servidor + readiness: 000 = aún sin lista; deja de esperar ante el
+      # primer código HTTP (200/401/404 cuentan: lo que se valida es el socket).
+      - name: Arrancar servidor Next y esperar readiness
+        run: |
+          set -e
+          PORT=3100 pnpm start &
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 60); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' "$SCAUDIT_CONTRACT_BASE_URL/api/public/v1/health" || true)"
+            if [ -n "$code" ] && [ "$code" != "000" ]; then
+              echo "Servidor arriba (HTTP $code tras ${i}s)"
+              break
+            fi
+            sleep 1
+          done
+          code="$(curl -s -o /dev/null -w '%{http_code}' "$SCAUDIT_CONTRACT_BASE_URL/api/public/v1/health" || true)"
+          if [ -z "$code" ] || [ "$code" = "000" ]; then
+            echo "::error::El servidor Next no respondió en $SCAUDIT_CONTRACT_BASE_URL (60s)"
+            exit 1
+          fi
 
       - name: Validate OpenAPI spec
         run: pnpm test:contract
@@ -517,20 +582,25 @@ jobs:
       # Requiere el secreto `SCAUDIT_API_KEY` (ver `.env.example` → "API pública
       # v1 — contrato Newman"). Configúralo en
       # Settings → Secrets and variables → Actions → New repository secret.
+      # TD-20: el token no es un secreto de repositorio sino una credencial
+      # efímera creada por el propio job contra la BD de servicio (una sola
+      # ejecución). La ausencia de token sigue siendo un fallo explícito
+      # (`newman_status=missing_token_font`), nunca un cierre silencioso o un
+      # golpe a producción.
       - name: Run Newman API contract tests against the non-production target
         id: newman
         if: steps.target.outputs.target_status == 'ok'
         run: |
-          if [ -z "${{ secrets.SCAUDIT_API_KEY }}" ]; then
-            # Los PRs de fork ya no llegan aquí: el guard `target` los omite antes.
-            echo "::error::Falta el secreto SCAUDIT_API_KEY: el contrato de la API pública no se puede validar en vivo. Configúralo en Settings → Secrets and variables → Actions → New repository secret."
-            echo "newman_status=missing_secret" >> "$GITHUB_OUTPUT"
+          if [ -z "$SCAUDIT_API_KEY_LOCAL" ]; then
+            # El guard `target` omite PRs de fork antes; sin token es un fallo del arnés.
+            echo "::error::No hay token efímero de contrato (pasos Seed/Export del TD-20)."
+            echo "newman_status=missing_token_font" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
           newman_rc=0
           npx newman run tests/api-contract/scaudit-api-collection.json \
-            --env-var "apiKey=${{ secrets.SCAUDIT_API_KEY }}" \
+            --env-var "apiKey=$SCAUDIT_API_KEY_LOCAL" \
             --env-var "baseUrl=$SCAUDIT_CONTRACT_BASE_URL" \
             --reporters cli,junit \
             --reporter-junit-export results/api-contract.xml \
@@ -573,12 +643,19 @@ jobs:
               echo '✅ **OpenAPI spec valid** — Newman tests passed against the non-production target'
             elif [ "${{ steps.newman.outputs.newman_status }}" = "skipped" ]; then
               echo '✅ **OpenAPI spec valid** — Newman skipped (fork PR: `SCAUDIT_API_KEY` no disponible)'
-            elif [ "${{ steps.newman.outputs.newman_status }}" = "missing_secret" ]; then
-              echo '❌ **Falta el secreto `SCAUDIT_API_KEY`** — el contrato en vivo no se ejecutó y el job falla'
+            elif [ "${{ steps.newman.outputs.newman_status }}" = "missing_token_font" ]; then
+              echo '❌ **Sin token efímero** — el arnés TD-20 no sembró la API key de contrato (ver pasos Seed/Export)'
             else
               echo '❌ **Newman tests failed** — check artifacts for details'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Parar servidor efímero (TD-20)
+        if: always()
+        run: |
+          if [ -n "$SERVER_PID" ]; then
+            kill "$SERVER_PID" || true
+          fi
 
   # ── P1-8: suite de integración contra Postgres REAL ───────────────────────
   # Job SEPARADO del e2e (que conserva sus secrets intactos): aquí no hay
