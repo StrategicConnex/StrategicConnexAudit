@@ -23,12 +23,12 @@
 --      PostgREST con el JWT del propio usuario). El guard se limita al rol no
 --      privilegiado: el servidor conecta como `postgres` y sigue gestionando
 --      roles con normalidad.
----> statement-breakpoint
+--> statement-breakpoint
 
 DROP POLICY IF EXISTS "users_insert_self" ON "users";
----> statement-breakpoint
+--> statement-breakpoint
 DROP POLICY IF EXISTS "users_update_self" ON "users";
----> statement-breakpoint
+--> statement-breakpoint
 
 -- Alta del perfil: solo la propia fila.
 CREATE POLICY "users_insert_self"
@@ -36,7 +36,7 @@ CREATE POLICY "users_insert_self"
   FOR INSERT
   TO authenticated
   WITH CHECK (id = public.current_auth_uid());
----> statement-breakpoint
+--> statement-breakpoint
 
 -- Actualización del perfil: la fila debe ser propia tanto antes (USING) como
 -- después (WITH CHECK) del UPDATE, para impedir que un usuario se reescriba el
@@ -47,7 +47,7 @@ CREATE POLICY "users_update_self"
   TO authenticated
   USING (id = public.current_auth_uid())
   WITH CHECK (id = public.current_auth_uid());
----> statement-breakpoint
+--> statement-breakpoint
 
 -- Guard de privilegio: desde el rol `authenticated`, `role` no es escribible.
 -- En INSERT se fuerza el default de la tabla ('client'); en UPDATE se conserva
@@ -69,10 +69,10 @@ BEGIN
   RETURN NEW;
 END;
 $$;
----> statement-breakpoint
+--> statement-breakpoint
 
 DROP TRIGGER IF EXISTS users_freeze_role_for_authenticated ON "users";
----> statement-breakpoint
+--> statement-breakpoint
 CREATE TRIGGER users_freeze_role_for_authenticated
   BEFORE INSERT OR UPDATE ON "users"
   FOR EACH ROW
