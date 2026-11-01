@@ -104,3 +104,6 @@ next-env.d.ts
 # live at the workspace root (outside this repo) - never let them in here
 _archivados-*/
 .cloud-attachments/
+
+# PGlite repro transitorio (TD-29, data-dir relativo al CWD)
+.td29-repro-pglite/
