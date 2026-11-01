@@ -96,48 +96,169 @@ DELETE FROM "adversary_task_nodes" c
 -- ═══ 2. Las 11 FK declaradas en el schema ═══════════════════════════════
 
 -- intelligence: las tres columnas nullable que quedaron sin FK en producción.
-ALTER TABLE "intelligence_tool_runs"
-  ADD CONSTRAINT "intelligence_tool_runs_investigation_id_intelligence_investigations_id_fk"
-  FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"intelligence_tool_runs"'::regclass
+      AND conname = left('intelligence_tool_runs_investigation_id_intelligence_investigations_id_fk', 63)
+  ) THEN
+    ALTER TABLE "intelligence_tool_runs"
+    ADD CONSTRAINT "intelligence_tool_runs_investigation_id_intelligence_investigations_id_fk"
+    FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "intelligence_findings"
-  ADD CONSTRAINT "intelligence_findings_investigation_id_intelligence_investigations_id_fk"
-  FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"intelligence_findings"'::regclass
+      AND conname = left('intelligence_findings_investigation_id_intelligence_investigations_id_fk', 63)
+  ) THEN
+    ALTER TABLE "intelligence_findings"
+    ADD CONSTRAINT "intelligence_findings_investigation_id_intelligence_investigations_id_fk"
+    FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "intelligence_assets"
-  ADD CONSTRAINT "intelligence_assets_investigation_id_intelligence_investigations_id_fk"
-  FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"intelligence_assets"'::regclass
+      AND conname = left('intelligence_assets_investigation_id_intelligence_investigations_id_fk', 63)
+  ) THEN
+    ALTER TABLE "intelligence_assets"
+    ADD CONSTRAINT "intelligence_assets_investigation_id_intelligence_investigations_id_fk"
+    FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "whois_history"
-  ADD CONSTRAINT "whois_history_investigation_id_intelligence_investigations_id_fk"
-  FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"whois_history"'::regclass
+      AND conname = left('whois_history_investigation_id_intelligence_investigations_id_fk', 63)
+  ) THEN
+    ALTER TABLE "whois_history"
+    ADD CONSTRAINT "whois_history_investigation_id_intelligence_investigations_id_fk"
+    FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "anomaly_detections"
-  ADD CONSTRAINT "anomaly_detections_investigation_id_intelligence_investigations_id_fk"
-  FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE SET NULL;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"anomaly_detections"'::regclass
+      AND conname = left('anomaly_detections_investigation_id_intelligence_investigations_id_fk', 63)
+  ) THEN
+    ALTER TABLE "anomaly_detections"
+    ADD CONSTRAINT "anomaly_detections_investigation_id_intelligence_investigations_id_fk"
+    FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE SET NULL;
+  END IF;
+END $$;
 --> statement-breakpoint
 
 -- adversary: la propia tabla de engaños nunca tuvo FK (ni hacia su proyecto).
-ALTER TABLE "adversary_engagements"
-  ADD CONSTRAINT "adversary_engagements_project_id_projects_id_fk"
-  FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE CASCADE;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"adversary_engagements"'::regclass
+      AND conname = left('adversary_engagements_project_id_projects_id_fk', 63)
+  ) THEN
+    ALTER TABLE "adversary_engagements"
+    ADD CONSTRAINT "adversary_engagements_project_id_projects_id_fk"
+    FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "adversary_engagements"
-  ADD CONSTRAINT "adversary_engagements_owner_id_users_id_fk"
-  FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE SET NULL;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"adversary_engagements"'::regclass
+      AND conname = left('adversary_engagements_owner_id_users_id_fk', 63)
+  ) THEN
+    ALTER TABLE "adversary_engagements"
+    ADD CONSTRAINT "adversary_engagements_owner_id_users_id_fk"
+    FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE SET NULL;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "adversary_runs"
-  ADD CONSTRAINT "adversary_runs_investigation_id_intelligence_investigations_id_fk"
-  FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE SET NULL;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"adversary_runs"'::regclass
+      AND conname = left('adversary_runs_investigation_id_intelligence_investigations_id_fk', 63)
+  ) THEN
+    ALTER TABLE "adversary_runs"
+    ADD CONSTRAINT "adversary_runs_investigation_id_intelligence_investigations_id_fk"
+    FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE SET NULL;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "adversary_runs"
-  ADD CONSTRAINT "adversary_runs_engagement_id_adversary_engagements_id_fk"
-  FOREIGN KEY ("engagement_id") REFERENCES "adversary_engagements"("id") ON DELETE SET NULL;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"adversary_runs"'::regclass
+      AND conname = left('adversary_runs_engagement_id_adversary_engagements_id_fk', 63)
+  ) THEN
+    ALTER TABLE "adversary_runs"
+    ADD CONSTRAINT "adversary_runs_engagement_id_adversary_engagements_id_fk"
+    FOREIGN KEY ("engagement_id") REFERENCES "adversary_engagements"("id") ON DELETE SET NULL;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "adversary_task_nodes"
-  ADD CONSTRAINT "adversary_task_nodes_engagement_id_adversary_engagements_id_fk"
-  FOREIGN KEY ("engagement_id") REFERENCES "adversary_engagements"("id") ON DELETE CASCADE;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"adversary_task_nodes"'::regclass
+      AND conname = left('adversary_task_nodes_engagement_id_adversary_engagements_id_fk', 63)
+  ) THEN
+    ALTER TABLE "adversary_task_nodes"
+    ADD CONSTRAINT "adversary_task_nodes_engagement_id_adversary_engagements_id_fk"
+    FOREIGN KEY ("engagement_id") REFERENCES "adversary_engagements"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "adversary_task_nodes"
-  ADD CONSTRAINT "adversary_task_nodes_scenario_id_adversary_scenarios_id_fk"
-  FOREIGN KEY ("scenario_id") REFERENCES "adversary_scenarios"("id") ON DELETE SET NULL;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"adversary_task_nodes"'::regclass
+      AND conname = left('adversary_task_nodes_scenario_id_adversary_scenarios_id_fk', 63)
+  ) THEN
+    ALTER TABLE "adversary_task_nodes"
+    ADD CONSTRAINT "adversary_task_nodes_scenario_id_adversary_scenarios_id_fk"
+    FOREIGN KEY ("scenario_id") REFERENCES "adversary_scenarios"("id") ON DELETE SET NULL;
+  END IF;
+END $$;

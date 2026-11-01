@@ -31,10 +31,32 @@ UPDATE "intelligence_run_events" e
    AND NOT EXISTS (SELECT 1 FROM "intelligence_tool_runs" t WHERE t.id = e."tool_run_id");
 --> statement-breakpoint
 -- 3) Las dos FK declaradas en el schema.
-ALTER TABLE "intelligence_run_events"
-  ADD CONSTRAINT "intelligence_run_events_investigation_id_intelligence_investigations_id_fk"
-  FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"intelligence_run_events"'::regclass
+      AND conname = left('intelligence_run_events_investigation_id_intelligence_investigations_id_fk', 63)
+  ) THEN
+    ALTER TABLE "intelligence_run_events"
+    ADD CONSTRAINT "intelligence_run_events_investigation_id_intelligence_investigations_id_fk"
+    FOREIGN KEY ("investigation_id") REFERENCES "intelligence_investigations"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "intelligence_run_events"
-  ADD CONSTRAINT "intelligence_run_events_tool_run_id_intelligence_tool_runs_id_fk"
-  FOREIGN KEY ("tool_run_id") REFERENCES "intelligence_tool_runs"("id") ON DELETE CASCADE;
+-- Idempotente: la migración desde cero (0003) ya crea esta FK; en la BD
+-- live faltaba y por eso 0043/0044 existieron (TD-19).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"intelligence_run_events"'::regclass
+      AND conname = left('intelligence_run_events_tool_run_id_intelligence_tool_runs_id_fk', 63)
+  ) THEN
+    ALTER TABLE "intelligence_run_events"
+    ADD CONSTRAINT "intelligence_run_events_tool_run_id_intelligence_tool_runs_id_fk"
+    FOREIGN KEY ("tool_run_id") REFERENCES "intelligence_tool_runs"("id") ON DELETE CASCADE;
+  END IF;
+END $$;

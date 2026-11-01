@@ -151,7 +151,21 @@ describe('Chat contract — documento normativo', () => {
     expect(debt).toMatch(/\| TD-24 \|/);
     expect(debt).toContain('dashboardData');
     expect(debt).toContain('TD-24');
-    expect(debt).toContain('24 deudas registradas');
     expect(contract).toContain('TD-24');
+  });
+
+  it('el total declarado en el registro coincide con las filas TD reales', () => {
+    // Antes se afirmaba el literal '24 deudas registradas': cada alta legítima
+    // de deuda rompía este test (y con él dos jobs de CI). Lo que importa no es
+    // el número, sino que el resumen del registro no se desincronice de la
+    // tabla. Ahora se compara contra las filas reales de la sección 5.
+    const declared = debt.match(/\*\*(\d+) deudas registradas\*\*/);
+    expect(declared, 'el registro debe declarar el total de deudas').not.toBeNull();
+
+    // Las secciones 9 y 10 repiten filas `| TD-05 | …` como seguimiento, así
+    // que lo comparable es el número de IDs distintos, no el de filas.
+    const ids = new Set([...debt.matchAll(/^\| (TD-\d+) \|/gm)].map((m) => m[1]));
+    expect(ids.size).toBeGreaterThan(0);
+    expect(ids.size).toBe(Number(declared![1]));
   });
 });

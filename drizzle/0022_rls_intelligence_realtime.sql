@@ -125,7 +125,11 @@ CREATE POLICY "intelligence_run_events_select_member_or_owner" ON intelligence_r
 --    publicar (orden crítico: sin RLS la publicación expondría todas las filas).
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  -- TD-19: la comprobación miraba pg_publication_tables, así que en un Postgres
+  -- sin la publicación (migración desde cero) el ALTER fallaba con
+  -- "publication \"supabase_realtime\" does not exist". Se exige que exista.
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime')
+     AND NOT EXISTS (
     SELECT 1 FROM pg_publication_tables
     WHERE pubname = 'supabase_realtime'
       AND schemaname = 'public'

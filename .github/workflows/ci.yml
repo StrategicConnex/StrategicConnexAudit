@@ -361,7 +361,12 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
-    runs-on: ubuntu-latest
+    # Runner fijado a 24.04: `ubuntu-latest` derivó a 26.04 y el Playwright
+    # fijado por el lockfile (1.59.1) no tiene build de Chromium para esa
+    # distro — el job moría en "Playwright does not support chromium on
+    # ubuntu26.04-x64" antes de ejecutar un solo test. Se sube el runner
+    # cuando el lockfile traiga un Playwright que lo soporte.
+    runs-on: ubuntu-24.04
     # NEXT_PUBLIC_* viajan al bundle del navegador: son configuración pública,
     # no secretos. Se leen de `secrets` si existen y caen a defaults públicos
     # para que el job nunca falle por configuración ausente (lección del
