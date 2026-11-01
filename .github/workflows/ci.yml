@@ -54,6 +54,15 @@ jobs:
       - name: Guard contrast (WCAG AA tokens)
         run: node scripts/contrast-guard.mjs
 
+      # docs/architecture: el validador de Mermaid (7/7 bloques) existía pero
+      # nadie lo ejecutaba, así que un diagrama roto entraba a `main` sin que
+      # nada se pusiera rojo. Va acá y no en docs-quality-gate porque ese job
+      # es zero-deps a propósito y este script necesita jsdom + mermaid, que
+      # `pnpm install` ya deja instalados. BARRERA DURA: exit 1 si un bloque
+      # no parsea o si no se detecta ningún bloque (falla-en-vacío imposible).
+      - name: Validate Mermaid diagrams
+        run: node scripts/validate-mermaid.mjs
+
   typecheck:
     name: Typecheck (tsc --noEmit)
     runs-on: ubuntu-latest
