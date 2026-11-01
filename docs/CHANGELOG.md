@@ -33,6 +33,8 @@ estado: Aprobado
 - `docs/index.md` pasa a **v1.4**: enlaces al Informe Maestro y al Estado Actual + nota de vigencia de métricas.
 - **Reclasificación de deuda (TD-20, TD-27)**: el tablero pasa de «8 ABIERTAS» a **6 ABIERTAS + 2 BLOQUEADAS en decisión** — TD-20 queda interna/técnica (desbloqueo documentado: contrato en vivo efímero en CI: Next server + BD de CI + API key de test + Newman contra localhost, sin dependencia del owner) y TD-27 queda como **dependencia externa** (credenciales de cuenta con hallazgos `critical` reales; limitación conocida del QA, reevaluación 2026-11-04). No se marca ninguna «RESUELTO» sin evidencia.
 
+- **TD-29 IMPLEMENTADO** (queda "en validación CI"): `tests/integration/setup.ts` reescrito con arnés real (fixtures con `randomUUID()` + FK válidas, re-export `withRLSIntegration`/`directDb`/`eq`, limpieza con cascade) y las 4 suites de integración reescritas (`.returning()` en vez de `.rowCount`, enums válidos, sin pseudo-SQL). Nueva migración idempotente **`drizzle/2026-11-01_td29_tenant_fixture_rls.sql`** (idx 67): policies owner-only faltantes (`audits_update_owner`, `audits_delete_owner`, `intelligence_findings_delete_owner`) + grants DML completos a `authenticated`/`service_role` (users/projects/audits/findings). `ai-real-connections.test.ts` intacto (opt-in). El tablero pasa a RESUELTO cuando el job `Integration (Postgres real)` corra verde.
+
 ---
 
 ## Octubre 2026 - Sprint 5: Anti-monodependencia del pool IA

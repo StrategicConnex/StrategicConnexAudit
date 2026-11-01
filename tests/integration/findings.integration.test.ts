@@ -1,18 +1,30 @@
 /**
- * tests/integration/findings.integration.test.ts — CRUD de inteligencia_findings contra Postgres real
+ * tests/integration/findings.integration.test.ts — CRUD de intelligence_findings contra Postgres real
  *
- * Relación: findings pertenece a projects (FK projectId) y toolRuns (FK toolRunId).
- * Prueba CRUD básico y aislamiento RLS multi-tenant.
+ * Relación: findings pertenece a projects (FK projectId). El ciclo de vida del
+ * hallazgo usa `status` text ('open' por defecto; drizzle/2026-10-05) y
+ * `severity` es el enum finding_severity (info|low|medium|high|critical).
+ *
+ * TD-29 (2026-11-01): subconsultas pseudo-SQL sustituidas por el id real del
+ * proyecto fixture; conteo de filas con `.returning()`.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
-import { directDb, withRLSIntegration, cleanupIntegrationFixtures, seedIntegrationFixtures } from './setup';
-import { intelligenceFindings, projects, eq } from '@/shared/db';
-import { sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { intelligenceFindings } from '@/shared/db/schemas';
+import {
+  directDb,
+  withRLSIntegration,
+  cleanupIntegrationFixtures,
+  seedIntegrationFixtures,
+  type IntegrationFixtures,
+} from './setup';
+
+let fixtures: IntegrationFixtures;
 
 beforeEach(async () => {
-  await seedIntegrationFixtures();
+  fixtures = await seedIntegrationFixtures();
 });
 
 afterEach(async () => {
@@ -21,132 +33,132 @@ afterEach(async () => {
 
 describe('Findings CRUD (Postgres real)', () => {
   it('debe crear un finding asociado a un proyecto existente', async () => {
-    const projectId = sql`(SELECT id FROM projects WHERE ownerId = 'user-a-id' LIMIT 1)`;
-
-    const newFinding = await directDb.insert(intelligenceFindings).values({
-      id: randomUUID(),
-      projectId: projectId,
-      severity: 'high' as any,
-      title: 'Finding de Prueba',
-      description: 'Automatically generated finding for test',
-      evidence: {},
-      status: 'open' as any,
-      confidence: 0.700,
-    }).returning();
+    const newFinding = await directDb
+      .insert(intelligenceFindings)
+      .values({
+        id: randomUUID(),
+        projectId: fixtures.userAProjectId,
+        severity: 'high',
+        title: 'Finding de Prueba',
+        description: 'Automatically generated finding for test',
+        evidence: {},
+        status: 'open',
+        confidence: '0.700',
+      })
+      .returning({ id: intelligenceFindings.id, title: intelligenceFindings.title });
 
     expect(newFinding.length).toBe(1);
     expect(newFinding[0].title).toBe('Finding de Prueba');
   });
 
   it('con withRLS, un usuario solo ve findings de sus propios proyectos', async () => {
-    const projectId = sql`(SELECT id FROM projects WHERE ownerId = 'user-a-id' LIMIT 1)`;
-
     await directDb.insert(intelligenceFindings).values({
       id: randomUUID(),
-      projectId: projectId,
-      severity: 'high' as any,
+      projectId: fixtures.userAProjectId,
+      severity: 'high',
       title: 'Finding Secreto A',
       description: 'Finding sensible de la tenant A',
       evidence: {},
-      status: 'open' as any,
-      confidence: 0.800,
+      status: 'open',
+      confidence: '0.800',
     });
 
     // userB con withRLS no debe ver findings de proyectos de userA
-    const userBFindings = await withRLSIntegration('user-b-id', async (tx) =>
-      tx.select({ id: true, title: true }).from(intelligenceFindings).where(
-        eq(intelligenceFindings.projectId, projectId)
-      )
+    const userBFindings = await withRLSIntegration(fixtures.userBId, async (tx) =>
+      tx
+        .select({ id: intelligenceFindings.id, title: intelligenceFindings.title })
+        .from(intelligenceFindings)
+        .where(eq(intelligenceFindings.projectId, fixtures.userAProjectId)),
     );
 
     expect(userBFindings.length).toBe(0);
   });
 
   it('directDb ve todos los findings (agujero RLS)', async () => {
-    const projectId = sql`(SELECT id FROM projects WHERE ownerId = 'user-a-id' LIMIT 1)`;
-
+    const secretFindingId = randomUUID();
     await directDb.insert(intelligenceFindings).values({
-      id: randomUUID(),
-      projectId: projectId,
-      severity: 'medium' as any,
+      id: secretFindingId,
+      projectId: fixtures.userAProjectId,
+      severity: 'medium',
       title: 'Finding visible a todos',
       description: 'Este finding debería ser visible via directDb',
       evidence: {},
-      status: 'open' as any,
-      confidence: 0.500,
+      status: 'open',
+      confidence: '0.500',
     });
 
-    const allFindings = await directDb.select({ id: true, title: true }).from(intelligenceFindings);
+    // directDb lee el finding recién insertado (sin RLS)
+    const rows = await directDb
+      .select({ id: intelligenceFindings.id })
+      .from(intelligenceFindings)
+      .where(eq(intelligenceFindings.id, secretFindingId));
 
-    expect(allFindings.length).toBeGreaterThan(0);
-    // Deberíamos finding creado arriba
-    const hasFinding = allFindings.some((f: any) => f.title === 'Finding visible a todos');
-    expect(hasFinding).toBe(true);
+    expect(rows.length).toBe(1);
   });
 
   it('actualizar finding afecta solo al proyecto dueño (con withRLS)', async () => {
-    const projectId = sql`(SELECT id FROM projects WHERE ownerId = 'user-a-id' LIMIT 1)`;
-
     const findingId = randomUUID();
     await directDb.insert(intelligenceFindings).values({
       id: findingId,
-      projectId,
-      severity: 'low' as any,
+      projectId: fixtures.userAProjectId,
+      severity: 'low',
       title: 'Finding a Actualizar',
       description: 'Finding para testing de update',
       evidence: {},
-      status: 'open' as any,
-      confidence: 0.500,
+      status: 'open',
+      confidence: '0.500',
     });
 
     // userB intenta actualizar finding de userA con withRLS
-    const result = await withRLSIntegration('user-b-id', async (tx) =>
-      tx.update(intelligenceFindings).set({ title: 'Title Modificado' }).where(
-        eq(intelligenceFindings.id, findingId)
-      )
+    const userBUpdate = await withRLSIntegration(fixtures.userBId, async (tx) =>
+      tx
+        .update(intelligenceFindings)
+        .set({ title: 'Título Modificado por B' })
+        .where(eq(intelligenceFindings.id, findingId))
+        .returning({ id: intelligenceFindings.id }),
     );
 
     // Debería afectar 0 filas con RLS activo
-    expect(result.rowCount).toBe(0);
+    expect(userBUpdate.length).toBe(0);
 
     // userA debería poder actualizar su propio finding
-    const userAResult = await withRLSIntegration('user-a-id', async (tx) =>
-      tx.update(intelligenceFindings).set({ title: 'Title Modificado' }).where(
-        eq(intelligenceFindings.id, findingId)
-      )
+    const userAUpdate = await withRLSIntegration(fixtures.userAId, async (tx) =>
+      tx
+        .update(intelligenceFindings)
+        .set({ title: 'Título Modificado' })
+        .where(eq(intelligenceFindings.id, findingId))
+        .returning({ id: intelligenceFindings.id }),
     );
 
-    expect(userAResult.rowCount).toBe(1);
+    expect(userAUpdate.length).toBe(1);
   });
 
   it('eliminar finding afecta solo al proyecto dueño (con withRLS)', async () => {
-    const projectId = sql`(SELECT id FROM projects WHERE ownerId = 'user-a-id' LIMIT 1)`;
-
     const findingId = randomUUID();
     await directDb.insert(intelligenceFindings).values({
       id: findingId,
-      projectId,
-      severity: 'info' as any,
+      projectId: fixtures.userAProjectId,
+      severity: 'info',
       title: 'Finding a Eliminar',
       description: 'Finding de prueba de delete',
       evidence: {},
-      status: 'open' as any,
-      confidence: 0.300,
+      status: 'open',
+      confidence: '0.300',
     });
 
     // userB intenta eliminar finding de userA con withRLS
-    const result = await withRLSIntegration('user-b-id', async (tx) =>
-      tx.delete(intelligenceFindings).where(eq(intelligenceFindings.id, findingId))
+    const userBDelete = await withRLSIntegration(fixtures.userBId, async (tx) =>
+      tx.delete(intelligenceFindings).where(eq(intelligenceFindings.id, findingId)).returning({ id: intelligenceFindings.id }),
     );
 
     // Debería afectar 0 filas con RLS activo
-    expect(result.rowCount).toBe(0);
+    expect(userBDelete.length).toBe(0);
 
     // userA debería poder eliminar su propio finding
-    const userAResult = await withRLSIntegration('user-a-id', async (tx) =>
-      tx.delete(intelligenceFindings).where(eq(intelligenceFindings.id, findingId))
+    const userADelete = await withRLSIntegration(fixtures.userAId, async (tx) =>
+      tx.delete(intelligenceFindings).where(eq(intelligenceFindings.id, findingId)).returning({ id: intelligenceFindings.id }),
     );
 
-    expect(userAResult.rowCount).toBe(1);
+    expect(userADelete.length).toBe(1);
   });
 });

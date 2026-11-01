@@ -470,6 +470,13 @@
       "when": 1793041556000,
       "tag": "2026-10-26_ai_usage_stream_metrics",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793563200000,
+      "tag": "2026-11-01_td29_tenant_fixture_rls",
+      "breakpoints": true
     }
   ]
 }

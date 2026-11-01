@@ -1,22 +1,34 @@
 /**
  * tests/integration/projects.integration.test.ts — CRUD de projects contra Postgres real
  *
- * Ejecución: pnpm test:integration -- --run projects.integration.test.ts
+ * Ejecución: pnpm test:integration
  *
- * this test suite requires:
- * - Postgres real corriendo (CI: job `integration`, local: `docker run` o Postgres local)
- - DATABASE_URL y DIRECT_URL apuntando a la BD correcta
+ * Este suite requiere:
+ * - Postgres real corriendo (CI: job `integration`; local: Postgres con DATABASE_URL/DIRECT_URL)
+ * - Stub de Supabase ya preparado (pnpm db:prepare-test) + drizzle-kit migrate
+ *
+ * TD-29 (2026-11-01): fixtures reales (seedIntegrationFixtures devuelve ids con
+ * FK válida) y conteo de filas con `.returning()` en vez de `.rowCount`.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
-import { directDb, withRLSIntegration, cleanupIntegrationFixtures, seedIntegrationFixtures, setupIntegrationDb } from './setup';
-import { projects, eq } from '@/shared/db';
-import { sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { projects } from '@/shared/db/schemas';
+import {
+  directDb,
+  withRLSIntegration,
+  cleanupIntegrationFixtures,
+  seedIntegrationFixtures,
+  setupIntegrationDb,
+  type IntegrationFixtures,
+} from './setup';
+
+let fixtures: IntegrationFixtures;
 
 beforeEach(async () => {
   await setupIntegrationDb();
-  await seedIntegrationFixtures();
+  fixtures = await seedIntegrationFixtures();
 });
 
 afterEach(async () => {
@@ -24,65 +36,62 @@ afterEach(async () => {
 });
 
 describe('Projects CRUD (Postgres real)', () => {
-  it('debe crear un proyecto con RLS activo (usuario dueño ve su propio proyecto)', async () => {
-    // Usamos userA creado en setup
-    const userId = process.env.E2E_TEST_TENANT_USER_ID || 'user-a-id';
-
-    const newProject = await directDb.insert(projects).values({
-      id: randomUUID(),
-      ownerId: userId,
-      name: 'Proyecto de Prueba',
-      domain: 'https://prueba.test',
-      timezone: 'UTC',
-      crawlDepth: 3,
-      userAgent: 'StrategicAuditBot/1.0',
-      respectsRobotsTxt: true,
-      dataRetentionDays: 365,
-      autoDeleteAudits: false,
-      settings: {},
-    }).returning();
+  it('debe crear un proyecto con FK válida (directDb, rol con BYPASSRLS)', async () => {
+    const newProject = await directDb
+      .insert(projects)
+      .values({
+        id: randomUUID(),
+        ownerId: fixtures.userAId,
+        name: 'Proyecto de Prueba',
+        domain: 'https://prueba.test',
+      })
+      .returning({ id: projects.id, name: projects.name, ownerId: projects.ownerId });
 
     expect(newProject.length).toBe(1);
     expect(newProject[0].name).toBe('Proyecto de Prueba');
-    expect(newProject[0].ownerId).toBe(userId);
+    expect(newProject[0].ownerId).toBe(fixtures.userAId);
   });
 
   it('con withRLS, un usuario solo ve sus propios proyectos', async () => {
-    // userA crea un proyecto
-    const userAId = 'user-a-id';
-
+    // userA crea UN proyecto extra (además del fixture)
+    const extraProjectId = randomUUID();
     await directDb.insert(projects).values({
-      id: randomUUID(),
-      ownerId: userAId,
+      id: extraProjectId,
+      ownerId: fixtures.userAId,
       name: 'Proyecto Solo A',
       domain: 'https://solo-a.test',
     });
 
     // userB con withRLS solo debe ver sus propios proyectos (0 de userA)
-    const userBProjects = await withRLSIntegration('user-b-id', async (tx) =>
-      tx.select({ id: true, name: true }).from(projects).where(eq(projects.ownerId, userAId))
+    const userBProjects = await withRLSIntegration(fixtures.userBId, async (tx) =>
+      tx
+        .select({ id: projects.id, name: projects.name })
+        .from(projects)
+        .where(eq(projects.ownerId, fixtures.userAId)),
     );
 
-    // userB should see 0 projects owned by userA with RLS
     expect(userBProjects.length).toBe(0);
   });
 
-  it('directDb (BypassRLS) ve TODOS los proyectos independientemente del userId', async () => {
+  it('directDb (rol BYPASSRLS) ve TODOS los proyectos independientemente del userId', async () => {
     // userA crea un proyecto
     await directDb.insert(projects).values({
       id: randomUUID(),
-      ownerId: 'user-a-id',
+      ownerId: fixtures.userAId,
       name: 'Proyecto Secreto',
       domain: 'https://secreto.test',
     });
 
     // directDb sin withRLS ve TODAS las filas (el "agujero" de RLS)
-    const allProjects = await directDb.select({ id: true, name: true }).from(projects);
+    const allProjects = await directDb.select({ id: projects.id }).from(projects);
 
     expect(allProjects.length).toBeGreaterThan(0);
-    // Deberíamos ver al menos el proyecto de userA
-    const hasUserA = allProjects.some((p: any) => p.ownerId === 'user-a-id');
-    expect(hasUserA).toBe(true);
+    // Deberíamos ver al menos los proyectos de userA del run
+    const userARows = await directDb
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.ownerId, fixtures.userAId));
+    expect(userARows.length).toBeGreaterThanOrEqual(2);
   });
 
   it('actualizar un proyecto solo afecta al dueño (con withRLS)', async () => {
@@ -90,26 +99,33 @@ describe('Projects CRUD (Postgres real)', () => {
     const projectId = randomUUID();
     await directDb.insert(projects).values({
       id: projectId,
-      ownerId: 'user-a-id',
+      ownerId: fixtures.userAId,
       name: 'Nombre Original',
       domain: 'https://original.test',
     });
 
     // userB intenta actualizar el proyecto de userA con withRLS
-    // should affect 0 rows because RLS filters by ownerId
-    const result = await withRLSIntegration('user-b-id', async (tx) =>
-      tx.update(projects).set({ name: 'Nombre Modificado' }).where(eq(projects.id, projectId))
+    // → 0 filas porque la policy RLS filtra por dueño
+    const userBUpdate = await withRLSIntegration(fixtures.userBId, async (tx) =>
+      tx
+        .update(projects)
+        .set({ name: 'Nombre Modificado por B' })
+        .where(eq(projects.id, projectId))
+        .returning({ id: projects.id }),
     );
 
-    // Número de filas afectadas debería ser 0 con RLS activo
-    expect(result.rowCount).toBe(0);
+    expect(userBUpdate.length).toBe(0);
 
-    // Pero userA debería poder actualizar su propio proyecto
-    const userAUpdate = await withRLSIntegration('user-a-id', async (tx) =>
-      tx.update(projects).set({ name: 'Nombre Modificado' }).where(eq(projects.id, projectId))
+    // Pero userA sí puede actualizar su propio proyecto
+    const userAUpdate = await withRLSIntegration(fixtures.userAId, async (tx) =>
+      tx
+        .update(projects)
+        .set({ name: 'Nombre Modificado' })
+        .where(eq(projects.id, projectId))
+        .returning({ id: projects.id }),
     );
 
-    expect(userAUpdate.rowCount).toBe(1);
+    expect(userAUpdate.length).toBe(1);
   });
 
   it('eliminar un proyecto solo afecta al dueño (con withRLS)', async () => {
@@ -117,24 +133,24 @@ describe('Projects CRUD (Postgres real)', () => {
     const projectId = randomUUID();
     await directDb.insert(projects).values({
       id: projectId,
-      ownerId: 'user-a-id',
+      ownerId: fixtures.userAId,
       name: 'Proyecto a Eliminar',
       domain: 'https://eliminar.test',
     });
 
     // userB intenta eliminar el proyecto de userA con withRLS
-    const result = await withRLSIntegration('user-b-id', async (tx) =>
-      tx.delete(projects).where(eq(projects.id, projectId))
+    const userBDelete = await withRLSIntegration(fixtures.userBId, async (tx) =>
+      tx.delete(projects).where(eq(projects.id, projectId)).returning({ id: projects.id }),
     );
 
     // Debería afectar 0 filas con RLS activo
-    expect(result.rowCount).toBe(0);
+    expect(userBDelete.length).toBe(0);
 
     // userA debería poder eliminar su propio proyecto
-    const userADelete = await withRLSIntegration('user-a-id', async (tx) =>
-      tx.delete(projects).where(eq(projects.id, projectId))
+    const userADelete = await withRLSIntegration(fixtures.userAId, async (tx) =>
+      tx.delete(projects).where(eq(projects.id, projectId)).returning({ id: projects.id }),
     );
 
-    expect(userADelete.rowCount).toBe(1);
+    expect(userADelete.length).toBe(1);
   });
 });

@@ -1,26 +1,35 @@
 /**
  * tests/integration/rls-tenant-isolation.integration.test.ts — PRUEBA NEGATIVA del agujero BYPASSRLS
  *
- * Esta es la prueba más valiosa de P1-8: demuestra por primera vez que el aislamiento
- * multi-tenant funciona contra Postgres REAL (no solo en PGlite).
+ * La prueba más valiosa de P1-8: demuestra que el aislamiento multi-tenant
+ * funciona contra Postgres REAL (no solo en PGlite).
  *
  * Escenarios:
  * 1. Usuario A crea proyecto → Usuario B intenta leerlo → 0 filas (RLS funciona)
  * 2. Usuario B intenta UPDATE/DELETE en proyecto de A → 0 filas afectadas (RLS funciona)
- * 3. Con directDb (BYPASSRLS) → sí ve las filas (demuestra el agujero de seguridad)
+ * 3. Con directDb (rol con BYPASSRLS) → sí ve las filas (demuestra el agujero de seguridad)
  *
- * Esta prueba nunca pudo ejecutarse en sesiones anteriores porque fallaba con
- * ECONNREFUSED 127.0.0.1:5432 (Postgres no estaba en CI).
+ * TD-29 (2026-11-01): la versión anterior fallaba ANTES de llegar a Postgres
+ * (ids 'user-a-id' sin FK, exports inexistentes, `.rowCount` de driver). Ahora
+ * los fixtures son reales (seedIntegrationFixtures) y lo que se cuenta son las
+ * filas devueltas por `.returning()` (drizzle-orm, driver-agnóstico).
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { randomUUID } from 'crypto';
-import { directDb, withRLSIntegration, cleanupIntegrationFixtures, seedIntegrationFixtures } from './setup';
-import { projects, intelligenceFindings, eq } from '@/shared/db';
-import { sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { projects } from '@/shared/db/schemas';
+import {
+  directDb,
+  withRLSIntegration,
+  cleanupIntegrationFixtures,
+  seedIntegrationFixtures,
+  type IntegrationFixtures,
+} from './setup';
+
+let fixtures: IntegrationFixtures;
 
 beforeEach(async () => {
-  await seedIntegrationFixtures();
+  fixtures = await seedIntegrationFixtures();
 });
 
 afterEach(async () => {
@@ -28,92 +37,79 @@ afterEach(async () => {
 });
 
 describe('P1-8: Aislamiento RLS multi-tenant contra Postgres real', () => {
-  const userAId = 'user-a-id';
-  const userBId = 'user-b-id';
-
-  beforeEach(async () => {
-    // seedIntegrationFixtures ya crea userA y userB + proyectos propios
-  });
-
-  it('Usuario A crea proyecto, Usuario B intenta leerlo → 0 filas (RLS isola)', async () => {
-    // El fixture ya creó un proyecto de userA. Verificamos que userB no lo vea.
-    const userAProjectId = sql`(SELECT id FROM projects WHERE ownerId = ${userAId} LIMIT 1)`;
-
-    const rows = await withRLSIntegration(userBId, async (tx) =>
-      tx.select({ id: true, name: true }).from(projects).where(
-        eq(projects.ownerId, userAId)
-      )
+  it('Usuario A tiene su proyecto; Usuario B intenta leerlo → 0 filas (RLS aísla)', async () => {
+    const rows = await withRLSIntegration(fixtures.userBId, async (tx) =>
+      tx
+        .select({ id: projects.id, name: projects.name })
+        .from(projects)
+        .where(eq(projects.ownerId, fixtures.userAId)),
     );
 
-    // ESSENCIAL: RLS debe aislar — userB ve 0 proyectos de userA
+    // ESENCIAL: RLS debe aislar — userB ve 0 proyectos de userA
     expect(rows.length).toBe(0);
   });
 
   it('Usuario B intenta UPDATE en proyecto de A → 0 filas afectadas (RLS bloquea)', async () => {
-    // userA ya tiene un proyecto del fixture
-    const userAProjectId = sql`(SELECT id FROM projects WHERE ownerId = ${userAId} LIMIT 1)`;
-
-    const result = await withRLSIntegration(userBId, async (tx) =>
-      tx.update(projects).set({ name: 'Nombre Modificado' }).where(
-        eq(projects.id, userAProjectId)
-      )
+    const updated = await withRLSIntegration(fixtures.userBId, async (tx) =>
+      tx
+        .update(projects)
+        .set({ name: 'Nombre Modificado Por B' })
+        .where(eq(projects.id, fixtures.userAProjectId))
+        .returning({ id: projects.id }),
     );
 
     // RLS debe bloquear el update — 0 filas afectadas
-    expect(result.rowCount).toBe(0);
+    expect(updated.length).toBe(0);
   });
 
   it('Usuario B intenta DELETE en proyecto de A → 0 filas afectadas (RLS bloquea)', async () => {
-    // userA ya tiene un proyecto del fixture
-    const userAProjectId = sql`(SELECT id FROM projects WHERE ownerId = ${userAId} LIMIT 1)`;
-
-    const result = await withRLSIntegration(userBId, async (tx) =>
-      tx.delete(projects).where(eq(projects.id, userAProjectId))
+    const deleted = await withRLSIntegration(fixtures.userBId, async (tx) =>
+      tx.delete(projects).where(eq(projects.id, fixtures.userAProjectId)).returning({ id: projects.id }),
     );
 
     // RLS debe bloquear el delete — 0 filas afectadas
-    expect(result.rowCount).toBe(0);
+    expect(deleted.length).toBe(0);
   });
 
-  it('Con directDb (BYPASSRLS), Usuario B SÍ ve las filas de proyecto de A (demuestra el agujero)', async () => {
-    // userA ya tiene un proyecto del fixture
+  it('Con directDb (rol BYPASSRLS) sí se lee el proyecto de A (demuestra el agujero)', async () => {
+    // directDb SIN withRLS ve TODAS las filas, incluida la de userA
+    const rows = await directDb
+      .select({ id: projects.id, ownerId: projects.ownerId })
+      .from(projects)
+      .where(eq(projects.id, fixtures.userAProjectId));
 
-    // directDb SIN withRLS ve TODAS las filas, incluyendo las de userA
-    const rows = await directDb.select({ id: true, name: true, ownerId: true }).from(projects);
-
-    // Deberíamos ver proyectos de userA (demuestra que directDb bypassa RLS)
-    const userAProjects = rows.filter((r: any) => r.ownerId === userAId);
-    expect(userAProjects.length).toBeGreaterThanOrEqual(1);
+    expect(rows.length).toBe(1);
+    expect(rows[0].ownerId).toBe(fixtures.userAId);
   });
 
-  it('Usuario A puede leer/actualizar/borrar sus propios proyectos (withRLS funciona correctamente)', async () => {
-    // userA ya tiene un proyecto del fixture
-    const userAProjectId = sql`(SELECT id FROM projects WHERE ownerId = ${userAId} LIMIT 1)`;
-
+  it('Usuario A puede leer/actualizar/borrar sus propios proyectos (withRLS correcto)', async () => {
     // userA puede leer su propio proyecto
-    const userARead = await withRLSIntegration(userAId, async (tx) =>
-      tx.select({ id: true, name: true }).from(projects).where(
-        eq(projects.id, userAProjectId)
-      )
+    const userARead = await withRLSIntegration(fixtures.userAId, async (tx) =>
+      tx
+        .select({ id: projects.id, name: projects.name })
+        .from(projects)
+        .where(eq(projects.id, fixtures.userAProjectId)),
     );
 
     expect(userARead.length).toBe(1);
     expect(userARead[0].name).toBeDefined();
 
     // userA puede actualizar su propio proyecto
-    const userAUpdate = await withRLSIntegration(userAId, async (tx) =>
-      tx.update(projects).set({ name: 'Nombre Actualizado' }).where(
-        eq(projects.id, userAProjectId)
-      )
+    const userAUpdate = await withRLSIntegration(fixtures.userAId, async (tx) =>
+      tx
+        .update(projects)
+        .set({ name: 'Nombre Actualizado' })
+        .where(eq(projects.id, fixtures.userAProjectId))
+        .returning({ id: projects.id }),
     );
 
-    expect(userAUpdate.rowCount).toBe(1);
+    expect(userAUpdate.length).toBe(1);
 
     // userA puede borrar su propio proyecto
-    const userADelete = await withRLSIntegration(userAId, async (tx) =>
-      tx.delete(projects).where(eq(projects.id, userAProjectId))
+    const userADelete = await withRLSIntegration(fixtures.userAId, async (tx) =>
+      tx.delete(projects).where(eq(projects.id, fixtures.userAProjectId)).returning({ id: projects.id }),
     );
 
-    expect(userADelete.rowCount).toBe(1);
+    expect(userADelete.length).toBe(1);
   });
 });
