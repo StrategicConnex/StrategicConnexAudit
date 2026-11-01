@@ -3,8 +3,8 @@ layout: home
 title: Inicio
 nav_order: 1
 permalink: /
-version: 1.2
-date: 2026-08-01
+version: 1.4
+date: 2026-11-01
 author: Equipo SCAUDIT
 status: Aprobado
 ---
@@ -44,6 +44,8 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 ## Enlaces rápidos
 
 - [Arquitectura](/docs/architecture)
+- [Estado Actual del Sistema](/docs/current-state)
+- [Informe Maestro — Consolidación del Proyecto](/docs/master-report)
 - [Instalación](/docs/installation)
 - [API Reference](/docs/api)
 - [Seguridad](/docs/security)
@@ -61,6 +63,8 @@ StrategicAudit Pro (SCAUDIT) es una plataforma **enterprise-grade** de inteligen
 | Tests automatizados | 198 | CI `test-and-coverage` [VERIFIED] |
 | Endpoints públicos | 4 (health, intelligence, ai/report, monitoring) | `docs/api.md` [VERIFIED] |
 | Reducción de JS inicial (perf) | 584 KB | `docs/improvements/PERFORMANCE_REPORT.md` [VERIFIED] |
+
+> Las métricas del **código vivo** (migraciones, tareas Trigger.dev, tests) están consolidadas con fecha 2026-11-01 en [`MASTER-REPORT-2026-11-01.md`](/docs/master-report) y [`architecture/CURRENT-STATE.md`](/docs/current-state).
 
 ---
 
@@ -219,9 +223,9 @@ El sitio de documentación se publica con GitHub Pages (workflow `docs.yml`) y e
 
 | Campo | Valor |
 |-------|-------|
-| Versión | 1.3 |
-| Fecha | 2026-08-01 |
+| Versión | 1.4 |
+| Fecha | 2026-11-01 |
 | Autor | Equipo SCAUDIT |
 | Estado | Aprobado |
 
-Changelog de esta página: **v1.3** (2026-08-01) — métricas de la tabla Datos actualizadas tras la elevación masiva (17/17 PASS, avg 99.1). **v1.2** (2026-08-01) — sección Datos y métricas agregada y front matter versionado (requisito del quality gate). **v1.1** (2026-08-01) — estructura del template obligatorio (REQ, FIG, trazabilidad, glosario).
+Changelog de esta página: **v1.4** (2026-11-01) — consolidación documental del workspace: enlaces al Informe Maestro (consolidación) y al Estado Actual del Sistema; nota de vigencia de métricas. **v1.3** (2026-08-01) — métricas de la tabla Datos actualizadas tras la elevación masiva (17/17 PASS, avg 99.1). **v1.2** (2026-08-01) — sección Datos y métricas agregada y front matter versionado (requisito del quality gate). **v1.1** (2026-08-01) — estructura del template obligatorio (REQ, FIG, trazabilidad, glosario).

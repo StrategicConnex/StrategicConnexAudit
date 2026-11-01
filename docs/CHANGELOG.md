@@ -3,8 +3,8 @@ layout: default
 title: Changelog
 nav_order: 6
 permalink: /docs/changelog
-version: 1.1
-fecha: 2026-08-01
+version: 1.2
+fecha: 2026-11-01
 autor: Equipo SCAUDIT
 estado: Aprobado
 ---
@@ -22,7 +22,20 @@ estado: Aprobado
 
 ---
 
-## Octubre 2026 — Sprint 5: Anti-monodependencia del pool IA
+## Noviembre 2026 - Consolidación documental del workspace
+
+### ✅ 2026-11-01 - Consolidación del proyecto y de la documentación
+
+- **Informe Maestro creado**: `docs/MASTER-REPORT-2026-11-01.md` — índice único de la consolidación: estado verificado del workspace, mapa documental completo, disposición de residuos, síntesis de deuda viva (19/29 resueltas) y próximos pasos.
+- **Nuevo doc de estado vigente**: `docs/architecture/CURRENT-STATE.md` v1.0 — snapshot del stack real (Next.js 16.3.3, Drizzle 67 migraciones/78 tablas con paridad, 78 API routes en 25 dominios, 34 task IDs de Trigger.dev, 333 archivos de test), sustituye a SRS-V2 y Master-Database-V2 como referencia de estado.
+- **Archivados los doc de diseño de la raíz del workspace**: `SRS-Strategic-AuditPro-V2.md`, `Master_Database_V2.md`, `Plan_de_Accion_StrategicAudit_Pro_v2.md` y `Plan_de_Mejoras_StrategicAudit_Pro.md` se movieron a `docs/archive/legacy-root-docs/` con banner **HISTÓRICO** (describían el stack aspiracional de mayo-2026).
+- **Limpieza de residuos** (archivados sin eliminar, en `_archivados-2026-11-01/` de la raíz): `nuevo/` (borrador del action de disclaimer con errata de cookie, ya cubierto por `actions.ts` + `src/shared/lib/disclaimer.ts`), logs de desarrollo vacíos, `Foto.png`/`Foto2.png` y `.mig-pricing.html`.
+- `docs/index.md` pasa a **v1.4**: enlaces al Informe Maestro y al Estado Actual + nota de vigencia de métricas.
+- **Reclasificación de deuda (TD-20, TD-27)**: el tablero pasa de «8 ABIERTAS» a **6 ABIERTAS + 2 BLOQUEADAS en decisión** — TD-20 queda interna/técnica (desbloqueo documentado: contrato en vivo efímero en CI: Next server + BD de CI + API key de test + Newman contra localhost, sin dependencia del owner) y TD-27 queda como **dependencia externa** (credenciales de cuenta con hallazgos `critical` reales; limitación conocida del QA, reevaluación 2026-11-04). No se marca ninguna «RESUELTO» sin evidencia.
+
+---
+
+## Octubre 2026 - Sprint 5: Anti-monodependencia del pool IA
 
 ### ⚡ 2026-10-20 — H-09 cerrada en producción (self-RUM live) + fix beacon 307 + H-10 supabase fuera del first-load
 
